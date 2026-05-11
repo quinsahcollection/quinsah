@@ -43,7 +43,7 @@
         .page-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--border-color); }
         .header-title { font-size: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'Inter', sans-serif;}
         .icon-btn { background: none; border: none; color: var(--primary-black); font-size: 1.2rem; cursor: pointer; }
-        .store-btn-primary { background-color: var(--primary-black); color: #FFF; border: none; padding: 14px 20px; border-radius: 4px; font-weight: 500; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85rem; font-family: 'Inter', sans-serif;}
+        .store-btn-primary { background-color: var(--primary-black); color: #FFF; border: none; padding: 14px 20px; border-radius: 4px; font-weight: 500; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85rem; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; gap: 8px;}
         .store-btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
         .store-btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap;}
         .store-btn-outline.active { border-color: var(--primary-black); background: var(--primary-black); color: white; }
@@ -54,7 +54,7 @@
         .product-card:active { opacity: 0.7; }
         .product-img { width: 100%; height: 220px; background-color: var(--surface-color); position: relative; }
         .product-info { padding: 12px 15px; }
-        .product-brand { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .product-brand { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: flex; justify-content: space-between;}
         .product-title { font-size: 0.9rem; font-weight: 400; margin-bottom: 8px; line-height: 1.3; font-family: 'Inter', sans-serif;}
         .product-price { font-weight: 600; font-size: 0.95rem; }
         .stories-container { display: flex; gap: 15px; overflow-x: auto; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
@@ -106,7 +106,8 @@
         .nav-link.active { border-right: 3px solid var(--primary-black); color: var(--primary-black); font-weight: 500; background-color: #FAFAFA; }
         .main-content { flex: 1; padding: 40px; overflow-y: auto; width: 100%; }
         .page-title { font-size: 1.5rem; font-weight: 500; margin-bottom: 5px; font-family: 'Inter', sans-serif;}
-        .tabs-nav { display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; }
+        .tabs-nav { display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; overflow-x: auto; white-space: nowrap;}
+        .tabs-nav::-webkit-scrollbar { display: none; }
         .tab-btn { background: none; border: none; padding: 10px 0; font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: 'Inter', sans-serif;}
         .tab-btn.active { color: var(--primary-black); border-bottom-color: var(--primary-black); }
         .admin-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 30px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
@@ -204,7 +205,11 @@
                                     <span class="store-badge" style="position: absolute; top: 10px; left: 10px;" v-if="idx === 0">📱 AR Try-On</span>
                                 </div>
                                 <div class="product-info">
-                                    <div class="product-brand">{{ product.brand || 'Maison Minimal' }}</div>
+                                    <div class="product-brand">
+                                        {{ product.brand || 'Maison Minimal' }}
+                                        <!-- Indikator ada link eksternal -->
+                                        <span v-if="product.externalLink" style="font-size: 0.9rem;" title="Available on Marketplace">🔗</span>
+                                    </div>
                                     <div class="product-title">{{ product.name }}</div>
                                     <div class="product-price">Rp {{ formatPrice(product.basePrice) }}</div>
                                 </div>
@@ -242,7 +247,6 @@
                         <button class="store-btn-outline">+ Accessories</button>
                     </div>
 
-                    <!-- KODE YANG SEMPAT HILANG SAYA KEMBALIKAN DI SINI -->
                     <div style="padding: 20px;">
                         <div class="flex-between" style="margin-bottom: 20px;">
                             <div>
@@ -268,8 +272,6 @@
                             </div>
                             <button class="store-btn-primary" style="width: auto; padding: 8px 15px; border-radius: 20px; font-size: 0.7rem;">Chat Now</button>
                         </div>
-                        
-                        <!-- KODE YANG SEMPAT HILANG SAYA KEMBALIKAN DI SINI -->
                         <div class="flex-between" style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                             <span style="font-size: 0.85rem;">12 looks curated for you</span>
                             <span style="font-size: 0.8rem; font-weight: 600; text-decoration: underline; cursor:pointer;">Filter</span>
@@ -331,20 +333,16 @@
                             <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1.1rem;">{{ userEmail }}</h2>
                             <p style="font-size: 0.8rem; color: var(--text-secondary);">Minimalist • Modern Classic</p>
                         </div>
-                        
-                        <!-- KODE YANG SEMPAT HILANG SAYA KEMBALIKAN DI SINI -->
                         <div style="display: flex; gap: 10px; margin-bottom: 25px;">
                             <div @click="profileTab = 'items'" :style="{ borderBottom: profileTab === 'items' ? '2px solid #000' : '1px solid #EBEBEB', color: profileTab === 'items' ? '#111' : '#767676' }" style="flex: 1; padding-bottom: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">My Closet</div>
                             <div @click="profileTab = 'orders'" :style="{ borderBottom: profileTab === 'orders' ? '2px solid #000' : '1px solid #EBEBEB', color: profileTab === 'orders' ? '#111' : '#767676' }" style="flex: 1; padding-bottom: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">Active Orders</div>
                         </div>
-                        
                         <div v-if="profileTab === 'items'">
                             <div class="grid-2" style="border: none; gap: 15px;">
                                 <div style="background: var(--surface-color); height: 160px; border-radius: 4px;"></div>
                                 <div style="background: var(--surface-color); height: 160px; border-radius: 4px;"></div>
                             </div>
                         </div>
-                        
                         <div v-if="profileTab === 'orders'">
                             <div style="background: var(--surface-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
                                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #DDD; padding-bottom: 10px;">
@@ -361,7 +359,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <button class="store-btn-outline" style="width: 100%; border-color: #D32F2F; color: #D32F2F; margin-top: 20px;" @click="handleLogout">Sign Out</button>
                     </div>
                 </div>
@@ -375,7 +372,7 @@
             </div>
 
             <!-- ========================================================================================= -->
-            <!-- OVERLAY: PRODUCT DETAIL PAGE (Muncul bila gambar diklik)                                  -->
+            <!-- OVERLAY: PRODUCT DETAIL PAGE                                                              -->
             <!-- ========================================================================================= -->
             <transition name="slide-up">
                 <div v-if="selectedProduct" style="position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; background: var(--bg-color); z-index: 100; overflow-y: auto; padding-bottom: 90px;">
@@ -415,14 +412,19 @@
 
                         <!-- Info Material -->
                         <div style="border-top: 1px solid var(--border-color); padding-top: 15px; color: var(--text-secondary);">
+                            <div v-if="selectedProduct.baseSku" style="font-size: 0.85rem; margin-bottom: 5px;"><strong style="color: var(--primary-black);">SKU:</strong> {{ selectedProduct.baseSku }}</div>
                             <div v-if="selectedProduct.material" style="font-size: 0.85rem; margin-bottom: 5px;"><strong style="color: var(--primary-black);">Material:</strong> {{ selectedProduct.material }}</div>
                             <div v-if="selectedProduct.care" style="font-size: 0.85rem;"><strong style="color: var(--primary-black);">Care:</strong> {{ selectedProduct.care }}</div>
                         </div>
                     </div>
 
-                    <!-- Add to Cart (Floating Footer) -->
+                    <!-- Add to Cart / Link Eksternal (Floating Footer) -->
                     <div style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 414px; padding: 15px 20px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border-color); z-index: 20;">
-                        <button class="store-btn-primary" style="padding: 16px;">Add to Cart - Rp {{ formatPrice(selectedProduct.basePrice) }}</button>
+                        <!-- TOMBOL PINTAR: Jika ada link marketplace, arahkan ke sana. Jika tidak, masuk cart internal -->
+                        <button class="store-btn-primary" style="padding: 16px;" @click="handleBuyNow(selectedProduct)">
+                            <span v-if="selectedProduct.externalLink">🔗 Beli via Marketplace</span>
+                            <span v-else>Add to Cart - Rp {{ formatPrice(selectedProduct.basePrice) }}</span>
+                        </button>
                     </div>
                 </div>
             </transition>
@@ -449,11 +451,14 @@
                 <div class="main-content">
                     <div class="header">
                         <h1 class="page-title">Catalog Setup</h1>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Manage your products and store structure.</p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Manage your products, categories, and outlets.</p>
                     </div>
+                    
+                    <!-- UPDATE TABS ADMIN -->
                     <div class="tabs-nav">
                         <button class="tab-btn" :class="{ active: adminActiveTab === 'products' }" @click="adminActiveTab = 'products'">Products Catalog</button>
                         <button class="tab-btn" :class="{ active: adminActiveTab === 'categories' }" @click="adminActiveTab = 'categories'">Category Manager</button>
+                        <button class="tab-btn" :class="{ active: adminActiveTab === 'outlets' }" @click="adminActiveTab = 'outlets'">Outlets & Locations</button>
                     </div>
 
                     <!-- TAB ADMIN: PRODUCTS -->
@@ -489,10 +494,23 @@
                                     
                                     <div style="display: flex; flex-direction: column; justify-content: space-between;">
                                         <div class="form-group" style="margin: 0;"><label>Product Name</label><input type="text" v-model="prodForm.name" required></div>
-                                        <div class="form-group" style="margin: 0;"><label>Brand</label><input type="text" v-model="prodForm.brand"></div>
-                                        <div class="form-group" style="margin: 0;"><label>Base Price (IDR)</label><input type="number" v-model="prodForm.basePrice" required></div>
+                                        <div style="display: flex; gap: 10px; margin: 0;">
+                                            <div class="form-group" style="flex:1; margin:0;"><label>Base SKU Induk</label><input type="text" v-model="prodForm.baseSku" placeholder="Ex: TS-01" required></div>
+                                            <div class="form-group" style="flex:1; margin:0;"><label>Brand</label><input type="text" v-model="prodForm.brand"></div>
+                                        </div>
+                                        <div style="display: flex; gap: 10px; margin: 0;">
+                                            <div class="form-group" style="flex:1; margin:0;"><label>Harga Modal / HPP (IDR)</label><input type="number" v-model="prodForm.costPrice" placeholder="0"></div>
+                                            <div class="form-group" style="flex:1; margin:0;"><label>Harga Jual Base (IDR)</label><input type="number" v-model="prodForm.basePrice" required></div>
+                                        </div>
                                     </div>
-                                    <div class="form-group full"><label>Product Description</label><textarea v-model="prodForm.description"></textarea></div>
+                                    
+                                    <!-- INPUT BARU: Link Marketplace Eksternal -->
+                                    <div class="form-group full">
+                                        <label>Link Pembelian Eksternal / Marketplace (Opsional)</label>
+                                        <input type="url" v-model="prodForm.externalLink" placeholder="Masukkan URL Shopee / Tokopedia / TikTok... Jika diisi, tombol Add to Cart akan mengarah ke link ini.">
+                                    </div>
+
+                                    <div class="form-group full" style="margin-top: 0;"><label>Product Description</label><textarea v-model="prodForm.description"></textarea></div>
                                     <div class="form-group"><label>Material / Composition</label><input type="text" v-model="prodForm.material"></div>
                                     <div class="form-group"><label>Care Instructions</label><input type="text" v-model="prodForm.care"></div>
                                 </div>
@@ -530,7 +548,7 @@
                                     <div v-for="(vType, tIndex) in prodForm.variantTypes" :key="tIndex" class="variant-box">
                                         <div style="width: 200px;">
                                             <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Variant Type</label>
-                                            <input type="text" v-model="vType.name" placeholder="Name..." @input="updateCombinations" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
+                                            <input type="text" v-model="vType.name" placeholder="Name (Ex: Ukuran)..." @input="updateCombinations" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;">
                                         </div>
                                         <div style="flex: 1;">
                                             <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Options (Koma / Enter / Klik Luar)</label>
@@ -548,25 +566,41 @@
                                         <button type="button" class="admin-btn-danger" style="margin-top: 25px;" @click="removeVariantType(tIndex)">🗑️</button>
                                     </div>
                                     <div v-if="prodForm.variantTypes.length === 0" style="text-align: center; color: var(--text-secondary); font-size: 0.85rem;">
-                                        No variant groups added. This product will be saved as a single item.
+                                        Tidak ada varian. Produk ini akan disimpan sebagai produk tunggal tanpa opsi.
                                     </div>
                                 </div>
 
                                 <div v-if="prodForm.generatedVariants.length > 0" style="margin-bottom: 40px;">
-                                    <h4 style="font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; color: var(--text-secondary);">Variant Matrix Configuration</h4>
+                                    <h4 style="font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; color: var(--text-secondary);">4. Inventory & Pricing Allocation</h4>
                                     <div class="table-container" style="border: 1px solid var(--border-color); border-radius: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                                        <table class="admin-table" style="margin: 0;">
-                                            <thead><tr><th>Combination</th><th>SKU</th><th>Price Override (IDR)</th><th>Stock</th></tr></thead>
+                                        <table class="admin-table" style="margin: 0; min-width: 800px;">
+                                            <thead><tr>
+                                                <th>Combination</th>
+                                                <th>SKU Variant</th>
+                                                <th>Modal (HPP)</th>
+                                                <th>Harga Jual</th>
+                                                <th>Outlet Lokasi Stok</th>
+                                                <th width="80">Qty</th>
+                                            </tr></thead>
                                             <tbody>
                                                 <tr v-for="(item, index) in prodForm.generatedVariants" :key="index">
-                                                    <td style="font-weight: 600; color: var(--primary-black);">{{ item.name === 'Default' ? 'Single Item' : item.name }}</td>
-                                                    <td><input type="text" v-model="item.sku" placeholder="SKU" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                    <td><input type="number" v-model="item.price" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                    <td><input type="number" v-model="item.stock" placeholder="0" style="padding: 8px; width: 100px; border: 1px solid var(--border-color);"></td>
+                                                    <td style="font-weight: 600; color: var(--primary-black); font-size: 0.85rem;">{{ item.name === 'Default' ? 'Single Item' : item.name }}</td>
+                                                    <td><input type="text" v-model="item.sku" :placeholder="prodForm.baseSku ? prodForm.baseSku + '-' + (index+1) : 'SKU'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
+                                                    <td><input type="number" v-model="item.costPrice" :placeholder="prodForm.costPrice || '0'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
+                                                    <td><input type="number" v-model="item.price" :placeholder="prodForm.basePrice || '0'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
+                                                    <!-- DROPDOWN OUTLET -->
+                                                    <td>
+                                                        <select v-model="item.outlet" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);">
+                                                            <option value="">-- Pilih Outlet --</option>
+                                                            <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }} ({{ o.type }})</option>
+                                                        </select>
+                                                    </td>
+                                                    <td><input type="number" v-model="item.stock" placeholder="0" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
+                                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">*Kosongkan Modal/Jual di tabel jika ingin mengikuti harga standar produk induk.</p>
                                 </div>
                                 <div style="border-top: 1px solid var(--border-color); padding-top: 20px; text-align: right;">
                                     <button type="submit" class="admin-btn admin-btn-primary" style="padding: 15px 40px; font-size: 1rem;">Publish Product</button>
@@ -577,7 +611,7 @@
                         <div class="admin-card" v-else>
                             <div class="table-container">
                                 <table class="admin-table">
-                                    <thead><tr><th>Product Details</th><th>Category Path</th><th>Total Variants</th><th>Status</th></tr></thead>
+                                    <thead><tr><th>Product Details</th><th>SKU / Modal</th><th>Variants & Stock</th><th>Link</th></tr></thead>
                                     <tbody>
                                         <tr v-for="(product, index) in products" :key="index">
                                             <td>
@@ -586,16 +620,22 @@
                                                     <div v-else style="width: 40px; height: 40px; background: var(--surface-light); border-radius: 4px;"></div>
                                                     <div>
                                                         <div style="font-weight: 600;">{{ product.name }}</div>
-                                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Base: {{ formatPrice(product.basePrice) }}</div>
+                                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Jual: Rp {{ formatPrice(product.basePrice) }}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td style="font-size: 0.8rem; color: var(--text-secondary);">{{ product.parent || '-' }} / {{ product.sub1 || '-' }}</td>
+                                            <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                                                <div style="color: var(--primary-black); font-weight: 600;">{{ product.baseSku || '-' }}</div>
+                                                <div style="margin-top: 4px;">Modal: Rp {{ formatPrice(product.costPrice) }}</div>
+                                            </td>
                                             <td>
                                                 <span class="admin-badge">{{ product.generatedVariants ? product.generatedVariants.length : 1 }} Options</span>
-                                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Stock: {{ calculateTotalStock(product.generatedVariants) }}</div>
+                                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Total Qty: {{ calculateTotalStock(product.generatedVariants) }}</div>
                                             </td>
-                                            <td><span class="admin-badge" style="background: #E8F5E9; color: #2E7D32;">Published</span></td>
+                                            <td>
+                                                <span v-if="product.externalLink" class="admin-badge" style="background: #E3F2FD; color: #1565C0;">Marketplace</span>
+                                                <span v-else class="admin-badge" style="background: #FFF3E0; color: #E65100;">Internal</span>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -631,6 +671,51 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- TAB ADMIN BARU: OUTLETS MANAGER -->
+                    <div v-if="adminActiveTab === 'outlets'">
+                        <div class="form-grid">
+                            <div class="admin-card">
+                                <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Register New Outlet</h2>
+                                <form @submit.prevent="saveOutlet">
+                                    <div class="form-group">
+                                        <label>Outlet Name</label>
+                                        <input type="text" v-model="outletForm.name" placeholder="Ex: Gudang Jakarta, Shopee Official..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Platform / Type</label>
+                                        <select v-model="outletForm.type" required>
+                                            <option value="Physical Store">Toko Fisik / Gudang</option>
+                                            <option value="Shopee">Shopee</option>
+                                            <option value="Tokopedia">Tokopedia</option>
+                                            <option value="TikTok Shop">TikTok Shop</option>
+                                            <option value="Lazada">Lazada</option>
+                                            <option value="Website">Website Internal</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="admin-btn admin-btn-primary w-100" style="width: 100%;">Save Outlet</button>
+                                </form>
+                            </div>
+                            <div class="admin-card">
+                                <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Registered Outlets</h2>
+                                <div class="table-container">
+                                    <table class="admin-table">
+                                        <thead><tr><th>Outlet Name</th><th>Platform Type</th></tr></thead>
+                                        <tbody>
+                                            <tr v-for="(o, idx) in outlets" :key="idx">
+                                                <td style="font-weight: 600;">{{ o.name }}</td>
+                                                <td><span class="admin-badge">{{ o.type }}</span></td>
+                                            </tr>
+                                            <tr v-if="outlets.length === 0">
+                                                <td colspan="2" style="text-align: center; color: var(--text-secondary);">Belum ada outlet terdaftar.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             <div class="toast" :class="{ show: toastMessage }">✓ {{ toastMessage }}</div>
@@ -679,12 +764,19 @@
             const toastMessage = ref('');
             const isSidebarOpen = ref(false);
             
+            // Kategori State
             const categoryData = reactive({ 'Apparel': { 'Outerwear': ['Blazers', 'Coats'], 'Bottoms': ['Trousers'] } });
             const newCat = reactive({ parent: '', sub1: '', sub2: '' });
             
+            // STATE BARU: Outlets
+            const outlets = ref([]);
+            const outletForm = reactive({ name: '', type: 'Physical Store' });
+
+            // UPDATE STATE: Menambahkan SKU, CostPrice, Link di Product Form Induk & Matriks
             const prodForm = reactive({ 
-                name: '', brand: '', basePrice: '', description: '', material: '', care: '', parent: '', sub1: '', sub2: '',
-                variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', stock: '', price: '' }],
+                name: '', brand: '', baseSku: '', costPrice: '', basePrice: '', externalLink: '', 
+                description: '', material: '', care: '', parent: '', sub1: '', sub2: '',
+                variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }],
                 images: [] 
             });
 
@@ -714,6 +806,28 @@
                 } catch (e) { console.error("Error fetching categories:", e); }
             };
 
+            // FUNGSI BARU: Ambil data outlet
+            const fetchOutlets = async () => {
+                try {
+                    const querySnapshot = await getDocs(collection(db, "outlets"));
+                    const fetched = [];
+                    querySnapshot.forEach((doc) => { fetched.push({ id: doc.id, ...doc.data() }); });
+                    outlets.value = fetched;
+                } catch (e) { console.error("Error fetching outlets:", e); }
+            };
+
+            // FUNGSI BARU: Simpan outlet
+            const saveOutlet = async () => {
+                try {
+                    const docRef = await addDoc(collection(db, "outlets"), { ...outletForm });
+                    outlets.value.push({ id: docRef.id, ...outletForm });
+                    showToast('Outlet berhasil disimpan!');
+                    outletForm.name = ''; outletForm.type = 'Physical Store';
+                } catch(e) {
+                    showToast('Gagal menyimpan Outlet.');
+                }
+            };
+
             const handleAuth = async () => {
                 authLoading.value = true;
                 try {
@@ -738,11 +852,12 @@
             onMounted(async () => {
                 await fetchProducts(); 
                 await fetchCategories(); 
+                await fetchOutlets(); // Tarik data outlet saat load
                 
                 if (products.value.length === 0) {
                     products.value = [
-                        { id: 'demo-kebaya-1', name: 'Kutubaru Modern Lace', brand: 'The Studio Heritage', basePrice: 2850000, parent: 'Apparel', sub1: 'Ethnic', images: [] },
-                        { id: 'demo-batik-1', name: 'Kemeja Batik Tulis Slim Fit', brand: 'The Studio Heritage', basePrice: 1450000, parent: 'Apparel', sub1: 'Ethnic', images: [] }
+                        { id: 'demo-kebaya-1', name: 'Kutubaru Modern Lace', brand: 'The Studio Heritage', baseSku: 'TS-01', costPrice: 1500000, basePrice: 2850000, parent: 'Apparel', sub1: 'Ethnic', images: [] },
+                        { id: 'demo-batik-1', name: 'Kemeja Batik Tulis Slim Fit', brand: 'The Studio Heritage', baseSku: 'TS-02', costPrice: 800000, basePrice: 1450000, externalLink: 'https://shopee.co.id', parent: 'Apparel', sub1: 'Ethnic', images: [] }
                     ];
                 }
 
@@ -808,7 +923,11 @@
                     
                     showToast('Product successfully published!');
                     showAddProductForm.value = false;
-                    Object.assign(prodForm, { name: '', brand: '', basePrice: '', description: '', material: '', care: '', parent: '', sub1: '', sub2: '', variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', stock: '', price: '' }], images: [] });
+                    Object.assign(prodForm, { 
+                        name: '', brand: '', baseSku: '', costPrice: '', basePrice: '', externalLink: '', 
+                        description: '', material: '', care: '', parent: '', sub1: '', sub2: '', 
+                        variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }], images: [] 
+                    });
                 } catch (e) { 
                     console.error(e);
                     showToast('Error saving to Database! Coba kecilkan/hapus foto.'); 
@@ -853,7 +972,9 @@
             const updateCombinations = () => {
                 const validTypes = prodForm.variantTypes.filter(t => t.name && t.options.length > 0);
                 if (validTypes.length === 0) {
-                    if (prodForm.generatedVariants.length !== 1 || prodForm.generatedVariants[0].name !== 'Default') { prodForm.generatedVariants = [{ name: 'Default', sku: '', stock: '', price: '' }]; }
+                    if (prodForm.generatedVariants.length !== 1 || prodForm.generatedVariants[0].name !== 'Default') { 
+                        prodForm.generatedVariants = [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }]; 
+                    }
                     return;
                 }
                 const optionsArrays = validTypes.map(t => t.options);
@@ -863,7 +984,8 @@
                 prodForm.generatedVariants = combinations.map(combo => {
                     const variantName = combo.join(' - ');
                     const existing = prodForm.generatedVariants.find(v => v.name === variantName);
-                    return existing ? existing : { name: variantName, sku: '', stock: '', price: '' };
+                    // Pastikan field baru outlet & costPrice ter-generate saat varian berubah
+                    return existing ? existing : { name: variantName, sku: '', costPrice: '', price: '', outlet: '', stock: '' };
                 });
             }
             
@@ -876,6 +998,15 @@
             const playStory = (title) => { alert(`Memutar cuplikan video untuk: ${title}`); }
             const autoFillUI = () => { alert("AI Stylist sedang melengkapi paduan outfit Anda..."); }
 
+            // FUNGSI BARU: Smart Handle Buy (Marketplace vs Internal)
+            const handleBuyNow = (product) => {
+                if(product.externalLink) {
+                    window.open(product.externalLink, '_blank');
+                } else {
+                    alert(`Menambahkan ${product.name} ke keranjang belanja Anda.`);
+                }
+            };
+
             watch(storeTab, (newVal) => {
                 if(newVal === 'Home') { isLoadingStore.value = true; setTimeout(() => { isLoadingStore.value = false; }, 800); }
             });
@@ -884,9 +1015,10 @@
                 appState, isLoginMode, authLoading, authForm, userEmail, handleAuth, handleLogout,
                 storeTab, profileTab, isLoadingStore, stories, triggerVisualSearch, playStory, autoFillUI, formatPrice,
                 adminActiveTab, showAddProductForm, isSidebarOpen, toggleSidebar, toastMessage, categoryData, newCat, addCategoryPath,
+                outlets, outletForm, saveOutlet, // Export Outlet State
                 products, prodForm, saveProduct, addVariantType, removeVariantType, addOption, checkComma, removeOption, updateCombinations, calculateTotalStock,
                 triggerFileInput, handleImageUpload, removeImage,
-                selectedProduct, viewProduct
+                selectedProduct, viewProduct, handleBuyNow // Export fungsi beli
             }
         }
     }).mount('#app')
