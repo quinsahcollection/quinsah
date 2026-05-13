@@ -3,1242 +3,838 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Studio - Complete Premium Platform</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Quinsah Collection ERP - Full Enterprise + Auth</title>
     
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
     <style>
-        /* =========================================================================
-           GLOBAL RESET & LAYOUT DASAR
-           ========================================================================= */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background-color: #E0E0E0; font-family: 'Inter', sans-serif; 
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; width: 100vw; overflow: hidden; -webkit-font-smoothing: antialiased; 
+        :root { --primary-color: #dc2626; --primary-dark: #991b1b; --bg-main: #f8f9fa; --bg-panel: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        .app-container { display: flex; height: 100vh; position: relative; }
+        
+        /* Auth Styles */
+        .auth-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e2e8f0 100%); position: absolute; top: 0; left: 0; width: 100%; z-index: 9999; }
+        .auth-card { background: #fff; width: 100%; max-width: 420px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .btn-google { background-color: #fff; border: 1px solid #d1d5db; color: #374151; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        /* Layout Styles */
+        .sidebar-left { width: 90px; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 20px 0; z-index: 1040; flex-shrink: 0; }
+        .logo-icon { color: var(--primary-color); font-size: 2rem; margin-bottom: 20px; }
+        
+        .nav-icon { width: 65px; height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; color: var(--text-muted); margin-bottom: 10px; cursor: pointer; font-size: 0.75rem; font-weight: 500; transition: 0.2s; }
+        .nav-icon i { font-size: 1.5rem; margin-bottom: 4px; }
+        .nav-icon:hover, .nav-icon.active { background-color: rgba(220, 38, 38, 0.1); color: var(--primary-color); font-weight: 600; }
+        
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 30px; }
+        .sidebar-right { width: 380px; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; z-index: 10; flex-shrink: 0; }
+        
+        /* UI Elements */
+        .dashboard-card { background-color: var(--bg-panel); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .product-card { background-color: var(--bg-panel); border-radius: 16px; padding: 12px; border: 1px solid var(--border-color); height: 100%; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s; }
+        .product-card:hover { transform: translateY(-3px); border-color: var(--primary-color); box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15); }
+        .product-img { width: 100%; height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; background-color: #f0f0f0; }
+        .sku-badge { font-size: 0.7rem; background: #fef2f2; padding: 3px 8px; border-radius: 6px; color: var(--primary-dark); font-weight: 600;}
+        
+        .table-custom th { background-color: #f9fafb; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid var(--border-color); padding: 12px;}
+        .table-custom td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        
+        .form-control, .form-select, .input-group-text { background-color: #fff; border: 1px solid var(--border-color); }
+        .form-control:focus, .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25); }
+        .btn-primary-custom { background-color: var(--primary-color); color: #fff; border: none; font-weight: 600; }
+        .text-primary-custom { color: var(--primary-color) !important; }
+        
+        /* Visual Pohon Kategori Premium */
+        .tree-level-1 { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px; background: #fff; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .tree-header-1 { background-color: #f8f9fa; padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .tree-children-container { padding: 10px 20px 10px 30px; } /* Memberi margin/padding dalam agar tidak menabrak kotak */
+        .tree-level-2 { padding: 12px 15px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 2px solid #cbd5e1; background: #fff; border-bottom: 1px dashed #e5e7eb; border-radius: 0 8px 8px 0; }
+        .tree-level-2:last-child { border-bottom: none; margin-bottom: 0; }
+        .tree-level-3 { padding: 10px 15px; margin-left: 30px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 2px dashed #94a3b8; background: #fcfcfc; border-radius: 0 8px 8px 0; border-bottom: 1px dashed #f1f5f9; }
+
+        /* Modal Illustrations */
+        .modal-icon-header { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: 0 auto 15px auto; font-size: 2rem; }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Mobile Responsive Keranjang */
+        .mobile-fab-cart { display: none; }
+        @media (max-width: 991px) {
+            body { overflow-y: auto; padding-bottom: 70px; }
+            .app-container { flex-direction: column; height: auto; display: block; }
+            .sidebar-left { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; flex-direction: row; padding: 0; border-top: 1px solid var(--border-color); justify-content: space-evenly; z-index: 1050; }
+            .logo-icon { display: none; }
+            .nav-icon { margin-bottom: 0; flex-grow: 1; height: 100%; border-radius: 0; }
+            .main-content { padding: 15px; }
+            .sidebar-right { position: fixed; top: 0; right: -100%; width: 100%; height: 100vh; max-width: 400px; padding-bottom: 20px; z-index: 1060; transition: right 0.3s ease; box-shadow: -5px 0 20px rgba(0,0,0,0.2); }
+            .sidebar-right.show-mobile { right: 0; }
+            .mobile-fab-cart { display: flex; align-items: center; justify-content: center; position: fixed; bottom: 85px; right: 20px; background-color: var(--primary-color); color: #fff; padding: 14px 24px; border-radius: 50px; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4); z-index: 1040; border: none; cursor: pointer; }
         }
 
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
-        .fade-enter-from { opacity: 0; transform: translateY(10px); }
-        .fade-leave-to { opacity: 0; transform: translateY(-10px); }
-        
-        .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease-out, opacity 0.3s ease-out; }
-        .slide-up-enter-from { transform: translateY(100%); opacity: 0.5; }
-        .slide-up-leave-to { transform: translateY(100%); opacity: 0.5; }
-
-        .slide-left-enter-active, .slide-left-leave-active { transition: transform 0.3s ease-out; }
-        .slide-left-enter-from, .slide-left-leave-to { transform: translateX(100%); }
-
-        /* =========================================================================
-           1. CSS TOKO (FRONT-END) - DARK & GOLD THEME
-           ========================================================================= */
-        .store-scope {
-            --bg-color: #FFFFFF; --surface-color: #F8F8F8; --surface-light: #F0F0F0;
-            --primary-black: #1A1A1A; --accent-gold: #C5A059; 
-            --text-primary: #111111; --text-secondary: #767676;
-            --border-color: #EBEBEB; --success-color: #2E7D32;
-        }
-        .app-container {
-            width: 100%; max-width: 414px; height: 100vh;
-            background-color: var(--bg-color); position: relative; color: var(--text-primary);
-            overflow-y: auto; overflow-x: hidden;
-            padding-bottom: 85px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-        .store-scope h1, .store-scope h2, .store-scope h3 { font-family: 'Playfair Display', serif; font-weight: 500; letter-spacing: -0.02em; }
-        .page-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--border-color); }
-        .header-title { font-size: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'Inter', sans-serif;}
-        .icon-btn { background: none; border: none; color: var(--primary-black); font-size: 1.2rem; cursor: pointer; position: relative;}
-        
-        .cart-badge { position: absolute; top: -5px; right: -8px; background: var(--accent-gold); color: #fff; font-size: 0.6rem; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-
-        .store-btn-primary { background: linear-gradient(135deg, var(--primary-black), #2a2a2a); color: var(--accent-gold); border: 1px solid #333; padding: 14px 20px; border-radius: 4px; font-weight: 600; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.85rem; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.3s;}
-        .store-btn-primary:active { transform: scale(0.98); }
-        .store-btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
-        
-        .store-btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: all 0.2s;}
-        .store-btn-outline.active { border-color: var(--accent-gold); background: var(--primary-black); color: var(--accent-gold); }
-        
-        .store-badge { background: var(--surface-color); color: var(--text-primary); padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 4px; }
-        .store-badge-premium { background: var(--primary-black); color: var(--accent-gold); border: none; cursor: pointer; }
-        
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-color); }
-        .product-card { background: var(--bg-color); padding-bottom: 15px; cursor: pointer; transition: opacity 0.2s; }
-        .product-card:active { opacity: 0.7; }
-        .product-img { width: 100%; height: 220px; background-color: var(--surface-color); position: relative; }
-        .product-info { padding: 12px 15px; }
-        .product-brand { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: flex; justify-content: space-between;}
-        .product-title { font-size: 0.9rem; font-weight: 400; margin-bottom: 8px; line-height: 1.3; font-family: 'Inter', sans-serif;}
-        .product-price { font-weight: 600; font-size: 0.95rem; color: var(--primary-black); }
-        
-        .stories-container { display: flex; gap: 15px; overflow-x: auto; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
-        .stories-container::-webkit-scrollbar { display: none; }
-        .story-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
-        .story-ring { width: 65px; height: 65px; border-radius: 50%; padding: 2px; border: 1px solid var(--accent-gold); }
-        .story-img { width: 100%; height: 100%; border-radius: 50%; background: var(--surface-light); }
-        .story-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; }
-        
-        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        .skeleton { background: linear-gradient(90deg, var(--surface-color) 25%, var(--border-color) 50%, var(--surface-color) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        
-        .scroll-x { display: flex; gap: 10px; overflow-x: auto; padding: 15px 20px; }
-        .scroll-x::-webkit-scrollbar { display: none; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        
-        .bottom-nav { position: absolute; bottom: 0; width: 100%; background: rgba(255, 255, 255, 0.98); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 15px 0 25px 0; z-index: 20; }
-        .nav-item { text-align: center; color: var(--text-secondary); font-size: 0.65rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.05em; transition: color 0.3s; }
-        .nav-item.active { color: var(--accent-gold); font-weight: 600; }
-        .nav-icon { font-size: 1.3rem; }
-        
-        .store-input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: border-color 0.2s; }
-        .store-input:focus { outline: none; border-color: var(--accent-gold); }
-
-        /* CART DRAWER CSS */
-        .cart-overlay { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 105; }
-        .cart-drawer { position: absolute; top:0; right:0; bottom:0; width: 85%; background: var(--bg-color); z-index: 110; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.1); }
-        
-        /* =========================================================================
-           2. CSS ADMIN (BACK-END)
-           ========================================================================= */
-        .admin-scope {
-            --bg-color: #F5F5F7; --surface-color: #FFFFFF;
-            --primary-black: #1A1A1A; --accent-gold: #C5A059;
-            --text-primary: #111111; --text-secondary: #767676; 
-            --border-color: #E5E5E5; --sidebar-width: 250px;
-        }
-        .admin-layout {
-            width: 100vw; height: 100vh; background-color: var(--bg-color); color: var(--text-primary);
-            display: flex; flex-direction: column; position: relative;
-        }
-        .mobile-header { display: none; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--primary-black); color: var(--accent-gold); z-index: 10; }
-        .hamburger-btn { background: none; border: none; font-size: 1.5rem; color: var(--accent-gold); cursor: pointer; }
-        .app-wrapper { display: flex; flex: 1; overflow: hidden; position: relative; }
-        .sidebar-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 90; backdrop-filter: blur(2px); }
-        .sidebar { width: var(--sidebar-width); background-color: var(--primary-black); color: #fff; display: flex; flex-direction: column; padding: 20px 0; z-index: 100; height: 100%; transition: transform 0.3s ease; }
-        .brand { font-size: 1.2rem; font-weight: 600; padding: 0 24px 30px; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #333; margin-bottom: 20px; color: var(--accent-gold); }
-        .nav-link { padding: 14px 24px; color: #AAA; text-decoration: none; display: flex; align-items: center; gap: 12px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
-        .nav-link:hover { color: #FFF; }
-        .nav-link.active { border-right: 3px solid var(--accent-gold); color: var(--accent-gold); font-weight: 500; background-color: rgba(197, 160, 89, 0.1); }
-        .main-content { flex: 1; padding: 40px; overflow-y: auto; width: 100%; }
-        .page-title { font-size: 1.5rem; font-weight: 500; margin-bottom: 5px; font-family: 'Inter', sans-serif;}
-        .tabs-nav { display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 30px; overflow-x: auto; white-space: nowrap;}
-        .tabs-nav::-webkit-scrollbar { display: none; }
-        .tab-btn { background: none; border: none; padding: 10px 0; font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: 'Inter', sans-serif;}
-        .tab-btn.active { color: var(--primary-black); border-bottom-color: var(--accent-gold); }
-        .admin-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 30px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
-        
-        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-box { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); border-top: 3px solid var(--accent-gold); box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
-        .stat-value { font-size: 1.8rem; font-weight: 600; color: var(--primary-black); margin-top: 10px; font-family: 'Playfair Display', serif;}
-
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group.full { grid-column: 1 / -1; margin-top: 15px; }
-        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 0.9rem; }
-        .upload-area { border: 2px dashed var(--border-color); border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; background: var(--bg-color); min-height: 160px; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: background 0.3s; }
-        
-        .admin-btn { padding: 12px 20px; border-radius: 4px; font-weight: 500; font-size: 0.9rem; cursor: pointer; border: none; font-family: 'Inter', sans-serif; }
-        .admin-btn-primary { background: var(--primary-black); color: var(--accent-gold); }
-        .admin-btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); }
-        
-        .table-container { overflow-x: auto; margin-top: 15px; -webkit-overflow-scrolling: touch; }
-        .admin-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .admin-table th, .admin-table td { padding: 16px 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        .admin-table th { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 500; background: #FAFAFA; }
-        .admin-badge { background: var(--bg-color); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px; }
-        
-        .toast { position: fixed; bottom: 30px; right: 30px; background: var(--primary-black); color: var(--accent-gold); padding: 15px 25px; border-radius: 4px; font-size: 0.9rem; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 9999; }
-        .toast.show { transform: translateY(0); opacity: 1; }
-
-        /* =========================================================================
-           PRINT MEDIA QUERY (THERMAL LABEL 100x150mm)
-           ========================================================================= */
+        #print-section { display: none; }
         @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100mm; height: 150mm; padding: 5mm; background: white; font-family: 'Inter', sans-serif; color: #000; box-sizing: border-box;}
-            .no-print { display: none !important; }
-            @page { size: 100mm 150mm; margin: 0; }
-        }
-
-        @media (max-width: 768px) {
-            .mobile-header { display: flex; }
-            .sidebar { position: absolute; top: 0; bottom: 0; left: 0; transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); }
-            .sidebar-overlay.open { display: block; }
-            .main-content { padding: 20px; }
-            .form-grid, .stat-grid { grid-template-columns: 1fr; }
+            body > *:not(#print-section) { display: none !important; }
+            #print-section { display: block !important; position: absolute; left: 0; top: 0; margin: 0; background: #fff; font-family: monospace; width: 80mm; font-size: 12px; padding: 5mm; }
+            #print-section.mode-label { width: 100mm; min-height: 149mm; font-family: 'Inter', sans-serif; border: 1px solid #000; }
+            .print-divider { border-top: 1px dashed #000; margin: 10px 0; }
+            .label-barcode { height: 50px; background: repeating-linear-gradient(90deg, #000, #000 2px, transparent 2px, transparent 4px); margin: 10px 0; }
         }
     </style>
 </head>
 <body>
 
-<div id="app" style="width: 100%; display: flex; justify-content: center; align-items: center;">
-
-    <transition name="fade" mode="out-in">
-        <!-- ========================================================================================= -->
-        <!-- VIEW 1: FRONT-END STORE (DEFAULT VIEW & PUBLIC VISIBLE)                                   -->
-        <!-- ========================================================================================= -->
-        <div class="store-scope app-container" v-if="appState === 'store'" key="store">
-            <div class="page-header">
-                <button class="icon-btn" v-if="storeTab !== 'Home'" @click="storeTab = 'Home'">←</button>
-                <button class="icon-btn" v-else>≡</button>
-                <div class="header-title" style="color: var(--accent-gold);">{{ storeTab === 'Home' ? 'The Studio' : storeTab }}</div>
-                <div style="display: flex; gap: 15px;">
-                    <button class="icon-btn" @click="triggerVisualSearch" title="Visual Search">📷</button>
-                    <!-- Ikon Keranjang dengan Badge -->
-                    <button class="icon-btn" @click="isCartOpen = true">
-                        🛒
-                        <span class="cart-badge" v-if="cartTotalItems > 0">{{ cartTotalItems }}</span>
-                    </button>
-                </div>
-            </div>
-
-            <transition name="fade" mode="out-in">
-                <!-- TAB HOME -->
-                <div v-if="storeTab === 'Home'" key="home">
-                    <div class="stories-container">
-                        <div class="story-wrapper" v-for="story in stories" :key="story.id" @click="playStory(story.title)">
-                            <div class="story-ring"><div class="story-img"></div></div>
-                            <span class="story-title">{{ story.title }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Skeleton Loading -->
-                    <div v-if="isLoadingStore" class="grid-2" style="border: none; margin-top: 20px;">
-                        <div class="product-card" v-for="i in 4" :key="'skel'+i" style="padding: 10px;">
-                            <div class="skeleton" style="width: 100%; height: 220px; border-radius: 4px;"></div>
-                            <div class="skeleton" style="width: 60%; height: 12px; margin-top: 15px; border-radius: 2px;"></div>
-                            <div class="skeleton" style="width: 80%; height: 16px; margin-top: 8px; border-radius: 2px;"></div>
-                        </div>
-                    </div>
-
-                    <div v-else>
-                        <div style="padding: 20px 20px 10px; text-align: center;">
-                            <h2 style="font-size: 2rem; margin-bottom: 10px; font-style: italic; color: var(--primary-black);">Curated Essentials</h2>
-                            <p style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5;">Refined garments for the modern wardrobe.</p>
-                        </div>
-                        
-                        <!-- FILTER KATEGORI -->
-                        <div class="scroll-x">
-                            <button class="store-btn-outline" :class="{ active: activeCategory === 'All' }" @click="filterCategory('All')">All Collection</button>
-                            <button class="store-btn-outline" 
-                                    v-for="cat in availableCategories" :key="cat"
-                                    :class="{ active: activeCategory === cat }" 
-                                    @click="filterCategory(cat)">
-                                {{ cat }}
-                            </button>
-                        </div>
-                        
-                        <!-- GRID PRODUK -->
-                        <div class="grid-2">
-                            <div class="product-card" v-for="(product, idx) in filteredProducts" :key="product.id" @click="viewProduct(product)">
-                                <div class="product-img" :style="product.images && product.images.length > 0 ? { backgroundImage: 'url(' + product.images[0] + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : {}">
-                                    <span class="store-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9);" v-if="idx === 0">📱 AR Try-On</span>
-                                </div>
-                                <div class="product-info">
-                                    <div class="product-brand">
-                                        {{ product.brand || 'The Studio' }}
-                                        <span v-if="product.externalLink" style="font-size: 0.9rem;" title="Available on Marketplace">🔗</span>
-                                    </div>
-                                    <div class="product-title">{{ product.name }}</div>
-                                    <div class="product-price">Rp {{ formatPrice(product.basePrice) }}</div>
-                                </div>
-                            </div>
-                            <div v-if="filteredProducts.length === 0" style="grid-column: 1/-1; padding: 40px; text-align: center; color: var(--text-secondary);">
-                                Belum ada produk di kategori ini.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB BUILD OUTFIT -->
-                <div v-else-if="storeTab === 'Build Outfit'" key="build">
-                    <div style="height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface-color); border-bottom: 1px solid var(--border-color);">
-                        <span style="font-size: 2.5rem; font-weight: 300; display: block; margin-bottom: 10px; color: var(--accent-gold);">+</span>
-                        <span style="font-size: 0.9rem; letter-spacing: 0.05em; text-transform: uppercase;">Curate Your Look</span>
-                    </div>
-                    <div style="padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
-                        <div>
-                            <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Extracted Palette</div>
-                            <div style="display: flex; gap: 8px;">
-                                <div style="width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; border: 1px solid rgba(0,0,0,0.1);"></div>
-                                <div style="width: 16px; height: 16px; border-radius: 50%; background: #111111; border: 1px solid rgba(0,0,0,0.1);"></div>
-                                <div style="width: 16px; height: 16px; border-radius: 50%; background: #C5A059; border: 1px solid rgba(0,0,0,0.1);"></div>
-                            </div>
-                        </div>
-                        <button class="store-badge store-badge-premium" @click="autoFillUI">✨ AI Auto-Complete</button>
-                    </div>
-                    <div class="scroll-x">
-                        <button class="store-btn-outline">+ Top</button>
-                        <button class="store-btn-outline">+ Bottom</button>
-                        <button class="store-btn-outline">+ Footwear</button>
-                        <button class="store-btn-outline">+ Accessories</button>
-                    </div>
-                    <div style="padding: 20px;">
-                        <div class="flex-between" style="margin-bottom: 20px;">
-                            <div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Style Cohesion</div>
-                                <div style="font-family: 'Playfair Display', serif; font-size: 2rem;">92<span style="font-size: 1rem; color: var(--text-secondary);">/100</span></div>
-                            </div>
-                            <div style="text-align: right;">
-                                <span class="store-badge" style="border-color: var(--accent-gold); color: var(--accent-gold);">Excellent Match</span>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px;">Perfect for: Evening</div>
-                            </div>
-                        </div>
-                        <button class="store-btn-primary" @click="storeTab = 'Style Suggestions'">View Style Suggestions</button>
-                    </div>
-                </div>
-
-                <!-- TAB STYLE SUGGESTIONS -->
-                <div v-else-if="storeTab === 'Style Suggestions'" key="style">
-                    <div style="padding: 20px;">
-                        <div style="background: var(--surface-color); padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color);">
-                            <div>
-                                <h3 style="font-size: 0.9rem; font-family: 'Inter', sans-serif; font-weight: 600;">Need expert advice?</h3>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">Chat with our AI Stylist.</p>
-                            </div>
-                            <button class="store-btn-primary" style="width: auto; padding: 8px 15px; border-radius: 20px; font-size: 0.7rem;">Chat Now</button>
-                        </div>
-                        <div class="flex-between" style="margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                            <span style="font-size: 0.85rem;">12 looks curated for you</span>
-                            <span style="font-size: 0.8rem; font-weight: 600; text-decoration: underline; cursor:pointer;">Filter</span>
-                        </div>
-                        <div style="margin-bottom: 30px;">
-                            <h3 style="font-size: 1.3rem; margin-bottom: 5px; font-style: italic;">The Noir Collection</h3>
-                            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px;">A seamless transition from office to evening events.</p>
-                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;">
-                                <div style="height: 200px; background: var(--surface-light); border-radius: 4px;"></div>
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div style="flex: 1; background: var(--surface-light); border-radius: 4px;"></div>
-                                    <div style="flex: 1; background: var(--surface-light); border-radius: 4px;"></div>
-                                </div>
-                            </div>
-                            <div class="flex-between">
-                                <div style="font-weight: 600; font-size: 1rem; color: var(--accent-gold);">Rp 6.198.000</div>
-                                <button style="background: transparent; border: none; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; cursor: pointer; border-bottom: 1px solid var(--primary-black);">Add All to Cart</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB PROFILE -->
-                <div v-else-if="storeTab === 'Profile'" key="profile">
-                    <div v-if="!userEmail" style="padding: 20px;">
-                        <div style="text-align: center; margin-bottom: 30px; padding-top: 20px;">
-                            <h2 style="font-family: 'Playfair Display', serif; font-size: 2.2rem; font-style: italic; margin-bottom: 5px; color: var(--accent-gold);">Welcome</h2>
-                            <p style="color: var(--text-secondary); font-size: 0.85rem;">Masuk atau daftar untuk melihat akun.</p>
-                        </div>
-                        <div style="display: flex; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid var(--border-color);">
-                            <div style="padding-bottom: 10px; cursor: pointer; font-weight: 500;" :style="{ color: isLoginMode ? 'var(--primary-black)' : '#767676', borderBottom: isLoginMode ? '2px solid var(--accent-gold)' : 'none' }" @click="isLoginMode = true">Sign In</div>
-                            <div style="padding-bottom: 10px; cursor: pointer; font-weight: 500;" :style="{ color: !isLoginMode ? 'var(--primary-black)' : '#767676', borderBottom: !isLoginMode ? '2px solid var(--accent-gold)' : 'none' }" @click="isLoginMode = false">Register</div>
-                        </div>
-                        <form @submit.prevent="handleAuth">
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; color: var(--text-secondary);">Email Address</label>
-                                <input type="email" class="store-input" v-model="authForm.email" placeholder="Email Anda" required>
-                            </div>
-                            <div style="margin-bottom: 25px;">
-                                <label style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; color: var(--text-secondary);">Password</label>
-                                <input type="password" class="store-input" v-model="authForm.password" placeholder="••••••••" required>
-                            </div>
-                            <button type="submit" class="store-btn-primary" :disabled="authLoading">
-                                {{ authLoading ? 'Memproses...' : (isLoginMode ? 'Sign In' : 'Create Account') }}
-                            </button>
-                        </form>
-                        <p style="text-align: center; font-size: 0.75rem; color: var(--text-secondary); margin-top: 25px; padding: 15px; background: var(--surface-color); border-radius: 4px;">
-                            <span style="display: block; margin-bottom: 4px; color: var(--accent-gold);">🛠️ <b>Akses Developer:</b></span>
-                            Login dengan <b>admin@thestudio.com</b> akan otomatis membuka Admin Dashboard.
-                        </p>
-                    </div>
-
-                    <div v-else style="padding: 20px;">
-                        <div style="text-align: center; margin-bottom: 30px; padding-top: 10px;">
-                            <div style="width: 70px; height: 70px; background: var(--surface-light); border-radius: 50%; margin: 0 auto 15px; border: 2px solid var(--accent-gold);"></div>
-                            <h2 style="font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1.1rem;">{{ userEmail }}</h2>
-                            <p style="font-size: 0.8rem; color: var(--text-secondary);">Premium Member</p>
-                        </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                            <div @click="profileTab = 'wishlist'" :style="{ borderBottom: profileTab === 'wishlist' ? '2px solid var(--accent-gold)' : '1px solid #EBEBEB', color: profileTab === 'wishlist' ? '#111' : '#767676' }" style="flex: 1; padding-bottom: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">Wishlist</div>
-                            <div @click="profileTab = 'orders'" :style="{ borderBottom: profileTab === 'orders' ? '2px solid var(--accent-gold)' : '1px solid #EBEBEB', color: profileTab === 'orders' ? '#111' : '#767676' }" style="flex: 1; padding-bottom: 10px; text-align: center; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;">Riwayat Pesanan</div>
-                        </div>
-                        
-                        <div v-if="profileTab === 'wishlist'">
-                            <p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center;" v-if="wishlist.length === 0">Belum ada wishlist.</p>
-                            <div class="grid-2" style="border: none; gap: 15px;" v-else>
-                                <!-- Tampilkan produk yang di-wishlist -->
-                                <div class="product-card" v-for="id in wishlist" :key="id" style="padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
-                                    <div style="font-size: 0.8rem; font-weight: bold;">ID Produk: {{ id }}</div>
-                                    <div style="font-size: 0.7rem; color: var(--accent-gold); cursor: pointer; margin-top: 5px;" @click="toggleWishlist(id)">Hapus</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div v-if="profileTab === 'orders'">
-                            <p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center;" v-if="myOrders.length === 0">Belum ada pesanan.</p>
-                            <div v-for="order in myOrders" :key="order.id" style="background: var(--surface-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-                                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #DDD; padding-bottom: 10px; margin-bottom: 10px;">
-                                    <span style="font-weight: 600; font-size: 0.9rem;">Order #{{ order.id.slice(-6).toUpperCase() }}</span>
-                                    <span class="admin-badge" style="background: var(--primary-black); color: var(--accent-gold);">{{ order.status }}</span>
-                                </div>
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px;">Total: Rp {{ formatPrice(order.total) }}</div>
-                                <div style="font-size: 0.8rem; color: var(--text-secondary);">Items: {{ order.items.length }}</div>
-                            </div>
-                        </div>
-                        <button class="store-btn-outline" style="width: 100%; border-color: #D32F2F; color: #D32F2F; margin-top: 20px;" @click="handleLogout">Sign Out</button>
-                    </div>
-                </div>
-            </transition>
-
-            <div class="bottom-nav">
-                <div class="nav-item" :class="{ active: storeTab === 'Home' }" @click="storeTab = 'Home'"><span class="nav-icon">⌂</span><span>Home</span></div>
-                <div class="nav-item" :class="{ active: storeTab === 'Build Outfit' }" @click="storeTab = 'Build Outfit'"><span class="nav-icon">⊞</span><span>Builder</span></div>
-                <div class="nav-item" :class="{ active: storeTab === 'Style Suggestions' }" @click="storeTab = 'Style Suggestions'"><span class="nav-icon">✧</span><span>Style</span></div>
-                <div class="nav-item" :class="{ active: storeTab === 'Profile' }" @click="storeTab = 'Profile'"><span class="nav-icon">👤</span><span>Profile</span></div>
-            </div>
-
-            <!-- ========================================================================================= -->
-            <!-- OVERLAY: PRODUCT DETAIL PAGE                                                              -->
-            <!-- ========================================================================================= -->
-            <transition name="slide-up">
-                <div v-if="selectedProduct" style="position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; background: var(--bg-color); z-index: 100; overflow-y: auto; padding-bottom: 90px;">
-                    <!-- Header -->
-                    <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); z-index: 10; border-bottom: 1px solid var(--border-color);">
-                        <button class="icon-btn" @click="selectedProduct = null; selectedVariant = null;">←</button>
-                        <div class="header-title" style="color: var(--accent-gold);">Detail Produk</div>
-                        <button class="icon-btn" @click="toggleWishlist(selectedProduct.id)" :style="{ color: wishlist.includes(selectedProduct.id) ? 'var(--accent-gold)' : 'var(--primary-black)' }">
-                            {{ wishlist.includes(selectedProduct.id) ? '♥' : '♡' }}
-                        </button>
-                    </div>
-                    
-                    <div style="width: 100%; height: 400px; background-color: var(--surface-light); background-size: cover; background-position: center;" :style="selectedProduct.images && selectedProduct.images.length > 0 ? { backgroundImage: 'url(' + selectedProduct.images[0] + ')' } : {}"></div>
-                    
-                    <div v-if="selectedProduct.images && selectedProduct.images.length > 1" style="display: flex; gap: 10px; padding: 15px 20px; overflow-x: auto;">
-                        <div v-for="(img, i) in selectedProduct.images" :key="i" style="width: 60px; height: 60px; border-radius: 4px; background-size: cover; background-position: center; border: 1px solid var(--border-color); flex-shrink: 0;" :style="{ backgroundImage: 'url(' + img + ')' }"></div>
-                    </div>
-
-                    <div style="padding: 20px;">
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;">{{ selectedProduct.brand || 'The Studio' }}</div>
-                        <h1 style="font-size: 1.5rem; font-weight: 500; font-family: 'Playfair Display', serif; margin-bottom: 10px;">{{ selectedProduct.name }}</h1>
-                        <div style="font-weight: 600; font-size: 1.2rem; margin-bottom: 25px; color: var(--primary-black);">
-                            Rp {{ formatPrice(selectedVariant && selectedVariant.price ? selectedVariant.price : selectedProduct.basePrice) }}
-                        </div>
-                        
-                        <div v-if="selectedProduct.generatedVariants && selectedProduct.generatedVariants.length > 0 && selectedProduct.generatedVariants[0].name !== 'Default'" style="margin-bottom: 25px;">
-                            <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 10px;">Select Variant</div>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <button v-for="v in selectedProduct.generatedVariants" :key="v.name" 
-                                        class="store-btn-outline" 
-                                        :class="{ active: selectedVariant && selectedVariant.name === v.name }"
-                                        @click="selectedVariant = v"
-                                        style="padding: 10px 20px; font-size: 0.85rem;">
-                                    {{ v.name }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style="font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary); margin-bottom: 20px; white-space: pre-wrap;">{{ selectedProduct.description || 'Produk premium dengan kualitas terbaik dari koleksi kami.' }}</div>
-
-                        <div style="border-top: 1px solid var(--border-color); padding-top: 15px; color: var(--text-secondary);">
-                            <div v-if="selectedVariant && selectedVariant.sku" style="font-size: 0.85rem; margin-bottom: 5px;"><strong style="color: var(--primary-black);">SKU:</strong> {{ selectedVariant.sku }}</div>
-                            <div v-else-if="selectedProduct.baseSku" style="font-size: 0.85rem; margin-bottom: 5px;"><strong style="color: var(--primary-black);">SKU Induk:</strong> {{ selectedProduct.baseSku }}</div>
-                            <div v-if="selectedProduct.material" style="font-size: 0.85rem; margin-bottom: 5px;"><strong style="color: var(--primary-black);">Material:</strong> {{ selectedProduct.material }}</div>
-                            <div v-if="selectedProduct.care" style="font-size: 0.85rem;"><strong style="color: var(--primary-black);">Care:</strong> {{ selectedProduct.care }}</div>
-                        </div>
-                    </div>
-
-                    <div style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 414px; padding: 15px 20px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border-color); z-index: 20;">
-                        <button class="store-btn-primary" style="padding: 16px;" @click="handleAddToCart(selectedProduct, selectedVariant)">
-                            <span v-if="selectedProduct.externalLink">🔗 Beli via Marketplace</span>
-                            <span v-else>Add to Cart</span>
-                        </button>
-                    </div>
-                </div>
-            </transition>
-
-            <!-- ========================================================================================= -->
-            <!-- OVERLAY: CART & CHECKOUT (DRAWER SLIDE DARI KANAN)                                        -->
-            <!-- ========================================================================================= -->
-            <div class="cart-overlay" v-if="isCartOpen" @click="isCartOpen = false"></div>
-            <transition name="slide-left">
-                <div class="cart-drawer" v-if="isCartOpen">
-                    <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                        <h2 style="font-size: 1.2rem; font-family: 'Playfair Display', serif;">Your Cart</h2>
-                        <button class="icon-btn" @click="isCartOpen = false">✕</button>
-                    </div>
-                    
-                    <div style="flex: 1; overflow-y: auto; padding: 20px;">
-                        <div v-if="cart.length === 0" style="text-align: center; color: var(--text-secondary); margin-top: 40px;">
-                            <div style="font-size: 2rem; margin-bottom: 10px;">🛍️</div>
-                            <p>Keranjang Anda masih kosong.</p>
-                        </div>
-                        
-                        <!-- List Cart Item -->
-                        <div v-for="(item, index) in cart" :key="index" style="display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid var(--surface-light); padding-bottom: 15px;">
-                            <div style="width: 70px; height: 70px; background: var(--surface-light); border-radius: 4px; background-size: cover;" :style="item.image ? { backgroundImage: 'url(' + item.image + ')' } : {}"></div>
-                            <div style="flex: 1;">
-                                <div style="font-size: 0.85rem; font-weight: 600;">{{ item.name }}</div>
-                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 5px;">{{ item.variantName !== 'Default' ? item.variantName : '' }}</div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="font-weight: 600; color: var(--primary-black); font-size: 0.9rem;">Rp {{ formatPrice(item.price) }}</div>
-                                    <div style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 4px; overflow: hidden;">
-                                        <button style="padding: 2px 8px; background: #fff; border: none; cursor: pointer;" @click="updateCartQty(index, -1)">-</button>
-                                        <span style="font-size: 0.8rem; padding: 0 10px;">{{ item.qty }}</span>
-                                        <button style="padding: 2px 8px; background: #fff; border: none; cursor: pointer;" @click="updateCartQty(index, 1)">+</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Checkout Mini -->
-                        <div v-if="cart.length > 0" style="margin-top: 30px; background: var(--surface-color); padding: 15px; border-radius: 8px;">
-                            <h3 style="font-size: 0.9rem; margin-bottom: 15px; text-transform: uppercase;">Shipping Info</h3>
-                            <input type="text" class="store-input" v-model="checkoutForm.name" placeholder="Nama Lengkap" style="margin-bottom: 10px; font-size: 0.8rem; padding: 10px;">
-                            <input type="text" class="store-input" v-model="checkoutForm.phone" placeholder="No. HP / WA" style="margin-bottom: 10px; font-size: 0.8rem; padding: 10px;">
-                            <textarea class="store-input" v-model="checkoutForm.address" placeholder="Alamat Lengkap" style="min-height: 60px; font-size: 0.8rem; padding: 10px; margin-bottom: 15px;"></textarea>
-                            
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" class="store-input" v-model="checkoutForm.promoCode" placeholder="Kode Promo" style="font-size: 0.8rem; padding: 10px;">
-                                <button class="store-btn-outline" @click="applyPromo" style="padding: 0 15px;">Apply</button>
-                            </div>
-                            <div v-if="promoApplied" style="font-size: 0.75rem; color: var(--success-color); margin-top: 5px;">Promo diterapkan! Diskon: Rp {{ formatPrice(discountAmount) }}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="padding: 20px; border-top: 1px solid var(--border-color); background: #fff;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
-                            <span style="color: var(--text-secondary);">Subtotal</span>
-                            <span>Rp {{ formatPrice(cartSubtotal) }}</span>
-                        </div>
-                        <div v-if="discountAmount > 0" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; color: var(--success-color);">
-                            <span>Discount</span>
-                            <span>- Rp {{ formatPrice(discountAmount) }}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: 600; font-size: 1.1rem; color: var(--primary-black);">
-                            <span>Total</span>
-                            <span>Rp {{ formatPrice(cartTotal) }}</span>
-                        </div>
-                        <button class="store-btn-primary" :disabled="cart.length === 0" @click="processCheckout">Confirm & Place Order</button>
-                    </div>
-                </div>
-            </transition>
-        </div>
-
-        <!-- ========================================================================================= -->
-        <!-- VIEW 2: BACK-END ADMIN DASHBOARD (MUNCUL JIKA EMAIL = ADMIN)                              -->
-        <!-- ========================================================================================= -->
-        <div class="admin-scope admin-layout" v-else-if="appState === 'admin'" key="admin">
-            <div class="mobile-header">
-                <div style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">The Studio</div>
-                <button class="hamburger-btn" @click="toggleSidebar">☰</button>
-            </div>
-            <div class="app-wrapper">
-                <div class="sidebar-overlay" :class="{ open: isSidebarOpen }" @click="toggleSidebar"></div>
-                <div class="sidebar" :class="{ open: isSidebarOpen }">
-                    <div class="brand">The Studio<br><span style="font-size: 0.6rem; color: #767676;">Premium Backend</span></div>
-                    <div class="nav-link" :class="{ active: adminActiveTab === 'dashboard' }" @click="adminActiveTab = 'dashboard'">📊 Dashboard</div>
-                    <div class="nav-link" :class="{ active: ['products','categories','outlets'].includes(adminActiveTab) }" @click="adminActiveTab = 'products'">📦 Catalog Setup</div>
-                    <div class="nav-link" :class="{ active: adminActiveTab === 'orders' }" @click="adminActiveTab = 'orders'">🛒 Orders & Resi</div>
-                    <div class="nav-link" :class="{ active: adminActiveTab === 'promos' }" @click="adminActiveTab = 'promos'">🎫 Promo Codes</div>
-                    <div class="nav-link" :class="{ active: adminActiveTab === 'customers' }" @click="adminActiveTab = 'customers'">👥 Customers</div>
-                    <div style="flex: 1;"></div>
-                    <div class="nav-link" style="color: #FF8A80;" @click="handleLogout">🚪 Sign Out</div>
-                </div>
-                
-                <div class="main-content">
-                    
-                    <!-- TAB ADMIN: DASHBOARD ANALYTICS -->
-                    <div v-if="adminActiveTab === 'dashboard'">
-                        <div class="header">
-                            <h1 class="page-title">Executive Dashboard</h1>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Overview of your business performance.</p>
-                        </div>
-                        <div class="stat-grid" style="margin-top: 30px;">
-                            <div class="stat-box">
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Total Revenue</div>
-                                <div class="stat-value" style="color: var(--success-color);">Rp {{ formatPrice(dashboardStats.revenue) }}</div>
-                            </div>
-                            <div class="stat-box">
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Active Orders</div>
-                                <div class="stat-value">{{ dashboardStats.orders }}</div>
-                            </div>
-                            <div class="stat-box">
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Total Products</div>
-                                <div class="stat-value">{{ products.length }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB ADMIN: ORDERS & THERMAL PRINT -->
-                    <div v-if="adminActiveTab === 'orders'">
-                        <div class="header">
-                            <h1 class="page-title">Order Management</h1>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Process orders and print thermal shipping labels (100x150mm).</p>
-                        </div>
-                        <div class="admin-card">
-                            <div class="table-container">
-                                <table class="admin-table">
-                                    <thead><tr><th>Order ID</th><th>Customer</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        <tr v-for="order in allOrders" :key="order.id">
-                                            <td style="font-weight: 600; font-family: monospace;">#{{ order.id.slice(-6).toUpperCase() }}</td>
-                                            <td>
-                                                <div style="font-size: 0.85rem; font-weight: 600;">{{ order.customer.name }}</div>
-                                                <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ order.customer.phone }}</div>
-                                            </td>
-                                            <td style="font-weight: 600;">Rp {{ formatPrice(order.total) }}</td>
-                                            <td>
-                                                <select v-model="order.status" @change="updateOrderStatus(order.id, order.status)" style="padding: 4px; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border-color);">
-                                                    <option value="Pending">Pending</option>
-                                                    <option value="Processing">Processing</option>
-                                                    <option value="Shipped">Shipped</option>
-                                                    <option value="Delivered">Delivered</option>
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <button class="store-badge-premium" style="padding: 6px 12px; font-size: 0.75rem;" @click="printThermalLabel(order)">🖨️ Cetak Resi</button>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="allOrders.length === 0">
-                                            <td colspan="5" style="text-align: center; color: var(--text-secondary);">Belum ada pesanan masuk.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB ADMIN: PROMOS -->
-                    <div v-if="adminActiveTab === 'promos'">
-                        <div class="header">
-                            <h1 class="page-title">Voucher & Promos</h1>
-                        </div>
-                        <div class="form-grid">
-                            <div class="admin-card">
-                                <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Create Voucher</h2>
-                                <form @submit.prevent="savePromo">
-                                    <div class="form-group"><label>Promo Code</label><input type="text" v-model="promoForm.code" placeholder="Ex: STUDIO20" required style="text-transform: uppercase;"></div>
-                                    <div class="form-group"><label>Discount Nominal (Rp)</label><input type="number" v-model="promoForm.discount" required></div>
-                                    <button type="submit" class="admin-btn admin-btn-primary w-100" style="width: 100%;">Create Promo</button>
-                                </form>
-                            </div>
-                            <div class="admin-card">
-                                <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Active Promos</h2>
-                                <div class="table-container">
-                                    <table class="admin-table">
-                                        <thead><tr><th>Code</th><th>Discount</th><th>Action</th></tr></thead>
-                                        <tbody>
-                                            <tr v-for="p in promos" :key="p.id">
-                                                <td style="font-weight: bold; color: var(--success-color);">{{ p.code }}</td>
-                                                <td>Rp {{ formatPrice(p.discount) }}</td>
-                                                <td><button style="color: red; border: none; background: transparent; cursor: pointer;" @click="deletePromo(p.id)">Hapus</button></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB ADMIN: CATALOG SETUP -->
-                    <div v-if="['products', 'categories', 'outlets'].includes(adminActiveTab)">
-                        <div class="header">
-                            <h1 class="page-title">Catalog & Store Setup</h1>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Manage your products, categories, and outlets.</p>
-                        </div>
-                        <div class="tabs-nav">
-                            <button class="tab-btn" :class="{ active: adminActiveTab === 'products' }" @click="adminActiveTab = 'products'">Products Catalog</button>
-                            <button class="tab-btn" :class="{ active: adminActiveTab === 'categories' }" @click="adminActiveTab = 'categories'">Category Manager</button>
-                            <button class="tab-btn" :class="{ active: adminActiveTab === 'outlets' }" @click="adminActiveTab = 'outlets'">Outlets & Locations</button>
-                        </div>
-
-                        <!-- TAB ADMIN: PRODUCTS -->
-                        <div v-if="adminActiveTab === 'products'">
-                            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;" v-if="!showAddProductForm">
-                                <button class="admin-btn admin-btn-primary" @click="showAddProductForm = true">+ Create Product</button>
-                            </div>
-
-                            <div class="admin-card" v-if="showAddProductForm">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                                    <h2 style="font-size: 1.2rem;">New Product Entry</h2>
-                                    <button class="admin-btn admin-btn-outline" style="padding: 6px 12px;" @click="showAddProductForm = false">Discard</button>
-                                </div>
-                                <form @submit.prevent="saveProduct" @keydown.enter.prevent>
-                                    <h3 class="form-section-title">1. Basic Information</h3>
-                                    <div class="form-grid">
-                                        <div style="grid-column: 1;">
-                                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Product Images (Max 5)</label>
-                                            <div class="upload-area" @click="triggerFileInput" v-if="prodForm.images.length < 5">
-                                                <span style="font-size: 2rem;">📷</span>
-                                                <p style="margin-top: 10px; color: var(--text-secondary);">Tap to upload ({{ prodForm.images.length }}/5)</p>
-                                            </div>
-                                            <input type="file" id="file-upload" @change="handleImageUpload" accept="image/*" multiple style="display: none;">
-                                            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                                                <div v-for="(img, idx) in prodForm.images" :key="idx" style="position: relative; width: 60px; height: 60px; border-radius: 4px; border: 1px solid var(--border-color); background-size: cover; background-position: center;" :style="{ backgroundImage: 'url(' + img + ')' }">
-                                                    <button type="button" @click="removeImage(idx)" style="position: absolute; top: -5px; right: -5px; background: #D32F2F; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style="display: flex; flex-direction: column; justify-content: space-between;">
-                                            <div class="form-group" style="margin: 0;"><label>Product Name</label><input type="text" v-model="prodForm.name" required></div>
-                                            <div style="display: flex; gap: 10px; margin: 0;">
-                                                <div class="form-group" style="flex:1; margin:0;"><label>Base SKU Induk</label><input type="text" v-model="prodForm.baseSku" placeholder="Ex: TS-01" required></div>
-                                                <div class="form-group" style="flex:1; margin:0;"><label>Brand</label><input type="text" v-model="prodForm.brand"></div>
-                                            </div>
-                                            <div style="display: flex; gap: 10px; margin: 0;">
-                                                <div class="form-group" style="flex:1; margin:0;"><label>Harga Modal (IDR)</label><input type="number" v-model="prodForm.costPrice" placeholder="0"></div>
-                                                <div class="form-group" style="flex:1; margin:0;"><label>Harga Jual Base (IDR)</label><input type="number" v-model="prodForm.basePrice" required></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group full"><label>Link Eksternal / Marketplace (Opsional)</label><input type="url" v-model="prodForm.externalLink" placeholder="URL Shopee / Tokopedia..."></div>
-                                        <div class="form-group full" style="margin-top: 0;"><label>Product Description</label><textarea v-model="prodForm.description"></textarea></div>
-                                        <div class="form-group"><label>Material / Composition</label><input type="text" v-model="prodForm.material"></div>
-                                        <div class="form-group"><label>Care Instructions</label><input type="text" v-model="prodForm.care"></div>
-                                    </div>
-
-                                    <h3 class="form-section-title">2. Categorization</h3>
-                                    <div class="form-grid" style="background: #FAFAFA; padding: 20px; border: 1px solid var(--border-color); border-radius: 6px;">
-                                        <div class="form-group" style="margin: 0;"><label>Parent Category</label><select v-model="prodForm.parent" required><option value="">-- Select --</option><option v-for="(node, name) in categoryData" :value="name">{{ name }}</option></select></div>
-                                        <div class="form-group" style="margin: 0;" v-if="prodForm.parent"><label>Sub Category 1</label><select v-model="prodForm.sub1" required><option value="">-- Select --</option><option v-for="(node, name) in categoryData[prodForm.parent]" :value="name">{{ name }}</option></select></div>
-                                        <div class="form-group" style="margin: 0;" v-if="prodForm.sub1"><label>Sub Category 2</label><select v-model="prodForm.sub2" required><option value="">-- Select --</option><option v-for="item in categoryData[prodForm.parent][prodForm.sub1]" :value="item">{{ item }}</option></select></div>
-                                    </div>
-
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
-                                        <h3 class="form-section-title" style="margin: 0; border: none; padding: 0;">3. Multi-Variants</h3>
-                                        <button type="button" class="admin-btn admin-btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" @click="addVariantType" v-if="prodForm.variantTypes.length < 2">+ Add Variant Group</button>
-                                    </div>
-                                    <div style="background: #FAFAFA; padding: 20px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 20px;">
-                                        <div v-for="(vType, tIndex) in prodForm.variantTypes" :key="tIndex" class="variant-box">
-                                            <div style="width: 200px;"><label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Variant Type</label><input type="text" v-model="vType.name" placeholder="Name (Ex: Ukuran)..." @input="updateCombinations" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px;"></div>
-                                            <div style="flex: 1;"><label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Options (Koma / Enter)</label>
-                                                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                                                    <span class="chip" v-for="(opt, oIndex) in vType.options" :key="oIndex">{{ opt }} <span class="chip-remove" @click="removeOption(tIndex, oIndex)">×</span></span>
-                                                    <input type="text" placeholder="+ Ketik & Koma (,)" @keydown.enter.prevent="addOption(tIndex, $event)" @input="checkComma(tIndex, $event)" @blur="addOption(tIndex, $event)" style="width: 180px; padding: 6px 10px; border-radius: 30px; border: 1px solid var(--border-color);">
-                                                </div>
-                                            </div>
-                                            <button type="button" class="admin-btn-danger" style="margin-top: 25px;" @click="removeVariantType(tIndex)">🗑️</button>
-                                        </div>
-                                    </div>
-
-                                    <div v-if="prodForm.generatedVariants.length > 0" style="margin-bottom: 40px;">
-                                        <h4 style="font-size: 0.8rem; text-transform: uppercase; margin-bottom: 10px; color: var(--text-secondary);">4. Inventory & Pricing</h4>
-                                        <div class="table-container" style="border: 1px solid var(--border-color); border-radius: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                                            <table class="admin-table" style="margin: 0; min-width: 800px;">
-                                                <thead><tr><th>Combination</th><th>SKU Variant</th><th>Modal (HPP)</th><th>Harga Jual</th><th>Outlet</th><th width="80">Qty</th></tr></thead>
-                                                <tbody>
-                                                    <tr v-for="(item, index) in prodForm.generatedVariants" :key="index">
-                                                        <td style="font-weight: 600; font-size: 0.85rem;">{{ item.name === 'Default' ? 'Single Item' : item.name }}</td>
-                                                        <td><input type="text" v-model="item.sku" :placeholder="prodForm.baseSku ? prodForm.baseSku + '-' + (index+1) : 'SKU'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                        <td><input type="number" v-model="item.costPrice" :placeholder="prodForm.costPrice || '0'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                        <td><input type="number" v-model="item.price" :placeholder="prodForm.basePrice || '0'" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                        <td><select v-model="item.outlet" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"><option value="">-- Pilih Outlet --</option><option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }} ({{ o.type }})</option></select></td>
-                                                        <td><input type="number" v-model="item.stock" placeholder="0" style="padding: 8px; width: 100%; border: 1px solid var(--border-color);"></td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div style="border-top: 1px solid var(--border-color); padding-top: 20px; text-align: right;"><button type="submit" class="admin-btn admin-btn-primary" style="padding: 15px 40px; font-size: 1rem;">Publish Product</button></div>
-                                </form>
-                            </div>
-
-                            <div class="admin-card" v-else>
-                                <div class="table-container">
-                                    <table class="admin-table">
-                                        <thead><tr><th>Product Details</th><th>SKU / Modal</th><th>Variants & Stock</th><th>Link</th></tr></thead>
-                                        <tbody>
-                                            <tr v-for="(product, index) in products" :key="index">
-                                                <td>
-                                                    <div style="display: flex; gap: 10px; align-items: center;">
-                                                        <div v-if="product.images && product.images.length > 0" style="width: 40px; height: 40px; border-radius: 4px; background-size: cover; background-position: center;" :style="{ backgroundImage: 'url(' + product.images[0] + ')' }"></div>
-                                                        <div v-else style="width: 40px; height: 40px; background: var(--surface-light); border-radius: 4px;"></div>
-                                                        <div><div style="font-weight: 600;">{{ product.name }}</div><div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Jual: Rp {{ formatPrice(product.basePrice) }}</div></div>
-                                                    </div>
-                                                </td>
-                                                <td style="font-size: 0.8rem; color: var(--text-secondary);"><div style="color: var(--primary-black); font-weight: 600;">{{ product.baseSku || '-' }}</div><div style="margin-top: 4px;">Modal: Rp {{ formatPrice(product.costPrice) }}</div></td>
-                                                <td><span class="admin-badge">{{ product.generatedVariants ? product.generatedVariants.length : 1 }} Options</span><div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Total Qty: {{ calculateTotalStock(product.generatedVariants) }}</div></td>
-                                                <td><span v-if="product.externalLink" class="admin-badge" style="background: #E3F2FD; color: #1565C0;">Marketplace</span><span v-else class="admin-badge" style="background: #FFF3E0; color: #E65100;">Internal</span></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB ADMIN: CATEGORY MANAGER -->
-                        <div v-if="adminActiveTab === 'categories'">
-                            <div class="form-grid">
-                                <div class="admin-card">
-                                    <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Add New Category Path</h2>
-                                    <form @submit.prevent="addCategoryPath">
-                                        <div class="form-group">
-                                            <label>1. Parent Category</label>
-                                            <!-- SOLUSI: Menghapus error kompilasi v-if dan v-for -->
-                                            <input type="text" v-model="newCat.parent" list="parent-options" required>
-                                            <datalist id="parent-options">
-                                                <option v-for="(node, name) in categoryData" :key="name" :value="name"></option>
-                                            </datalist>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>2. Sub-Category 1</label>
-                                            <input type="text" v-model="newCat.sub1" list="sub1-options" required>
-                                            <datalist id="sub1-options">
-                                                <template v-if="newCat.parent && categoryData[newCat.parent]">
-                                                    <option v-for="(node, name) in categoryData[newCat.parent]" :key="name" :value="name"></option>
-                                                </template>
-                                            </datalist>
-                                        </div>
-                                        <div class="form-group"><label>3. Sub-Category 2</label><input type="text" v-model="newCat.sub2" required></div>
-                                        <button type="submit" class="admin-btn admin-btn-primary w-100" style="width: 100%;">Build & Save Category</button>
-                                    </form>
-                                </div>
-                                <div class="admin-card">
-                                    <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Current Store Structure</h2>
-                                    <div class="tree-container">
-                                        <div v-for="(sub1Data, parentName) in categoryData" :key="parentName" style="margin-bottom: 20px;">
-                                            <div class="tree-parent">📁 {{ parentName }}</div>
-                                            <div v-for="(sub2Data, sub1Name) in sub1Data" :key="sub1Name">
-                                                <div class="tree-sub1">📂 {{ sub1Name }}</div><div class="tree-sub2" v-for="item in sub2Data" :key="item">{{ item }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- TAB ADMIN: OUTLETS MANAGER -->
-                        <div v-if="adminActiveTab === 'outlets'">
-                            <div class="form-grid">
-                                <div class="admin-card">
-                                    <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Register New Outlet</h2>
-                                    <form @submit.prevent="saveOutlet">
-                                        <div class="form-group"><label>Outlet Name</label><input type="text" v-model="outletForm.name" placeholder="Ex: Gudang Jakarta..." required></div>
-                                        <div class="form-group"><label>Platform / Type</label>
-                                            <select v-model="outletForm.type" required><option value="Physical Store">Toko Fisik / Gudang</option><option value="Shopee">Shopee</option><option value="Tokopedia">Tokopedia</option><option value="TikTok Shop">TikTok Shop</option><option value="Website">Website Internal</option></select>
-                                        </div>
-                                        <button type="submit" class="admin-btn admin-btn-primary w-100" style="width: 100%;">Save Outlet</button>
-                                    </form>
-                                </div>
-                                <div class="admin-card">
-                                    <h2 style="font-size: 1.1rem; margin-bottom: 20px;">Registered Outlets</h2>
-                                    <div class="table-container">
-                                        <table class="admin-table">
-                                            <thead><tr><th>Outlet Name</th><th>Platform Type</th></tr></thead>
-                                            <tbody>
-                                                <tr v-for="(o, idx) in outlets" :key="idx"><td style="font-weight: 600;">{{ o.name }}</td><td><span class="admin-badge">{{ o.type }}</span></td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="toast" :class="{ show: toastMessage }">✓ {{ toastMessage }}</div>
-        </div>
-    </transition>
+<div id="app">
     
-    <!-- ========================================================================================= -->
-    <!-- HIDDEN PRINT AREA (THERMAL LABEL 100x150mm)                                               -->
-    <!-- ========================================================================================= -->
-    <div id="print-area" v-if="labelToPrint">
-        <div style="border: 2px solid #000; height: 100%; padding: 10px; display: flex; flex-direction: column;">
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
-                <h1 style="font-size: 18px; margin: 0;">THE STUDIO</h1>
-                <p style="font-size: 10px; margin: 2px 0 0;">Premium Web Order</p>
-            </div>
-            
-            <div style="flex: 1;">
-                <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">PENERIMA:</div>
-                <div style="font-size: 16px; font-weight: bold;">{{ labelToPrint.customer.name }}</div>
-                <div style="font-size: 14px; margin-bottom: 5px;">{{ labelToPrint.customer.phone }}</div>
-                <div style="font-size: 12px; line-height: 1.4; border: 1px solid #000; padding: 5px; margin-bottom: 15px; min-height: 50px;">
-                    {{ labelToPrint.customer.address }}
+    <!-- LOADING SCREEN -->
+    <div v-if="!isAppReady" class="auth-wrapper">
+        <div class="text-center">
+            <div class="spinner-border text-danger mb-3" style="width: 3rem; height: 3rem;"></div>
+            <h5 class="fw-bold text-muted">Memeriksa Akses...</h5>
+        </div>
+    </div>
+
+    <!-- AUTHENTICATION SCREEN -->
+    <div v-else-if="!isLoggedIn" class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-logo"><i class="bi bi-gem"></i></div>
+            <h4 class="text-center fw-bold mb-1">Quinsah ERP</h4>
+            <p class="text-center text-muted small mb-4">{{ authMode === 'login' ? 'Masuk ke sistem kasir' : (authMode === 'register' ? 'Buat akun karyawan baru' : 'Reset kata sandi Anda') }}</p>
+
+            <div v-if="authError" class="alert alert-danger py-2 small fw-semibold"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ authError }}</div>
+            <div v-if="authSuccess" class="alert alert-success py-2 small fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>{{ authSuccess }}</div>
+
+            <form @submit.prevent="handleAuthAction">
+                <div class="mb-3" v-if="authMode === 'register'"><label class="form-label small fw-bold text-muted">Nama Lengkap</label><input type="text" class="form-control" v-model="authUser.name" required></div>
+                <div class="mb-3"><label class="form-label small fw-bold text-muted">Email Address</label><input type="email" class="form-control" v-model="authUser.email" required></div>
+                <div class="mb-3" v-if="authMode !== 'forgot'">
+                    <div class="d-flex justify-content-between"><label class="form-label small fw-bold text-muted">Password</label><a href="#" class="small text-primary-custom text-decoration-none" v-if="authMode === 'login'" @click.prevent="authMode = 'forgot'">Lupa Password?</a></div>
+                    <input type="password" class="form-control" v-model="authUser.password" required>
                 </div>
-                
-                <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">DETAIL PESANAN:</div>
-                <table style="width: 100%; font-size: 11px; border-collapse: collapse; margin-bottom: 15px;">
-                    <tbody>
-                        <tr style="border-bottom: 1px solid #000;" v-for="(item, idx) in labelToPrint.items" :key="idx">
-                            <td style="padding: 2px 0;">{{ item.qty }}x</td>
-                            <td style="padding: 2px 0;">{{ item.name }}<br><small>{{ item.variantName }}</small></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div style="border-top: 2px solid #000; padding-top: 10px; text-align: center;">
-                <div style="font-family: monospace; font-size: 16px; letter-spacing: 2px; margin-bottom: 5px;">|||| ||||| ||| ||| ||||</div>
-                <div style="font-size: 12px; font-weight: bold;">ORDER: #{{ labelToPrint.id.slice(-8).toUpperCase() }}</div>
-                <div style="font-size: 10px; margin-top: 5px;">Printed on: {{ new Date().toLocaleDateString() }}</div>
+                <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
+                    <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
+                    <span v-else>{{ authMode === 'login' ? 'Masuk' : (authMode === 'register' ? 'Daftar Sekarang' : 'Kirim Link Reset') }}</span>
+                </button>
+            </form>
+
+            <div class="position-relative text-center my-3" v-if="authMode !== 'forgot'"><hr><span class="position-absolute top-50 start-50 translate-middle bg-white px-2 small text-muted">ATAU</span></div>
+            <button class="btn btn-google w-100 py-2 mb-3" @click="loginWithGoogle" v-if="authMode !== 'forgot'" :disabled="isProcessingAuth"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Lanjutkan dengan Google</button>
+            <div class="text-center small fw-semibold text-muted">
+                <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-primary-custom text-decoration-none" @click.prevent="authMode = 'register'">Daftar</a></span>
+                <span v-if="authMode === 'register' || authMode === 'forgot'">Sudah punya akun? <a href="#" class="text-primary-custom text-decoration-none" @click.prevent="authMode = 'login'">Masuk</a></span>
             </div>
         </div>
     </div>
 
+    <!-- MAIN ERP APPLICATION -->
+    <div v-else class="app-container d-print-none">
+        
+        <!-- Sidebar Navigation (Sistem Role Admin vs Karyawan) -->
+        <aside class="sidebar-left">
+            <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
+            <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'"><i class="bi bi-display"></i> POS</div>
+            <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="userRole === 'Admin'"><i class="bi bi-tags"></i> Catalog</div>
+            <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'"><i class="bi bi-people"></i> CRM</div>
+            <div class="nav-icon" :class="{'active': currentView === 'finance'}" @click="currentView = 'finance'" v-if="userRole === 'Admin'"><i class="bi bi-wallet2"></i> AR/AP</div>
+            <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="userRole === 'Admin'"><i class="bi bi-shop"></i> Outlets</div>
+            <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'"><i class="bi bi-receipt-cutoff"></i> Invoices</div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                <div>
+                    <h4 class="mb-0 fw-bold">{{ viewTitles[currentView] }}</h4>
+                    <span class="badge" :class="userRole === 'Admin' ? 'bg-danger' : 'bg-primary'">Akses: {{ userRole }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end d-none d-sm-block">
+                        <div class="fw-bold fs-6 lh-1">{{ userProfile.name || 'User' }}</div>
+                        <small class="text-success fw-bold" style="font-size: 0.75rem;"><i class="bi bi-cloud-check-fill me-1"></i>Online</small>
+                    </div>
+                    <button class="btn btn-sm btn-light border text-danger" @click="logout" title="Keluar / Logout"><i class="bi bi-box-arrow-right fw-bold fs-6"></i></button>
+                </div>
+            </header>
+
+            <!-- VIEW: POS KASIR -->
+            <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
+                <div class="search-bar-wrapper w-50 mb-4">
+                    <div class="input-group input-group-sm shadow-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama Produk / SKU..." v-model="searchQuery">
+                    </div>
+                </div>
+                <div class="row g-3 overflow-auto flex-grow-1 align-content-start pb-4">
+                    <div class="col-xl-3 col-lg-4 col-md-4 col-6" v-for="product in filteredProducts" :key="product.id">
+                        <div class="product-card" @click="openPosModifier(product)">
+                            <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" class="product-img">
+                            <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.85rem;">{{ product.name }}</h6>
+                            <div class="mb-2"><span class="sku-badge">{{ product.sku }}</span></div>
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <span class="text-primary-custom fw-bold" style="font-size: 0.85rem;">Rp {{ formatNumber(product.basePrice) }}</span>
+                                <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ product.variants?.length > 0 ? product.variants.length+' Varian' : product.baseStock+' Pcs' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: CATALOG (Kategori Pohon & Master Produk Full) -->
+            <div v-if="currentView === 'catalog' && userRole === 'Admin'">
+                <ul class="nav nav-pills mb-3 gap-2">
+                    <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Daftar Produk</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='categories', 'bg-primary-custom': catalogTab==='categories'}" href="#" @click.prevent="catalogTab='categories'">Hierarki Kategori</a></li>
+                </ul>
+
+                <div v-if="catalogTab==='products'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Master Produk Lengkap</h5>
+                        <button class="btn btn-sm btn-primary-custom px-3 py-2" @click="openAddProductModal"><i class="bi bi-plus-lg me-1"></i> Tambah Produk</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>SKU</th><th>Foto</th><th>Nama</th><th>Kategori Utama</th><th>Harga Dasar</th><th>Varian</th><th>Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="p in products" :key="p.id">
+                                    <td><span class="sku-badge">{{ p.sku }}</span></td>
+                                    <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="45" height="45" class="rounded object-fit-cover shadow-sm"></td>
+                                    <td class="fw-bold">{{ p.name }}</td>
+                                    <td><span class="badge bg-light text-secondary border">{{ getCategoryName(p.categoryId_L1) }}</span></td>
+                                    <td class="fw-semibold">Rp {{ formatNumber(p.basePrice) }}</td>
+                                    <td>{{ p.variants ? p.variants.length : 0 }} Tipe</td>
+                                    <td><button class="btn btn-sm btn-light border text-danger" @click="removeData('products', p.id)"><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAMPILAN POHON FAKTOR KATEGORI (VISUAL TREE YANG DIPERBAIKI) -->
+                <div v-if="catalogTab==='categories'">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold mb-0">Visualisasi Pohon Kategori</h5>
+                        <button class="btn btn-primary-custom px-3 py-2" @click="openAddCategoryModal('')"><i class="bi bi-folder-plus me-1"></i> Buat Kategori Induk Baru</button>
+                    </div>
+
+                    <div v-if="catLevel1.length === 0" class="text-muted text-center py-5 border rounded bg-white shadow-sm">
+                        <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>Belum ada struktur kategori yang dibuat.
+                    </div>
+
+                    <!-- Level 1 (Induk) -->
+                    <div v-for="l1 in catLevel1" :key="l1.id" class="tree-level-1">
+                        <div class="tree-header-1">
+                            <div class="fw-bold fs-6 text-primary-custom d-flex align-items-center"><i class="bi bi-folder-fill fs-5 me-2"></i>{{ l1.name }}</div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary py-1 px-3 me-2 fw-semibold" @click="openAddCategoryModal(l1.id)" title="Tambah Sub-Kategori ke dalam Induk Ini"><i class="bi bi-plus-lg"></i> Sub</button>
+                                <button class="btn btn-sm btn-light text-danger py-1 px-2 border" @click="removeData('categories', l1.id)"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                        
+                        <!-- Kontainer Anak agar padding rapi dan tidak nabrak border luar -->
+                        <div class="tree-children-container" v-if="getChildren(l1.id).length > 0">
+                            <!-- Level 2 (Sub 1) -->
+                            <div v-for="l2 in getChildren(l1.id)" :key="l2.id">
+                                <div class="tree-level-2">
+                                    <div class="fw-semibold text-dark"><i class="bi bi-arrow-return-right text-muted me-2"></i>{{ l2.name }}</div>
+                                    <div>
+                                        <button class="btn btn-sm btn-light border text-primary py-0 px-2 me-2" style="font-size: 0.75rem" @click="openAddCategoryModal(l2.id)"><i class="bi bi-plus"></i> Anak Sub</button>
+                                        <button class="btn btn-sm btn-light text-danger py-0 px-2" @click="removeData('categories', l2.id)"><i class="bi bi-trash"></i></button>
+                                    </div>
+                                </div>
+
+                                <!-- Level 3 (Sub 2) -->
+                                <div v-for="l3 in getChildren(l2.id)" :key="l3.id" class="tree-level-3">
+                                    <div class="small text-muted fw-medium"><i class="bi bi-dash me-2"></i>{{ l3.name }}</div>
+                                    <button class="btn btn-sm text-danger py-0 px-2" @click="removeData('categories', l3.id)"><i class="bi bi-x-circle"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VIEW: CRM -->
+            <div v-if="currentView === 'crm'">
+                <ul class="nav nav-pills mb-3 gap-2">
+                    <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='customers', 'bg-primary-custom': crmTab==='customers'}" href="#" @click.prevent="crmTab='customers'">Data Pelanggan</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='memberships', 'bg-primary-custom': crmTab==='memberships'}" href="#" @click.prevent="crmTab='memberships'">Tipe Membership</a></li>
+                </ul>
+                <div v-if="crmTab==='customers'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Database Pelanggan</h5>
+                        <button class="btn btn-sm btn-primary-custom px-3 py-2" data-bs-toggle="modal" data-bs-target="#addCustomerModal"><i class="bi bi-person-plus me-1"></i> Tambah Pelanggan</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Nama Lengkap</th><th>No. WhatsApp/HP</th><th>Membership</th><th>Diskon</th><th v-if="userRole === 'Admin'">Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="c in customers" :key="c.id">
+                                    <td class="fw-bold">{{ c.name }}</td><td>{{ c.phone }}</td>
+                                    <td><span class="badge bg-warning text-dark">{{ getMembershipName(c.membershipId) }}</span></td>
+                                    <td class="fw-bold text-success">{{ getMembershipDiscount(c.membershipId) }}%</td>
+                                    <td v-if="userRole === 'Admin'"><button class="btn btn-sm btn-light border text-danger" @click="removeData('customers', c.id)"><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div v-if="crmTab==='memberships'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Aturan Membership & Reward</h5>
+                        <button class="btn btn-sm btn-primary-custom px-3 py-2" data-bs-toggle="modal" data-bs-target="#addMembershipModal"><i class="bi bi-star me-1"></i> Tambah Tier</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Nama Tier Membership</th><th>Diskon Otomatis (%)</th><th v-if="userRole === 'Admin'">Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="m in memberships" :key="m.id">
+                                    <td class="fw-bold">{{ m.tierName }}</td><td class="text-success fw-bold">{{ m.discountPercent }}%</td>
+                                    <td v-if="userRole === 'Admin'"><button class="btn btn-sm btn-light border text-danger" @click="removeData('memberships', m.id)"><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: FINANCE -->
+            <div v-if="currentView === 'finance' && userRole === 'Admin'">
+                <div class="dashboard-card bg-light border-start border-4 border-warning mb-4">
+                    <div class="text-muted small fw-bold">TOTAL PIUTANG (AR)</div><h3 class="text-warning mb-0 fw-bold">Rp 0</h3>
+                </div>
+            </div>
+
+            <!-- VIEW: OUTLETS -->
+            <div v-if="currentView === 'outlets' && userRole === 'Admin'">
+                <div class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Manajemen Lokasi Outlet</h5>
+                        <button class="btn btn-sm btn-primary-custom px-3 py-2" data-bs-toggle="modal" data-bs-target="#addOutletModal"><i class="bi bi-shop me-1"></i> Tambah Outlet</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Kode</th><th>Nama Outlet</th><th>Lokasi Kota/Alamat</th><th>Aksi</th></tr></thead>
+                            <tbody><tr v-for="o in outlets" :key="o.id"><td><span class="badge bg-dark">{{ o.code }}</span></td><td class="fw-bold">{{ o.name }}</td><td>{{ o.location }}</td><td><button class="btn btn-sm btn-light border text-danger" @click="removeData('outlets', o.id)"><i class="bi bi-trash"></i></button></td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: INVOICES -->
+            <div v-if="currentView === 'reports'">
+                <div class="dashboard-card">
+                    <h5 class="fw-bold mb-4">Riwayat Transaksi Cloud</h5>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>No. Invoice</th><th>Waktu</th><th>Total Pembayaran</th><th>Kasir Bertugas</th><th>Print Dokumen</th></tr></thead>
+                            <tbody>
+                                <tr v-for="trx in transactions" :key="trx.id">
+                                    <td class="fw-bold text-primary-custom">{{ trx.id }}</td><td>{{ trx.time }}</td>
+                                    <td class="fw-bold">Rp {{ formatNumber(trx.total) }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ trx.cashierName || 'Kasir' }}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary me-1 py-1" @click="triggerPrint(trx, 'receipt')"><i class="bi bi-receipt"></i> Struk</button>
+                                        <button class="btn btn-sm btn-primary-custom py-1" @click="triggerPrint(trx, 'label')"><i class="bi bi-box"></i> Resi</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR (KERANJANG OFFCANVAS MOBILE) -->
+        <aside class="sidebar-right" :class="{'show-mobile': isMobileCartOpen}" v-show="currentView === 'pos'">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Keranjang</h5>
+                <div>
+                    <button class="btn btn-sm btn-light text-danger border" @click="cart=[]" :disabled="cart.length===0"><i class="bi bi-trash"></i> Bersihkan</button>
+                    <button class="btn btn-sm btn-light border d-lg-none ms-2" @click="isMobileCartOpen = false"><i class="bi bi-x-lg text-dark"></i> Tutup</button>
+                </div>
+            </div>
+            
+            <div class="mb-3 border-bottom pb-3">
+                <label class="form-label text-muted small fw-bold mb-1">Pilih Pelanggan</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                    <select class="form-select fw-semibold" v-model="selectedCustomer">
+                        <option v-for="cust in customers" :value="cust">{{ cust.name }}</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex-grow-1 overflow-auto pe-1 mb-3">
+                <div v-if="cart.length===0" class="text-center text-muted mt-5 py-5"><i class="bi bi-bag fs-1 mb-2 d-block"></i>Kosong.</div>
+                <div class="product-card p-3 mb-2" v-for="item in cart" :key="item.cartId" style="height: auto; box-shadow: none;">
+                    <div class="d-flex justify-content-between mb-1">
+                        <div class="fw-bold" style="font-size: 0.9rem;">{{ item.name }}</div>
+                        <div class="fw-bold text-primary-custom" style="font-size: 0.9rem;">Rp {{ formatNumber(item.price * item.qty) }}</div>
+                    </div>
+                    <div class="text-muted mb-2" style="font-size: 0.75rem;">
+                        <span v-if="item.selectedType">Tipe: {{ item.selectedType }}<br></span>
+                        <span v-if="item.selectedColor">Warna: {{ item.selectedColor }} | Ukuran: {{ item.selectedSize }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="text-muted" style="font-size: 0.8rem;">@ Rp {{ formatNumber(item.price) }}</span>
+                        <div class="d-flex align-items-center bg-light border px-1 rounded">
+                            <button class="btn btn-sm p-0 px-2 border-0 fw-bold" @click="updateQty(item.cartId, -1)">-</button>
+                            <span class="px-2 fw-bold" style="font-size: 0.85rem;">{{ item.qty }}</span>
+                            <button class="btn btn-sm p-0 px-2 border-0 fw-bold" @click="updateQty(item.cartId, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-auto border-top pt-3">
+                <div class="d-flex justify-content-between mb-1 small text-muted fw-semibold"><span>Subtotal</span><span>Rp {{ formatNumber(subtotal) }}</span></div>
+                <div class="d-flex justify-content-between mb-2 small text-success fw-bold" v-if="discountAmount > 0">
+                    <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer?.membershipId) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 mt-2 border-top pt-2">
+                    <span class="fw-bold fs-5">Total</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
+                </div>
+                <button class="btn bg-primary-custom w-100 py-3 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || isProcessing">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="bi bi-cash fs-5 me-2"></i> BAYAR SEKARANG</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- TOMBOL FAB MOBILE -->
+        <button class="mobile-fab-cart d-lg-none" v-if="currentView === 'pos' && totalQty > 0 && !isMobileCartOpen" @click="isMobileCartOpen = true">
+            <i class="bi bi-bag-check-fill me-2 fs-5"></i> Checkout ({{ totalQty }} Pcs)
+        </button>
+
+        <!-- ==================================================
+             MODALS: UI/UX DISEMPURNAKAN DGN ILUSTRASI & ICON FORM
+             ================================================== -->
+
+        <!-- MODAL: ADD KATEGORI (HIERARKI) -->
+        <div class="modal fade" id="addCategoryModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">Penambahan Kategori</h5><button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body bg-white p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nama Kategori</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-folder text-muted"></i></span>
+                                <input type="text" class="form-control" v-model="formCategory.name" placeholder="Misal: Atasan, Kemeja, dll">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Posisi dalam Hierarki (Induk)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-diagram-3 text-muted"></i></span>
+                                <select class="form-select" v-model="formCategory.parentId">
+                                    <option value="">-- Kategori Utama (Paling Atas) --</option>
+                                    <option v-for="cat in categories" :value="cat.id">{{ cat.name }} (Lvl {{ cat.level }})</option>
+                                </select>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.7rem;">Pilih Kategori Utama jika ingin menjadikannya struktur teratas.</small>
+                        </div>
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveCategory">Simpan Konfigurasi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: ADD PRODUCT -->
+        <div class="modal fade" id="addProductModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom"><h5 class="modal-title fw-bold">Formulir Pendaftaran Produk</h5><button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body bg-white p-4" style="max-height: 75vh; overflow-y: auto;">
+                        <div class="row g-3">
+                            <div class="col-md-4"><label class="form-label small fw-bold text-muted">SKU Barcode</label><input type="text" class="form-control" v-model="formProduct.sku" placeholder="ex: QS-01"></div>
+                            <div class="col-md-8"><label class="form-label small fw-bold text-muted">Nama Lengkap Produk</label><input type="text" class="form-control" v-model="formProduct.name" placeholder="ex: Gamis Quinsah Premium"></div>
+                            
+                            <!-- Hierarki Kategori -->
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">Kategori Lvl 1</label>
+                                <select class="form-select" v-model="formProduct.categoryId_L1"><option value="">Pilih Utama</option><option v-for="cat in catLevel1" :value="cat.id">{{ cat.name }}</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">Sub-Kategori 1</label>
+                                <select class="form-select" v-model="formProduct.categoryId_L2" :disabled="!formProduct.categoryId_L1"><option value="">Pilih Sub 1</option><option v-for="cat in catLevel2" :value="cat.id">{{ cat.name }}</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-muted">Sub-Kategori 2</label>
+                                <select class="form-select" v-model="formProduct.categoryId_L3" :disabled="!formProduct.categoryId_L2"><option value="">Pilih Sub 2</option><option v-for="cat in catLevel3" :value="cat.id">{{ cat.name }}</option></select>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold text-muted">Foto Visual Produk (Otomatis Kompres)</label>
+                                <input type="file" class="form-control" accept="image/*" @change="handleImageUpload">
+                                <div v-if="formProduct.imageBase64" class="mt-2 text-success small"><i class="bi bi-check-circle-fill"></i> Selesai dikompres dan siap dikirim.</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">Harga Dasar (Rp)</label>
+                                <div class="input-group"><span class="input-group-text bg-light">Rp</span><input type="number" class="form-control" v-model.number="formProduct.basePrice"></div>
+                            </div>
+                            <div class="col-md-6"><label class="form-label small fw-bold text-muted">Stok Total (Abaikan jika ada Varian)</label><input type="number" class="form-control" v-model.number="formProduct.baseStock" :disabled="formProduct.variants.length > 0"></div>
+
+                            <div class="col-12 mt-4 pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h6 class="fw-bold text-primary-custom mb-0">MATRIKS VARIAN PRODUK</h6>
+                                        <small class="text-muted">Buat kombinasi Tipe, Warna, dan Ukuran untuk manajemen stok presisi.</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary fw-semibold" @click="addVariantRow"><i class="bi bi-plus-lg"></i> Baris Varian</button>
+                                </div>
+                                <div class="row g-2 mb-2 align-items-center" v-for="(v, index) in formProduct.variants" :key="index">
+                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Tipe (Baju)" v-model="v.type"></div>
+                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Warna (Navy)" v-model="v.color"></div>
+                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Ukuran (XL)" v-model="v.size"></div>
+                                    <div class="col-2"><input type="number" class="form-control form-control-sm" placeholder="Stok" v-model.number="v.stock"></div>
+                                    <div class="col-1 text-end"><button class="btn btn-sm btn-light text-danger border" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-trash"></i></button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-top"><button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveProduct">Simpan ke Katalog Cloud</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: ADD MEMBERSHIP (DI PERBAGUS) -->
+        <div class="modal fade" id="addMembershipModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-body p-4 bg-white">
+                        <div class="text-center mb-4">
+                            <div class="modal-icon-header bg-light text-warning shadow-sm"><i class="bi bi-award-fill"></i></div>
+                            <h5 class="fw-bold mb-1">Buat Tier Membership</h5>
+                            <small class="text-muted">Tentukan tingkatan loyalitas dan potongan otomatis yang akan didapatkan.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nama Kelas / Tier</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-tags text-muted"></i></span>
+                                <input type="text" class="form-control" v-model="formMembership.tierName" placeholder="Contoh: VIP Gold, Platinum">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Besaran Diskon (%)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" v-model.number="formMembership.discountPercent" placeholder="Contoh: 15">
+                                <span class="input-group-text bg-light"><i class="bi bi-percent text-muted"></i></span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light border flex-grow-1 fw-bold" data-bs-dismiss="modal">Batal</button>
+                            <button class="btn btn-primary-custom flex-grow-1 fw-bold" @click="saveMembership">Simpan Aturan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODAL: ADD CUSTOMER (DI PERBAGUS) -->
+        <div class="modal fade" id="addCustomerModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-body p-4 bg-white">
+                        <div class="text-center mb-4">
+                            <div class="modal-icon-header bg-light text-primary-custom shadow-sm"><i class="bi bi-person-heart"></i></div>
+                            <h5 class="fw-bold mb-1">Registrasi Pelanggan</h5>
+                            <small class="text-muted">Data akan tersimpan di cloud untuk riwayat transaksi kasir.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nama Lengkap</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-person text-muted"></i></span>
+                                <input type="text" class="form-control" v-model="formCustomer.name" placeholder="Masukkan nama pelanggan">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nomor Kontak (WhatsApp)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-whatsapp text-success"></i></span>
+                                <input type="text" class="form-control" v-model="formCustomer.phone" placeholder="08123456789">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Tautkan ke Program Loyalitas</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-star text-warning"></i></span>
+                                <select class="form-select" v-model="formCustomer.membershipId">
+                                    <option value="">Status Reguler (Tanpa Diskon)</option>
+                                    <option v-for="m in memberships" :value="m.id">{{ m.tierName }} (Diskon {{ m.discountPercent }}%)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light border flex-grow-1 fw-bold" data-bs-dismiss="modal">Tutup</button>
+                            <button class="btn btn-primary-custom flex-grow-1 fw-bold" @click="saveCustomer">Simpan Profil</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODAL: ADD OUTLET (DI PERBAGUS) -->
+        <div class="modal fade" id="addOutletModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-body p-4 bg-white">
+                        <div class="text-center mb-4">
+                            <div class="modal-icon-header bg-light text-success shadow-sm"><i class="bi bi-shop-window"></i></div>
+                            <h5 class="fw-bold mb-1">Registrasi Cabang / Outlet</h5>
+                            <small class="text-muted">Kelola titik penjualan untuk distribusi produk Quinsah.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Kode Registrasi Toko</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-upc-scan text-muted"></i></span>
+                                <input type="text" class="form-control" v-model="formOutlet.code" placeholder="Contoh: JKT-01">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nama Resmi Outlet</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-shop text-muted"></i></span>
+                                <input type="text" class="form-control" v-model="formOutlet.name" placeholder="Contoh: Quinsah Cabang Sudirman">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted">Alamat / Lokasi Geografis</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-geo-alt text-danger"></i></span>
+                                <input type="text" class="form-control" v-model="formOutlet.location" placeholder="Kota atau Alamat Lengkap">
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light border flex-grow-1 fw-bold" data-bs-dismiss="modal">Kembali</button>
+                            <button class="btn btn-primary-custom flex-grow-1 fw-bold" @click="saveOutlet">Aktifkan Cabang</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POS MODIFIER (Pilih Varian saat Kasir) -->
+        <div class="modal fade" id="posModifierModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom"><h6 class="modal-title fw-bold">{{ activeProduct?.name }}</h6><button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body bg-white text-center" v-if="!hasVariants">
+                        <p class="text-muted small">Produk ini tidak memiliki filter varian.</p>
+                        <button type="button" class="btn btn-primary-custom w-100 fw-bold py-2" @click="addToCart(null)">Langsung Masukkan Keranjang</button>
+                    </div>
+                    <div class="modal-body bg-white" v-else>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Pilih Tipe</label>
+                            <select class="form-select" v-model="posSelection.type" @change="posSelection.color=''; posSelection.size=''"><option value="">-- Tipe --</option><option v-for="t in availablePosTypes" :value="t">{{ t }}</option></select>
+                        </div>
+                        <div class="mb-3" v-if="posSelection.type">
+                            <label class="form-label small fw-bold text-muted">Pilih Warna</label>
+                            <select class="form-select" v-model="posSelection.color" @change="posSelection.size=''"><option value="">-- Warna --</option><option v-for="c in availablePosColors" :value="c">{{ c }}</option></select>
+                        </div>
+                        <div class="mb-4" v-if="posSelection.color">
+                            <label class="form-label small fw-bold text-muted">Pilih Ukuran (Cek Stok)</label>
+                            <select class="form-select" v-model="posSelection.size"><option value="">-- Ukuran --</option><option v-for="s in availablePosSizes" :value="s.size">{{ s.size }} (Stok sisa: {{ s.stock }})</option></select>
+                        </div>
+                        <button type="button" class="btn btn-primary-custom w-100 fw-bold py-2" @click="addToCart(true)" :disabled="!posSelection.size">Tambahkan ke Keranjang</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAYMENT MODAL -->
+        <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-body text-center py-4 px-4 bg-white">
+                        <div class="bg-light rounded-circle d-inline-flex p-3 mb-3 text-success"><i class="bi bi-wallet2 fs-2"></i></div>
+                        <p class="text-muted mb-1 fw-semibold">Total Nilai Transaksi</p>
+                        <h2 class="text-primary-custom fw-bold mb-4 border-bottom pb-3">Rp {{ formatNumber(total) }}</h2>
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing"><span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Setujui & Cetak Resi</span></button>
+                        <button class="btn btn-white border w-100 fw-bold py-2" data-bs-dismiss="modal" :disabled="isProcessing">Batalkan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- End App Container -->
+</div> <!-- End Vue App -->
+
+<!-- PRINT SECTIONS (Hidden on Web) -->
+<div id="print-section" :class="printMode === 'receipt' ? 'mode-receipt' : 'mode-label'">
+    <div v-if="printMode === 'receipt'">
+        <div style="text-align:center; font-weight:bold; font-size:16px;">QUINSAH COLLECTION</div><div class="print-divider"></div>
+        <div>Inv: {{ activePrintData?.id }} | Tgl: {{ activePrintData?.time }}</div><div>Kasir: {{ activePrintData?.cashierName }}</div><div class="print-divider"></div>
+        <div v-for="i in activePrintData?.items" :key="i.cartId" style="margin-bottom:5px;">
+            <b>{{ i.name }}</b> <span style="font-size:10px;">{{ i.selectedColor ? `(${i.selectedType}-${i.selectedColor}-${i.selectedSize})` : '' }}</span>
+            <div style="display:flex; justify-content:space-between;"><span>{{ i.qty }}x Rp{{ formatNumber(i.price) }}</span><span>Rp{{ formatNumber(i.qty*i.price) }}</span></div>
+        </div>
+        <div class="print-divider"></div><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span><span>Rp{{ formatNumber(activePrintData?.total || 0) }}</span></div>
+    </div>
+    <div v-if="printMode === 'label'">
+        <div style="font-size:18px; font-weight:bold; border-bottom:2px solid #000; margin-bottom:10px;">SHIPPING LABEL / PAKET</div>
+        <div><b>TUJUAN (PENERIMA):</b><br><span style="font-size:16px; font-weight:bold;">{{ activePrintData?.customer }}</span></div>
+        <div class="label-barcode"></div><div style="font-size:10px; text-align:center;">*{{ activePrintData?.id }}*</div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Firebase Modules -->
 <script type="module">
-    import { createApp, ref, reactive, onMounted, watch, computed } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
-    // SOLUSI: Menambahkan fungsi deleteDoc yang tertinggal
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4",
-        authDomain: "quinsahcollection-36926.firebaseapp.com",
-        projectId: "quinsahcollection-36926",
-        storageBucket: "quinsahcollection-36926.firebasestorage.app",
-        messagingSenderId: "496825899922",
-        appId: "1:496825899922:web:c73fd178a406918e22ff4b"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const { createApp } = Vue;
 
     createApp({
-        setup() {
-            // STATE UMUM
-            const appState = ref('store'); 
-            const isLoginMode = ref(true);
-            const authLoading = ref(false);
-            const authForm = reactive({ email: '', password: '' });
-            const userEmail = ref(''); 
-            const storeTab = ref('Home');
-            const profileTab = ref('orders'); 
-            const isLoadingStore = ref(true);
-            const toastMessage = ref('');
-            const stories = ref([{ id: 1, title: 'New In' }, { id: 2, title: 'Essentials' }, { id: 3, title: 'Knitwear' }, { id: 4, title: 'Editorial' }]);
-            const showToast = (msg) => { toastMessage.value = msg; setTimeout(() => { toastMessage.value = '' }, 3000) }
-
-            // DATA PRODUK & KATEGORI
-            const products = ref([]);
-            const categoryData = reactive({ 'Apparel': { 'Outerwear': ['Blazers', 'Coats'], 'Bottoms': ['Trousers'] } });
-            
-            // FILTER KATEGORI FRONTEND
-            const activeCategory = ref('All');
-            const availableCategories = computed(() => {
-                const cats = new Set();
-                products.value.forEach(p => { if(p.sub1) cats.add(p.sub1); });
-                return Array.from(cats);
-            });
-            const filteredProducts = computed(() => {
-                if(activeCategory.value === 'All') return products.value;
-                return products.value.filter(p => p.sub1 === activeCategory.value || p.parent === activeCategory.value);
-            });
-            const filterCategory = (cat) => { activeCategory.value = cat; };
-
-            // KERANJANG & CHECKOUT
-            const cart = ref([]);
-            const isCartOpen = ref(false);
-            const checkoutForm = reactive({ name: '', phone: '', address: '', promoCode: '' });
-            const promoApplied = ref(false);
-            const discountAmount = ref(0);
-            
-            const cartTotalItems = computed(() => cart.value.reduce((sum, item) => sum + item.qty, 0));
-            const cartSubtotal = computed(() => cart.value.reduce((sum, item) => sum + (item.price * item.qty), 0));
-            const cartTotal = computed(() => Math.max(0, cartSubtotal.value - discountAmount.value));
-
-            const handleAddToCart = (product, variant) => {
-                if(product.externalLink) { window.open(product.externalLink, '_blank'); return; }
-                
-                const variantName = variant ? variant.name : 'Default';
-                const price = variant && variant.price ? variant.price : product.basePrice;
-                const img = product.images && product.images.length > 0 ? product.images[0] : null;
-                
-                const existingIndex = cart.value.findIndex(item => item.productId === product.id && item.variantName === variantName);
-                if (existingIndex > -1) {
-                    cart.value[existingIndex].qty++;
-                } else {
-                    cart.value.push({ productId: product.id, name: product.name, variantName, price, qty: 1, image: img });
-                }
-                showToast("Berhasil ditambahkan ke keranjang!");
-                selectedProduct.value = null; selectedVariant.value = null;
-            };
-
-            const updateCartQty = (index, delta) => {
-                cart.value[index].qty += delta;
-                if(cart.value[index].qty <= 0) cart.value.splice(index, 1);
-            };
-
-            const applyPromo = () => {
-                const validPromo = promos.value.find(p => p.code.toUpperCase() === checkoutForm.promoCode.toUpperCase());
-                if(validPromo) {
-                    promoApplied.value = true; discountAmount.value = validPromo.discount;
-                } else {
-                    alert("Kode promo tidak valid."); promoApplied.value = false; discountAmount.value = 0;
-                }
-            };
-
-            const processCheckout = async () => {
-                if(!checkoutForm.name || !checkoutForm.phone || !checkoutForm.address) { alert("Lengkapi data pengiriman."); return; }
-                if(!userEmail.value) { alert("Silakan Sign In terlebih dahulu di menu Profile untuk memesan."); isCartOpen.value = false; storeTab.value = 'Profile'; return; }
-                
-                try {
-                    const orderData = {
-                        customerEmail: userEmail.value,
-                        customer: { name: checkoutForm.name, phone: checkoutForm.phone, address: checkoutForm.address },
-                        items: cart.value,
-                        subtotal: cartSubtotal.value, discount: discountAmount.value, total: cartTotal.value,
-                        status: 'Pending', createdAt: new Date().toISOString()
-                    };
-                    await addDoc(collection(db, "orders"), orderData);
-                    showToast("Pesanan Berhasil Dibuat!");
-                    cart.value = []; isCartOpen.value = false;
-                    Object.assign(checkoutForm, { name: '', phone: '', address: '', promoCode: '' }); discountAmount.value = 0; promoApplied.value = false;
-                    await fetchOrders(); 
-                    storeTab.value = 'Profile'; profileTab.value = 'orders';
-                } catch(e) { console.error(e); alert("Gagal membuat pesanan."); }
-            };
-
-            // WISHLIST
-            const wishlist = ref([]);
-            const toggleWishlist = (id) => {
-                if(wishlist.value.includes(id)) { wishlist.value = wishlist.value.filter(item => item !== id); } 
-                else { wishlist.value.push(id); }
-            };
-
-            // STATE ADMIN
-            const adminActiveTab = ref('dashboard');
-            const showAddProductForm = ref(false);
-            const isSidebarOpen = ref(false);
-            const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value }
-            
-            const outlets = ref([]);
-            const outletForm = reactive({ name: '', type: 'Physical Store' });
-            
-            const promos = ref([]);
-            const promoForm = reactive({ code: '', discount: '' });
-            
-            const allOrders = ref([]);
-            const myOrders = computed(() => allOrders.value.filter(o => o.customerEmail === userEmail.value));
-            const dashboardStats = computed(() => {
-                const totalRev = allOrders.value.reduce((sum, o) => sum + o.total, 0);
-                return { revenue: totalRev, orders: allOrders.value.length };
-            });
-
-            // CETAK RESI THERMAL
-            const labelToPrint = ref(null);
-            const printThermalLabel = (order) => {
-                labelToPrint.value = order;
-                setTimeout(() => { window.print(); labelToPrint.value = null; }, 500);
-            };
-
-            // FORM PRODUK
-            const selectedProduct = ref(null);
-            const selectedVariant = ref(null);
-            const viewProduct = (product) => { selectedProduct.value = product; selectedVariant.value = null; };
-            const newCat = reactive({ parent: '', sub1: '', sub2: '' });
-            const prodForm = reactive({ name: '', brand: '', baseSku: '', costPrice: '', basePrice: '', externalLink: '', description: '', material: '', care: '', parent: '', sub1: '', sub2: '', variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }], images: [] });
-
-            // FETCH FIREBASE
-            const fetchProducts = async () => {
-                isLoadingStore.value = true;
-                try {
-                    const qs = await getDocs(collection(db, "products"));
-                    const fetched = []; qs.forEach((doc) => { fetched.push({ id: doc.id, ...doc.data() }); });
-                    products.value = fetched;
-                } catch (e) { console.error(e); } finally { isLoadingStore.value = false; }
-            };
-
-            const fetchCategories = async () => {
-                try {
-                    const docSnap = await getDoc(doc(db, "settings", "categories"));
-                    if (docSnap.exists()) { Object.keys(categoryData).forEach(k => delete categoryData[k]); Object.assign(categoryData, docSnap.data()); } 
-                    else { await setDoc(doc(db, "settings", "categories"), categoryData); } // SOLUSI: docRef diperbaiki
-                } catch (e) { console.error(e); }
-            };
-
-            const fetchOutlets = async () => {
-                try {
-                    const qs = await getDocs(collection(db, "outlets"));
-                    const fetched = []; qs.forEach((doc) => { fetched.push({ id: doc.id, ...doc.data() }); });
-                    outlets.value = fetched;
-                } catch (e) { console.error(e); }
-            };
-
-            const fetchOrders = async () => {
-                try {
-                    const qs = await getDocs(collection(db, "orders"));
-                    const fetched = []; qs.forEach((doc) => { fetched.push({ id: doc.id, ...doc.data() }); });
-                    allOrders.value = fetched.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                } catch (e) { console.error(e); }
-            };
-
-            const fetchPromos = async () => {
-                try {
-                    const qs = await getDocs(collection(db, "promos"));
-                    const fetched = []; qs.forEach((doc) => { fetched.push({ id: doc.id, ...doc.data() }); });
-                    promos.value = fetched;
-                } catch (e) { console.error(e); }
-            };
-
-            // SIMPAN DATA ADMIN
-            const updateOrderStatus = async (orderId, newStatus) => {
-                try { await updateDoc(doc(db, "orders", orderId), { status: newStatus }); showToast("Status Pesanan Diperbarui."); } 
-                catch(e) { console.error(e); }
-            };
-
-            const savePromo = async () => {
-                try {
-                    const docRef = await addDoc(collection(db, "promos"), { ...promoForm });
-                    promos.value.push({ id: docRef.id, ...promoForm });
-                    promoForm.code = ''; promoForm.discount = ''; showToast('Promo Ditambahkan!');
-                } catch(e) { console.error(e); }
-            };
-
-            // SOLUSI: Fungsi hapus promo yang tertinggal
-            const deletePromo = async (id) => {
-                try {
-                    await deleteDoc(doc(db, "promos", id));
-                    promos.value = promos.value.filter(p => p.id !== id);
-                    showToast("Promo berhasil dihapus.");
-                } catch(e) { console.error(e); }
-            };
-
-            const saveOutlet = async () => {
-                try {
-                    const docRef = await addDoc(collection(db, "outlets"), { ...outletForm });
-                    outlets.value.push({ id: docRef.id, ...outletForm });
-                    showToast('Outlet disimpan!'); outletForm.name = ''; outletForm.type = 'Physical Store';
-                } catch(e) { showToast('Gagal menyimpan Outlet.'); }
-            };
-
-            // AUTH
-            const handleAuth = async () => {
-                authLoading.value = true;
-                try {
-                    if (isLoginMode.value) { await signInWithEmailAndPassword(auth, authForm.email, authForm.password); } 
-                    else { await createUserWithEmailAndPassword(auth, authForm.email, authForm.password); }
-                    authForm.password = ''; 
-                } catch (error) { alert("Akses Gagal: Cek kembali email & password Anda."); } 
-                finally { authLoading.value = false; }
-            };
-
-            const handleLogout = async () => { await signOut(auth); appState.value = 'store'; storeTab.value='Home'; };
-
-            onMounted(async () => {
-                await Promise.all([fetchProducts(), fetchCategories(), fetchOutlets(), fetchOrders(), fetchPromos()]);
-                
-                if (products.value.length === 0) {
-                    products.value = [
-                        { id: '1', name: 'The Signature Knit', brand: 'The Studio', baseSku: 'TS-01', basePrice: 1250000, parent: 'Apparel', sub1: 'Knitwear', images: [] },
-                        { id: '2', name: 'Tailored Trousers', brand: 'The Studio', baseSku: 'TS-02', basePrice: 850000, externalLink: 'https://shopee.co.id', parent: 'Apparel', sub1: 'Bottoms', images: [] }
-                    ];
-                }
-
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userEmail.value = user.email;
-                        if (user.email === 'admin@thestudio.com') { appState.value = 'admin'; adminActiveTab.value = 'dashboard'; } 
-                        else { appState.value = 'store'; }
-                    } else { userEmail.value = ''; appState.value = 'store'; }
-                });
-            });
-
-            // UPLOAD IMAGE & COMPRESS
-            const triggerFileInput = () => { document.getElementById('file-upload').click(); };
-            const compressImage = (file) => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader(); reader.readAsDataURL(file);
-                    reader.onload = (e) => {
-                        const img = new Image(); img.src = e.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 600; let scaleSize = 1;
-                            if(img.width > MAX_WIDTH) { scaleSize = MAX_WIDTH / img.width; }
-                            canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
-                            const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.6));
-                        }
-                    }
-                });
-            };
-            const handleImageUpload = async (event) => {
-                const files = Array.from(event.target.files);
-                if (prodForm.images.length + files.length > 5) { alert("Maksimal 5 foto per produk!"); return; }
-                for (let file of files) { const b64 = await compressImage(file); if(b64) prodForm.images.push(b64); }
-                event.target.value = ''; 
-            };
-            const removeImage = (idx) => { prodForm.images.splice(idx, 1); };
-
-            // SAVE PRODUCT & VARIANTS
-            const saveProduct = async () => {
-                try {
-                    const newProductData = JSON.parse(JSON.stringify(prodForm));
-                    newProductData.createdAt = new Date().toISOString();
-                    const docRef = await addDoc(collection(db, "products"), newProductData);
-                    if (products.value[0]?.id?.includes('demo')) { products.value = []; }
-                    products.value.unshift({ id: docRef.id, ...newProductData });
-                    showToast('Product successfully published!');
-                    showAddProductForm.value = false;
-                    Object.assign(prodForm, { name: '', brand: '', baseSku: '', costPrice: '', basePrice: '', externalLink: '', description: '', material: '', care: '', parent: '', sub1: '', sub2: '', variantTypes: [], generatedVariants: [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }], images: [] });
-                } catch (e) { showToast('Error saving to Database! Coba kecilkan/hapus foto.'); }
-            };
-
-            const addCategoryPath = async () => {
-                const { parent, sub1, sub2 } = newCat;
-                if(!categoryData[parent]) categoryData[parent] = {};
-                if(!categoryData[parent][sub1]) categoryData[parent][sub1] = [];
-                if(!categoryData[parent][sub1].includes(sub2)) {
-                    categoryData[parent][sub1].push(sub2);
-                    try { await setDoc(doc(db, "settings", "categories"), categoryData); showToast(`Path saved`); } 
-                    catch(e) { showToast('Gagal menyimpan kategori'); }
-                } else { showToast('Kategori sudah ada.'); }
-                newCat.parent = ''; newCat.sub1 = ''; newCat.sub2 = '';
-            }
-            
-            const addVariantType = () => { prodForm.variantTypes.push({ name: '', options: [] }); updateCombinations(); }
-            const removeVariantType = (index) => { prodForm.variantTypes.splice(index, 1); updateCombinations(); }
-            const addOption = (tIndex, event) => {
-                let val = event.target.value.replace(/,/g, '').trim(); 
-                if (val && !prodForm.variantTypes[tIndex].options.includes(val)) { prodForm.variantTypes[tIndex].options.push(val); updateCombinations(); }
-                event.target.value = ''; 
-            }
-            const checkComma = (tIndex, event) => { if (event.target.value.includes(',')) { addOption(tIndex, event); } }
-            const removeOption = (tIndex, oIndex) => { prodForm.variantTypes[tIndex].options.splice(oIndex, 1); updateCombinations(); }
-            const updateCombinations = () => {
-                const validTypes = prodForm.variantTypes.filter(t => t.name && t.options.length > 0);
-                if (validTypes.length === 0) {
-                    if (prodForm.generatedVariants.length !== 1 || prodForm.generatedVariants[0].name !== 'Default') { prodForm.generatedVariants = [{ name: 'Default', sku: '', costPrice: '', price: '', outlet: '', stock: '' }]; }
-                    return;
-                }
-                const optionsArrays = validTypes.map(t => t.options);
-                const combinations = optionsArrays.reduce((acc, curr) => { const res = []; acc.forEach(a => curr.forEach(c => res.push([...a, c]))); return res; }, [[]]);
-                prodForm.generatedVariants = combinations.map(combo => {
-                    const variantName = combo.join(' - ');
-                    const existing = prodForm.generatedVariants.find(v => v.name === variantName);
-                    return existing ? existing : { name: variantName, sku: '', costPrice: '', price: '', outlet: '', stock: '' };
-                });
-            }
-            
-            const calculateTotalStock = (variants) => { return variants ? variants.reduce((total, v) => total + (Number(v.stock) || 0), 0) : 0; }
-            const formatPrice = (price) => new Intl.NumberFormat('id-ID').format(price || 0);
-            const triggerVisualSearch = () => { alert("Kamera Aktif: Silakan foto baju yang ingin dicari."); }
-            const playStory = (title) => { alert(`Memutar cuplikan video untuk: ${title}`); }
-            const autoFillUI = () => { alert("AI Stylist sedang melengkapi paduan outfit Anda..."); }
-
-            watch(storeTab, (newVal) => { if(newVal === 'Home') { isLoadingStore.value = true; setTimeout(() => { isLoadingStore.value = false; }, 600); } });
-
-            // SOLUSI: Memastikan deletePromo ikut direturn
+        data() {
             return {
-                appState, isLoginMode, authLoading, authForm, userEmail, handleAuth, handleLogout,
-                storeTab, profileTab, isLoadingStore, stories, triggerVisualSearch, playStory, autoFillUI, formatPrice,
-                adminActiveTab, showAddProductForm, isSidebarOpen, toggleSidebar, toastMessage, categoryData, newCat, addCategoryPath,
-                outlets, outletForm, saveOutlet, 
-                products, prodForm, saveProduct, addVariantType, removeVariantType, addOption, checkComma, removeOption, updateCombinations, calculateTotalStock,
-                triggerFileInput, handleImageUpload, removeImage,
-                selectedProduct, selectedVariant, viewProduct,
-                activeCategory, availableCategories, filteredProducts, filterCategory,
-                cart, isCartOpen, cartTotalItems, cartSubtotal, cartTotal, checkoutForm, promoApplied, discountAmount, handleAddToCart, updateCartQty, applyPromo, processCheckout,
-                wishlist, toggleWishlist,
-                allOrders, myOrders, dashboardStats, updateOrderStatus, labelToPrint, printThermalLabel,
-                promos, promoForm, savePromo, deletePromo
-            }
-        }
-    }).mount('#app')
-</script>
+                isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
+                authMode: 'login', authError: '', authSuccess: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
 
+                currentView: 'pos', catalogTab: 'products', crmTab: 'customers',
+                viewTitles: { pos: 'Mesin Kasir', catalog: 'Katalog & Kategori', crm: 'Manajemen Pelanggan', finance: 'Buku Piutang', outlets: 'Lokasi Toko', reports: 'Faktur Cloud' },
+                searchQuery: '', 
+                
+                products: [], categories: [], customers: [], memberships: [], outlets: [], transactions: [], cart: [], selectedCustomer: null, 
+                
+                formCategory: { name: '', parentId: '' },
+                formMembership: { tierName: '', discountPercent: 0 },
+                formCustomer: { name: '', phone: '', membershipId: '' },
+                formOutlet: { code: '', name: '', location: '' },
+                formProduct: { sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', basePrice: 0, baseStock: 0, imageBase64: '', variants: [] },
+                
+                activeProduct: null, posSelection: { type: '', color: '', size: '' },
+                printMode: 'receipt', activePrintData: null,
+                isProcessing: false, isMobileCartOpen: false
+            }
+        },
+        mounted() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    await this.fetchUserProfile(user);
+                    this.isLoggedIn = true;
+                    this.initAppListeners(); 
+                } else { this.isLoggedIn = false; this.userProfile = {}; }
+                this.isAppReady = true;
+            });
+        },
+        computed: {
+            catLevel1() { return this.categories.filter(c => c.level === 1); },
+            catLevel2() { return this.categories.filter(c => c.parentId === this.formProduct.categoryId_L1 && c.level === 2); },
+            catLevel3() { return this.categories.filter(c => c.parentId === this.formProduct.categoryId_L2 && c.level === 3); },
+            
+            filteredProducts() { return this.products.filter(p => p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(this.searchQuery.toLowerCase())); },
+            
+            hasVariants() { return this.activeProduct && this.activeProduct.variants && this.activeProduct.variants.length > 0; },
+            availablePosTypes() { return this.hasVariants ? [...new Set(this.activeProduct.variants.map(v => v.type))] : []; },
+            availablePosColors() { return this.hasVariants ? [...new Set(this.activeProduct.variants.filter(v => v.type === this.posSelection.type).map(v => v.color))] : []; },
+            availablePosSizes() { return this.hasVariants ? this.activeProduct.variants.filter(v => v.type === this.posSelection.type && v.color === this.posSelection.color) : []; },
+
+            totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
+            subtotal() { return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0); },
+            discountAmount() { return (this.subtotal) * (this.getMembershipDiscount(this.selectedCustomer?.membershipId) / 100); },
+            total() { return Math.round(this.subtotal - this.discountAmount); }
+        },
+        methods: {
+            async fetchUserProfile(user) {
+                try {
+                    const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
+                    if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
+                    else {
+                        const newUser = { name: user.displayName || 'Karyawan', email: user.email, role: 'Karyawan', createdAt: serverTimestamp() };
+                        await setDoc(userDocRef, newUser); this.userProfile = newUser; this.userRole = 'Karyawan';
+                    }
+                } catch(e) { console.error(e); }
+            },
+            async handleAuthAction() {
+                this.authError = ''; this.authSuccess = ''; this.isProcessingAuth = true;
+                try {
+                    if (this.authMode === 'login') await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+                    else if (this.authMode === 'register') {
+                        const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+                        await setDoc(doc(db, "users", res.user.uid), { name: this.authUser.name, email: this.authUser.email, role: 'Karyawan', createdAt: serverTimestamp() });
+                    } else if (this.authMode === 'forgot') { await sendPasswordResetEmail(auth, this.authUser.email); this.authSuccess = 'Link reset password telah dikirim.'; this.authMode = 'login'; }
+                } catch(error) { this.authError = "Gagal memproses otentikasi. Pastikan email/password benar."; }
+                this.isProcessingAuth = false;
+            },
+            async loginWithGoogle() { this.isProcessingAuth = true; try { await signInWithPopup(auth, provider); } catch(error) { this.authError = "Akses Google gagal."; } this.isProcessingAuth = false; },
+            async logout() { if(confirm('Sesi akan diakhiri. Lanjutkan?')) { await signOut(auth); this.currentView = 'pos'; this.cart = []; } },
+
+            initAppListeners() {
+                this.listenCol('categories', 'categories'); this.listenCol('memberships', 'memberships'); this.listenCol('products', 'products');
+                this.listenCol('transactions', 'transactions'); this.listenCol('outlets', 'outlets');
+                this.listenCol('customers', 'customers', () => { if(!this.selectedCustomer && this.customers.length) this.selectedCustomer = this.customers[0]; });
+            },
+            listenCol(col, state, cb) { onSnapshot(query(collection(db, col), orderBy("createdAt", "desc")), (snap) => { const r = []; snap.forEach(d => r.push({ id: d.id, ...d.data() })); this[state] = r; if(cb) cb(); }); },
+            
+            formatNumber(num) { return new Intl.NumberFormat('id-ID').format(num); },
+            getCategoryName(id) { const c = this.categories.find(x => x.id === id); return c ? c.name : '-'; },
+            getMembershipName(id) { const m = this.memberships.find(x => x.id === id); return m ? m.tierName : 'Reguler'; },
+            getMembershipDiscount(id) { const m = this.memberships.find(x => x.id === id); return m ? m.discountPercent : 0; },
+            
+            showModal(id) { const e = document.getElementById(id); if(e) bootstrap.Modal.getOrCreateInstance(e).show(); },
+            hideModal(id) { const e = document.getElementById(id); if(e) { const m = bootstrap.Modal.getInstance(e); if(m) m.hide(); setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.style.overflow = ''; document.body.style.paddingRight = ''; }, 300); } },
+            
+            getChildren(parentId) { return this.categories.filter(c => c.parentId === parentId); },
+            openAddCategoryModal(parentId = '') { this.formCategory.parentId = parentId; this.showModal('addCategoryModal'); },
+
+            async removeData(colName, id) { if(this.userRole !== 'Admin') { alert("Ditolak! Hak Akses Terbatas."); return; } if(confirm("Hapus data ini secara permanen dari Cloud Database?")) await deleteDoc(doc(db, colName, id)); },
+            
+            async saveCategory() {
+                let lvl = 1; if(this.formCategory.parentId) { const p = this.categories.find(c => c.id === this.formCategory.parentId); lvl = p ? p.level + 1 : 1; }
+                await addDoc(collection(db, "categories"), { name: this.formCategory.name, parentId: this.formCategory.parentId || null, level: lvl, createdAt: serverTimestamp() });
+                this.hideModal('addCategoryModal'); this.formCategory = {name:'', parentId:''};
+            },
+
+            openAddProductModal() { this.showModal('addProductModal'); },
+            addVariantRow() { this.formProduct.variants.push({ type: '', color: '', size: '', stock: 0 }); },
+            handleImageUpload(e) {
+                const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+                reader.onload = (e) => { const img = new Image(); img.onload = () => {
+                    const canvas = document.createElement('canvas'); const scale = 400 / img.width; canvas.width = 400; canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); this.formProduct.imageBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                }; img.src = e.target.result; }; reader.readAsDataURL(file);
+            },
+            async saveProduct() { await addDoc(collection(db, "products"), { ...this.formProduct, createdAt: serverTimestamp() }); this.hideModal('addProductModal'); this.formProduct = { sku:'', name:'', categoryId_L1:'', categoryId_L2:'', categoryId_L3:'', basePrice:0, baseStock:0, imageBase64:'', variants:[] }; },
+            async saveMembership() { await addDoc(collection(db, "memberships"), { ...this.formMembership, createdAt: serverTimestamp() }); this.hideModal('addMembershipModal'); this.formMembership = {tierName:'', discountPercent:0}; },
+            async saveCustomer() { await addDoc(collection(db, "customers"), { ...this.formCustomer, createdAt: serverTimestamp() }); this.hideModal('addCustomerModal'); this.formCustomer = {name:'', phone:'', membershipId:''}; },
+            async saveOutlet() { await addDoc(collection(db, "outlets"), {...this.formOutlet, createdAt: serverTimestamp()}); this.hideModal('addOutletModal'); this.formOutlet = { code: '', name: '', location: '' }; },
+
+            openPosModifier(product) { this.activeProduct = product; this.posSelection = { type: '', color: '', size: '' }; this.showModal('posModifierModal'); },
+            addToCart(isVariant) {
+                let cartId = this.activeProduct.id; let item = { id: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, price: this.activeProduct.basePrice, qty: 1 };
+                if (isVariant) { cartId += `-${this.posSelection.type}-${this.posSelection.color}-${this.posSelection.size}`; item.selectedType = this.posSelection.type; item.selectedColor = this.posSelection.color; item.selectedSize = this.posSelection.size; }
+                item.cartId = cartId; const existing = this.cart.find(i => i.cartId === cartId); if (existing) existing.qty++; else this.cart.push(item);
+                this.hideModal('posModifierModal');
+            },
+            updateQty(id, chg) { const idx=this.cart.findIndex(i=>i.cartId===id); if(idx>-1) { this.cart[idx].qty+=chg; if(this.cart[idx].qty<=0) this.cart.splice(idx,1); } },
+            
+            openPaymentModal() { this.showModal('paymentModal'); },
+            async processTransaction() {
+                this.isProcessing = true; const newInvId = 'INV-QS-' + Math.floor(Math.random() * 90000 + 10000);
+                await addDoc(collection(db, "transactions"), {
+                    id: newInvId, time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
+                    customer: this.selectedCustomer?.name || 'Walk-in', cashierName: this.userProfile.name || 'System', total: this.total, itemsCount: this.cart.reduce((s,i)=>s+i.qty,0),
+                    items: JSON.parse(JSON.stringify(this.cart)), createdAt: serverTimestamp()
+                });
+                this.hideModal('paymentModal'); this.cart = []; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
+            },
+            triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 300); }
+        }
+    }).mount('#app');
+</script>
 </body>
 </html>
