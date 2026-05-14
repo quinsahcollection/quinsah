@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.5</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.6</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -251,8 +251,9 @@
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">
                                         {{ p.name || '-' }}
-                                        <!-- INDIKATOR JUMLAH VARIAN -->
+                                        <!-- INDIKATOR JUMLAH VARIAN & KATEGORI PENUH -->
                                         <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.6rem;" v-if="p.variants && p.variants.length > 0">{{ p.variants.length }} Varian</span>
+                                        <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ getCategoryPath(p) }}</div>
                                     </td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
@@ -280,11 +281,15 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
-                            <thead><tr><th>Foto</th><th>Induk</th><th>Nama Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
-                                    <td class="text-muted fw-semibold small">{{ v.parentName }}</td>
+                                    <td class="text-muted fw-semibold small">
+                                        {{ v.parentName }}
+                                        <!-- FULL CATEGORY PATH -->
+                                        <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ v.categoryPath }}</div>
+                                    </td>
                                     <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
                                     <td><span class="sku-badge bg-dark text-white">{{ v.sku }}</span></td>
                                     <td>
@@ -547,7 +552,7 @@
             <div class="mt-auto border-top pt-2" style="font-size: 0.8rem;">
                 <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
                 
-                <!-- RINCIAN DISKON KASIR DITAMPILKAN DI SINI (SESUAI PERMINTAAN) -->
+                <!-- RINCIAN DISKON KASIR DITAMPILKAN DI SINI -->
                 <template v-if="posDiscountAmount > 0">
                     <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
                         <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
@@ -577,7 +582,7 @@
 
         <!-- ================= MODALS SECTION ================= -->
         
-        <!-- MODAL TAMBAH KATEGORI (Dengan Icon & Penjelasan) -->
+        <!-- MODAL TAMBAH KATEGORI -->
         <div class="modal fade" id="addCategoryModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow">
@@ -722,23 +727,35 @@
                             <div class="col-12"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>1. Informasi Dasar Produk</h6></div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">SKU Induk (Barcode)</label>
-                                <input type="text" class="form-control form-control-sm" v-model="formProduct.sku" placeholder="Cth: QNS-SHIRT-01">
+                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.sku" placeholder="Cth: QNS-SHIRT-01">
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label small fw-bold">Nama Produk</label>
-                                <input type="text" class="form-control form-control-sm" v-model="formProduct.name" placeholder="Cth: Kemeja Flanel Kotak Premium">
+                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.name" placeholder="Cth: Kemeja Flanel Kotak Premium">
                             </div>
+                            
+                            <!-- PERBAIKAN: DROPDOWN KATEGORI BERJENJANG -->
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold">Kategori Induk</label>
-                                <select class="form-select form-select-sm" v-model="formProduct.categoryId_L1">
-                                    <option value="">Pilih Kategori</option>
-                                    <option v-for="cat in structuredCategories.filter(c => c.treeLevel === 0)" :value="cat.id">{{ cat.name }}</option>
-                                </select>
+                                <label class="form-label small fw-bold">Kategori Produk (Berjenjang)</label>
+                                <div class="d-flex flex-column gap-1 mb-2">
+                                    <select class="form-select form-select-sm" v-model="formProduct.categoryId_L1" @change="formProduct.categoryId_L2=''; formProduct.categoryId_L3=''">
+                                        <option value="">Pilih Kategori Utama</option>
+                                        <option v-for="cat in structuredCategories.filter(c => c.treeLevel === 0)" :value="cat.id">{{ cat.name }}</option>
+                                    </select>
+                                    <select class="form-select form-select-sm border-info" v-model="formProduct.categoryId_L2" v-if="catLevel2.length > 0" @change="formProduct.categoryId_L3=''">
+                                        <option value="">-- Sub Kategori (L2) --</option>
+                                        <option v-for="cat in catLevel2" :value="cat.id">{{ cat.name }}</option>
+                                    </select>
+                                    <select class="form-select form-select-sm border-warning" v-model="formProduct.categoryId_L3" v-if="catLevel3.length > 0">
+                                        <option value="">-- Sub Kategori (L3) --</option>
+                                        <option v-for="cat in catLevel3" :value="cat.id">{{ cat.name }}</option>
+                                    </select>
+                                </div>
                             </div>
                             
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">Foto Produk (Utama)</label>
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 mb-2">
                                     <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
                                     <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="30" class="rounded border">
                                 </div>
@@ -746,11 +763,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">HPP (Modal Dasar / Rp)</label>
-                                <input type="number" class="form-control form-control-sm" v-model.number="formProduct.hppPrice" placeholder="Harga kulakan/modal...">
+                                <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.hppPrice" placeholder="Harga kulakan/modal...">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-success">Harga Jual Normal (Rp)</label>
-                                <input type="number" class="form-control form-control-sm fw-bold border-success text-success" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
+                                <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
                             </div>
 
                             <div class="col-12 mt-4"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>2. Pengaturan Promo & Grosir (Bisa ditimpa varian)</h6></div>
@@ -804,15 +821,15 @@
                                 <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. (Opsional) Pembuatan Matriks Varian Otomatis</h6>
                                 <p class="text-muted small mb-3">Gunakan ini jika produk memiliki variasi seperti Warna dan Ukuran. Ketik opsi lalu pisahkan dengan tanda Koma (,) atau Enter.</p>
                                 
+                                <!-- PERBAIKAN: VARIANT DATA TERSIMPAN DAN RE-LOAD SECARA DINAMIS -->
                                 <div class="row g-2 mb-3">
-                                    <div class="col-md-4" v-for="(vAttr, idx) in dynamicVariants" :key="idx">
-                                        <!-- PERBAIKAN UI VARIANT BOX -->
+                                    <div class="col-md-4" v-for="(vAttr, idx) in formProduct.dynamicVariantsData" :key="idx">
                                         <div class="dynamic-variant-box p-3 bg-light border border-secondary rounded mb-2 shadow-sm">
                                             <div class="mb-2">
                                                 <label class="form-label small fw-bold text-primary-custom mb-1"><i class="bi bi-pencil-square me-1"></i>Judul Atribut Varian</label>
                                                 <div class="input-group input-group-sm">
                                                     <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran, dll..." v-model="vAttr.name">
-                                                    <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="dynamicVariants.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
+                                                    <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="formProduct.dynamicVariantsData.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
                                                 </div>
                                             </div>
                                             <div>
@@ -825,7 +842,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="dynamicVariants.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
+                                        <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
                                         <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
                                     </div>
                                 </div>
@@ -926,7 +943,6 @@
                                     <option value="multi">% Bertingkat</option>
                                     <option value="nominal">Nominal (Rp)</option>
                                 </select>
-                                <!-- Multi text input jika bertingkat, number jika biasa -->
                                 <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
                                 <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
                             </div>
@@ -993,7 +1009,6 @@
                         <div class="modal-body bg-white text-center p-4" v-if="!hasVariants">
                             <img :src="activeProduct.imageBase64 || 'https://via.placeholder.com/150'" width="120" height="120" class="rounded mb-3 shadow-sm object-fit-cover">
                             
-                            <!-- Harga Coret Khusus Induk -->
                             <h5 class="text-muted text-decoration-line-through mb-0" v-if="getEffectiveBasePrice(activeProduct) < (activeProduct.sellPrice || activeProduct.basePrice)">Rp {{ formatNumber(activeProduct.sellPrice || activeProduct.basePrice) }}</h5>
                             <h3 class="fw-bold text-primary-custom mb-2">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h3>
                             
@@ -1007,12 +1022,10 @@
                                     <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
                                         <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" height="80">
                                         
-                                        <!-- Perbaikan Tampilan Nama Varian -->
                                         <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap lh-base" style="font-size: 0.75rem;">{{ v.name || v.attributes || 'Varian '+(idx+1) }}</div>
                                         <div class="text-muted mb-2 fw-semibold" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</div>
                                         
                                         <div class="mt-auto">
-                                            <!-- Harga Coret Khusus Varian -->
                                             <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}</div>
                                             <div class="fw-bold mb-1 lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
                                             
@@ -1162,8 +1175,8 @@
                 formMembership: { id: null, tierName: '', discountPercent: 0 },
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
-                formProduct: { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [] },
-                dynamicVariants: [ { name: 'Warna', tags: [], input: '' } ],
+                // PERBAIKAN: dynamicVariantsData diletakkan ke dalam formProduct agar ikut disave ke database
+                formProduct: { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1210,7 +1223,8 @@
                                 parentName: p.name, sku: v.variantSku, 
                                 name: v.name || v.attributes || 'Varian', 
                                 hpp: v.hppPrice, base: v.sellPrice || p.sellPrice, sell: vSell, 
-                                stock: this.getVariantTotalStock(v), imageBase64: v.imageBase64 || p.imageBase64 
+                                stock: this.getVariantTotalStock(v), imageBase64: v.imageBase64 || p.imageBase64,
+                                categoryPath: this.getCategoryPath(p)
                             }); 
                         });
                     }
@@ -1231,12 +1245,8 @@
             posActiveOutlet() { return this.outlets.find(o => o.id === this.posActiveOutletId); },
             totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
             
-            // Perhitungan Subtotal Produk Murni (Belum termasuk potong kasir khusus)
-            subtotalBase() { 
-                return this.cart.reduce((sum, item) => sum + (this.getPriceBeforePosDiscount(item) * item.qty), 0); 
-            },
+            subtotalBase() { return this.cart.reduce((sum, item) => sum + (this.getPriceBeforePosDiscount(item) * item.qty), 0); },
 
-            // Perhitungan Total Potongan yang diberikan kasir lewat override
             posDiscountAmount() {
                 return this.cart.reduce((sum, item) => {
                     let before = this.getPriceBeforePosDiscount(item);
@@ -1245,7 +1255,6 @@
                 }, 0);
             },
 
-            // Subtotal bersih setelah dipotong diskon item kasir
             subtotal() { return this.cart.reduce((sum, item) => sum + (this.getFinalItemPrice(item) * item.qty), 0); },
             
             discountAmount() { const membershipId = this.selectedCustomer ? this.selectedCustomer.membershipId : null; return (this.subtotal) * (this.getMembershipDiscount(membershipId) / 100); },
@@ -1259,7 +1268,7 @@
             total(newVal) { if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; }
         },
         methods: {
-            getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [] }; },
+            getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] }; },
             async fetchUserProfile(user) {
                 const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
                 if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
@@ -1285,6 +1294,16 @@
             getMembershipName(id) { if (!id) return 'Reguler'; const m = this.memberships.find(x => x.id === id); return m ? (m.tierName || 'Reguler') : 'Reguler'; },
             getOutletAddress(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.location : '-'; },
             
+            // PERBAIKAN: Fungsi Mengambil Path Lengkap Kategori dari Database
+            getCategoryPath(p) {
+                let path = [];
+                const getCatName = (id) => { const c = this.categories.find(x => x.id === id); return c ? c.name : null; };
+                if (p.categoryId_L1) { const n1 = getCatName(p.categoryId_L1); if(n1) path.push(n1); }
+                if (p.categoryId_L2) { const n2 = getCatName(p.categoryId_L2); if(n2) path.push(n2); }
+                if (p.categoryId_L3) { const n3 = getCatName(p.categoryId_L3); if(n3) path.push(n3); }
+                return path.length > 0 ? path.join(' > ') : 'Tanpa Kategori';
+            },
+
             showModal(id) { const el = document.getElementById(id); if (el) bootstrap.Modal.getOrCreateInstance(el).show(); },
             hideModal(id) { const el = document.getElementById(id); if (el) { const m = bootstrap.Modal.getInstance(el); if(m) m.hide(); setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.style.overflow = ''; }, 300); } },
             
@@ -1292,7 +1311,6 @@
                 if(modalId === 'addProductModal') { 
                     this.formProduct = this.getEmptyProductForm(); 
                     this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
-                    this.dynamicVariants = [{ name: 'Warna', tags: [], input: '' }]; 
                 }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
                 else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', membershipId:''};
@@ -1311,7 +1329,10 @@
                         if (!v.outletStocks) v.outletStocks = {}; 
                         if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
                     });
-                    this.dynamicVariants = [{ name: 'Warna', tags: [], input: '' }];
+                    // PERBAIKAN: Panggil kembali state atribut varian saat diedit (jika belum ada, buatkan kotak 1 kosong)
+                    if (!copy.dynamicVariantsData || copy.dynamicVariantsData.length === 0) {
+                        copy.dynamicVariantsData = [{ name: 'Warna', tags: [], input: '' }];
+                    }
                 }
                 if (formName === 'formOutlet') {
                     if (!copy.taxPercent) copy.taxPercent = 0;
@@ -1337,21 +1358,21 @@
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
 
             addDynamicVariantLevel() { 
-                if(this.dynamicVariants.length < 3) {
+                if(this.formProduct.dynamicVariantsData.length < 3) {
                     let commonNames = ['Warna', 'Ukuran', 'Bahan'];
-                    this.dynamicVariants.push({ name: commonNames[this.dynamicVariants.length] || `Atribut ${this.dynamicVariants.length + 1}`, tags: [], input: '' }); 
+                    this.formProduct.dynamicVariantsData.push({ name: commonNames[this.formProduct.dynamicVariantsData.length] || `Atribut ${this.formProduct.dynamicVariantsData.length + 1}`, tags: [], input: '' }); 
                 }
             },
-            removeDynamicVariantLevel(index) { this.dynamicVariants.splice(index, 1); },
+            removeDynamicVariantLevel(index) { this.formProduct.dynamicVariantsData.splice(index, 1); },
             handleDynamicVariantInput(index, event) {
                 if (event.key === ',' || event.key === 'Enter') {
-                    let val = this.dynamicVariants[index].input.replace(',', '').trim();
-                    if (val && !this.dynamicVariants[index].tags.includes(val)) { this.dynamicVariants[index].tags.push(val); }
-                    this.dynamicVariants[index].input = '';
+                    let val = this.formProduct.dynamicVariantsData[index].input.replace(',', '').trim();
+                    if (val && !this.formProduct.dynamicVariantsData[index].tags.includes(val)) { this.formProduct.dynamicVariantsData[index].tags.push(val); }
+                    this.formProduct.dynamicVariantsData[index].input = '';
                 }
             },
             generateDynamicMatrix() {
-                const validAttrs = this.dynamicVariants.filter(a => a.tags.length > 0);
+                const validAttrs = this.formProduct.dynamicVariantsData.filter(a => a.tags.length > 0);
                 if (validAttrs.length === 0) return;
                 const arrays = validAttrs.map(a => a.tags);
                 const cartesian = arrays.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
@@ -1396,7 +1417,6 @@
                 return pBase;
             },
 
-            // 1. Ambil Harga Setelah Promo & Grosir (SEBELUM diskon tambahan kasir)
             getPriceBeforePosDiscount(cartItem) {
                 let currentPrice = cartItem.promoPrice; 
                 if (cartItem.tiers && cartItem.tiers.length > 0) {
@@ -1407,7 +1427,6 @@
                 return currentPrice;
             },
 
-            // 2. Ambil Harga Final (Harga Grosir dipotong lagi oleh Diskon Tambahan Kasir)
             getFinalItemPrice(cartItem) {
                 let currentPrice = this.getPriceBeforePosDiscount(cartItem);
                 
@@ -1421,7 +1440,6 @@
                         return Math.max(0, currentPrice - (currentPrice * discountVal / 100));
                     }
                     else if (cartItem.posDiscountType === 'multi') {
-                        // Diskon Bertingkat (Cascading) Cth: 50 + 20 + 10
                         let cascadeStr = (cartItem.posDiscountValue || "").toString().split('+');
                         let cascadeResult = currentPrice;
                         cascadeStr.forEach(d => {
