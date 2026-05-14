@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.4</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.5</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -249,7 +249,11 @@
                                 <tr v-for="p in products" :key="p.id">
                                     <td><span class="sku-badge">{{ p.sku || 'N/A' }}</span></td>
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
-                                    <td class="fw-bold">{{ p.name || '-' }}</td>
+                                    <td class="fw-bold">
+                                        {{ p.name || '-' }}
+                                        <!-- INDIKATOR JUMLAH VARIAN -->
+                                        <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.6rem;" v-if="p.variants && p.variants.length > 0">{{ p.variants.length }} Varian</span>
+                                    </td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
                                         <div class="fw-semibold text-success">Rp {{ formatNumber(getEffectiveBasePrice(p)) }}</div>
@@ -528,7 +532,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex flex-column">
-                            <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < item.basePrice">Rp {{ formatNumber(item.basePrice) }}</span>
+                            <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
                             <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
                         </div>
                         <div class="d-flex align-items-center bg-light border p-0 rounded">
@@ -541,7 +545,16 @@
             </div>
             
             <div class="mt-auto border-top pt-2" style="font-size: 0.8rem;">
-                <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotal) }}</span></div>
+                <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
+                
+                <!-- RINCIAN DISKON KASIR DITAMPILKAN DI SINI (SESUAI PERMINTAAN) -->
+                <template v-if="posDiscountAmount > 0">
+                    <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
+                        <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
+                        <span class="fw-bold">- Rp {{ formatNumber((getPriceBeforePosDiscount(item) - getFinalItemPrice(item)) * item.qty) }}</span>
+                    </div>
+                </template>
+
                 <div class="d-flex justify-content-between mb-1 text-success fw-bold" v-if="discountAmount > 0">
                     <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer ? selectedCustomer.membershipId : null) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
                 </div>
@@ -789,24 +802,31 @@
 
                             <div class="col-12 mt-4">
                                 <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. (Opsional) Pembuatan Matriks Varian Otomatis</h6>
-                                <p class="text-muted small mb-2">Gunakan ini jika produk memiliki variasi seperti Warna dan Ukuran. Ketik opsi lalu pisahkan dengan tanda Koma (,) atau Enter.</p>
+                                <p class="text-muted small mb-3">Gunakan ini jika produk memiliki variasi seperti Warna dan Ukuran. Ketik opsi lalu pisahkan dengan tanda Koma (,) atau Enter.</p>
                                 
                                 <div class="row g-2 mb-3">
                                     <div class="col-md-4" v-for="(vAttr, idx) in dynamicVariants" :key="idx">
-                                        <div class="dynamic-variant-box p-2 bg-light border rounded">
-                                            <div class="d-flex justify-content-between mb-1 align-items-center">
-                                                <input type="text" class="form-control form-control-sm fw-bold border-0 bg-transparent px-0 text-primary-custom" placeholder="Cth: Warna atau Ukuran" v-model="vAttr.name" style="box-shadow: none;">
-                                                <button class="btn btn-sm text-danger p-0" @click="removeDynamicVariantLevel(idx)" v-if="dynamicVariants.length > 1"><i class="bi bi-trash"></i></button>
+                                        <!-- PERBAIKAN UI VARIANT BOX -->
+                                        <div class="dynamic-variant-box p-3 bg-light border border-secondary rounded mb-2 shadow-sm">
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-bold text-primary-custom mb-1"><i class="bi bi-pencil-square me-1"></i>Judul Atribut Varian</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran, dll..." v-model="vAttr.name">
+                                                    <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="dynamicVariants.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
+                                                </div>
                                             </div>
-                                            <input type="text" class="form-control form-control-sm shadow-none mb-1 border-primary" placeholder="Ketik opsi (Merah, Biru, L, XL...)" v-model="vAttr.input" @keyup="handleDynamicVariantInput(idx, $event)">
                                             <div>
-                                                <span class="badge bg-dark me-1 mb-1 fw-normal" style="font-size:0.65rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x cursor-pointer ms-1" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
+                                                <label class="form-label small fw-bold mb-1">Pilihan Pilihan (Tekan Enter)</label>
+                                                <input type="text" class="form-control form-control-sm shadow-none mb-2" placeholder="Ketik opsi (Cth: Merah, Biru...)" v-model="vAttr.input" @keyup="handleDynamicVariantInput(idx, $event)">
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-dark me-1 mb-1 fw-normal px-2 py-1" style="font-size:0.7rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x-lg cursor-pointer ms-1 text-danger" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-12 d-flex gap-2">
-                                        <button class="btn btn-sm btn-outline-primary-custom py-1" @click="addDynamicVariantLevel" v-if="dynamicVariants.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
-                                        <button class="btn btn-sm btn-primary-custom py-1 px-3 shadow-sm" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
+                                        <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="dynamicVariants.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
+                                        <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
                                     </div>
                                 </div>
 
@@ -874,7 +894,7 @@
                         
                         <!-- LIVE PREVIEW HARGA DISKON -->
                         <div class="p-2 bg-light border border-primary rounded mb-3 text-center">
-                            <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;" v-if="getFinalItemPrice(cartItemEdit) < cartItemEdit.basePrice">Harga Normal: Rp {{ formatNumber(cartItemEdit.basePrice) }}</div>
+                            <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;" v-if="getFinalItemPrice(cartItemEdit) < getPriceBeforePosDiscount(cartItemEdit)">Hrg Sistem: Rp {{ formatNumber(getPriceBeforePosDiscount(cartItemEdit)) }}</div>
                             <div class="fw-bold text-success fs-6">Harga Akhir: Rp {{ formatNumber(getFinalItemPrice(cartItemEdit)) }}</div>
                         </div>
 
@@ -898,7 +918,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-danger"><i class="bi bi-percent me-1"></i>Diskon Override Kasir</label>
+                            <label class="form-label small fw-bold text-danger"><i class="bi bi-tags-fill me-1"></i>Diskon Tambahan (Dari Kasir)</label>
                             <div class="input-group input-group-sm">
                                 <select class="form-select bg-white" style="max-width: 50%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = (cartItemEdit.posDiscountType === 'multi' ? '' : 0)">
                                     <option value="none">Tanpa Diskon</option>
@@ -910,7 +930,7 @@
                                 <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
                                 <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
                             </div>
-                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Pilih <b>% Bertingkat</b> untuk diskon kaskade seperti "60+30+10". Ini mengganti paksa diskon bawaan.</small>
+                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Diskon ini akan dipotong lagi dari harga yang sudah kena promo/grosir di sistem. Pilih <b>% Bertingkat</b> untuk diskon kaskade seperti "60+30+10".</small>
                         </div>
 
                         <div class="mb-4 border-top pt-3">
@@ -1143,7 +1163,7 @@
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
                 formProduct: { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [] },
-                dynamicVariants: [ { name: 'Varian', tags: [], input: '' } ],
+                dynamicVariants: [ { name: 'Warna', tags: [], input: '' } ],
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1210,7 +1230,24 @@
             
             posActiveOutlet() { return this.outlets.find(o => o.id === this.posActiveOutletId); },
             totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
-            subtotal() { return this.cart.reduce((sum, item) => { return sum + (this.getFinalItemPrice(item) * item.qty); }, 0); },
+            
+            // Perhitungan Subtotal Produk Murni (Belum termasuk potong kasir khusus)
+            subtotalBase() { 
+                return this.cart.reduce((sum, item) => sum + (this.getPriceBeforePosDiscount(item) * item.qty), 0); 
+            },
+
+            // Perhitungan Total Potongan yang diberikan kasir lewat override
+            posDiscountAmount() {
+                return this.cart.reduce((sum, item) => {
+                    let before = this.getPriceBeforePosDiscount(item);
+                    let after = this.getFinalItemPrice(item);
+                    return sum + ((before - after) * item.qty);
+                }, 0);
+            },
+
+            // Subtotal bersih setelah dipotong diskon item kasir
+            subtotal() { return this.cart.reduce((sum, item) => sum + (this.getFinalItemPrice(item) * item.qty), 0); },
+            
             discountAmount() { const membershipId = this.selectedCustomer ? this.selectedCustomer.membershipId : null; return (this.subtotal) * (this.getMembershipDiscount(membershipId) / 100); },
             netSubtotal() { return this.subtotal - this.discountAmount; },
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
@@ -1252,7 +1289,11 @@
             hideModal(id) { const el = document.getElementById(id); if (el) { const m = bootstrap.Modal.getInstance(el); if(m) m.hide(); setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.style.overflow = ''; }, 300); } },
             
             openModal(modalId) {
-                if(modalId === 'addProductModal') { this.formProduct = this.getEmptyProductForm(); this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); this.dynamicVariants = [{ name: 'Warna', tags: [], input: '' }]; }
+                if(modalId === 'addProductModal') { 
+                    this.formProduct = this.getEmptyProductForm(); 
+                    this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
+                    this.dynamicVariants = [{ name: 'Warna', tags: [], input: '' }]; 
+                }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
                 else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', membershipId:''};
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
@@ -1270,7 +1311,7 @@
                         if (!v.outletStocks) v.outletStocks = {}; 
                         if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
                     });
-                    this.dynamicVariants = [{ name: 'Varian Khusus', tags: [], input: '' }];
+                    this.dynamicVariants = [{ name: 'Warna', tags: [], input: '' }];
                 }
                 if (formName === 'formOutlet') {
                     if (!copy.taxPercent) copy.taxPercent = 0;
@@ -1295,7 +1336,12 @@
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
 
-            addDynamicVariantLevel() { if(this.dynamicVariants.length < 3) this.dynamicVariants.push({ name: `Atribut ${this.dynamicVariants.length + 1}`, tags: [], input: '' }); },
+            addDynamicVariantLevel() { 
+                if(this.dynamicVariants.length < 3) {
+                    let commonNames = ['Warna', 'Ukuran', 'Bahan'];
+                    this.dynamicVariants.push({ name: commonNames[this.dynamicVariants.length] || `Atribut ${this.dynamicVariants.length + 1}`, tags: [], input: '' }); 
+                }
+            },
             removeDynamicVariantLevel(index) { this.dynamicVariants.splice(index, 1); },
             handleDynamicVariantInput(index, event) {
                 if (event.key === ',' || event.key === 'Enter') {
@@ -1341,7 +1387,6 @@
             
             getEffectiveVariantPrice(parentProd, variant) {
                 let pBase = variant.sellPrice || parentProd.sellPrice || parentProd.basePrice || 0;
-                
                 let hasVariantDiscount = variant.discountType && variant.discountType !== 'none';
                 let dType = hasVariantDiscount ? variant.discountType : parentProd.discountType;
                 let dVal = hasVariantDiscount ? variant.discountValue : parentProd.discountValue;
@@ -1351,34 +1396,34 @@
                 return pBase;
             },
 
-            // LOGIK DISKON POS & MULTI-DISCOUNT
-            getFinalItemPrice(cartItem) {
-                // Harga awal produk (sudah kena diskon promo katalog jika ada)
+            // 1. Ambil Harga Setelah Promo & Grosir (SEBELUM diskon tambahan kasir)
+            getPriceBeforePosDiscount(cartItem) {
                 let currentPrice = cartItem.promoPrice; 
-                
-                // Cek harga grosir dulu
                 if (cartItem.tiers && cartItem.tiers.length > 0) {
                     let sortedTiers = [...cartItem.tiers].sort((a,b) => b.minQty - a.minQty); 
                     let appliedTier = sortedTiers.find(t => cartItem.qty >= t.minQty);
                     if (appliedTier) currentPrice = appliedTier.price;
                 }
+                return currentPrice;
+            },
 
-                // Jika Kasir melakukan OVERRIDE, kita hitung ulang dari harga dasar asli (basePrice)
+            // 2. Ambil Harga Final (Harga Grosir dipotong lagi oleh Diskon Tambahan Kasir)
+            getFinalItemPrice(cartItem) {
+                let currentPrice = this.getPriceBeforePosDiscount(cartItem);
+                
                 if (cartItem.posDiscountType && cartItem.posDiscountType !== 'none') {
-                    let baseCalc = cartItem.basePrice; 
-                    
                     if (cartItem.posDiscountType === 'nominal') {
                         let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
-                        return Math.max(0, baseCalc - discountVal);
+                        return Math.max(0, currentPrice - discountVal);
                     }
                     else if (cartItem.posDiscountType === 'percent') {
                         let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
-                        return Math.max(0, baseCalc - (baseCalc * discountVal / 100));
+                        return Math.max(0, currentPrice - (currentPrice * discountVal / 100));
                     }
                     else if (cartItem.posDiscountType === 'multi') {
-                        // LOGIKA DISKON BERTINGKAT (Contoh: "60+30+10")
+                        // Diskon Bertingkat (Cascading) Cth: 50 + 20 + 10
                         let cascadeStr = (cartItem.posDiscountValue || "").toString().split('+');
-                        let cascadeResult = baseCalc;
+                        let cascadeResult = currentPrice;
                         cascadeStr.forEach(d => {
                             let pct = parseFloat(d.trim());
                             if (!isNaN(pct) && pct > 0) {
@@ -1388,7 +1433,6 @@
                         return Math.max(0, cascadeResult);
                     }
                 }
-                
                 return currentPrice;
             },
 
