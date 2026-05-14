@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.1</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -26,7 +26,7 @@
         .nav-icon i { font-size: 1.5rem; margin-bottom: 4px; }
         .nav-icon:hover, .nav-icon.active { background-color: rgba(220, 38, 38, 0.1); color: var(--primary-color); font-weight: 600; }
         
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 30px; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 30px; position: relative; }
         .sidebar-right { width: 380px; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 15px; z-index: 10; flex-shrink: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.02); }
         
         /* UI Elements */
@@ -47,8 +47,8 @@
         .text-primary-custom { color: var(--primary-color) !important; }
 
         /* Variant & Tier Cards */
-        .variant-grid-card { border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: 0.2s; padding: 10px; text-align: center; }
-        .variant-grid-card:hover { border-color: var(--primary-color); background-color: #fef2f2; }
+        .variant-grid-card { border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: 0.2s; padding: 12px; text-align: center; background-color: #fff; }
+        .variant-grid-card:hover { border-color: var(--primary-color); background-color: #fef2f2; box-shadow: 0 4px 10px rgba(220,38,38,0.1); }
         .variant-grid-card.disabled { opacity: 0.5; cursor: not-allowed; border-color: #e5e7eb !important; background-color: #f9fafb !important; }
         .tier-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 
@@ -89,6 +89,25 @@
             .sidebar-right.show-mobile { right: 0; }
             
             .modal-body { padding: 15px !important; }
+            
+            /* Styling khusus untuk keranjang melayang (FAB) */
+            .fab-cart {
+                position: fixed;
+                bottom: 80px;
+                right: 20px;
+                width: 65px;
+                height: 65px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4);
+                z-index: 1045;
+                border: 3px solid white;
+                cursor: pointer;
+            }
         }
 
         /* PRINT MEDIA CSS FIXES */
@@ -180,13 +199,10 @@
             <!-- VIEW: POS KASIR -->
             <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
-                    <div class="input-group input-group-sm shadow-sm" style="max-width: 300px;">
+                    <div class="input-group input-group-sm shadow-sm" style="max-width: 350px;">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Produk / SKU..." v-model="searchQuery">
+                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU Produk..." v-model="searchQuery">
                     </div>
-                    <button class="btn btn-primary-custom btn-sm d-lg-none" @click="isMobileCartOpen = true">
-                        <i class="bi bi-cart"></i> <span class="badge bg-white text-danger ms-1">{{ totalQty }}</span>
-                    </button>
                 </div>
                 <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
                     <div class="col-xl-3 col-lg-4 col-md-4 col-6" v-for="product in filteredProducts" :key="product.id">
@@ -196,23 +212,27 @@
                             <div class="mb-2"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <span class="text-primary-custom fw-bold" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
-                                <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">{{ product.variants && product.variants.length > 0 ? product.variants.length+' Tipe' : getBaseTotalStock(product)+' Pcs' }}</span>
+                                <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">{{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getBaseTotalStock(product)+' Pcs' }}</span>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- FLOATING ACTION BUTTON (FAB) KHUSUS KERANJANG DI MOBILE -->
+                <div class="fab-cart d-lg-none" @click="isMobileCartOpen = true" v-if="!isMobileCartOpen">
+                    <i class="bi bi-cart3 fs-3"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white p-2" style="font-size: 0.8rem;">{{ totalQty }}</span>
                 </div>
             </div>
 
             <!-- VIEW: CATALOG (Master Produk, Varian, Kategori) -->
             <div v-if="currentView === 'catalog' && userRole === 'Admin'">
-                <!-- Tab Menu (Dibuat Scrollable pada Mobile) -->
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Master Produk</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='variants', 'bg-primary-custom': catalogTab==='variants'}" href="#" @click.prevent="catalogTab='variants'">Daftar SKU Varian</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='categories', 'bg-primary-custom': catalogTab==='categories'}" href="#" @click.prevent="catalogTab='categories'">Struktur Kategori</a></li>
                 </ul>
 
-                <!-- TAB: Produk -->
                 <div v-if="catalogTab==='products'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Daftar Induk Produk</h6>
@@ -242,7 +262,6 @@
                     </div>
                 </div>
 
-                <!-- TAB: SKU Varian -->
                 <div v-if="catalogTab==='variants'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Database SKU Varian</h6>
@@ -250,7 +269,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
-                            <thead><tr><th>Foto</th><th>Induk</th><th>Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk</th><th>Pilihan Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
@@ -266,7 +285,6 @@
                     </div>
                 </div>
 
-                <!-- TAB: Pohon Kategori -->
                 <div v-if="catalogTab==='categories'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Struktur Pohon Kategori</h6>
@@ -485,10 +503,13 @@
                     <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 4px;">
                         <span v-if="item.selectedVariantAttrs">{{ item.selectedVariantAttrs }}</span>
                     </div>
+                    <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
+                        <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
+                    </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="d-flex flex-column">
                             <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < item.basePrice">Rp {{ formatNumber(item.basePrice) }}</span>
-                            <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil-square ms-1 text-muted"></i></span>
+                            <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
                         </div>
                         <div class="d-flex align-items-center bg-light border p-0 rounded">
                             <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
@@ -555,7 +576,7 @@
                                 <div class="p-3 bg-light rounded border h-100">
                                     <label class="form-label small fw-bold">Diskon Produk</label>
                                     <div class="input-group input-group-sm mb-2">
-                                        <select class="form-select bg-white" style="max-width: 120px;" v-model="formProduct.discountType">
+                                        <select class="form-select bg-white" style="max-width: 120px;" v-model="formProduct.discountType" @change="formProduct.discountValue = 0">
                                             <option value="none">Tanpa Diskon</option>
                                             <option value="percent">Persen (%)</option>
                                             <option value="nominal">Nominal (Rp)</option>
@@ -669,7 +690,18 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-body p-3 bg-white">
                         <h6 class="fw-bold mb-1 text-primary-custom">{{ cartItemEdit.name }}</h6>
-                        <p class="text-muted small mb-3 border-bottom pb-2">{{ cartItemEdit.selectedVariantAttrs || 'Item Regular' }}</p>
+                        <p class="text-muted small border-bottom pb-2 mb-3">{{ cartItemEdit.selectedVariantAttrs || 'Item Regular' }}</p>
+                        
+                        <!-- Penjelasan Grosir Tersedia -->
+                        <div class="mb-3 bg-light p-2 rounded" v-if="cartItemEdit.tiers && cartItemEdit.tiers.length > 0">
+                            <label class="form-label fw-bold text-info m-0" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Syarat Grosir Tersedia (Auto)</label>
+                            <div class="d-flex flex-column gap-1 mt-1">
+                                <span class="badge border border-info text-dark text-start bg-white" style="font-size:0.65rem;" v-for="t in cartItemEdit.tiers" :key="t.minQty">
+                                    Beli >= {{ t.minQty }} Pcs: Harga mjd Rp {{ formatNumber(t.price) }}
+                                </span>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Kuantitas (Qty)</label>
                             <div class="input-group input-group-sm">
@@ -678,18 +710,25 @@
                                 <button class="btn btn-outline-secondary fw-bold" @click="cartItemEdit.qty++">+</button>
                             </div>
                         </div>
+                        
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Diskon Kasir Per Item</label>
+                            <label class="form-label small fw-bold">Diskon Override Kasir</label>
                             <div class="input-group input-group-sm">
-                                <select class="form-select bg-light" style="max-width: 45%;" v-model="cartItemEdit.posDiscountType">
+                                <select class="form-select bg-light" style="max-width: 45%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = 0">
                                     <option value="none">Tanpa Diskon</option>
                                     <option value="percent">Persen (%)</option>
                                     <option value="nominal">Nominal (Rp)</option>
                                 </select>
                                 <input type="number" class="form-control" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
                             </div>
-                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Menimpa diskon promo otomatis jika diisi.</small>
+                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Mengganti paksa semua diskon jika diisi kasir.</small>
                         </div>
+
+                        <div class="mb-4 border-top pt-3">
+                            <label class="form-label small fw-bold"><i class="bi bi-pencil-square me-1"></i>Catatan Khusus</label>
+                            <textarea class="form-control form-control-sm" v-model="cartItemEdit.note" rows="2" placeholder="Tulis instruksi khusus..."></textarea>
+                        </div>
+                        
                         <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveCartItemEdit">Terapkan Perubahan</button>
                     </div>
                 </div>
@@ -737,6 +776,7 @@
         <div class="modal fade" id="addMembershipModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body p-3"><h6 class="fw-bold mb-3">Membership</h6><input type="text" class="form-control form-control-sm mb-2" v-model="formMembership.tierName" placeholder="Nama Tier"><input type="number" class="form-control form-control-sm mb-3" v-model.number="formMembership.discountPercent" placeholder="Diskon (%)"><button class="btn btn-primary-custom btn-sm w-100 fw-bold" @click="saveData('memberships', formMembership, 'addMembershipModal')">Simpan</button></div></div></div></div>
         <div class="modal fade" id="addCustomerModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content"><div class="modal-body p-3"><h6 class="fw-bold mb-3">Pelanggan</h6><input type="text" class="form-control form-control-sm mb-2" v-model="formCustomer.name" placeholder="Nama"><input type="text" class="form-control form-control-sm mb-2" v-model="formCustomer.phone" placeholder="No HP"><select class="form-select form-select-sm mb-3" v-model="formCustomer.membershipId"><option value="">Reguler (Tanpa Diskon)</option><option v-for="m in memberships" :value="m.id">{{ m.tierName }}</option></select><button class="btn btn-primary-custom btn-sm w-100 fw-bold" @click="saveData('customers', formCustomer, 'addCustomerModal')">Simpan</button></div></div></div></div>
 
+        <!-- POS MODIFIER (PILIH VARIAN CARD GRID) -->
         <div class="modal fade" id="posModifierModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content border-0 shadow">
@@ -745,21 +785,25 @@
                             <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
                             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body bg-white text-center p-3" v-if="!hasVariants">
+                        <div class="modal-body bg-white text-center p-4" v-if="!hasVariants">
                             <img :src="activeProduct.imageBase64 || 'https://via.placeholder.com/150'" width="120" height="120" class="rounded mb-3 shadow-sm object-fit-cover">
-                            <h5 class="fw-bold text-primary-custom">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h5>
-                            <p class="text-muted small fw-semibold">Stok Saat Ini: {{ getBaseTotalStock(activeProduct) }} Pcs</p>
-                            <button type="button" class="btn btn-primary-custom w-100 fw-bold py-2" @click="addToCart(null)"><i class="bi bi-cart-plus me-1"></i> MASUKKAN KERANJANG</button>
+                            <h4 class="fw-bold text-primary-custom mb-1">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h4>
+                            <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getBaseTotalStock(activeProduct) }} Pcs</p>
+                            <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
-                        <div class="modal-body bg-white p-3" v-else>
-                            <p class="text-muted small fw-bold mb-2"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN:</p>
-                            <div class="row g-2">
+                        <div class="modal-body bg-white p-4" v-else>
+                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN PILIHAN VARIAN:</p>
+                            <div class="row g-3">
                                 <div class="col-md-3 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
-                                    <div class="variant-grid-card" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
-                                        <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm" width="100%" height="70">
-                                        <div class="fw-bold text-truncate text-primary-custom" style="font-size: 0.75rem;">{{ v.attributes }}</div>
-                                        <div class="fw-bold my-1" style="font-size: 0.8rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
-                                        <span class="badge w-100" style="font-size: 0.65rem;" :class="getVariantTotalStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa: {{ getVariantTotalStock(v) }} Pcs</span>
+                                    <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
+                                        <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" height="80">
+                                        <!-- Perbaikan Tampilan Varian di POS agar lebih jelas -->
+                                        <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-2 text-wrap lh-base" style="font-size: 0.70rem;">Pilihan: {{ v.attributes }}</div>
+                                        
+                                        <div class="mt-auto">
+                                            <div class="fw-bold mb-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
+                                            <span class="badge w-100" style="font-size: 0.7rem;" :class="getVariantTotalStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantTotalStock(v) }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -772,7 +816,7 @@
     </div> <!-- End App Container -->
 
     <!-- ==========================================
-         SEKSI PENCETAKAN (Sekarang aman di dalam #app)
+         SEKSI PENCETAKAN
          ========================================== -->
     <div id="print-section" class="d-none d-print-block" :class="printMode === 'receipt' ? 'mode-receipt' : 'mode-label'">
         
@@ -792,7 +836,8 @@
             
             <div v-for="i in activePrintData.items" :key="i.cartId" style="margin-bottom:5px; font-size:11px;">
                 <div style="font-weight:bold;">{{ i.name }}</div>
-                <div v-if="i.selectedVariantAttrs" style="font-size:10px; color:#333;">{{ i.selectedVariantAttrs }}</div>
+                <div v-if="i.selectedVariantAttrs" style="font-size:10px; color:#333;">Varian: {{ i.selectedVariantAttrs }}</div>
+                <div v-if="i.note" style="font-size:10px; font-style:italic;">Note: {{ i.note }}</div>
                 <div style="display:flex; justify-content:space-between; margin-top:2px;">
                     <span>{{ i.qty }} x {{ formatNumber(i.finalPrice) }}</span>
                     <span>{{ formatNumber(i.qty * i.finalPrice) }}</span>
@@ -805,7 +850,7 @@
                 <tr v-if="activePrintData.serviceAmt > 0"><td>Service Charge</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt) }}</td></tr>
                 <tr><td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td><td style="text-align:right; font-size:14px; padding-top:5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                 <tr><td style="padding-top:5px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align:right; padding-top:5px;">{{ formatNumber(activePrintData.amountReceived) }}</td></tr>
-                <tr><td>KEMBALIAN</td><td style="text-align:right;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td></tr>
+                <tr v-if="activePrintData.paymentMethod === 'CASH'"><td>KEMBALIAN</td><td style="text-align:right;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td></tr>
             </table>
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             <div style="text-align:center; font-size:10px;">Terima Kasih Atas Kunjungan Anda<br>Barang yang sudah dibeli tidak dapat ditukar</div>
@@ -855,7 +900,8 @@
                     <tr v-for="i in activePrintData.items" :key="i.cartId" style="border-bottom:1px solid #ccc;">
                         <td style="padding:8px 5px;">
                             <div style="font-weight:bold; font-size:13px;">{{ i.name }}</div>
-                            <div style="font-size:11px; margin-top:2px;" v-if="i.selectedVariantAttrs">{{ i.selectedVariantAttrs }}</div>
+                            <div style="font-size:11px; margin-top:2px;" v-if="i.selectedVariantAttrs">Varian: {{ i.selectedVariantAttrs }}</div>
+                            <div style="font-size:11px; margin-top:2px; font-style:italic;" v-if="i.note">Catatan: {{ i.note }}</div>
                         </td>
                         <td style="text-align:center; font-family: monospace;">{{ i.variantSku || i.sku || '-' }}</td>
                         <td style="text-align:center; font-weight:bold; font-size:16px;">{{ i.qty }}</td>
@@ -1090,20 +1136,22 @@
             },
 
             getFinalItemPrice(cartItem) {
-                if (cartItem.posDiscountType && cartItem.posDiscountType !== 'none') {
-                    let base = cartItem.basePrice;
-                    if (cartItem.posDiscountType === 'nominal') return base - cartItem.posDiscountValue;
-                    if (cartItem.posDiscountType === 'percent') return base - (base * cartItem.posDiscountValue / 100);
-                }
+                // Perbaikan Logika Kalkulasi (Mencegah NaN dan 0 akibat bug)
+                let currentPrice = cartItem.promoPrice; 
                 
-                let effectivePrice = cartItem.promoPrice; 
                 if (cartItem.tiers && cartItem.tiers.length > 0) {
                     let sortedTiers = [...cartItem.tiers].sort((a,b) => b.minQty - a.minQty); 
                     let appliedTier = sortedTiers.find(t => cartItem.qty >= t.minQty);
-                    if (appliedTier) return appliedTier.price;
+                    if (appliedTier) currentPrice = appliedTier.price;
+                }
+
+                if (cartItem.posDiscountType && cartItem.posDiscountType !== 'none') {
+                    let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
+                    if (cartItem.posDiscountType === 'nominal') return Math.max(0, currentPrice - discountVal);
+                    if (cartItem.posDiscountType === 'percent') return Math.max(0, currentPrice - (currentPrice * discountVal / 100));
                 }
                 
-                return effectivePrice;
+                return currentPrice;
             },
 
             getVariantTotalStock(variant) { if (!variant || !variant.outletStocks) return 0; return Object.values(variant.outletStocks).reduce((a, b) => a + (b || 0), 0); },
@@ -1121,7 +1169,7 @@
                 let item = { 
                     id: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
                     basePrice: bPrice, promoPrice: pPrice, qty: 1, tiers: this.activeProduct.tiers || [],
-                    posDiscountType: 'none', posDiscountValue: 0
+                    posDiscountType: 'none', posDiscountValue: 0, note: ''
                 };
                 
                 if (variant) { 
