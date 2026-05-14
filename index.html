@@ -199,7 +199,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
                     <div class="input-group input-group-sm shadow-sm" style="max-width: 350px;">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU Produk..." v-model="searchQuery">
+                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU / Varian..." v-model="searchQuery">
                     </div>
                     <button v-if="heldTransactions.length > 0" class="btn btn-warning btn-sm fw-bold shadow-sm" @click="openModal('holdModal')">
                         <i class="bi bi-clock-history"></i> Hold ({{ heldTransactions.length }})
@@ -241,7 +241,7 @@
                         <button class="btn btn-sm btn-primary-custom" @click="openModal('addProductModal')"><i class="bi bi-plus-lg me-1"></i> Tambah Baru</button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-custom align-middle">
+                        <table class="table table-custom align-middle text-nowrap">
                             <thead><tr><th>SKU</th><th>Foto</th><th>Nama Produk</th><th>Hrg Dasar</th><th>Tipe Promo</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="p in products" :key="p.id">
@@ -277,7 +277,7 @@
                         <span class="text-muted small d-none d-sm-block">Otomatis dari Induk</span>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-custom align-middle">
+                        <table class="table table-custom align-middle text-nowrap">
                             <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
@@ -336,7 +336,7 @@
 
                 <div v-if="invTab==='stocks'" class="dashboard-card">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle" style="font-size: 0.75rem;">
+                        <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
                             <thead class="table-light text-center">
                                 <tr>
                                     <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
@@ -368,7 +368,7 @@
 
                 <div v-if="invTab==='logs'" class="dashboard-card">
                     <div class="table-responsive">
-                        <table class="table table-custom align-middle">
+                        <table class="table table-custom align-middle text-nowrap">
                             <thead><tr><th>Waktu</th><th>Ref. Transaksi</th><th>Nama Item (SKU)</th><th>Qty</th><th>Status</th></tr></thead>
                             <tbody>
                                 <tr v-for="log in stockLogs" :key="log.id">
@@ -465,7 +465,7 @@
             <div v-if="currentView === 'reports'" class="dashboard-card">
                 <h6 class="fw-bold mb-3">Riwayat Transaksi</h6>
                 <div class="table-responsive">
-                    <table class="table table-custom align-middle">
+                    <table class="table table-custom align-middle text-nowrap">
                         <thead><tr><th>No. Inv</th><th>Waktu</th><th>Pelanggan</th><th>Pembayaran</th><th>Total</th><th>Aksi Cetak</th></tr></thead>
                         <tbody>
                             <tr v-for="trx in transactions" :key="trx.id">
@@ -839,9 +839,13 @@
                                                     <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="formProduct.dynamicVariantsData.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <label class="form-label small fw-bold mb-1">Pilihan Pilihan (Tekan Enter)</label>
-                                                <input type="text" class="form-control form-control-sm shadow-none mb-2" placeholder="Ketik opsi (Cth: Merah, Biru...)" v-model="vAttr.input" @keyup="handleDynamicVariantInput(idx, $event)">
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-bold mb-1">Pilihan Pilihan</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah)..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
+                                                    <button class="btn btn-outline-primary-custom" type="button" @click="pushDynamicVariantTag(idx)"><i class="bi bi-plus-lg"></i> Tambah</button>
+                                                </div>
+                                                <small class="text-muted" style="font-size:0.6rem;">Ketik lalu tekan tombol Tambah atau koma (,)</small>
                                             </div>
                                             <div>
                                                 <span class="badge bg-dark me-1 mb-1 fw-normal px-2 py-1" style="font-size:0.7rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x-lg cursor-pointer ms-1 text-danger" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
@@ -855,8 +859,8 @@
                                 </div>
 
                                 <div class="table-responsive mt-3" v-if="formProduct.variants.length > 0">
-                                    <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Silakan Edit Sesuai Kebutuhan)</p>
-                                    <table class="table table-sm table-bordered align-middle" style="font-size: 0.75rem;">
+                                    <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Geser ke samping untuk melihat & edit)</p>
+                                    <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.75rem;">
                                         <thead class="table-light text-center">
                                             <tr>
                                                 <th>Nama Varian</th>
@@ -871,18 +875,18 @@
                                         </thead>
                                         <tbody>
                                             <tr v-for="(v, index) in formProduct.variants" :key="index">
-                                                <td><input type="text" class="form-control form-control-sm px-1 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian"></td>
+                                                <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
                                                 <td>
-                                                    <div class="d-flex flex-column align-items-center gap-1">
-                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 80px; font-size:0.65rem;">
+                                                    <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
+                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 90px; font-size:0.65rem;">
                                                         <img v-if="v.imageBase64" :src="v.imageBase64" width="30" height="30" class="rounded border object-fit-cover shadow-sm">
                                                     </div>
                                                 </td>
-                                                <td><input type="text" class="form-control form-control-sm px-1 text-center font-monospace fw-semibold" v-model="v.variantSku"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-1 text-center" v-model.number="v.hppPrice"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-1 text-success fw-bold text-center" v-model.number="v.sellPrice"></td>
+                                                <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
+                                                <td><input type="number" class="form-control form-control-sm px-2 text-center" v-model.number="v.hppPrice" style="min-width: 90px;"></td>
+                                                <td><input type="number" class="form-control form-control-sm px-2 text-success fw-bold text-center" v-model.number="v.sellPrice" style="min-width: 100px;"></td>
                                                 <td>
-                                                    <div class="input-group input-group-sm" style="min-width: 130px;">
+                                                    <div class="input-group input-group-sm" style="min-width: 140px;">
                                                         <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
                                                             <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
                                                         </select>
@@ -890,7 +894,7 @@
                                                     </div>
                                                 </td>
                                                 <td v-for="out in outlets" :key="out.id">
-                                                    <input type="number" class="form-control form-control-sm text-center px-1 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 45px;">
+                                                    <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
                                                 </td>
                                                 <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-x-circle-fill fs-5"></i></button></td>
                                             </tr>
@@ -1222,10 +1226,20 @@
             },
 
             filteredProducts() { 
+                const q = this.searchQuery.toLowerCase().trim();
+                if (!q) return this.products;
                 return this.products.filter(p => {
-                    const matchName = (p.name || '').toLowerCase().includes(this.searchQuery.toLowerCase());
-                    const matchSku = (p.sku || '').toLowerCase().includes(this.searchQuery.toLowerCase());
-                    return matchName || matchSku;
+                    const matchName = (p.name || '').toLowerCase().includes(q);
+                    const matchSku = (p.sku || '').toLowerCase().includes(q);
+                    let matchVar = false;
+                    if (p.variants && p.variants.length > 0) {
+                        matchVar = p.variants.some(v => 
+                            (v.name || '').toLowerCase().includes(q) || 
+                            (v.attributes || '').toLowerCase().includes(q) ||
+                            (v.variantSku || '').toLowerCase().includes(q)
+                        );
+                    }
+                    return matchName || matchSku || matchVar;
                 }); 
             },
             
@@ -1351,13 +1365,23 @@
                 }
             },
             removeDynamicVariantLevel(index) { this.formProduct.dynamicVariantsData.splice(index, 1); },
-            handleDynamicVariantInput(index, event) {
-                if (event.key === ',' || event.key === 'Enter') {
-                    let val = this.formProduct.dynamicVariantsData[index].input.replace(',', '').trim();
-                    if (val && !this.formProduct.dynamicVariantsData[index].tags.includes(val)) { this.formProduct.dynamicVariantsData[index].tags.push(val); }
-                    this.formProduct.dynamicVariantsData[index].input = '';
+            
+            handleDynamicVariantInput(index) {
+                let val = this.formProduct.dynamicVariantsData[index].input || '';
+                if (val.includes(',')) {
+                    this.pushDynamicVariantTag(index, val.split(',')[0]);
                 }
             },
+            pushDynamicVariantTag(index, overrideVal = null) {
+                let val = overrideVal !== null ? overrideVal : this.formProduct.dynamicVariantsData[index].input;
+                if (!val) return;
+                val = val.replace(/,/g, '').trim();
+                if (val && !this.formProduct.dynamicVariantsData[index].tags.includes(val)) {
+                    this.formProduct.dynamicVariantsData[index].tags.push(val);
+                }
+                this.formProduct.dynamicVariantsData[index].input = '';
+            },
+
             generateDynamicMatrix() {
                 const validAttrs = this.formProduct.dynamicVariantsData.filter(a => a.tags.length > 0);
                 if (validAttrs.length === 0) return;
