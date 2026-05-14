@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.1</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.3</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -211,7 +211,11 @@
                             <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">{{ product.name || 'Tanpa Nama' }}</h6>
                             <div class="mb-2"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
-                                <span class="text-primary-custom fw-bold" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
+                                <!-- Harga dengan Coret Diskon -->
+                                <div class="d-flex flex-column">
+                                    <span class="text-muted text-decoration-line-through lh-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</span>
+                                    <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
+                                </div>
                                 <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">{{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getBaseTotalStock(product)+' Pcs' }}</span>
                             </div>
                         </div>
@@ -246,7 +250,10 @@
                                     <td><span class="sku-badge">{{ p.sku || 'N/A' }}</span></td>
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">{{ p.name || '-' }}</td>
-                                    <td class="fw-semibold text-success">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</td>
+                                    <td>
+                                        <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
+                                        <div class="fw-semibold text-success">Rp {{ formatNumber(getEffectiveBasePrice(p)) }}</div>
+                                    </td>
                                     <td>
                                         <span class="badge bg-warning text-dark border me-1" v-if="p.discountValue > 0">Diskon</span>
                                         <span class="badge bg-info text-dark border" v-if="p.tiers && p.tiers.length > 0">Grosir</span>
@@ -269,14 +276,17 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
-                            <thead><tr><th>Foto</th><th>Induk</th><th>Pilihan Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk</th><th>Nama Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
                                     <td class="text-muted fw-semibold small">{{ v.parentName }}</td>
-                                    <td class="fw-bold text-primary-custom small">{{ v.attributes }}</td>
+                                    <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
                                     <td><span class="sku-badge bg-dark text-white">{{ v.sku }}</span></td>
-                                    <td class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</td>
+                                    <td>
+                                        <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
+                                        <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
+                                    </td>
                                     <td><span class="badge" :class="v.stock > 0 ? 'bg-success' : 'bg-danger'">{{ v.stock }}</span></td>
                                 </tr>
                                 <tr v-if="allVariantsList.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada varian produk.</td></tr>
@@ -325,7 +335,7 @@
                         <table class="table table-bordered table-hover align-middle" style="font-size: 0.75rem;">
                             <thead class="table-light text-center">
                                 <tr>
-                                    <th rowspan="2" class="align-middle text-start">Produk / Varian</th>
+                                    <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
                                     <th :colspan="outlets.length">Stok Outlet</th>
                                     <th rowspan="2" class="align-middle bg-danger text-white">Total</th>
                                 </tr>
@@ -334,12 +344,15 @@
                             <tbody>
                                 <template v-for="p in products" :key="p.id">
                                     <tr class="table-secondary fw-bold">
-                                        <td><i class="bi bi-box me-1"></i>{{ p.name }}</td>
+                                        <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2">{{ p.sku }}</span></td>
                                         <td v-for="out in outlets" :key="out.id" class="text-center">{{ getProductStockAtOutlet(p, out.id) }}</td>
                                         <td class="text-center bg-danger bg-opacity-10">{{ getBaseTotalStock(p) }}</td>
                                     </tr>
                                     <tr v-for="(v, index) in p.variants" :key="index">
-                                        <td class="ps-3 text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ v.attributes }}</td>
+                                        <td class="ps-3 text-muted">
+                                            <i class="bi bi-arrow-return-right me-1"></i>{{ v.name || v.attributes || 'Varian '+(index+1) }}
+                                            <span class="sku-badge bg-dark text-white ms-2">{{ v.variantSku || '-' }}</span>
+                                        </td>
                                         <td v-for="out in outlets" :key="out.id" class="text-center fw-semibold">{{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }}</td>
                                         <td class="text-center fw-bold">{{ getVariantTotalStock(v) }}</td>
                                     </tr>
@@ -358,8 +371,11 @@
                                     <td class="text-muted" style="font-size: 0.7rem;">{{ log.dateStr }}</td>
                                     <td class="fw-bold small">{{ log.refId }}</td>
                                     <td>
-                                        <div class="fw-bold small">{{ log.productName }}</div>
-                                        <div style="font-size:0.65rem;" class="text-muted" v-if="log.variantName && log.variantName !== '-'">{{ log.variantName }} ({{ log.sku }})</div>
+                                        <div class="fw-bold small">{{ log.productName }} <span class="sku-badge ms-1" v-if="!log.variantName || log.variantName === '-'">{{ log.sku }}</span></div>
+                                        <div style="font-size:0.65rem;" class="text-muted mt-1" v-if="log.variantName && log.variantName !== '-'">
+                                            <i class="bi bi-tag-fill me-1"></i>{{ log.variantName }} 
+                                            <span class="sku-badge bg-dark text-white ms-1">{{ log.sku }}</span>
+                                        </div>
                                     </td>
                                     <td class="fw-bold" :class="log.qtyChange > 0 ? 'text-success' : 'text-danger'">{{ log.qtyChange > 0 ? '+'+log.qtyChange : log.qtyChange }}</td>
                                     <td><span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : 'badge-in'">{{ log.type === 'OUT' ? 'KELUAR' : 'MASUK' }}</span></td>
@@ -500,8 +516,9 @@
                         <div class="fw-bold text-truncate" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
                         <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
                     </div>
+                    <!-- Ditampilkan dengan nama Varian yang jelas -->
                     <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 4px;">
-                        <span v-if="item.selectedVariantAttrs">{{ item.selectedVariantAttrs }}</span>
+                        <span v-if="item.variantName" class="fw-semibold"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</span>
                     </div>
                     <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
                         <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
@@ -561,7 +578,7 @@
                             </div>
                             
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold">Foto Produk</label>
+                                <label class="form-label small fw-bold">Foto Produk (Utama)</label>
                                 <div class="d-flex align-items-center gap-2">
                                     <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
                                     <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="30" class="rounded border">
@@ -570,11 +587,11 @@
                             <div class="col-md-4"><label class="form-label small fw-bold">HPP (Modal Dasar)</label><input type="number" class="form-control form-control-sm" v-model.number="formProduct.hppPrice"></div>
                             <div class="col-md-4"><label class="form-label small fw-bold text-success">Harga Jual Normal</label><input type="number" class="form-control form-control-sm fw-bold border-success text-success" v-model.number="formProduct.sellPrice"></div>
 
-                            <div class="col-12 mt-4"><h6 class="fw-bold text-primary-custom mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>Pengaturan Diskon & Grosir (Promo)</h6></div>
+                            <div class="col-12 mt-4"><h6 class="fw-bold text-primary-custom mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>Pengaturan Diskon & Grosir Induk (Bisa ditimpa varian)</h6></div>
                             
                             <div class="col-md-6">
                                 <div class="p-3 bg-light rounded border h-100">
-                                    <label class="form-label small fw-bold">Diskon Produk</label>
+                                    <label class="form-label small fw-bold">Diskon Produk Utama</label>
                                     <div class="input-group input-group-sm mb-2">
                                         <select class="form-select bg-white" style="max-width: 120px;" v-model="formProduct.discountType" @change="formProduct.discountValue = 0">
                                             <option value="none">Tanpa Diskon</option>
@@ -638,14 +655,39 @@
                                 <div class="table-responsive mt-2" v-if="formProduct.variants.length > 0">
                                     <table class="table table-sm table-bordered align-middle" style="font-size: 0.75rem;">
                                         <thead class="table-light text-center">
-                                            <tr><th>Detail Varian</th><th>SKU Varian</th><th>HPP</th><th>Harga Jual</th><th v-for="out in outlets" :key="out.id">{{ out.name }}</th><th><i class="bi bi-trash"></i></th></tr>
+                                            <tr>
+                                                <!-- Nama Kolom telah diganti sesuai standar -->
+                                                <th>Nama Varian</th>
+                                                <th>Foto Varian</th>
+                                                <th>SKU Varian</th>
+                                                <th>HPP</th>
+                                                <th>Harga Jual Normal</th>
+                                                <th>Diskon Khusus Varian</th>
+                                                <th v-for="out in outlets" :key="out.id">{{ out.name }}</th>
+                                                <th><i class="bi bi-trash"></i></th>
+                                            </tr>
                                         </thead>
                                         <tbody>
                                             <tr v-for="(v, index) in formProduct.variants" :key="index">
-                                                <td class="fw-bold text-nowrap text-primary-custom">{{ v.attributes }}</td>
-                                                <td><input type="text" class="form-control form-control-sm px-1" v-model="v.variantSku"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-1" v-model.number="v.hppPrice"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-1 text-success fw-bold" v-model.number="v.sellPrice"></td>
+                                                <td><input type="text" class="form-control form-control-sm px-1 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian"></td>
+                                                <td>
+                                                    <!-- Fitur Upload Khusus Gambar Varian -->
+                                                    <div class="d-flex flex-column align-items-center gap-1">
+                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 80px; font-size:0.65rem;">
+                                                        <img v-if="v.imageBase64" :src="v.imageBase64" width="30" height="30" class="rounded border object-fit-cover shadow-sm">
+                                                    </div>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm px-1 text-center" v-model="v.variantSku"></td>
+                                                <td><input type="number" class="form-control form-control-sm px-1 text-center" v-model.number="v.hppPrice"></td>
+                                                <td><input type="number" class="form-control form-control-sm px-1 text-success fw-bold text-center" v-model.number="v.sellPrice"></td>
+                                                <td>
+                                                    <div class="input-group input-group-sm" style="min-width: 130px;">
+                                                        <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
+                                                            <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
+                                                        </select>
+                                                        <input type="number" class="form-control px-1 text-center" v-model.number="v.discountValue" :disabled="!v.discountType || v.discountType === 'none'" placeholder="0">
+                                                    </div>
+                                                </td>
                                                 <td v-for="out in outlets" :key="out.id">
                                                     <input type="number" class="form-control form-control-sm text-center px-1" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 45px;">
                                                 </td>
@@ -690,8 +732,15 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-body p-3 bg-white">
                         <h6 class="fw-bold mb-1 text-primary-custom">{{ cartItemEdit.name }}</h6>
-                        <p class="text-muted small border-bottom pb-2 mb-3">{{ cartItemEdit.selectedVariantAttrs || 'Item Regular' }}</p>
+                        <!-- Nama Varian -->
+                        <p class="text-muted small border-bottom pb-2 mb-3 fw-semibold" v-if="cartItemEdit.variantName"><i class="bi bi-tag-fill me-1"></i>{{ cartItemEdit.variantName }}</p>
                         
+                        <!-- LIVE PREVIEW HARGA DISKON -->
+                        <div class="p-2 bg-light border border-primary rounded mb-3 text-center">
+                            <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;" v-if="getFinalItemPrice(cartItemEdit) < cartItemEdit.basePrice">Harga Normal: Rp {{ formatNumber(cartItemEdit.basePrice) }}</div>
+                            <div class="fw-bold text-success fs-6">Harga Akhir: Rp {{ formatNumber(getFinalItemPrice(cartItemEdit)) }}</div>
+                        </div>
+
                         <!-- Penjelasan Grosir Tersedia -->
                         <div class="mb-3 bg-light p-2 rounded" v-if="cartItemEdit.tiers && cartItemEdit.tiers.length > 0">
                             <label class="form-label fw-bold text-info m-0" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Syarat Grosir Tersedia (Auto)</label>
@@ -714,14 +763,14 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Diskon Override Kasir</label>
                             <div class="input-group input-group-sm">
-                                <select class="form-select bg-light" style="max-width: 45%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = 0">
+                                <select class="form-select bg-white" style="max-width: 45%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = 0">
                                     <option value="none">Tanpa Diskon</option>
                                     <option value="percent">Persen (%)</option>
                                     <option value="nominal">Nominal (Rp)</option>
                                 </select>
                                 <input type="number" class="form-control" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
                             </div>
-                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Mengganti paksa semua diskon jika diisi kasir.</small>
+                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Mengganti paksa semua diskon asli sistem.</small>
                         </div>
 
                         <div class="mb-4 border-top pt-3">
@@ -787,22 +836,31 @@
                         </div>
                         <div class="modal-body bg-white text-center p-4" v-if="!hasVariants">
                             <img :src="activeProduct.imageBase64 || 'https://via.placeholder.com/150'" width="120" height="120" class="rounded mb-3 shadow-sm object-fit-cover">
-                            <h4 class="fw-bold text-primary-custom mb-1">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h4>
+                            
+                            <!-- Harga Coret Khusus Induk -->
+                            <h5 class="text-muted text-decoration-line-through mb-0" v-if="getEffectiveBasePrice(activeProduct) < (activeProduct.sellPrice || activeProduct.basePrice)">Rp {{ formatNumber(activeProduct.sellPrice || activeProduct.basePrice) }}</h5>
+                            <h3 class="fw-bold text-primary-custom mb-2">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h3>
+                            
                             <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getBaseTotalStock(activeProduct) }} Pcs</p>
                             <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
                         <div class="modal-body bg-white p-4" v-else>
-                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN PILIHAN VARIAN:</p>
+                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN NAMA VARIAN:</p>
                             <div class="row g-3">
                                 <div class="col-md-3 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
                                     <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
                                         <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" height="80">
-                                        <!-- Perbaikan Tampilan Varian di POS agar lebih jelas -->
-                                        <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-2 text-wrap lh-base" style="font-size: 0.70rem;">Pilihan: {{ v.attributes }}</div>
+                                        
+                                        <!-- Perbaikan Tampilan Nama Varian -->
+                                        <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap lh-base" style="font-size: 0.75rem;">{{ v.name || v.attributes || 'Varian '+(idx+1) }}</div>
+                                        <div class="text-muted mb-2 fw-semibold" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</div>
                                         
                                         <div class="mt-auto">
-                                            <div class="fw-bold mb-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
-                                            <span class="badge w-100" style="font-size: 0.7rem;" :class="getVariantTotalStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantTotalStock(v) }}</span>
+                                            <!-- Harga Coret Khusus Varian -->
+                                            <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}</div>
+                                            <div class="fw-bold mb-1 lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
+                                            
+                                            <span class="badge w-100 mt-1" style="font-size: 0.7rem;" :class="getVariantTotalStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantTotalStock(v) }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -836,7 +894,7 @@
             
             <div v-for="i in activePrintData.items" :key="i.cartId" style="margin-bottom:5px; font-size:11px;">
                 <div style="font-weight:bold;">{{ i.name }}</div>
-                <div v-if="i.selectedVariantAttrs" style="font-size:10px; color:#333;">Varian: {{ i.selectedVariantAttrs }}</div>
+                <div v-if="i.variantName" style="font-size:10px; color:#333;">Varian: {{ i.variantName }}</div>
                 <div v-if="i.note" style="font-size:10px; font-style:italic;">Note: {{ i.note }}</div>
                 <div style="display:flex; justify-content:space-between; margin-top:2px;">
                     <span>{{ i.qty }} x {{ formatNumber(i.finalPrice) }}</span>
@@ -900,7 +958,7 @@
                     <tr v-for="i in activePrintData.items" :key="i.cartId" style="border-bottom:1px solid #ccc;">
                         <td style="padding:8px 5px;">
                             <div style="font-weight:bold; font-size:13px;">{{ i.name }}</div>
-                            <div style="font-size:11px; margin-top:2px;" v-if="i.selectedVariantAttrs">Varian: {{ i.selectedVariantAttrs }}</div>
+                            <div style="font-size:11px; margin-top:2px;" v-if="i.variantName">Varian: {{ i.variantName }}</div>
                             <div style="font-size:11px; margin-top:2px; font-style:italic;" v-if="i.note">Catatan: {{ i.note }}</div>
                         </td>
                         <td style="text-align:center; font-family: monospace;">{{ i.variantSku || i.sku || '-' }}</td>
@@ -990,7 +1048,15 @@
                 let list = [];
                 this.products.forEach(p => {
                     if(p.variants && p.variants.length > 0) {
-                        p.variants.forEach(v => { list.push({ parentName: p.name, sku: v.variantSku, attributes: v.attributes, hpp: v.hppPrice, sell: this.getEffectiveVariantPrice(p, v), stock: this.getVariantTotalStock(v), imageBase64: v.imageBase64 || p.imageBase64 }); });
+                        p.variants.forEach(v => { 
+                            let vSell = this.getEffectiveVariantPrice(p, v);
+                            list.push({ 
+                                parentName: p.name, sku: v.variantSku, 
+                                name: v.name || v.attributes || 'Varian', 
+                                hpp: v.hppPrice, base: v.sellPrice || p.sellPrice, sell: vSell, 
+                                stock: this.getVariantTotalStock(v), imageBase64: v.imageBase64 || p.imageBase64 
+                            }); 
+                        });
                     }
                 });
                 return list;
@@ -1064,7 +1130,10 @@
                     if (!copy.baseOutletStocks) copy.baseOutletStocks = {};
                     if (!copy.variants) copy.variants = [];
                     if (!copy.tiers) copy.tiers = [];
-                    copy.variants.forEach(v => { if (!v.outletStocks) v.outletStocks = {}; });
+                    copy.variants.forEach(v => { 
+                        if (!v.outletStocks) v.outletStocks = {}; 
+                        if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
+                    });
                     this.dynamicVariants = [{ name: 'Varian Khusus', tags: [], input: '' }];
                 }
                 if (formName === 'formOutlet') {
@@ -1109,7 +1178,12 @@
                 cartesian.forEach(combo => {
                     const attrStr = combo.join(' - '); const vSku = `${this.formProduct.sku}-${combo.join('-')}`.replace(/\s+/g, '').toUpperCase();
                     let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
-                    matrix.push({ attributes: attrStr, variantSku: vSku, hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, imageBase64: '', outletStocks: oStocks });
+                    matrix.push({ 
+                        name: attrStr, attributes: attrStr, variantSku: vSku, 
+                        hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, 
+                        discountType: 'none', discountValue: 0,
+                        imageBase64: '', outletStocks: oStocks 
+                    });
                 });
                 this.formProduct.variants = matrix;
             },
@@ -1128,15 +1202,20 @@
                 if (p.discountType === 'percent') pBase -= (pBase * (p.discountValue || 0) / 100);
                 return pBase;
             },
+            
             getEffectiveVariantPrice(parentProd, variant) {
                 let pBase = variant.sellPrice || parentProd.sellPrice || parentProd.basePrice || 0;
-                if (parentProd.discountType === 'nominal') pBase -= (parentProd.discountValue || 0);
-                if (parentProd.discountType === 'percent') pBase -= (pBase * (parentProd.discountValue || 0) / 100);
+                
+                let hasVariantDiscount = variant.discountType && variant.discountType !== 'none';
+                let dType = hasVariantDiscount ? variant.discountType : parentProd.discountType;
+                let dVal = hasVariantDiscount ? variant.discountValue : parentProd.discountValue;
+
+                if (dType === 'nominal') pBase -= (dVal || 0);
+                if (dType === 'percent') pBase -= (pBase * (dVal || 0) / 100);
                 return pBase;
             },
 
             getFinalItemPrice(cartItem) {
-                // Perbaikan Logika Kalkulasi (Mencegah NaN dan 0 akibat bug)
                 let currentPrice = cartItem.promoPrice; 
                 
                 if (cartItem.tiers && cartItem.tiers.length > 0) {
@@ -1146,9 +1225,10 @@
                 }
 
                 if (cartItem.posDiscountType && cartItem.posDiscountType !== 'none') {
+                    let base = cartItem.basePrice;
                     let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
-                    if (cartItem.posDiscountType === 'nominal') return Math.max(0, currentPrice - discountVal);
-                    if (cartItem.posDiscountType === 'percent') return Math.max(0, currentPrice - (currentPrice * discountVal / 100));
+                    if (cartItem.posDiscountType === 'nominal') return Math.max(0, base - discountVal);
+                    if (cartItem.posDiscountType === 'percent') return Math.max(0, base - (base * discountVal / 100));
                 }
                 
                 return currentPrice;
@@ -1173,8 +1253,9 @@
                 };
                 
                 if (variant) { 
-                    cartId += `-${variant.variantSku}`; item.selectedVariantAttrs = variant.attributes; 
-                    item.variantSku = variant.variantSku;
+                    cartId += `-${variant.variantSku}`; 
+                    item.variantName = variant.name || variant.attributes || 'Varian Khusus'; 
+                    item.variantSku = variant.variantSku || variant.sku || '-';
                 }
                 
                 item.cartId = cartId; const ex = this.cart.find(i => i.cartId === cartId); if (ex) ex.qty++; else this.cart.push(item);
@@ -1205,7 +1286,7 @@
                 
                 const logPromises = this.cart.map(item => {
                     return addDoc(collection(db, "stockLogs"), {
-                        dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.selectedVariantAttrs || '-',
+                        dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.variantName || '-',
                         qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp()
                     });
                 });
