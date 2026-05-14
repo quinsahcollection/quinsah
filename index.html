@@ -49,7 +49,7 @@
         /* Visual Pohon Kategori Premium */
         .tree-level-1 { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px; background: #fff; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .tree-header-1 { background-color: #f8f9fa; padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        .tree-children-container { padding: 10px 20px 10px 30px; } /* Memberi margin/padding dalam agar tidak menabrak kotak */
+        .tree-children-container { padding: 10px 20px 10px 30px; } 
         .tree-level-2 { padding: 12px 15px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 2px solid #cbd5e1; background: #fff; border-bottom: 1px dashed #e5e7eb; border-radius: 0 8px 8px 0; }
         .tree-level-2:last-child { border-bottom: none; margin-bottom: 0; }
         .tree-level-3 { padding: 10px 15px; margin-left: 30px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 2px dashed #94a3b8; background: #fcfcfc; border-radius: 0 8px 8px 0; border-bottom: 1px dashed #f1f5f9; }
@@ -174,7 +174,7 @@
                             <div class="mb-2"><span class="sku-badge">{{ product.sku }}</span></div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <span class="text-primary-custom fw-bold" style="font-size: 0.85rem;">Rp {{ formatNumber(product.basePrice) }}</span>
-                                <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ product.variants?.length > 0 ? product.variants.length+' Varian' : product.baseStock+' Pcs' }}</span>
+                                <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ product.variants?.length > 0 ? product.variants.length+' Varian' : getBaseTotalStock(product)+' Pcs' }}</span>
                             </div>
                         </div>
                     </div>
@@ -477,27 +477,87 @@
                                 <label class="form-label small fw-bold text-muted">Harga Dasar (Rp)</label>
                                 <div class="input-group"><span class="input-group-text bg-light">Rp</span><input type="number" class="form-control" v-model.number="formProduct.basePrice"></div>
                             </div>
-                            <div class="col-md-6"><label class="form-label small fw-bold text-muted">Stok Total (Abaikan jika ada Varian)</label><input type="number" class="form-control" v-model.number="formProduct.baseStock" :disabled="formProduct.variants.length > 0"></div>
+                            
+                            <!-- Input Stok Dasar (Jika tidak pakai varian) -->
+                            <div class="col-md-6" v-if="formProduct.variants.length === 0">
+                                <label class="form-label small fw-bold text-muted">Stok per Outlet (Tanpa Varian)</label>
+                                <div v-if="outlets.length === 0" class="small text-danger mt-1"><i class="bi bi-exclamation-triangle"></i> Silakan buat outlet terlebih dahulu di menu Outlets.</div>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6" v-for="outlet in outlets" :key="outlet.id">
+                                        <div class="input-group input-group-sm mb-2">
+                                            <span class="input-group-text bg-light text-truncate" style="max-width: 100px;" :title="outlet.name">{{ outlet.name }}</span>
+                                            <input type="number" class="form-control" v-model.number="formProduct.baseOutletStocks[outlet.id]" placeholder="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="col-12 mt-4 pt-3 border-top">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <h6 class="fw-bold text-primary-custom mb-0">MATRIKS VARIAN PRODUK</h6>
-                                        <small class="text-muted">Buat kombinasi Tipe, Warna, dan Ukuran untuk manajemen stok presisi.</small>
+                                        <small class="text-muted">Generate otomatis Tipe, Warna, dan Ukuran.</small>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-primary fw-semibold" @click="addVariantRow"><i class="bi bi-plus-lg"></i> Baris Varian</button>
                                 </div>
-                                <div class="row g-2 mb-2 align-items-center" v-for="(v, index) in formProduct.variants" :key="index">
-                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Tipe (Baju)" v-model="v.type"></div>
-                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Warna (Navy)" v-model="v.color"></div>
-                                    <div class="col-3"><input type="text" class="form-control form-control-sm" placeholder="Ukuran (XL)" v-model="v.size"></div>
-                                    <div class="col-2"><input type="number" class="form-control form-control-sm" placeholder="Stok" v-model.number="v.stock"></div>
-                                    <div class="col-1 text-end"><button class="btn btn-sm btn-light text-danger border" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-trash"></i></button></div>
+                                
+                                <!-- Alat Generate Matriks Varian -->
+                                <div class="row g-2 mb-3 bg-light p-3 rounded border mx-0">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Tipe <small>(Pisahkan dgn koma)</small></label>
+                                        <input type="text" class="form-control form-control-sm" placeholder="Contoh: Lengan Panjang, Pendek" v-model="variantOptions.types">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Warna</label>
+                                        <input type="text" class="form-control form-control-sm" placeholder="Contoh: Merah, Hitam, Navy" v-model="variantOptions.colors">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Ukuran</label>
+                                        <input type="text" class="form-control form-control-sm" placeholder="Contoh: S, M, L, XL" v-model="variantOptions.sizes">
+                                    </div>
+                                    <div class="col-12 text-end mt-2">
+                                        <button class="btn btn-sm btn-outline-primary fw-bold" @click="generateVariantMatrix">
+                                            <i class="bi bi-magic me-1"></i> Generate Baris Varian
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Tabel Matriks Varian -->
+                                <div class="table-responsive" v-if="formProduct.variants.length > 0">
+                                    <table class="table table-sm table-bordered align-middle" style="font-size: 0.8rem;">
+                                        <thead class="table-light text-center">
+                                            <tr>
+                                                <th>Detail Varian</th>
+                                                <th>SKU Varian</th>
+                                                <th>Foto Spesifik</th>
+                                                <th v-for="outlet in outlets" :key="outlet.id">Stok: {{ outlet.name }}</th>
+                                                <th>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(v, index) in formProduct.variants" :key="index">
+                                                <td class="fw-bold text-nowrap">{{ v.type }} {{ v.color }} {{ v.size }}</td>
+                                                <td><input type="text" class="form-control form-control-sm" v-model="v.variantSku" placeholder="Kode Varian"></td>
+                                                <td class="text-center">
+                                                    <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleVariantImageUpload(index, $event)">
+                                                    <img v-if="v.variantImageBase64" :src="v.variantImageBase64" width="40" height="40" class="mt-1 rounded object-fit-cover shadow-sm">
+                                                </td>
+                                                <td v-for="outlet in outlets" :key="outlet.id">
+                                                    <input type="number" class="form-control form-control-sm text-center" v-model.number="v.outletStocks[outlet.id]" placeholder="0" style="width: 70px; margin: 0 auto;">
+                                                </td>
+                                                <td class="text-center"><button class="btn btn-sm text-danger" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-trash"></i></button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer bg-light border-top"><button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveProduct">Simpan ke Katalog Cloud</button></div>
+                    <div class="modal-footer bg-light border-top">
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveProduct" :disabled="isSavingProduct">
+                            <span v-if="isSavingProduct" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ isSavingProduct ? 'Menyimpan ke Cloud...' : 'Simpan ke Katalog Cloud' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -638,7 +698,7 @@
                         </div>
                         <div class="mb-4" v-if="posSelection.color">
                             <label class="form-label small fw-bold text-muted">Pilih Ukuran (Cek Stok)</label>
-                            <select class="form-select" v-model="posSelection.size"><option value="">-- Ukuran --</option><option v-for="s in availablePosSizes" :value="s.size">{{ s.size }} (Stok sisa: {{ s.stock }})</option></select>
+                            <select class="form-select" v-model="posSelection.size"><option value="">-- Ukuran --</option><option v-for="s in availablePosSizes" :value="s.size">{{ s.size }} (Stok Total: {{ getVariantTotalStock(s) }})</option></select>
                         </div>
                         <button type="button" class="btn btn-primary-custom w-100 fw-bold py-2" @click="addToCart(true)" :disabled="!posSelection.size">Tambahkan ke Keranjang</button>
                     </div>
@@ -714,7 +774,11 @@
                 formMembership: { tierName: '', discountPercent: 0 },
                 formCustomer: { name: '', phone: '', membershipId: '' },
                 formOutlet: { code: '', name: '', location: '' },
-                formProduct: { sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', basePrice: 0, baseStock: 0, imageBase64: '', variants: [] },
+                
+                // Form Product dengan dukungan outlet dan varian terstruktur
+                formProduct: { sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [] },
+                isSavingProduct: false,
+                variantOptions: { types: '', colors: '', sizes: '' },
                 
                 activeProduct: null, posSelection: { type: '', color: '', size: '' },
                 printMode: 'receipt', activePrintData: null,
@@ -799,8 +863,43 @@
                 this.hideModal('addCategoryModal'); this.formCategory = {name:'', parentId:''};
             },
 
-            openAddProductModal() { this.showModal('addProductModal'); },
-            addVariantRow() { this.formProduct.variants.push({ type: '', color: '', size: '', stock: 0 }); },
+            openAddProductModal() { 
+                this.formProduct.baseOutletStocks = {};
+                this.outlets.forEach(o => { this.formProduct.baseOutletStocks[o.id] = 0; });
+                this.showModal('addProductModal'); 
+            },
+            
+            generateVariantMatrix() {
+                const types = this.variantOptions.types.split(',').map(s => s.trim()).filter(s => s);
+                const colors = this.variantOptions.colors.split(',').map(s => s.trim()).filter(s => s);
+                const sizes = this.variantOptions.sizes.split(',').map(s => s.trim()).filter(s => s);
+
+                const tArr = types.length ? types : [''];
+                const cArr = colors.length ? colors : [''];
+                const sArr = sizes.length ? sizes : [''];
+
+                if (types.length === 0 && colors.length === 0 && sizes.length === 0) return;
+
+                let matrix = [];
+                tArr.forEach(t => {
+                    cArr.forEach(c => {
+                        sArr.forEach(s => {
+                            let oStocks = {};
+                            this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                            let vSku = `${this.formProduct.sku}-${t}-${c}-${s}`.replace(/--/g, '-').replace(/-$/, '').toUpperCase();
+
+                            matrix.push({
+                                type: t, color: c, size: s,
+                                variantSku: vSku,
+                                variantImageBase64: '',
+                                outletStocks: oStocks
+                            });
+                        });
+                    });
+                });
+                this.formProduct.variants = matrix;
+            },
+
             handleImageUpload(e) {
                 const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
                 reader.onload = (e) => { const img = new Image(); img.onload = () => {
@@ -808,10 +907,44 @@
                     const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); this.formProduct.imageBase64 = canvas.toDataURL('image/jpeg', 0.6); 
                 }; img.src = e.target.result; }; reader.readAsDataURL(file);
             },
-            async saveProduct() { await addDoc(collection(db, "products"), { ...this.formProduct, createdAt: serverTimestamp() }); this.hideModal('addProductModal'); this.formProduct = { sku:'', name:'', categoryId_L1:'', categoryId_L2:'', categoryId_L3:'', basePrice:0, baseStock:0, imageBase64:'', variants:[] }; },
+            
+            handleVariantImageUpload(index, e) {
+                const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+                reader.onload = (ev) => { const img = new Image(); img.onload = () => {
+                    const canvas = document.createElement('canvas'); const scale = 200 / img.width; 
+                    canvas.width = 200; canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); 
+                    this.formProduct.variants[index].variantImageBase64 = canvas.toDataURL('image/jpeg', 0.6); 
+                }; img.src = ev.target.result; }; reader.readAsDataURL(file);
+            },
+
+            async saveProduct() { 
+                if (this.isSavingProduct) return; 
+                this.isSavingProduct = true;
+                try {
+                    await addDoc(collection(db, "products"), { ...this.formProduct, createdAt: serverTimestamp() }); 
+                    this.hideModal('addProductModal'); 
+                    this.formProduct = { sku:'', name:'', categoryId_L1:'', categoryId_L2:'', categoryId_L3:'', basePrice:0, baseOutletStocks:{}, imageBase64:'', variants:[] }; 
+                    this.variantOptions = { types: '', colors: '', sizes: '' };
+                } catch (error) {
+                    console.error(error);
+                    alert("Gagal menyimpan produk. Periksa koneksi Anda.");
+                } finally {
+                    this.isSavingProduct = false;
+                }
+            },
             async saveMembership() { await addDoc(collection(db, "memberships"), { ...this.formMembership, createdAt: serverTimestamp() }); this.hideModal('addMembershipModal'); this.formMembership = {tierName:'', discountPercent:0}; },
             async saveCustomer() { await addDoc(collection(db, "customers"), { ...this.formCustomer, createdAt: serverTimestamp() }); this.hideModal('addCustomerModal'); this.formCustomer = {name:'', phone:'', membershipId:''}; },
             async saveOutlet() { await addDoc(collection(db, "outlets"), {...this.formOutlet, createdAt: serverTimestamp()}); this.hideModal('addOutletModal'); this.formOutlet = { code: '', name: '', location: '' }; },
+
+            getVariantTotalStock(variant) {
+                if(!variant.outletStocks) return 0;
+                return Object.values(variant.outletStocks).reduce((a, b) => a + (b || 0), 0);
+            },
+            getBaseTotalStock(product) {
+                if(!product.baseOutletStocks) return product.baseStock || 0; 
+                return Object.values(product.baseOutletStocks).reduce((a, b) => a + (b || 0), 0);
+            },
 
             openPosModifier(product) { this.activeProduct = product; this.posSelection = { type: '', color: '', size: '' }; this.showModal('posModifierModal'); },
             addToCart(isVariant) {
