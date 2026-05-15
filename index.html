@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V5.1</title>
+    <title>Quinsah Collection ERP - Full Enterprise V5.2</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -78,8 +78,9 @@
         /* Confirm & Camera Modal always on top */
         #confirmModal { z-index: 1100 !important; }
         #cameraScannerModal { z-index: 1100 !important; }
-        /* Quick Add Modals on top of addProductModal */
+        /* Quick Add Modals on top of other modals */
         .quick-add-modal { z-index: 1085 !important; }
+        .variant-detail-modal { z-index: 1085 !important; }
 
         /* ELEGANT MOBILE & TABLET OPTIMIZATION */
         @media (max-width: 1199px) {
@@ -275,7 +276,7 @@
                                     <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                                 </div>
                                 <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
-                                    {{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getProductDisplayStock(product)+' '+(product.uom || 'Pcs') }}
+                                    {{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getProductDisplayStock(product)+' '+ (product.uom || 'Pcs') }}
                                 </span>
                             </div>
                         </div>
@@ -300,7 +301,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle text-nowrap">
-                        <thead><tr><th>No. PO</th><th>Tanggal</th><th>Supplier</th><th>Outlet Tujuan</th><th>Total Pembelian</th></tr></thead>
+                        <thead><tr><th>No. Invoice / PO</th><th>Tanggal</th><th>Supplier</th><th>Outlet Tujuan</th><th>Total Pembelian</th></tr></thead>
                         <tbody>
                             <tr v-for="po in purchases" :key="po.id">
                                 <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
@@ -317,10 +318,59 @@
 
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings' && userRole === 'Admin'">
-                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2">
+                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
+                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
                 </ul>
+
+                <div v-if="settingTab==='invoice'" class="dashboard-card">
+                    <div class="mb-3">
+                        <h6 class="fw-bold mb-1">Pengaturan Penomoran Invoice Otomatis</h6>
+                        <p class="text-muted small">Atur prefix/awalan dan pola penomoran untuk transaksi kasir (POS) maupun Purchase Order (PO).</p>
+                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light border rounded">
+                                <h6 class="fw-bold text-primary-custom mb-3"><i class="bi bi-display me-2"></i>Invoice POS (Penjualan)</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="appSettings.posPrefix" placeholder="Cth: INV">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
+                                    <select class="form-select form-select-sm" v-model="appSettings.posPattern">
+                                        <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
+                                        <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
+                                        <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
+                                        <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light border rounded">
+                                <h6 class="fw-bold text-success mb-3"><i class="bi bi-cart-plus me-2"></i>Invoice PO (Pembelian)</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="appSettings.poPrefix" placeholder="Cth: PO">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
+                                    <select class="form-select form-select-sm" v-model="appSettings.poPattern">
+                                        <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
+                                        <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
+                                        <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
+                                        <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary-custom mt-4 fw-bold px-4" @click="saveSettings" :disabled="isSaving">
+                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Format Invoice
+                    </button>
+                </div>
 
                 <div v-if="settingTab==='uoms'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -386,8 +436,7 @@
                                 <th>Kode Produk</th>
                                 <th>Foto</th>
                                 <th>Nama Produk</th>
-                                <th>Daftar Varian</th>
-                                <th>Satuan</th>
+                                <th>Daftar Varian (Klik untuk Detail)</th>
                                 <th>HPP (Modal)</th>
                                 <th>Hrg Jual</th>
                                 <th>Aksi</th>
@@ -406,12 +455,11 @@
                                     <td>
                                         <div v-if="!p.variants || p.variants.length === 0" class="text-muted small">- Tanpa Varian -</div>
                                         <div v-else class="d-flex flex-column gap-1">
-                                            <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal" style="font-size: 0.65rem;">
-                                                {{ v.name || v.attributes }} <span class="text-primary-custom fw-bold ms-1">({{ v.variantSku || '-' }})</span>
+                                            <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal cursor-pointer" style="font-size: 0.65rem; transition: 0.2s;" onmouseover="this.classList.replace('bg-light','bg-primary'); this.classList.replace('text-dark','text-white')" onmouseout="this.classList.replace('bg-primary','bg-light'); this.classList.replace('text-white','text-dark')" @click="openVariantDetail(p, v, idx)">
+                                                <i class="bi bi-pencil-square me-1"></i>{{ v.name || v.attributes }} <span class="fw-bold ms-1">({{ v.variantSku || '-' }})</span>
                                             </span>
                                         </div>
                                     </td>
-                                    <td><span class="badge bg-light text-dark border">{{ p.uom || 'Pcs' }}</span></td>
                                     <td class="fw-semibold text-muted small">Rp {{ formatNumber(p.hppPrice) }}</td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
@@ -500,7 +548,7 @@
                                     <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
                                     <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
                                     <th :colspan="outlets.length > 0 ? outlets.length : 1">Stok Outlet</th>
-                                    <th rowspan="2" class="align-middle bg-danger text-white">Total</th>
+                                    <th rowspan="2" class="align-middle bg-danger text-white">Total Keseluruhan</th>
                                 </tr>
                                 <tr>
                                     <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
@@ -516,9 +564,13 @@
                                         <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
                                         <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
                                         
-                                        <td v-for="out in outlets" :key="out.id" class="text-center">{{ getProductStockAtOutlet(p, out.id) }}</td>
+                                        <td v-for="out in outlets" :key="out.id" class="text-center fw-bold">
+                                            {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
                                         <td v-if="outlets.length === 0" class="text-center">-</td>
-                                        <td class="text-center bg-danger bg-opacity-10">{{ getBaseTotalStock(p) }}</td>
+                                        <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
+                                            {{ getBaseTotalStock(p) }} <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
                                     </tr>
                                     <tr v-for="(v, index) in p.variants" :key="index">
                                         <td class="ps-3 text-muted">
@@ -528,9 +580,13 @@
                                         <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
                                         <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
                                         
-                                        <td v-for="out in outlets" :key="out.id" class="text-center fw-semibold">{{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }}</td>
+                                        <td v-for="out in outlets" :key="out.id" class="text-center fw-semibold">
+                                            {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
                                         <td v-if="outlets.length === 0" class="text-center">-</td>
-                                        <td class="text-center fw-bold">{{ getVariantTotalStock(v) }}</td>
+                                        <td class="text-center fw-bold fs-6">
+                                            {{ getVariantTotalStock(v) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -700,6 +756,10 @@
             </div>
             
             <div class="mb-2 pb-2 border-bottom">
+                <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
+                    <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
+                    <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="Nomor Invoice...">
+                </div>
                 <div class="input-group input-group-sm">
                     <select class="form-select fw-semibold border-danger" v-model="selectedCustomer">
                         <option :value="null">-- Pelanggan (Wajib) --</option>
@@ -762,7 +822,7 @@
                 <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
                     <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
                 </div>
-                <button class="btn bg-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || isProcessing">
+                <button class="btn bg-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || !posCustomInvoice || isProcessing">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                     <span v-else><i class="bi bi-wallet2 me-1"></i> LANJUT BAYAR</span>
                 </button>
@@ -842,6 +902,54 @@
             </div>
         </div>
 
+        <!-- MODAL EDIT VARIAN DARI MASTER -->
+        <div class="modal fade variant-detail-modal" id="variantDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light p-3 border-bottom">
+                        <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-tag-fill me-2"></i>Detail Spesifik Varian</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4 bg-white" v-if="variantDetail.v && variantDetail.p">
+                        <div class="text-center mb-4">
+                            <div class="position-relative d-inline-block">
+                                <img :src="variantDetail.v.imageBase64 || variantDetail.p.imageBase64 || 'https://via.placeholder.com/100'" width="100" height="100" class="rounded object-fit-cover shadow-sm border">
+                                <label class="badge bg-primary position-absolute bottom-0 end-0 cursor-pointer" style="transform: translate(25%, 25%);" title="Ubah Foto Varian">
+                                    <i class="bi bi-camera"></i>
+                                    <input type="file" class="d-none" accept="image/*" @change="handleImageUpload($event, variantDetail.v, true)">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Nama Varian (Pilihan)</label>
+                            <input type="text" class="form-control form-control-sm fw-semibold text-primary-custom" v-model="variantDetail.v.name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Kode Varian (SKU)</label>
+                            <input type="text" class="form-control form-control-sm font-monospace bg-light" v-model="variantDetail.v.variantSku">
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Modal (HPP)</label>
+                                <input type="number" class="form-control form-control-sm" v-model.number="variantDetail.v.hppPrice">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-success">Harga Jual</label>
+                                <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="variantDetail.v.sellPrice">
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 border-top pt-3 mt-2">
+                            <button class="btn btn-outline-danger btn-sm w-50 fw-bold py-2" @click="deleteVariantDetail" :disabled="isSaving"><i class="bi bi-trash me-1"></i> Hapus</button>
+                            <button class="btn btn-primary-custom btn-sm w-50 fw-bold py-2" @click="saveVariantDetail" :disabled="isSaving">
+                                <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                                <span v-else><i class="bi bi-save me-1"></i> Simpan</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL MASTER KATEGORI -->
         <div class="modal fade quick-add-modal" id="addCategoryModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -898,8 +1006,8 @@
             </div>
         </div>
 
-        <!-- MODAL SUPPLIER -->
-        <div class="modal fade" id="addSupplierModal" tabindex="-1">
+        <!-- MODAL SUPPLIER (Diberi class quick-add-modal) -->
+        <div class="modal fade quick-add-modal" id="addSupplierModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow">
                     <div class="modal-header p-3 border-bottom"><h6 class="fw-bold mb-0"><i class="bi bi-truck text-primary-custom me-2"></i>Data Supplier Baru</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -932,14 +1040,21 @@
                     </div>
                     <div class="modal-body bg-white p-4">
                         <div class="row g-3 mb-3 border-bottom pb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
-                                <select class="form-select fw-semibold" v-model="formPurchase.supplierId">
-                                    <option value="">-- Pilih Supplier --</option>
-                                    <option v-for="s in suppliers" :value="s.id">{{ s.name }}</option>
-                                </select>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Nomor Invoice / PO</label>
+                                <input type="text" class="form-control fw-bold text-primary-custom" v-model="formPurchase.invoiceNo" placeholder="Invoice Pembelian...">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
+                                <div class="input-group">
+                                    <select class="form-select fw-semibold" v-model="formPurchase.supplierId">
+                                        <option value="">-- Pilih Supplier --</option>
+                                        <option v-for="s in suppliers" :value="s.id">{{ s.name }}</option>
+                                    </select>
+                                    <button class="btn btn-outline-primary-custom" type="button" @click="openModal('addSupplierModal')" title="Tambah Supplier Baru"><i class="bi bi-plus-lg"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok (Outlet)</label>
                                 <select class="form-select fw-semibold border-primary" v-model="formPurchase.outletId">
                                     <option value="">-- Pilih Cabang Outlet --</option>
@@ -1000,7 +1115,7 @@
                         </div>
                     </div>
                     <div class="modal-footer bg-light border-top p-3">
-                        <button class="btn btn-primary-custom w-100 fw-bold py-3 fs-6 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId">
+                        <button class="btn btn-primary-custom w-100 fw-bold py-3 fs-6 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId || !formPurchase.invoiceNo">
                             <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>PROSES & SINKRONISASI STOK MASUK
                         </button>
                     </div>
@@ -1328,7 +1443,7 @@
                             <label class="form-label fw-bold text-info m-0" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Syarat Grosir Tersedia (Auto)</label>
                             <div class="d-flex flex-column gap-1 mt-1">
                                 <span class="badge border border-info text-dark text-start bg-light" style="font-size:0.65rem;" v-for="t in cartItemEdit.tiers" :key="t.minQty">
-                                    Beli >= {{ t.minQty }} Pcs: Harga mjd Rp {{ formatNumber(t.price) }}
+                                    Beli >= {{ t.minQty }} {{ cartItemEdit.uom || 'Pcs' }}: Harga mjd Rp {{ formatNumber(t.price) }}
                                 </span>
                             </div>
                         </div>
@@ -1558,13 +1673,15 @@
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
 
-                currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'uoms',
+                currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
                 viewTitles: { pos: 'Mesin Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem' },
                 
-                searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '',
+                searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
+
+                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD' },
 
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
@@ -1578,8 +1695,10 @@
                 
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
 
-                formPurchase: { id: null, supplierId: '', outletId: '', items: [], note: '', total: 0 },
+                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0 },
                 formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
+
+                variantDetail: { p: null, v: null, idx: -1 },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1708,6 +1827,41 @@
                 }
             },
 
+            generateInvoiceNumber(type) {
+                const s = this.appSettings;
+                const prefix = type === 'POS' ? s.posPrefix : s.poPrefix;
+                const pattern = type === 'POS' ? s.posPattern : s.poPattern;
+                
+                let datePart = '';
+                const d = new Date();
+                if (pattern === 'YYYYMMDD') {
+                    const mo = String(d.getMonth()+1).padStart(2,'0');
+                    const da = String(d.getDate()).padStart(2,'0');
+                    datePart = `${d.getFullYear()}${mo}${da}`;
+                } else if (pattern === 'YYYYMM') {
+                    const mo = String(d.getMonth()+1).padStart(2,'0');
+                    datePart = `${d.getFullYear()}${mo}`;
+                } else if (pattern === 'YYMM') {
+                    const mo = String(d.getMonth()+1).padStart(2,'0');
+                    datePart = `${String(d.getFullYear()).slice(-2)}${mo}`;
+                }
+                
+                const randomPart = Math.floor(Math.random() * 90000 + 10000); 
+                return `${prefix}${prefix && datePart ? '-' : ''}${datePart}${datePart ? '-' : ''}${randomPart}`;
+            },
+
+            async saveSettings() {
+                this.isSaving = true;
+                try {
+                    await setDoc(doc(db, "settings", "app_settings"), this.appSettings);
+                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                    alert("Format Invoice berhasil disimpan!");
+                } catch(e) {
+                    console.error("Gagal simpan setting", e);
+                }
+                this.isSaving = false;
+            },
+
             resetPosDate() {
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -1742,6 +1896,11 @@
             },
             
             initAppListeners() {
+                onSnapshot(doc(db, "settings", "app_settings"), (docSnap) => {
+                    if(docSnap.exists()) { this.appSettings = { ...this.appSettings, ...docSnap.data() }; }
+                    if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                });
+
                 const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'stockLogs', 'uoms', 'tags', 'suppliers', 'purchases'];
                 collections.forEach(col => { onSnapshot(query(collection(db, col), orderBy("createdAt", "desc")), snap => { const r = []; snap.forEach(d => r.push({ id: d.id, ...d.data() })); this[col] = r; }, e => console.error(e)); });
             },
@@ -1779,7 +1938,6 @@
                     }
                     if (path.length > 0) return path.join(' > ');
                 }
-                // Fallback
                 let path = [];
                 const getCatName = (id) => { const c = this.categories.find(x => x.id === id); return c ? c.name : null; };
                 if (p.categoryId_L1) { const n1 = getCatName(p.categoryId_L1); if(n1) path.push(n1); }
@@ -1793,11 +1951,8 @@
                 this.activeBarcodeSku = sku;
                 this.showModal('barcodeModal');
                 setTimeout(() => {
-                    try {
-                        JsBarcode("#barcode-canvas", sku, {
-                            format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false
-                        });
-                    } catch(e) { console.error("Barcode Error", e); }
+                    try { JsBarcode("#barcode-canvas", sku, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } 
+                    catch(e) { console.error("Barcode Error", e); }
                 }, 200);
             },
 
@@ -1822,37 +1977,26 @@
             
             stopCameraScanner() {
                 if(this.html5QrCode) {
-                    this.html5QrCode.stop().then(() => {
-                        this.hideModal('cameraScannerModal');
-                    }).catch(err => { this.hideModal('cameraScannerModal'); });
-                } else {
-                    this.hideModal('cameraScannerModal');
-                }
+                    this.html5QrCode.stop().then(() => { this.hideModal('cameraScannerModal'); }).catch(err => { this.hideModal('cameraScannerModal'); });
+                } else { this.hideModal('cameraScannerModal'); }
             },
 
             handlePosSearchEnter() {
                 if (this.posSearchMode === 'scan' && this.searchQuery) {
                     const q = this.searchQuery.trim().toLowerCase();
-                    let foundProduct = null;
-                    let foundVariant = null;
+                    let foundProduct = null; let foundVariant = null;
 
                     for (let p of this.products) {
-                        if (p.sku && p.sku.toLowerCase() === q) {
-                            foundProduct = p; break;
-                        }
+                        if (p.sku && p.sku.toLowerCase() === q) { foundProduct = p; break; }
                         if (p.variants && p.variants.length > 0) {
                             let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
                             if (v) { foundProduct = p; foundVariant = v; break; }
                         }
                     }
 
-                    if (foundProduct) {
-                        this.activeProduct = foundProduct;
-                        this.addToCart(foundVariant || null);
-                    } else {
-                        this.askConfirm('Produk Tidak Ditemukan', `Barcode (${this.searchQuery}) tidak terdaftar di sistem.`, null);
-                    }
-                    this.searchQuery = ''; // Clear for next scan
+                    if (foundProduct) { this.activeProduct = foundProduct; this.addToCart(foundVariant || null); } 
+                    else { this.askConfirm('Produk Tidak Ditemukan', `Barcode (${this.searchQuery}) tidak terdaftar di sistem.`, null); }
+                    this.searchQuery = '';
                 }
             },
 
@@ -1871,7 +2015,10 @@
                 else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', address:'', membershipId:''};
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
                 else if(modalId === 'addOutletModal') this.formOutlet = {id:null, code:'', name:'', location:'', taxPercent: 0, serviceChargePercent: 0};
-                else if(modalId === 'addPurchaseModal') { this.formPurchase = {id:null, supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0}; this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; }
+                else if(modalId === 'addPurchaseModal') { 
+                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0 }; 
+                    this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; 
+                }
                 this.showModal(modalId);
             },
             
@@ -1882,11 +2029,9 @@
                     if (!copy.variants) copy.variants = [];
                     if (!copy.tiers) copy.tiers = [];
                     if (!copy.categoryId) copy.categoryId = '';
-                    
                     if (!copy.uom) copy.uom = 'Pcs';
                     if (!copy.productTags) copy.productTags = [];
                     copy.productTagInput = '';
-
                     copy.variants.forEach(v => { 
                         if (!v.outletStocks) v.outletStocks = {}; 
                         if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
@@ -1922,13 +2067,43 @@
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
 
+            openVariantDetail(product, variant, index) {
+                this.variantDetail = {
+                    p: JSON.parse(JSON.stringify(product)),
+                    v: JSON.parse(JSON.stringify(variant)),
+                    idx: index
+                };
+                this.showModal('variantDetailModal');
+            },
+
+            async saveVariantDetail() {
+                this.isSaving = true;
+                try {
+                    let pCopy = this.variantDetail.p;
+                    pCopy.variants[this.variantDetail.idx] = this.variantDetail.v;
+                    await updateDoc(doc(db, "products", pCopy.id), { variants: pCopy.variants });
+                    this.hideModal('variantDetailModal');
+                } catch(e) { alert('Gagal menyimpan detail varian.'); }
+                this.isSaving = false;
+            },
+
+            async deleteVariantDetail() {
+                this.askConfirm('Hapus Varian?', 'Yakin ingin menghapus varian spesifik ini?', async () => {
+                    this.isSaving = true;
+                    try {
+                        let pCopy = this.variantDetail.p;
+                        pCopy.variants.splice(this.variantDetail.idx, 1);
+                        await updateDoc(doc(db, "products", pCopy.id), { variants: pCopy.variants });
+                        this.hideModal('variantDetailModal');
+                    } catch(e) {}
+                    this.isSaving = false;
+                });
+            },
+
             pushProductTag() {
                 let val = this.formProduct.productTagInput;
-                if (!val) return;
-                val = val.trim();
-                if (val && !this.formProduct.productTags.includes(val)) {
-                    this.formProduct.productTags.push(val);
-                }
+                if (!val) return; val = val.trim();
+                if (val && !this.formProduct.productTags.includes(val)) { this.formProduct.productTags.push(val); }
                 this.formProduct.productTagInput = '';
             },
 
@@ -1942,17 +2117,12 @@
             
             handleDynamicVariantInput(index) {
                 let val = this.formProduct.dynamicVariantsData[index].input || '';
-                if (val.includes(',')) {
-                    this.pushDynamicVariantTag(index, val.split(',')[0]);
-                }
+                if (val.includes(',')) { this.pushDynamicVariantTag(index, val.split(',')[0]); }
             },
             pushDynamicVariantTag(index, overrideVal = null) {
                 let val = overrideVal !== null ? overrideVal : this.formProduct.dynamicVariantsData[index].input;
-                if (!val) return;
-                val = val.replace(/,/g, '').trim();
-                if (val && !this.formProduct.dynamicVariantsData[index].tags.includes(val)) {
-                    this.formProduct.dynamicVariantsData[index].tags.push(val);
-                }
+                if (!val) return; val = val.replace(/,/g, '').trim();
+                if (val && !this.formProduct.dynamicVariantsData[index].tags.includes(val)) { this.formProduct.dynamicVariantsData[index].tags.push(val); }
                 this.formProduct.dynamicVariantsData[index].input = '';
             },
 
@@ -1969,22 +2139,19 @@
                     matrix.push({ 
                         name: attrStr, attributes: attrStr, variantSku: vSku, 
                         hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, 
-                        discountType: 'none', discountValue: 0,
-                        imageBase64: '', outletStocks: oStocks 
+                        discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks 
                     });
                 });
                 this.formProduct.variants = matrix;
             },
 
             addManualVariant() {
-                let oStocks = {}; 
-                this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
                 this.formProduct.variants.push({
                     name: '', attributes: '', 
                     variantSku: this.formProduct.sku ? this.formProduct.sku + '-V' + (this.formProduct.variants.length + 1) : '',
                     hppPrice: this.formProduct.hppPrice || 0, sellPrice: this.formProduct.sellPrice || 0,
-                    discountType: 'none', discountValue: 0,
-                    imageBase64: '', outletStocks: oStocks
+                    discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks
                 });
             },
 
@@ -2041,9 +2208,7 @@
                         let cascadeResult = currentPrice;
                         cascadeStr.forEach(d => {
                             let pct = parseFloat(d.trim());
-                            if (!isNaN(pct) && pct > 0) {
-                                cascadeResult = cascadeResult - (cascadeResult * (pct / 100));
-                            }
+                            if (!isNaN(pct) && pct > 0) { cascadeResult = cascadeResult - (cascadeResult * (pct / 100)); }
                         });
                         return Math.max(0, cascadeResult);
                     }
@@ -2052,16 +2217,12 @@
             },
 
             getProductDisplayStock(product) {
-                if (this.posActiveOutletId) {
-                    return this.getProductStockAtOutlet(product, this.posActiveOutletId);
-                }
+                if (this.posActiveOutletId) { return this.getProductStockAtOutlet(product, this.posActiveOutletId); }
                 return this.getBaseTotalStock(product);
             },
 
             getVariantDisplayStock(variant) {
-                if (this.posActiveOutletId) {
-                    return (variant.outletStocks && variant.outletStocks[this.posActiveOutletId]) ? variant.outletStocks[this.posActiveOutletId] : 0;
-                }
+                if (this.posActiveOutletId) { return (variant.outletStocks && variant.outletStocks[this.posActiveOutletId]) ? variant.outletStocks[this.posActiveOutletId] : 0; }
                 return this.getVariantTotalStock(variant);
             },
 
@@ -2080,8 +2241,7 @@
                 let item = { 
                     id: this.activeProduct.id, productId: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
                     basePrice: bPrice, promoPrice: pPrice, qty: 1, tiers: this.activeProduct.tiers || [],
-                    posDiscountType: 'none', posDiscountValue: 0, note: '',
-                    uom: this.activeProduct.uom || 'Pcs'
+                    posDiscountType: 'none', posDiscountValue: 0, note: '', uom: this.activeProduct.uom || 'Pcs'
                 };
                 
                 if (variant) { 
@@ -2104,22 +2264,15 @@
                 this.heldTransactions.push({
                     id: 'HOLD-' + Date.now(),
                     time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}),
-                    customer: this.selectedCustomer,
-                    cart: [...this.cart],
-                    total: this.total,
-                    totalQty: this.totalQty
+                    customer: this.selectedCustomer, cart: [...this.cart], total: this.total, totalQty: this.totalQty
                 });
-                this.cart = [];
-                this.selectedCustomer = null;
-                this.isMobileCartOpen = false;
+                this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false;
             },
             restoreTransaction(index) {
                 const held = this.heldTransactions[index];
-                this.cart = held.cart;
-                this.selectedCustomer = held.customer;
+                this.cart = held.cart; this.selectedCustomer = held.customer;
                 this.heldTransactions.splice(index, 1);
-                this.hideModal('holdModal');
-                this.isMobileCartOpen = true;
+                this.hideModal('holdModal'); this.isMobileCartOpen = true;
             },
 
             onPurchaseProductChange() {
@@ -2135,8 +2288,7 @@
                 const p = this.products.find(x => x.id === this.formPurchaseItem.productId);
                 if(!p) return;
                 
-                let vName = '';
-                let vSku = p.sku;
+                let vName = ''; let vSku = p.sku;
                 if(this.formPurchaseItem.variantSku) {
                     const v = p.variants.find(vx => vx.variantSku === this.formPurchaseItem.variantSku);
                     if(v) { vName = v.name || v.attributes; vSku = v.variantSku; }
@@ -2158,7 +2310,7 @@
                 try {
                     const trxDateObj = new Date();
                     const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
-                    const newId = 'PO-' + Math.floor(Math.random() * 90000 + 10000);
+                    const newId = this.formPurchase.invoiceNo || this.generateInvoiceNumber('PO');
                     
                     let total = this.formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
                     
@@ -2169,7 +2321,6 @@
                     
                     await addDoc(collection(db, 'purchases'), dataToSave);
                     
-                    // Add Stock Logs & Update Product Stocks via Promise.all
                     const updatePromises = [];
                     for(let item of this.formPurchase.items) {
                         updatePromises.push(addDoc(collection(db, "stockLogs"), {
@@ -2177,7 +2328,6 @@
                             qtyChange: item.qty, type: 'IN', refId: newId, outletId: this.formPurchase.outletId, createdAt: serverTimestamp()
                         }));
                         
-                        // Update Actual Stock
                         let prod = this.products.find(p => p.id === item.productId);
                         if(prod) {
                             let pCopy = JSON.parse(JSON.stringify(prod));
@@ -2203,7 +2353,7 @@
 
             async processTransaction() {
                 this.isProcessing = true; 
-                const newInvId = 'INV-' + Math.floor(Math.random() * 90000 + 10000);
+                const newInvId = this.posCustomInvoice || this.generateInvoiceNumber('POS');
                 
                 const trxDateObj = this.posCustomDate ? new Date(this.posCustomDate) : new Date();
                 const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
@@ -2227,7 +2377,6 @@
                         qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp()
                     }));
 
-                    // Deduct Actual Stock
                     let prod = this.products.find(p => p.id === item.productId);
                     if(prod) {
                         let pCopy = JSON.parse(JSON.stringify(prod));
@@ -2246,6 +2395,8 @@
                 }
                 await Promise.all(updatePromises);
 
+                this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                
                 this.hideModal('paymentModal'); this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
                 
                 this.resetPosDate();
