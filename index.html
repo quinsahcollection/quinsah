@@ -531,10 +531,12 @@
                 </div>
             </div>
 
+            <!-- INVENTORY VIEW -->
             <div v-if="currentView === 'inventory' && userRole === 'Admin'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2">
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Pemantauan Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='logs', 'bg-primary-custom': invTab==='logs'}" href="#" @click.prevent="invTab='logs'">Log Mutasi Stok</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
                 </ul>
 
                 <div v-if="invTab==='stocks'" class="dashboard-card">
@@ -609,12 +611,72 @@
                                     <td class="fw-bold" :class="log.qtyChange > 0 ? 'text-success' : 'text-danger'">{{ log.qtyChange > 0 ? '+'+log.qtyChange : log.qtyChange }}</td>
                                     <td><span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : 'badge-in'">{{ log.type === 'OUT' ? 'KELUAR' : 'MASUK' }}</span></td>
                                 </tr>
+                                <tr v-if="stockLogs.length === 0"><td colspan="5" class="text-center py-4 text-muted small">Belum ada riwayat mutasi.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div v-if="invTab==='stockcard'" class="dashboard-card">
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold"><i class="bi bi-calendar-event me-1"></i>Mulai Tanggal</label>
+                            <input type="date" class="form-control form-control-sm" v-model="stockCardStartDate">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold"><i class="bi bi-calendar-event me-1"></i>Sampai Tanggal</label>
+                            <input type="date" class="form-control form-control-sm" v-model="stockCardEndDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold"><i class="bi bi-shop me-1"></i>Filter Outlet / Cabang</label>
+                            <select class="form-select form-select-sm fw-semibold" v-model="stockCardOutlet">
+                                <option value="">-- Semua Outlet (Global) --</option>
+                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger bg-white w-100 fw-bold py-1" @click="resetStockFilter"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom table-hover align-middle text-nowrap">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama Produk & Varian</th>
+                                    <th>SKU</th>
+                                    <th class="text-center text-primary">Stok Awal</th>
+                                    <th class="text-center text-success">Masuk (In)</th>
+                                    <th class="text-center text-danger">Keluar (Out)</th>
+                                    <th class="text-center bg-light fw-bold text-dark">Stok Akhir</th>
+                                    <th class="text-center">Aksi / Rincian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="log in stockCardSummary" :key="log.id">
+                                    <td>
+                                        <div class="fw-bold small">{{ log.name }}</div>
+                                        <div class="text-muted" style="font-size:0.65rem;" v-if="log.variantName && log.variantName !== '-'">{{ log.variantName }}</div>
+                                    </td>
+                                    <td><span class="sku-badge">{{ log.sku }}</span></td>
+                                    <td class="text-center text-primary fw-bold">{{ log.stokAwal }}</td>
+                                    <td class="text-center text-success fw-bold">{{ log.masuk }}</td>
+                                    <td class="text-center text-danger fw-bold">{{ log.keluar }}</td>
+                                    <td class="text-center bg-light fw-bold fs-6">{{ log.stokAkhir }}</td>
+                                    <td class="text-center align-middle">
+                                        <button v-if="log.inRangeLogs.length > 0" class="btn btn-sm btn-light border text-primary py-0 px-2 fw-semibold" @click="openStockDetail(log)" title="Lihat Detail Histori Transaksi Mutasi">
+                                            <i class="bi bi-info-circle me-1"></i> Rincian
+                                        </button>
+                                        <span v-else class="text-muted small">-</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="stockCardSummary.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada data produk/kartu stok.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
+            <!-- CRM VIEW -->
             <div v-if="currentView === 'crm'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='customers', 'bg-primary-custom': crmTab==='customers'}" href="#" @click.prevent="crmTab='customers'">Pelanggan</a></li>
@@ -688,6 +750,7 @@
                 </div>
             </div>
 
+            <!-- OUTLETS VIEW -->
             <div v-if="currentView === 'outlets' && userRole === 'Admin'" class="dashboard-card">
                 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0">Manajemen Outlet & Pajak</h6>
@@ -712,6 +775,7 @@
                 </div>
             </div>
 
+            <!-- REPORTS VIEW -->
             <div v-if="currentView === 'reports'" class="dashboard-card">
                 <h6 class="fw-bold mb-3">Riwayat Transaksi Penjualan (POS)</h6>
                 <div class="table-responsive">
@@ -743,6 +807,7 @@
             </div>
         </main>
 
+        <!-- POS SIDEBAR RIGHT -->
         <aside class="sidebar-right" :class="{'show-mobile': isMobileCartOpen}" v-show="currentView === 'pos'">
             <div class="mb-3">
                 <select class="form-select form-select-sm fw-bold border-dark" v-model="posActiveOutletId">
@@ -755,7 +820,8 @@
                 <h6 class="fw-bold mb-0">Keranjang</h6>
                 <div class="d-flex align-items-center gap-1">
                     <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi/Simpan Sementara"><i class="bi bi-pause-circle"></i></button>
-                    <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="cart=[]" :disabled="cart.length===0" title="Kosongkan"><i class="bi bi-trash"></i></button>
+                    <!-- TOMBOL RESET/BATAL EDIT KASIR -->
+                    <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="resetPos" title="Batalkan/Kosongkan Keranjang & Reset Nomor Invoice"><i class="bi bi-trash"></i></button>
                     <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false"><i class="bi bi-x-lg text-dark"></i></button>
                 </div>
             </div>
@@ -886,6 +952,49 @@
             </div>
         </div>
 
+        <!-- MODAL DETAIL MUTASI STOK KARTU STOK -->
+        <div class="modal fade" id="stockDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-journal-text me-2"></i>Rincian Mutasi Transaksi Stok</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0 bg-white">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark">{{ activeStockDetail?.name }}</div>
+                                <div class="text-muted small" v-if="activeStockDetail?.variantName !== '-'">Varian: {{ activeStockDetail?.variantName }}</div>
+                                <div class="badge bg-dark mt-1 font-monospace">{{ activeStockDetail?.sku }}</div>
+                            </div>
+                            <div class="text-end" v-if="stockCardStartDate || stockCardEndDate">
+                                <span class="badge bg-warning text-dark border"><i class="bi bi-funnel"></i> Ada Filter Tanggal Aktif</span>
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr><th>Tanggal Transaksi</th><th>Ref ID (Invoice / PO)</th><th>Tipe Transaksi</th><th>Qty Mutasi</th><th>Lokasi Outlet</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="l in activeStockDetail?.inRangeLogs" :key="l.id">
+                                        <td>{{ l.dateStr }}</td>
+                                        <td class="fw-bold text-primary-custom">{{ l.refId }}</td>
+                                        <td><span class="badge" :class="l.type === 'IN' ? 'badge-in' : 'badge-out'">{{ l.type === 'IN' ? 'MASUK (PO)' : 'KELUAR (INV)' }}</span></td>
+                                        <td class="fw-bold fs-6" :class="l.type === 'IN' ? 'text-success' : 'text-danger'">{{ l.type === 'IN' ? '+' : '-' }}{{ Math.abs(l.qtyChange) }}</td>
+                                        <td>{{ getOutletName(l.outletId) }}</td>
+                                    </tr>
+                                    <tr v-if="!activeStockDetail?.inRangeLogs || activeStockDetail?.inRangeLogs.length === 0">
+                                        <td colspan="5" class="text-center py-4 text-muted small">Tidak ada histori mutasi pada rentang tanggal terpilih.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL HOLD TRANSAKSI -->
         <div class="modal fade" id="holdModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
@@ -927,13 +1036,22 @@
                             <span class="badge bg-dark font-monospace text-white">{{ variantDetail.v.variantSku }}</span>
                         </div>
                         <div class="row g-2 text-center my-3 border-top border-bottom py-2">
-                            <div class="col-6 border-end">
+                            <div class="col-6">
                                 <span class="d-block small text-muted">Modal (HPP)</span>
                                 <span class="fw-semibold">Rp {{ formatNumber(variantDetail.v.hppPrice) }}</span>
                             </div>
-                            <div class="col-6">
-                                <span class="d-block small text-success fw-bold">Harga Jual</span>
-                                <span class="fw-bold text-success">Rp {{ formatNumber(variantDetail.v.sellPrice) }}</span>
+                            <div class="col-6 border-start">
+                                <span class="d-block small text-success fw-bold">Harga Jual Akhir</span>
+                                <span class="text-muted text-decoration-line-through small d-block" v-if="getEffectiveVariantPrice(variantDetail.p, variantDetail.v) < (variantDetail.v.sellPrice || variantDetail.p.sellPrice)">
+                                    Rp {{ formatNumber(variantDetail.v.sellPrice || variantDetail.p.sellPrice) }}
+                                </span>
+                                <span class="fw-bold text-success fs-6">Rp {{ formatNumber(getEffectiveVariantPrice(variantDetail.p, variantDetail.v)) }}</span>
+                                <div class="mt-1" v-if="variantDetail.v.discountType && variantDetail.v.discountType !== 'none'">
+                                    <span class="badge bg-danger" style="font-size: 0.6rem;">Diskon Varian: {{ variantDetail.v.discountType === 'percent' ? variantDetail.v.discountValue + '%' : 'Rp ' + formatNumber(variantDetail.v.discountValue) }}</span>
+                                </div>
+                                <div class="mt-1" v-else-if="variantDetail.p.discountType && variantDetail.p.discountType !== 'none'">
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Diskon Induk: {{ variantDetail.p.discountType === 'percent' ? variantDetail.p.discountValue + '%' : 'Rp ' + formatNumber(variantDetail.p.discountValue) }}</span>
+                                </div>
                             </div>
                         </div>
                         <div>
@@ -1624,8 +1742,9 @@
                     </div>
                     <div style="width:50%; padding:10px;">
                         <div style="font-size:10px; font-weight:bold; margin-bottom:5px; text-decoration: underline;">PENERIMA (TUJUAN):</div>
-                        <div style="font-size:18px; font-weight:bold;">{{ activePrintData.customer }}</div>
-                        <div style="font-size:11px; margin-top:5px; font-weight:bold;">Metode: {{ activePrintData.paymentMethod }}</div>
+                        <div style="font-size:18px; font-weight:bold; line-height: 1.2;">{{ activePrintData.customer }}</div>
+                        <div style="font-size:11px; margin-top:4px;"><i class="bi bi-telephone-fill"></i> {{ activePrintData.customerPhone || '-' }}</div>
+                        <div style="font-size:11px; margin-top:2px; max-width: 90%; line-height: 1.3;">{{ activePrintData.customerAddress || '-' }}</div>
                     </div>
                 </div>
 
@@ -1654,6 +1773,10 @@
                         </tr>
                     </tbody>
                 </table>
+                
+                <div style="margin-top:10px; font-size:11px; text-align:right;">
+                    <b>Metode Pembayaran:</b> {{ activePrintData.paymentMethod }}
+                </div>
             </div>
         </div>
 
@@ -1679,8 +1802,9 @@
                 </div>
                 <div style="width:48%;">
                     <div style="font-size:11px; color:#777; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Ditagihkan Kepada:</div>
-                    <div style="font-size:16px; font-weight:bold;">{{ activePrintData.customer }}</div>
-                    <div style="font-size:12px; margin-top:3px;">Metode Pembayaran: <b>{{ activePrintData.paymentMethod }}</b></div>
+                    <div style="font-size:16px; font-weight:bold; line-height: 1.2;">{{ activePrintData.customer }}</div>
+                    <div style="font-size:12px; margin-top:5px;"><b>Telp:</b> {{ activePrintData.customerPhone || '-' }}</div>
+                    <div style="font-size:12px; margin-top:2px; line-height: 1.4; max-width: 90%;"><b>Alamat:</b> {{ activePrintData.customerAddress || '-' }}</div>
                 </div>
             </div>
 
@@ -1724,6 +1848,10 @@
                     <tr>
                         <td style="padding:10px; font-weight:bold; font-size:16px;">TOTAL TAGIHAN</td>
                         <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark);">Rp {{ formatNumber(activePrintData.total) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px 10px; border-top:1px solid #000; border-bottom:1px solid #eee;">Metode Pembayaran</td>
+                        <td style="padding:6px 10px; border-top:1px solid #000; border-bottom:1px solid #eee; text-align:right; font-weight:bold;">{{ activePrintData.paymentMethod }}</td>
                     </tr>
                 </table>
             </div>
@@ -1869,6 +1997,8 @@
                 variantDetail: { p: null, v: null, idx: -1 },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
+                
+                stockCardStartDate: '', stockCardEndDate: '', stockCardOutlet: '', activeStockDetail: null,
 
                 isSaving: false, activeProduct: null, printMode: 'receipt', activePrintData: null,
                 isProcessing: false, isMobileCartOpen: false, heldTransactions: []
@@ -1961,6 +2091,72 @@
                 return [];
             },
 
+            stockCardSummary() {
+                let sTime = this.stockCardStartDate ? new Date(this.stockCardStartDate).setHours(0,0,0,0) : 0;
+                let eTime = this.stockCardEndDate ? new Date(this.stockCardEndDate).setHours(23,59,59,999) : Infinity;
+                let outletFilter = this.stockCardOutlet;
+                let summary = [];
+                
+                this.products.forEach(p => {
+                    if (!p.variants || p.variants.length === 0) {
+                        let currentStock = outletFilter ? this.getProductStockAtOutlet(p, outletFilter) : this.getBaseTotalStock(p);
+                        let sku = p.sku || '-';
+                        let logs = this.stockLogs.filter(l => l.sku === sku);
+                        if(outletFilter) logs = logs.filter(l => l.outletId === outletFilter);
+
+                        let inRangeIn = 0, inRangeOut = 0, afterRangeIn = 0, afterRangeOut = 0;
+                        let inRangeLogs = [];
+
+                        logs.forEach(l => {
+                            let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
+                            let qty = Math.abs(l.qtyChange);
+                            if (logTime > eTime) {
+                                if (l.type === 'IN') afterRangeIn += qty;
+                                else if (l.type === 'OUT') afterRangeOut += qty;
+                            } else if (logTime >= sTime && logTime <= eTime) {
+                                if (l.type === 'IN') inRangeIn += qty;
+                                else if (l.type === 'OUT') inRangeOut += qty;
+                                inRangeLogs.push(l);
+                            }
+                        });
+
+                        let stokAkhir = currentStock - afterRangeIn + afterRangeOut;
+                        let stokAwal = stokAkhir - inRangeIn + inRangeOut;
+
+                        summary.push({ id: p.id, name: p.name, variantName: '-', sku: sku, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
+                    } else {
+                        p.variants.forEach(v => {
+                            let currentStock = outletFilter ? (v.outletStocks && v.outletStocks[outletFilter] ? v.outletStocks[outletFilter] : 0) : this.getVariantTotalStock(v);
+                            let sku = v.variantSku || '-';
+                            let logs = this.stockLogs.filter(l => l.sku === sku || l.variantSku === sku);
+                            if(outletFilter) logs = logs.filter(l => l.outletId === outletFilter);
+
+                            let inRangeIn = 0, inRangeOut = 0, afterRangeIn = 0, afterRangeOut = 0;
+                            let inRangeLogs = [];
+
+                            logs.forEach(l => {
+                                let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
+                                let qty = Math.abs(l.qtyChange);
+                                if (logTime > eTime) {
+                                    if (l.type === 'IN') afterRangeIn += qty;
+                                    else if (l.type === 'OUT') afterRangeOut += qty;
+                                } else if (logTime >= sTime && logTime <= eTime) {
+                                    if (l.type === 'IN') inRangeIn += qty;
+                                    else if (l.type === 'OUT') inRangeOut += qty;
+                                    inRangeLogs.push(l);
+                                }
+                            });
+
+                            let stokAkhir = currentStock - afterRangeIn + afterRangeOut;
+                            let stokAwal = stokAkhir - inRangeIn + inRangeOut;
+
+                            summary.push({ id: p.id + '-' + sku, name: p.name, variantName: v.name || v.attributes, sku: sku, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
+                        });
+                    }
+                });
+                return summary;
+            },
+
             hasVariants() { return this.activeProduct && this.activeProduct.variants && this.activeProduct.variants.length > 0; },
             posActiveOutlet() { return this.outlets.find(o => o.id === this.posActiveOutletId); },
             totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
@@ -2032,6 +2228,15 @@
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 this.posCustomDate = now.toISOString().slice(0,16);
             },
+            
+            resetPos() {
+                this.askConfirm('Batalkan & Reset Kasir?', 'Semua keranjang akan dikosongkan dan nomor invoice dikembalikan seperti baru.', () => {
+                    this.cart = [];
+                    this.selectedCustomer = null;
+                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                });
+            },
+
             getEmptyProductForm() { 
                 return { 
                     id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', 
@@ -2060,8 +2265,20 @@
                     if(docSnap.exists()) { this.appSettings = { ...this.appSettings, ...docSnap.data() }; }
                     if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
                 });
-                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'stockLogs', 'uoms', 'tags', 'suppliers', 'purchases'];
-                collections.forEach(col => { onSnapshot(query(collection(db, col), orderBy("createdAt", "desc")), snap => { const r = []; snap.forEach(d => r.push({ id: d.id, ...d.data() })); this[col] = r; }, e => console.error(e)); });
+                
+                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'uoms', 'tags', 'suppliers', 'purchases', 'stockLogs'];
+                collections.forEach(col => { 
+                    onSnapshot(collection(db, col), snap => { 
+                        const r = []; 
+                        snap.forEach(d => r.push({ id: d.id, ...d.data() })); 
+                        r.sort((a,b) => {
+                            let tA = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now();
+                            let tB = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now();
+                            return tB - tA;
+                        });
+                        this[col] = r; 
+                    }, e => console.error(e)); 
+                });
             },
             
             formatNumber(num) { return new Intl.NumberFormat('id-ID').format(Math.round(num) || 0); },
@@ -2425,7 +2642,11 @@
 
                 let storedItems = JSON.parse(JSON.stringify(this.cart)); storedItems.forEach(i => i.finalPrice = this.getFinalItemPrice(i));
                 const trxData = {
-                    id: newInvId, dateStr: dateStr, customer: this.selectedCustomer ? this.selectedCustomer.name : 'Umum', cashierName: this.userProfile.name, 
+                    id: newInvId, dateStr: dateStr, 
+                    customer: this.selectedCustomer ? this.selectedCustomer.name : 'Umum', 
+                    customerPhone: this.selectedCustomer ? this.selectedCustomer.phone : '-',
+                    customerAddress: this.selectedCustomer ? this.selectedCustomer.address : '-',
+                    cashierName: this.userProfile.name, 
                     outletId: this.posActiveOutletId, total: this.total, taxAmt: this.taxAmount, serviceAmt: this.serviceAmount, 
                     paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived, items: storedItems, createdAt: serverTimestamp()
                 };
@@ -2506,7 +2727,18 @@
                 });
             },
 
-            triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 400); }
+            triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 400); },
+
+            resetStockFilter() {
+                this.stockCardStartDate = '';
+                this.stockCardEndDate = '';
+                this.stockCardOutlet = '';
+            },
+
+            openStockDetail(logData) {
+                this.activeStockDetail = logData;
+                this.showModal('stockDetailModal');
+            }
         }
     }).mount('#app');
 </script>
