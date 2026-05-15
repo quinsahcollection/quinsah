@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.6</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.7</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -94,7 +94,6 @@
             
             .modal-body { padding: 15px !important; }
             
-            /* Styling khusus untuk keranjang melayang (FAB) */
             .fab-cart {
                 position: fixed;
                 bottom: 80px;
@@ -196,15 +195,33 @@
             </header>
 
             <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
-                    <div class="input-group input-group-sm shadow-sm" style="max-width: 350px;">
-                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU / Varian..." v-model="searchQuery">
+                
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-xl-3 col-lg-4 col-md-4 col-12">
+                        <div class="input-group input-group-sm shadow-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU / Varian..." v-model="searchQuery">
+                        </div>
                     </div>
-                    <button v-if="heldTransactions.length > 0" class="btn btn-warning btn-sm fw-bold shadow-sm" @click="openModal('holdModal')">
-                        <i class="bi bi-clock-history"></i> Hold ({{ heldTransactions.length }})
-                    </button>
+                    <div class="col-xl-3 col-lg-3 col-md-4 col-6">
+                        <select class="form-select form-select-sm shadow-sm py-2" v-model="posCategoryFilter">
+                            <option value="">-- Semua Kategori --</option>
+                            <option v-for="cat in structuredCategories" :value="cat.id">{{ '—'.repeat(cat.treeLevel) }} {{ cat.name }}</option>
+                        </select>
+                    </div>
+                    <div class="col-xl-3 col-lg-3 col-md-4 col-6">
+                        <div class="input-group input-group-sm shadow-sm" :title="userRole === 'Admin' ? 'Admin: Ubah untuk Backdate Transaksi' : 'Tanggal Transaksi Otomatis'">
+                            <span class="input-group-text bg-white"><i class="bi bi-calendar-date"></i></span>
+                            <input type="datetime-local" class="form-control py-2" style="font-size:0.75rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-2 col-md-12 col-12 text-md-end text-start mt-2 mt-md-0">
+                        <button v-if="heldTransactions.length > 0" class="btn btn-warning btn-sm fw-bold shadow-sm w-100 py-2" @click="openModal('holdModal')">
+                            <i class="bi bi-clock-history"></i> Hold ({{ heldTransactions.length }})
+                        </button>
+                    </div>
                 </div>
+
                 <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
                     <div class="col-xl-3 col-lg-4 col-md-4 col-6" v-for="product in filteredProducts" :key="product.id">
                         <div class="product-card" @click="openPosModifier(product)">
@@ -219,6 +236,10 @@
                                 <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">{{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getBaseTotalStock(product)+' Pcs' }}</span>
                             </div>
                         </div>
+                    </div>
+                    <div v-if="filteredProducts.length === 0" class="col-12 text-center text-muted mt-5 py-5">
+                        <i class="bi bi-search fs-1 mb-2 d-block"></i>
+                        Tidak ada produk yang sesuai kriteria pencarian/kategori.
                     </div>
                 </div>
 
@@ -340,16 +361,26 @@
                             <thead class="table-light text-center">
                                 <tr>
                                     <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
-                                    <th :colspan="outlets.length">Stok Outlet</th>
+                                    <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
+                                    <th :colspan="outlets.length > 0 ? outlets.length : 1">Stok Outlet</th>
                                     <th rowspan="2" class="align-middle bg-danger text-white">Total</th>
                                 </tr>
-                                <tr><th v-for="out in outlets" :key="out.id">{{ out.name }}</th></tr>
+                                <tr>
+                                    <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
+                                    <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
+                                    <th v-for="out in outlets" :key="out.id">{{ out.name }}</th>
+                                    <th v-if="outlets.length === 0">-</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <template v-for="p in products" :key="p.id">
                                     <tr class="table-secondary fw-bold">
                                         <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2">{{ p.sku }}</span></td>
+                                        <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
+                                        <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
+                                        
                                         <td v-for="out in outlets" :key="out.id" class="text-center">{{ getProductStockAtOutlet(p, out.id) }}</td>
+                                        <td v-if="outlets.length === 0" class="text-center">-</td>
                                         <td class="text-center bg-danger bg-opacity-10">{{ getBaseTotalStock(p) }}</td>
                                     </tr>
                                     <tr v-for="(v, index) in p.variants" :key="index">
@@ -357,7 +388,11 @@
                                             <i class="bi bi-arrow-return-right me-1"></i>{{ v.name || v.attributes || 'Varian '+(index+1) }}
                                             <span class="sku-badge bg-dark text-white ms-2">{{ v.variantSku || '-' }}</span>
                                         </td>
+                                        <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
+                                        <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
+                                        
                                         <td v-for="out in outlets" :key="out.id" class="text-center fw-semibold">{{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }}</td>
+                                        <td v-if="outlets.length === 0" class="text-center">-</td>
                                         <td class="text-center fw-bold">{{ getVariantTotalStock(v) }}</td>
                                     </tr>
                                 </template>
@@ -497,7 +532,6 @@
                 <h6 class="fw-bold mb-0">Keranjang</h6>
                 <div class="d-flex align-items-center gap-1">
                     <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="cart=[]" :disabled="cart.length===0" title="Kosongkan"><i class="bi bi-trash"></i></button>
-                    <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi"><i class="bi bi-pause-circle"></i></button>
                     <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false"><i class="bi bi-x-lg text-dark"></i></button>
                 </div>
             </div>
@@ -605,7 +639,6 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-tag me-1"></i>Nama Kategori</label>
                             <input type="text" class="form-control form-control-sm" v-model="formCategory.name" placeholder="Cth: Pakaian Wanita">
-                            <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Gunakan nama yang jelas dan singkat.</small>
                         </div>
                         
                         <div class="mb-4">
@@ -640,7 +673,6 @@
                                 <input type="number" class="form-control" v-model.number="formMembership.discountPercent" placeholder="Cth: 15">
                                 <span class="input-group-text bg-white fw-bold">%</span>
                             </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Berlaku untuk semua transaksi pelanggan di tier ini.</small>
                         </div>
                         
                         <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('memberships', formMembership, 'addMembershipModal')"><i class="bi bi-save me-1"></i> Simpan Data</button>
@@ -669,7 +701,6 @@
                                 <option value="">Reguler (Tanpa Diskon)</option>
                                 <option v-for="m in memberships" :value="m.id">{{ m.tierName }} (Diskon {{ m.discountPercent }}%)</option>
                             </select>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Opsional: Pilih jika pelanggan masuk kategori VIP/Member.</small>
                         </div>
                         
                         <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('customers', formCustomer, 'addCustomerModal')"><i class="bi bi-save me-1"></i> Simpan Pelanggan</button>
@@ -715,7 +746,6 @@
                                     <span class="input-group-text bg-white">%</span>
                                 </div>
                             </div>
-                            <div class="col-12"><small class="text-muted" style="font-size: 0.65rem;">Catatan: Biaya ini akan ditambahkan otomatis ke tagihan akhir pelanggan di kasir.</small></div>
                         </div>
                         
                         <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveData('outlets', formOutlet, 'addOutletModal')"><i class="bi bi-save me-1"></i> Simpan Pengaturan Cabang</button>
@@ -765,7 +795,7 @@
                                 <label class="form-label small fw-bold">Foto Produk (Utama)</label>
                                 <div class="d-flex align-items-center gap-2 mb-2">
                                     <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
-                                    <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="30" class="rounded border">
+                                    <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="70" height="70" class="rounded border object-fit-cover shadow-sm ms-2">
                                 </div>
                                 <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Digunakan sebagai foto default jika varian tidak ada foto.</small>
                             </div>
@@ -814,7 +844,6 @@
 
                             <div class="col-12 mt-4" v-if="formProduct.variants.length === 0">
                                 <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-shop me-2"></i>3. Alokasi Stok Awal Outlet (Produk Tanpa Varian)</h6>
-                                <p class="text-muted small mb-2">Isi stok awal barang untuk setiap cabang di bawah ini.</p>
                                 <div class="row g-2">
                                     <div class="col-md-3 col-6" v-for="out in outlets" :key="out.id">
                                         <div class="input-group input-group-sm">
@@ -827,7 +856,6 @@
 
                             <div class="col-12 mt-4">
                                 <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. (Opsional) Pembuatan Matriks Varian Otomatis</h6>
-                                <p class="text-muted small mb-3">Gunakan ini jika produk memiliki variasi seperti Warna dan Ukuran. Ketik opsi lalu pisahkan dengan tanda Koma (,) atau Enter.</p>
                                 
                                 <div class="row g-2 mb-3">
                                     <div class="col-md-4" v-for="(vAttr, idx) in formProduct.dynamicVariantsData" :key="idx">
@@ -835,7 +863,7 @@
                                             <div class="mb-2">
                                                 <label class="form-label small fw-bold text-primary-custom mb-1"><i class="bi bi-pencil-square me-1"></i>Judul Atribut Varian</label>
                                                 <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran, dll..." v-model="vAttr.name">
+                                                    <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran..." v-model="vAttr.name">
                                                     <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="formProduct.dynamicVariantsData.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
                                                 </div>
                                             </div>
@@ -845,7 +873,6 @@
                                                     <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah)..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
                                                     <button class="btn btn-outline-primary-custom" type="button" @click="pushDynamicVariantTag(idx)"><i class="bi bi-plus-lg"></i> Tambah</button>
                                                 </div>
-                                                <small class="text-muted" style="font-size:0.6rem;">Ketik lalu tekan tombol Tambah atau koma (,)</small>
                                             </div>
                                             <div>
                                                 <span class="badge bg-dark me-1 mb-1 fw-normal px-2 py-1" style="font-size:0.7rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x-lg cursor-pointer ms-1 text-danger" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
@@ -878,8 +905,8 @@
                                                 <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
                                                 <td>
                                                     <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
-                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 90px; font-size:0.65rem;">
-                                                        <img v-if="v.imageBase64" :src="v.imageBase64" width="30" height="30" class="rounded border object-fit-cover shadow-sm">
+                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 100%; font-size:0.65rem;">
+                                                        <img v-if="v.imageBase64" :src="v.imageBase64" width="60" height="60" class="rounded border object-fit-cover shadow-sm">
                                                     </div>
                                                 </td>
                                                 <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
@@ -953,7 +980,6 @@
                                 <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
                                 <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
                             </div>
-                            <small class="text-muted mt-1 d-block" style="font-size: 0.65rem;">*Diskon ini akan dipotong lagi dari harga yang sudah kena promo/grosir di sistem. Pilih <b>% Bertingkat</b> untuk diskon kaskade seperti "60+30+10".</small>
                         </div>
 
                         <div class="mb-4 border-top pt-3">
@@ -1160,7 +1186,8 @@
 
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks',
                 viewTitles: { pos: 'Mesin Kasir', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori' },
-                searchQuery: '', 
+                
+                searchQuery: '', posCategoryFilter: '', posCustomDate: '',
                 
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], cart: [], selectedCustomer: null, 
                 
@@ -1178,6 +1205,7 @@
             }
         },
         mounted() {
+            this.resetPosDate(); // Inisialisasi Tanggal & Waktu sekarang
             onAuthStateChanged(auth, async (user) => {
                 try {
                     if (user) { 
@@ -1226,21 +1254,36 @@
             },
 
             filteredProducts() { 
+                let filtered = this.products;
+
+                // 1. Kategori Filter (Check if Product is in L1, L2, or L3)
+                if (this.posCategoryFilter) {
+                    filtered = filtered.filter(p => 
+                        p.categoryId_L1 === this.posCategoryFilter || 
+                        p.categoryId_L2 === this.posCategoryFilter || 
+                        p.categoryId_L3 === this.posCategoryFilter
+                    );
+                }
+
+                // 2. Text Search Filter
                 const q = this.searchQuery.toLowerCase().trim();
-                if (!q) return this.products;
-                return this.products.filter(p => {
-                    const matchName = (p.name || '').toLowerCase().includes(q);
-                    const matchSku = (p.sku || '').toLowerCase().includes(q);
-                    let matchVar = false;
-                    if (p.variants && p.variants.length > 0) {
-                        matchVar = p.variants.some(v => 
-                            (v.name || '').toLowerCase().includes(q) || 
-                            (v.attributes || '').toLowerCase().includes(q) ||
-                            (v.variantSku || '').toLowerCase().includes(q)
-                        );
-                    }
-                    return matchName || matchSku || matchVar;
-                }); 
+                if (q) {
+                    filtered = filtered.filter(p => {
+                        const matchName = (p.name || '').toLowerCase().includes(q);
+                        const matchSku = (p.sku || '').toLowerCase().includes(q);
+                        let matchVar = false;
+                        if (p.variants && p.variants.length > 0) {
+                            matchVar = p.variants.some(v => 
+                                (v.name || '').toLowerCase().includes(q) || 
+                                (v.attributes || '').toLowerCase().includes(q) ||
+                                (v.variantSku || '').toLowerCase().includes(q)
+                            );
+                        }
+                        return matchName || matchSku || matchVar;
+                    }); 
+                }
+                
+                return filtered;
             },
             
             hasVariants() { return this.activeProduct && this.activeProduct.variants && this.activeProduct.variants.length > 0; },
@@ -1271,6 +1314,11 @@
             total(newVal) { if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; }
         },
         methods: {
+            resetPosDate() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                this.posCustomDate = now.toISOString().slice(0,16);
+            },
             getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] }; },
             async fetchUserProfile(user) {
                 const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
@@ -1405,7 +1453,7 @@
             handleImageUpload(e, targetObj, isVariant=false) {
                 const file = e.target.files[0]; if (!file) return; const r = new FileReader();
                 r.onload = (ev) => { const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); const scale = (isVariant ? 150 : 300) / img.width; canvas.width = isVariant ? 150 : 300; canvas.height = img.height * scale;
+                    const canvas = document.createElement('canvas'); const scale = 400 / img.width; canvas.width = 400; canvas.height = img.height * scale;
                     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); targetObj.imageBase64 = canvas.toDataURL('image/jpeg', 0.6); 
                 }; img.src = ev.target.result; }; r.readAsDataURL(file);
             },
@@ -1524,7 +1572,10 @@
             async processTransaction() {
                 this.isProcessing = true; 
                 const newInvId = 'INV-' + Math.floor(Math.random() * 90000 + 10000);
-                const dateStr = new Date().toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
+                
+                // MENGGUNAKAN TANGGAL CUSTOM (BACKDATE ATAU SAAT INI)
+                const trxDateObj = this.posCustomDate ? new Date(this.posCustomDate) : new Date();
+                const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
 
                 let storedItems = JSON.parse(JSON.stringify(this.cart));
                 storedItems.forEach(i => i.finalPrice = this.getFinalItemPrice(i));
@@ -1533,7 +1584,7 @@
                     id: newInvId, dateStr: dateStr, customer: this.selectedCustomer ? this.selectedCustomer.name : 'Umum', cashierName: this.userProfile.name, 
                     outletId: this.posActiveOutletId, total: this.total, taxAmt: this.taxAmount, serviceAmt: this.serviceAmount, 
                     paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived,
-                    items: storedItems, createdAt: serverTimestamp()
+                    items: storedItems, createdAt: serverTimestamp() // Biarkan createdAt server sebagai referensi sistem
                 };
 
                 await addDoc(collection(db, "transactions"), trxData);
@@ -1547,6 +1598,9 @@
                 await Promise.all(logPromises);
 
                 this.hideModal('paymentModal'); this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
+                
+                // Reset Tanggal kembali ke jam saat ini untuk transaksi berikutnya
+                this.resetPosDate();
             },
             triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 300); }
         }
