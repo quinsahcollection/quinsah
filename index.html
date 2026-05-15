@@ -258,14 +258,21 @@
                     <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
                         <div class="product-card" @click="openPosModifier(product)">
                             <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" class="product-img">
-                            <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">{{ product.name || 'Tanpa Nama' }}</h6>
-                            <div class="mb-2"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
+                            <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">
+                                {{ product.name || 'Tanpa Nama' }}
+                            </h6>
+                            <div class="mb-1"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
+                            <div class="mb-2" v-if="product.productTags && product.productTags.length > 0">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
+                            </div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <div class="d-flex flex-column">
                                     <span class="text-muted text-decoration-line-through lh-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</span>
                                     <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                                 </div>
-                                <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">{{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getBaseTotalStock(product)+' Pcs' }}</span>
+                                <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
+                                    {{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getProductDisplayStock(product)+' '+(product.uom || 'Pcs') }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -295,7 +302,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Kode Produk</th><th>Foto</th><th>Nama Produk</th><th>Hrg Jual</th><th>Tipe Promo</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>Kode Produk</th><th>Foto</th><th>Nama Produk</th><th>Satuan</th><th>Hrg Jual</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="p in products" :key="p.id">
                                     <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
@@ -303,16 +310,16 @@
                                     <td class="fw-bold">
                                         {{ p.name || '-' }}
                                         <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.6rem;" v-if="p.variants && p.variants.length > 0">{{ p.variants.length }} Varian</span>
+                                        <div class="mt-1" v-if="p.productTags && p.productTags.length > 0">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size:0.6rem;" v-for="(t,i) in p.productTags" :key="i">{{ t }}</span>
+                                        </div>
                                         <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ getCategoryPath(p) }}</div>
                                     </td>
+                                    <td><span class="badge bg-light text-dark border">{{ p.uom || 'Pcs' }}</span></td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
                                         <div class="fw-semibold text-success">Rp {{ formatNumber(getEffectiveBasePrice(p)) }}</div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-warning text-dark border me-1" v-if="p.discountValue > 0">Diskon</span>
-                                        <span class="badge bg-info text-dark border" v-if="p.tiers && p.tiers.length > 0">Grosir</span>
-                                        <span class="text-muted small" v-if="(!p.discountValue || p.discountValue == 0) && (!p.tiers || p.tiers.length == 0)">-</span>
+                                        <span class="badge bg-warning text-dark border mt-1" v-if="p.discountValue > 0" style="font-size: 0.6rem;">Diskon</span>
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-light border text-primary me-1" @click="editData('products', p, 'formProduct', 'addProductModal')"><i class="bi bi-pencil"></i></button>
@@ -847,22 +854,35 @@
                     <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
                         <div class="row g-3">
                             <div class="col-12"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>1. Informasi Dasar Produk</h6></div>
+                            
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">SKU Induk (Barcode)</label>
                                 <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.sku" placeholder="Cth: QNS-SHIRT-01">
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold">Nama Produk</label>
                                 <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.name" placeholder="Cth: Kemeja Flanel Kotak Premium">
                             </div>
-                            
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label small fw-bold">Kategori Produk</label>
                                 <select class="form-select form-select-sm mb-2 fw-semibold" v-model="formProduct.categoryId">
                                     <option value="">-- Pilih Kategori --</option>
                                     <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
                                 </select>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Induk kategori bisa dipilih langsung sesuai tingkatan (↳).</small>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Satuan (UOM)</label>
+                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.uom" list="uomOptions" placeholder="Pcs, Dus...">
+                                <datalist id="uomOptions">
+                                    <option value="Pcs"></option>
+                                    <option value="Dus"></option>
+                                    <option value="Box"></option>
+                                    <option value="Pack"></option>
+                                    <option value="Lusin"></option>
+                                    <option value="Kg"></option>
+                                    <option value="Gram"></option>
+                                    <option value="Meter"></option>
+                                </datalist>
                             </div>
                             
                             <div class="col-md-4">
@@ -871,7 +891,6 @@
                                     <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
                                     <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="70" height="70" class="rounded border object-fit-cover shadow-sm ms-2">
                                 </div>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Digunakan sebagai foto default jika varian tidak ada foto.</small>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">HPP (Modal Dasar / Rp)</label>
@@ -880,6 +899,17 @@
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-success">Harga Jual Normal (Rp)</label>
                                 <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
+                            </div>
+
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold">Tag / Label Produk Khusus (Opsional)</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <input type="text" class="form-control" v-model="formProduct.productTagInput" @keydown.enter.prevent="pushProductTag" placeholder="Ketik label (cth: Terlaris, Diskon Promo) lalu tekan enter/tambah">
+                                    <button class="btn btn-outline-secondary" type="button" @click="pushProductTag"><i class="bi bi-plus-lg"></i> Tambah Tag</button>
+                                </div>
+                                <div v-if="formProduct.productTags && formProduct.productTags.length > 0">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2 fw-normal px-2 py-1" style="font-size: 0.75rem;" v-for="(tag, idx) in formProduct.productTags" :key="idx">{{ tag }} <i class="bi bi-x-circle-fill ms-1 cursor-pointer" @click="formProduct.productTags.splice(idx, 1)"></i></span>
+                                </div>
                             </div>
 
                             <div class="col-12 mt-4"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>2. Pengaturan Promo & Grosir (Bisa ditimpa varian)</h6></div>
@@ -929,7 +959,7 @@
                             </div>
 
                             <div class="col-12 mt-4">
-                                <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. (Opsional) Pembuatan Matriks Varian Otomatis</h6>
+                                <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. Matriks Generate Varian (Opsional) & Tabel Varian Final</h6>
                                 
                                 <div class="row g-2 mb-3">
                                     <div class="col-md-4" v-for="(vAttr, idx) in formProduct.dynamicVariantsData" :key="idx">
@@ -942,9 +972,9 @@
                                                 </div>
                                             </div>
                                             <div class="mb-2">
-                                                <label class="form-label small fw-bold mb-1">Pilihan Pilihan</label>
+                                                <label class="form-label small fw-bold mb-1">Pilihan Atribut</label>
                                                 <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah)..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
+                                                    <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah) lalu enter..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
                                                     <button class="btn btn-outline-primary-custom" type="button" @click="pushDynamicVariantTag(idx)"><i class="bi bi-plus-lg"></i> Tambah</button>
                                                 </div>
                                             </div>
@@ -956,6 +986,7 @@
                                     <div class="col-12 d-flex gap-2">
                                         <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
                                         <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
+                                        <button class="btn btn-sm btn-outline-secondary py-2 px-3 fw-bold bg-white" @click="addManualVariant"><i class="bi bi-plus-circle me-1"></i> Tambah Varian Manual</button>
                                     </div>
                                 </div>
 
@@ -1118,14 +1149,14 @@
                             <h5 class="text-muted text-decoration-line-through mb-0" v-if="getEffectiveBasePrice(activeProduct) < (activeProduct.sellPrice || activeProduct.basePrice)">Rp {{ formatNumber(activeProduct.sellPrice || activeProduct.basePrice) }}</h5>
                             <h3 class="fw-bold text-primary-custom mb-2">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h3>
                             
-                            <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getBaseTotalStock(activeProduct) }} Pcs</p>
+                            <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getProductDisplayStock(activeProduct) }} {{ activeProduct.uom || 'Pcs' }} <span v-if="posActiveOutletId" class="text-primary-custom">(Outlet)</span></p>
                             <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
                         <div class="modal-body bg-white p-4" v-else>
                             <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN NAMA VARIAN:</p>
                             <div class="row g-3">
                                 <div class="col-md-3 col-sm-4 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
-                                    <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
+                                    <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantDisplayStock(v) <= 0}" @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
                                         <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" style="height: 120px;">
                                         
                                         <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap lh-base" style="font-size: 0.75rem;">{{ v.name || v.attributes || 'Varian '+(idx+1) }}</div>
@@ -1135,7 +1166,7 @@
                                             <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}</div>
                                             <div class="fw-bold mb-1 lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
                                             
-                                            <span class="badge w-100 mt-1" style="font-size: 0.7rem;" :class="getVariantTotalStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantTotalStock(v) }}</span>
+                                            <span class="badge w-100 mt-1" style="font-size: 0.7rem;" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1166,7 +1197,7 @@
                 <div v-if="i.variantName" style="font-size:10px; color:#333;">Varian: {{ i.variantName }} ({{ i.variantSku }})</div>
                 <div v-if="i.note" style="font-size:10px; font-style:italic;">Note: {{ i.note }}</div>
                 <div style="display:flex; justify-content:space-between; margin-top:2px;">
-                    <span>{{ i.qty }} x {{ formatNumber(i.finalPrice) }}</span>
+                    <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice) }}</span>
                     <span>{{ formatNumber(i.qty * i.finalPrice) }}</span>
                 </div>
             </div>
@@ -1229,7 +1260,7 @@
                             <div style="font-size:11px; margin-top:2px; font-style:italic;" v-if="i.note">Catatan: {{ i.note }}</div>
                         </td>
                         <td style="text-align:center; font-family: monospace;">{{ i.variantSku || i.sku || '-' }}</td>
-                        <td style="text-align:center; font-weight:bold; font-size:16px;">{{ i.qty }}</td>
+                        <td style="text-align:center; font-weight:bold; font-size:16px;">{{ i.qty }} {{ i.uom || 'Pcs' }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -1264,7 +1295,6 @@
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 
-                // Variabel untuk modal Konfirmasi Global UI
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], cart: [], selectedCustomer: null, 
@@ -1274,7 +1304,7 @@
                 formMembership: { id: null, tierName: '', discountPercent: 0 },
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
-                formProduct: { id: null, sku: '', name: '', categoryId: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
+                formProduct: { id: null, sku: '', name: '', categoryId: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1382,7 +1412,6 @@
             total(newVal) { if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; }
         },
         methods: {
-            // UI KONFIRMASI GLOBAL PENGGANTI ALERT/CONFIRM
             askConfirm(title, message, callback) {
                 this.confirmTitle = title;
                 this.confirmMessage = message;
@@ -1402,7 +1431,14 @@
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 this.posCustomDate = now.toISOString().slice(0,16);
             },
-            getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] }; },
+            getEmptyProductForm() { 
+                return { 
+                    id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', 
+                    uom: 'Pcs', productTags: [], productTagInput: '',
+                    hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], 
+                    discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] 
+                }; 
+            },
             async fetchUserProfile(user) {
                 const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
                 if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
@@ -1488,7 +1524,6 @@
                     const config = { fps: 10, qrbox: { width: 250, height: 150 } };
                     
                     this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                        // Jika berhasil scan
                         this.stopCameraScanner();
                         this.searchQuery = decodedText;
                         this.posSearchMode = 'scan';
@@ -1559,6 +1594,11 @@
                     if (!copy.variants) copy.variants = [];
                     if (!copy.tiers) copy.tiers = [];
                     if (!copy.categoryId) copy.categoryId = '';
+                    
+                    if (!copy.uom) copy.uom = 'Pcs';
+                    if (!copy.productTags) copy.productTags = [];
+                    copy.productTagInput = '';
+
                     copy.variants.forEach(v => { 
                         if (!v.outletStocks) v.outletStocks = {}; 
                         if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
@@ -1593,6 +1633,16 @@
             },
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
+
+            pushProductTag() {
+                let val = this.formProduct.productTagInput;
+                if (!val) return;
+                val = val.trim();
+                if (val && !this.formProduct.productTags.includes(val)) {
+                    this.formProduct.productTags.push(val);
+                }
+                this.formProduct.productTagInput = '';
+            },
 
             addDynamicVariantLevel() { 
                 if(this.formProduct.dynamicVariantsData.length < 3) {
@@ -1636,6 +1686,18 @@
                     });
                 });
                 this.formProduct.variants = matrix;
+            },
+
+            addManualVariant() {
+                let oStocks = {}; 
+                this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                this.formProduct.variants.push({
+                    name: '', attributes: '', 
+                    variantSku: this.formProduct.sku ? this.formProduct.sku + '-V' + (this.formProduct.variants.length + 1) : '',
+                    hppPrice: this.formProduct.hppPrice || 0, sellPrice: this.formProduct.sellPrice || 0,
+                    discountType: 'none', discountValue: 0,
+                    imageBase64: '', outletStocks: oStocks
+                });
             },
 
             handleImageUpload(e, targetObj, isVariant=false) {
@@ -1701,6 +1763,20 @@
                 return currentPrice;
             },
 
+            getProductDisplayStock(product) {
+                if (this.posActiveOutletId) {
+                    return this.getProductStockAtOutlet(product, this.posActiveOutletId);
+                }
+                return this.getBaseTotalStock(product);
+            },
+
+            getVariantDisplayStock(variant) {
+                if (this.posActiveOutletId) {
+                    return (variant.outletStocks && variant.outletStocks[this.posActiveOutletId]) ? variant.outletStocks[this.posActiveOutletId] : 0;
+                }
+                return this.getVariantTotalStock(variant);
+            },
+
             getVariantTotalStock(variant) { if (!variant || !variant.outletStocks) return 0; return Object.values(variant.outletStocks).reduce((a, b) => a + (b || 0), 0); },
             getBaseTotalStock(product) { if (!product) return 0; if (product.baseOutletStocks && Object.keys(product.baseOutletStocks).length > 0) { return Object.values(product.baseOutletStocks).reduce((a, b) => a + (b || 0), 0); } return product.baseStock || 0; },
             getProductStockAtOutlet(p, outletId) { if (!p || !p.baseOutletStocks) return 0; return p.baseOutletStocks[outletId] || 0; },
@@ -1716,7 +1792,8 @@
                 let item = { 
                     id: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
                     basePrice: bPrice, promoPrice: pPrice, qty: 1, tiers: this.activeProduct.tiers || [],
-                    posDiscountType: 'none', posDiscountValue: 0, note: ''
+                    posDiscountType: 'none', posDiscountValue: 0, note: '',
+                    uom: this.activeProduct.uom || 'Pcs'
                 };
                 
                 if (variant) { 
