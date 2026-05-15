@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V5.0</title>
+    <title>Quinsah Collection ERP - Full Enterprise V5.1</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -382,20 +382,37 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Kode Produk</th><th>Foto</th><th>Nama Produk</th><th>Satuan</th><th>Hrg Jual</th><th>Aksi</th></tr></thead>
+                            <thead><tr>
+                                <th>Kode Produk</th>
+                                <th>Foto</th>
+                                <th>Nama Produk</th>
+                                <th>Daftar Varian</th>
+                                <th>Satuan</th>
+                                <th>HPP (Modal)</th>
+                                <th>Hrg Jual</th>
+                                <th>Aksi</th>
+                            </tr></thead>
                             <tbody>
                                 <tr v-for="p in products" :key="p.id">
                                     <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">
                                         {{ p.name || '-' }}
-                                        <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.6rem;" v-if="p.variants && p.variants.length > 0">{{ p.variants.length }} Varian</span>
                                         <div class="mt-1" v-if="p.productTags && p.productTags.length > 0">
                                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size:0.6rem;" v-for="(t,i) in p.productTags" :key="i">{{ t }}</span>
                                         </div>
                                         <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ getCategoryPath(p) }}</div>
                                     </td>
+                                    <td>
+                                        <div v-if="!p.variants || p.variants.length === 0" class="text-muted small">- Tanpa Varian -</div>
+                                        <div v-else class="d-flex flex-column gap-1">
+                                            <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal" style="font-size: 0.65rem;">
+                                                {{ v.name || v.attributes }} <span class="text-primary-custom fw-bold ms-1">({{ v.variantSku || '-' }})</span>
+                                            </span>
+                                        </div>
+                                    </td>
                                     <td><span class="badge bg-light text-dark border">{{ p.uom || 'Pcs' }}</span></td>
+                                    <td class="fw-semibold text-muted small">Rp {{ formatNumber(p.hppPrice) }}</td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through small" v-if="getEffectiveBasePrice(p) < (p.sellPrice || p.basePrice)">Rp {{ formatNumber(p.sellPrice || p.basePrice) }}</div>
                                         <div class="fw-semibold text-success">Rp {{ formatNumber(getEffectiveBasePrice(p)) }}</div>
@@ -418,7 +435,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
@@ -428,13 +445,14 @@
                                     </td>
                                     <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
                                     <td><span class="sku-badge bg-dark text-white" title="Klik lihat barcode" @click="showBarcode(v.sku)"><i class="bi bi-upc-scan me-1"></i>{{ v.sku }}</span></td>
+                                    <td class="text-muted fw-semibold small">Rp {{ formatNumber(v.hpp) }}</td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
                                         <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
                                     </td>
                                     <td><span class="badge" :class="v.stock > 0 ? 'bg-success' : 'bg-danger'">{{ v.stock }}</span></td>
                                 </tr>
-                                <tr v-if="allVariantsList.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada varian produk.</td></tr>
+                                <tr v-if="allVariantsList.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Belum ada varian produk.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -904,86 +922,86 @@
             </div>
         </div>
 
-        <!-- MODAL PEMBELIAN (PURCHASE) -->
+        <!-- MODAL PEMBELIAN (PURCHASE) - DIPERBESAR (MODAL-XL) -->
         <div class="modal fade" id="addPurchaseModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-light border-bottom p-3">
                         <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Stok Masuk (Pembelian ke Supplier)</h6>
                         <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body bg-white p-4">
-                        <div class="row g-2 mb-3 border-bottom pb-3">
+                        <div class="row g-3 mb-3 border-bottom pb-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
-                                <select class="form-select form-select-sm fw-semibold" v-model="formPurchase.supplierId">
+                                <select class="form-select fw-semibold" v-model="formPurchase.supplierId">
                                     <option value="">-- Pilih Supplier --</option>
                                     <option v-for="s in suppliers" :value="s.id">{{ s.name }}</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok (Outlet)</label>
-                                <select class="form-select form-select-sm fw-semibold border-primary" v-model="formPurchase.outletId">
+                                <select class="form-select fw-semibold border-primary" v-model="formPurchase.outletId">
                                     <option value="">-- Pilih Cabang Outlet --</option>
                                     <option v-for="o in outlets" :value="o.id">{{ o.name }}</option>
                                 </select>
                             </div>
                         </div>
 
-                        <h6 class="fw-bold small mb-2"><i class="bi bi-boxes me-1"></i>Tambahkan Item Pembelian</h6>
-                        <div class="row g-2 mb-3 align-items-end p-2 bg-light border rounded">
-                            <div class="col-md-3">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-boxes me-1"></i>Tambahkan Item Pembelian</h6>
+                        <div class="row g-2 mb-3 align-items-end p-3 bg-light border rounded shadow-sm">
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold mb-1">Produk Induk</label>
                                 <select class="form-select form-select-sm" v-model="formPurchaseItem.productId" @change="onPurchaseProductChange">
-                                    <option value="">-- Pilih --</option>
-                                    <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                                    <option value="">-- Pilih Produk --</option>
+                                    <option v-for="p in products" :value="p.id">{{ p.name }} (SKU: {{ p.sku }})</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-bold mb-1">Varian (Jika Ada)</label>
+                                <label class="form-label small fw-bold mb-1">Pilih Varian (Jika Ada)</label>
                                 <select class="form-select form-select-sm" v-model="formPurchaseItem.variantSku" :disabled="purchaseActiveVariants.length === 0">
                                     <option value="">-- Pilih Varian --</option>
-                                    <option v-for="v in purchaseActiveVariants" :value="v.variantSku">{{ v.name }}</option>
+                                    <option v-for="v in purchaseActiveVariants" :value="v.variantSku">{{ v.name || v.attributes }}</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small fw-bold mb-1">Qty Masuk</label>
                                 <input type="number" class="form-control form-control-sm" v-model.number="formPurchaseItem.qty" placeholder="0">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold mb-1">Hrg Beli Satuan</label>
-                                <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="formPurchaseItem.price" placeholder="Rp">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold mb-1">Hrg Beli Satuan (Rp)</label>
+                                <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="formPurchaseItem.price" placeholder="Harga Beli">
                             </div>
                             <div class="col-md-1">
-                                <button class="btn btn-primary-custom btn-sm w-100" @click="addPurchaseItem"><i class="bi bi-plus-lg"></i></button>
+                                <button class="btn btn-primary-custom btn-sm w-100 fw-bold" @click="addPurchaseItem"><i class="bi bi-plus-lg"></i> Add</button>
                             </div>
                         </div>
 
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.75rem;">
-                                <thead class="table-light"><tr><th>Nama Barang</th><th>SKU</th><th>Qty</th><th>Hrg Beli</th><th>Subtotal</th><th>Aksi</th></tr></thead>
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.8rem;">
+                                <thead class="table-light"><tr><th>Nama Barang</th><th>SKU</th><th class="text-center">Qty</th><th>Hrg Beli</th><th>Subtotal</th><th class="text-center">Aksi</th></tr></thead>
                                 <tbody>
                                     <tr v-for="(i, idx) in formPurchase.items" :key="idx">
-                                        <td class="fw-bold">{{ i.productName }} <div class="text-muted" style="font-size:0.65rem;" v-if="i.variantName">{{ i.variantName }}</div></td>
-                                        <td>{{ i.variantSku || i.sku }}</td>
-                                        <td class="text-center fw-bold">{{ i.qty }}</td>
-                                        <td class="text-success">Rp {{ formatNumber(i.price) }}</td>
-                                        <td class="text-primary-custom fw-bold">Rp {{ formatNumber(i.qty * i.price) }}</td>
-                                        <td class="text-center"><button class="btn btn-sm text-danger py-0 px-1" @click="formPurchase.items.splice(idx,1)"><i class="bi bi-trash"></i></button></td>
+                                        <td class="fw-bold">{{ i.productName }} <div class="text-muted" style="font-size:0.7rem;" v-if="i.variantName">{{ i.variantName }}</div></td>
+                                        <td class="font-monospace text-muted">{{ i.variantSku || i.sku }}</td>
+                                        <td class="text-center fw-bold fs-6">{{ i.qty }}</td>
+                                        <td class="text-success fw-semibold">Rp {{ formatNumber(i.price) }}</td>
+                                        <td class="text-primary-custom fw-bold fs-6">Rp {{ formatNumber(i.qty * i.price) }}</td>
+                                        <td class="text-center"><button class="btn btn-sm btn-outline-danger py-0 px-2" @click="formPurchase.items.splice(idx,1)"><i class="bi bi-trash"></i></button></td>
                                     </tr>
-                                    <tr v-if="formPurchase.items.length === 0"><td colspan="6" class="text-center text-muted py-3">Belum ada item ditambahkan.</td></tr>
+                                    <tr v-if="formPurchase.items.length === 0"><td colspan="6" class="text-center text-muted py-4">Belum ada item ditambahkan ke keranjang pembelian.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                         
                         <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                            <div class="fw-bold fs-6">TOTAL PEMBELIAN:</div>
-                            <div class="fw-bold fs-5 text-danger">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</div>
+                            <div class="fw-bold fs-5">TOTAL PEMBELIAN:</div>
+                            <div class="fw-bold fs-3 text-danger">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</div>
                         </div>
                     </div>
                     <div class="modal-footer bg-light border-top p-3">
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId">
-                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI STOK KE SERVER
+                        <button class="btn btn-primary-custom w-100 fw-bold py-3 fs-6 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId">
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>PROSES & SINKRONISASI STOK MASUK
                         </button>
                     </div>
                 </div>
