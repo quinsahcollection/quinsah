@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.7</title>
+    <title>Quinsah Collection ERP - Full Enterprise V4.9</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <style>
         :root { --primary-color: #dc2626; --primary-dark: #991b1b; --bg-main: #f8f9fa; --bg-panel: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
@@ -34,8 +37,10 @@
         .product-card { background-color: var(--bg-panel); border-radius: 12px; padding: 10px; border: 1px solid var(--border-color); height: 100%; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s; }
         .product-card:hover { transform: translateY(-3px); border-color: var(--primary-color); box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15); }
         .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background-color: #f0f0f0; }
-        .sku-badge { font-size: 0.65rem; background: #fef2f2; padding: 3px 6px; border-radius: 4px; color: var(--primary-dark); font-weight: 600;}
-        
+        .sku-badge { font-size: 0.65rem; background: #fef2f2; padding: 3px 6px; border-radius: 4px; color: var(--primary-dark); font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+        .sku-badge:hover { border-color: var(--primary-color); background: #fecaca; }
+        .cursor-pointer { cursor: pointer; }
+
         .table-custom th { background-color: #f8fafc; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid var(--border-color); padding: 10px;}
         .table-custom td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         
@@ -61,15 +66,24 @@
         .badge-out { background-color: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
         .badge-in { background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
 
+        /* Barcode Canvas Auto-scale */
+        #barcode-canvas { width: 100% !important; max-width: 100%; height: auto !important; object-fit: contain; }
+
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         /* Modal Z-Index Fix */
         .modal { z-index: 1070 !important; }
         .modal-backdrop { z-index: 1065 !important; }
+        /* Confirm & Camera Modal always on top */
+        #confirmModal { z-index: 1085 !important; }
+        #cameraScannerModal { z-index: 1085 !important; }
 
-        /* ELEGANT MOBILE OPTIMIZATION */
-        @media (max-width: 991px) {
+        /* ELEGANT MOBILE & TABLET OPTIMIZATION */
+        @media (max-width: 1199px) {
+            .sidebar-right { width: 340px; }
+        }
+        @media (max-width: 991px) { /* Tablet (iPad Portrait) & Mobile */
             body { font-size: 0.85rem; overflow-y: auto; padding-bottom: 60px; }
             h4, .h4 { font-size: 1.15rem !important; margin-bottom: 0; }
             h5, .h5 { font-size: 1rem !important; }
@@ -86,10 +100,10 @@
             .dashboard-card { padding: 15px; }
             .table-custom th, .table-custom td { padding: 8px; font-size: 0.75rem; white-space: nowrap; }
             
-            .product-card { padding: 8px; }
-            .product-img { height: 140px !important; }
+            .product-card { padding: 12px; }
+            .product-img { height: 160px !important; }
             
-            .sidebar-right { position: fixed; top: 0; right: -100%; width: 100%; height: 100dvh; max-width: 360px; padding-bottom: 120px !important; z-index: 1060; transition: right 0.3s ease; box-shadow: -5px 0 20px rgba(0,0,0,0.2); }
+            .sidebar-right { position: fixed; top: 0; right: -100%; width: 100%; height: 100dvh; max-width: 420px; padding-bottom: 120px !important; z-index: 1060; transition: right 0.3s ease; box-shadow: -5px 0 20px rgba(0,0,0,0.2); }
             .sidebar-right.show-mobile { right: 0; }
             
             .modal-body { padding: 15px !important; }
@@ -111,6 +125,11 @@
                 border: 3px solid white;
                 cursor: pointer;
             }
+        }
+        @media (max-width: 767px) { /* Strictly Mobile Phones */
+            .sidebar-right { max-width: 340px; }
+            .product-card { padding: 8px; }
+            .product-img { height: 130px !important; }
         }
 
         /* PRINT MEDIA CSS FIXES */
@@ -197,25 +216,38 @@
             <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
                 
                 <div class="row g-2 mb-3 align-items-center">
-                    <div class="col-xl-3 col-lg-4 col-md-4 col-12">
+                    <div class="col-xl-4 col-lg-5 col-md-5 col-12">
                         <div class="input-group input-group-sm shadow-sm">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0 shadow-none py-2" placeholder="Cari Nama / SKU / Varian..." v-model="searchQuery">
+                            <button class="btn btn-outline-secondary dropdown-toggle bg-white" type="button" data-bs-toggle="dropdown" :title="posSearchMode === 'text' ? 'Mode Pencarian Teks' : 'Mode Scanner Barcode Aktif'">
+                                <i class="bi" :class="posSearchMode === 'text' ? 'bi-search text-primary' : 'bi-upc-scan text-danger'"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'text'; $refs.posSearchInput.focus()"><i class="bi bi-search me-2 text-primary"></i>Ketik Pencarian Biasa</a></li>
+                                <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'scan'; $refs.posSearchInput.focus()"><i class="bi bi-upc-scan me-2 text-danger"></i>Gunakan Barcode Scanner (PC)</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item fw-semibold text-success" href="#" @click.prevent="startCameraScanner"><i class="bi bi-camera me-2"></i>Buka Kamera Scan (HP/Tablet)</a></li>
+                            </ul>
+                            <input type="text" class="form-control py-2 shadow-none border-start-0 ps-1" 
+                                   :class="{'border-danger bg-danger bg-opacity-10': posSearchMode === 'scan'}"
+                                   :placeholder="posSearchMode === 'text' ? 'Cari Nama / SKU / Varian...' : 'Arahkan Scanner & Scan Barcode...'" 
+                                   v-model="searchQuery"
+                                   ref="posSearchInput"
+                                   @keyup.enter="handlePosSearchEnter">
                         </div>
                     </div>
-                    <div class="col-xl-3 col-lg-3 col-md-4 col-6">
-                        <select class="form-select form-select-sm shadow-sm py-2" v-model="posCategoryFilter">
+                    <div class="col-xl-3 col-lg-3 col-md-3 col-6">
+                        <select class="form-select form-select-sm shadow-sm py-2 fw-semibold" v-model="posCategoryFilter">
                             <option value="">-- Semua Kategori --</option>
-                            <option v-for="cat in structuredCategories" :value="cat.id">{{ '—'.repeat(cat.treeLevel) }} {{ cat.name }}</option>
+                            <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
                         </select>
                     </div>
-                    <div class="col-xl-3 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-3 col-lg-2 col-md-4 col-6">
                         <div class="input-group input-group-sm shadow-sm" :title="userRole === 'Admin' ? 'Admin: Ubah untuk Backdate Transaksi' : 'Tanggal Transaksi Otomatis'">
                             <span class="input-group-text bg-white"><i class="bi bi-calendar-date"></i></span>
                             <input type="datetime-local" class="form-control py-2" style="font-size:0.75rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
                         </div>
                     </div>
-                    <div class="col-xl-3 col-lg-2 col-md-12 col-12 text-md-end text-start mt-2 mt-md-0">
+                    <div class="col-xl-2 col-lg-2 col-md-12 col-12 text-md-end text-start mt-2 mt-md-0">
                         <button v-if="heldTransactions.length > 0" class="btn btn-warning btn-sm fw-bold shadow-sm w-100 py-2" @click="openModal('holdModal')">
                             <i class="bi bi-clock-history"></i> Hold ({{ heldTransactions.length }})
                         </button>
@@ -223,7 +255,7 @@
                 </div>
 
                 <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
-                    <div class="col-xl-3 col-lg-4 col-md-4 col-6" v-for="product in filteredProducts" :key="product.id">
+                    <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
                         <div class="product-card" @click="openPosModifier(product)">
                             <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" class="product-img">
                             <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">{{ product.name || 'Tanpa Nama' }}</h6>
@@ -263,10 +295,10 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>SKU</th><th>Foto</th><th>Nama Produk</th><th>Hrg Dasar</th><th>Tipe Promo</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>SKU (Klik = Barcode)</th><th>Foto</th><th>Nama Produk</th><th>Hrg Dasar</th><th>Tipe Promo</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="p in products" :key="p.id">
-                                    <td><span class="sku-badge">{{ p.sku || 'N/A' }}</span></td>
+                                    <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">
                                         {{ p.name || '-' }}
@@ -299,7 +331,7 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>SKU Varian</th><th>Harga Jual</th><th>Stok</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>SKU (Klik=Barcode)</th><th>Harga Jual</th><th>Stok</th></tr></thead>
                             <tbody>
                                 <tr v-for="(v, index) in allVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
@@ -308,7 +340,7 @@
                                         <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ v.categoryPath }}</div>
                                     </td>
                                     <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
-                                    <td><span class="sku-badge bg-dark text-white">{{ v.sku }}</span></td>
+                                    <td><span class="sku-badge bg-dark text-white" title="Klik lihat barcode" @click="showBarcode(v.sku)"><i class="bi bi-upc-scan me-1"></i>{{ v.sku }}</span></td>
                                     <td>
                                         <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
                                         <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
@@ -375,7 +407,7 @@
                             <tbody>
                                 <template v-for="p in products" :key="p.id">
                                     <tr class="table-secondary fw-bold">
-                                        <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2">{{ p.sku }}</span></td>
+                                        <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
                                         <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
                                         <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
                                         
@@ -386,7 +418,7 @@
                                     <tr v-for="(v, index) in p.variants" :key="index">
                                         <td class="ps-3 text-muted">
                                             <i class="bi bi-arrow-return-right me-1"></i>{{ v.name || v.attributes || 'Varian '+(index+1) }}
-                                            <span class="sku-badge bg-dark text-white ms-2">{{ v.variantSku || '-' }}</span>
+                                            <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
                                         </td>
                                         <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
                                         <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
@@ -437,10 +469,11 @@
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
-                            <thead><tr><th>Nama</th><th>Kontak</th><th>Membership (Diskon)</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>Nama</th><th>Kontak & Alamat</th><th>Membership (Diskon)</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="c in customers" :key="c.id">
-                                    <td class="fw-bold small">{{ c.name }}</td><td class="small">{{ c.phone }}</td>
+                                    <td class="fw-bold small">{{ c.name }}</td>
+                                    <td class="small">{{ c.phone }}<br><span class="text-muted" style="font-size:0.7rem;">{{ c.address || '-' }}</span></td>
                                     <td><span class="badge bg-warning text-dark">{{ getMembershipName(c.membershipId) }} ({{ getMembershipDiscount(c.membershipId) }}%)</span></td>
                                     <td>
                                         <button class="btn btn-sm btn-light border text-primary me-1 px-2 py-1" @click="editData('customers', c, 'formCustomer', 'addCustomerModal')"><i class="bi bi-pencil"></i></button>
@@ -531,6 +564,7 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="fw-bold mb-0">Keranjang</h6>
                 <div class="d-flex align-items-center gap-1">
+                    <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi/Simpan Sementara"><i class="bi bi-pause-circle"></i></button>
                     <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="cart=[]" :disabled="cart.length===0" title="Kosongkan"><i class="bi bi-trash"></i></button>
                     <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false"><i class="bi bi-x-lg text-dark"></i></button>
                 </div>
@@ -607,6 +641,51 @@
             </div>
         </aside>
 
+        <div class="modal fade" id="confirmModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow-lg text-center p-4">
+                    <i class="bi bi-exclamation-circle text-warning mb-3" style="font-size: 3rem;"></i>
+                    <h6 class="fw-bold mb-2">{{ confirmTitle }}</h6>
+                    <p class="text-muted small mb-4">{{ confirmMessage }}</p>
+                    <div class="d-flex gap-2 w-100">
+                        <button class="btn btn-light border w-50 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                        <button class="btn btn-primary-custom w-50 fw-bold" @click="executeConfirm">Ya, Lanjutkan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg bg-dark">
+                    <div class="modal-header border-bottom-0 p-3">
+                        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-camera me-2"></i>Scanner Barcode Mode Kamera</h6>
+                        <button type="button" class="btn-close btn-close-white" @click="stopCameraScanner"></button>
+                    </div>
+                    <div class="modal-body p-0 text-center">
+                        <div id="qr-reader" style="width:100%; border-radius: 0 0 8px 8px; overflow: hidden;"></div>
+                        <p class="text-white-50 small mt-3 mb-3">Arahkan garis merah scanner ke Barcode produk.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="barcodeModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom p-3 bg-light">
+                        <h6 class="modal-title fw-bold text-dark"><i class="bi bi-upc-scan me-2 text-primary"></i>Barcode Label</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-center p-4 bg-white">
+                        <svg id="barcode-canvas"></svg>
+                        <div class="mt-2 fw-bold text-dark font-monospace" style="word-break: break-all;">{{ activeBarcodeSku }}</div>
+                        <small class="text-muted d-block mt-2" style="font-size:0.65rem;">Gunakan scanner untuk memindai barcode ini di mesin POS.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="modal fade" id="holdModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
@@ -645,7 +724,7 @@
                             <label class="form-label small fw-bold"><i class="bi bi-diagram-2 me-1"></i>Sub-Kategori Dari (Opsional)</label>
                             <select class="form-select form-select-sm" v-model="formCategory.parentId">
                                 <option value="">-- Jadikan Induk Utama --</option>
-                                <option v-for="cat in structuredCategories" :value="cat.id">{{ '—'.repeat(cat.treeLevel) }} {{ cat.name }}</option>
+                                <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
                             </select>
                             <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Pilih jika ini adalah anak dari kategori lain.</small>
                         </div>
@@ -694,6 +773,10 @@
                         <div class="mb-2">
                             <label class="form-label small fw-bold">No. Handphone (WA)</label>
                             <input type="text" class="form-control form-control-sm" v-model="formCustomer.phone" placeholder="08xxxxxx">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Alamat Lengkap</label>
+                            <textarea class="form-control form-control-sm" v-model="formCustomer.address" rows="2" placeholder="Alamat rumah/pengiriman pelanggan..."></textarea>
                         </div>
                         <div class="mb-4">
                             <label class="form-label small fw-bold">Hubungkan ke Membership</label>
@@ -774,21 +857,12 @@
                             </div>
                             
                             <div class="col-md-4">
-                                <label class="form-label small fw-bold">Kategori Produk (Berjenjang)</label>
-                                <div class="d-flex flex-column gap-1 mb-2">
-                                    <select class="form-select form-select-sm" v-model="formProduct.categoryId_L1" @change="formProduct.categoryId_L2=''; formProduct.categoryId_L3=''">
-                                        <option value="">Pilih Kategori Utama</option>
-                                        <option v-for="cat in structuredCategories.filter(c => c.treeLevel === 0)" :value="cat.id">{{ cat.name }}</option>
-                                    </select>
-                                    <select class="form-select form-select-sm border-info" v-model="formProduct.categoryId_L2" v-if="catLevel2.length > 0" @change="formProduct.categoryId_L3=''">
-                                        <option value="">-- Sub Kategori (L2) --</option>
-                                        <option v-for="cat in catLevel2" :value="cat.id">{{ cat.name }}</option>
-                                    </select>
-                                    <select class="form-select form-select-sm border-warning" v-model="formProduct.categoryId_L3" v-if="catLevel3.length > 0">
-                                        <option value="">-- Sub Kategori (L3) --</option>
-                                        <option v-for="cat in catLevel3" :value="cat.id">{{ cat.name }}</option>
-                                    </select>
-                                </div>
+                                <label class="form-label small fw-bold">Kategori Produk</label>
+                                <select class="form-select form-select-sm mb-2 fw-semibold" v-model="formProduct.categoryId">
+                                    <option value="">-- Pilih Kategori --</option>
+                                    <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                                </select>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Induk kategori bisa dipilih langsung sesuai tingkatan (↳).</small>
                             </div>
                             
                             <div class="col-md-4">
@@ -845,7 +919,7 @@
                             <div class="col-12 mt-4" v-if="formProduct.variants.length === 0">
                                 <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-shop me-2"></i>3. Alokasi Stok Awal Outlet (Produk Tanpa Varian)</h6>
                                 <div class="row g-2">
-                                    <div class="col-md-3 col-6" v-for="out in outlets" :key="out.id">
+                                    <div class="col-md-3 col-sm-4 col-6" v-for="out in outlets" :key="out.id">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white w-50 text-truncate small fw-semibold" style="font-size:0.75rem;">{{ out.name }}</span>
                                             <input type="number" class="form-control text-center fw-bold text-primary-custom" v-model.number="formProduct.baseOutletStocks[out.id]" placeholder="0">
@@ -1050,7 +1124,7 @@
                         <div class="modal-body bg-white p-4" v-else>
                             <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN NAMA VARIAN:</p>
                             <div class="row g-3">
-                                <div class="col-md-3 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
+                                <div class="col-md-3 col-sm-4 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
                                     <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantTotalStock(v) <= 0}" @click="getVariantTotalStock(v) > 0 ? addToCart(v) : null">
                                         <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" style="height: 120px;">
                                         
@@ -1187,16 +1261,20 @@
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks',
                 viewTitles: { pos: 'Mesin Kasir', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori' },
                 
-                searchQuery: '', posCategoryFilter: '', posCustomDate: '',
+                searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '',
+                activeBarcodeSku: '', html5QrCode: null,
                 
+                // Variabel untuk modal Konfirmasi Global UI
+                confirmTitle: '', confirmMessage: '', confirmCallback: null,
+
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], cart: [], selectedCustomer: null, 
                 
                 formCategory: { id: null, name: '', parentId: '' },
-                formCustomer: { id: null, name: '', phone: '', membershipId: '' },
+                formCustomer: { id: null, name: '', phone: '', address: '', membershipId: '' },
                 formMembership: { id: null, tierName: '', discountPercent: 0 },
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
-                formProduct: { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
+                formProduct: { id: null, sku: '', name: '', categoryId: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1205,7 +1283,7 @@
             }
         },
         mounted() {
-            this.resetPosDate(); // Inisialisasi Tanggal & Waktu sekarang
+            this.resetPosDate();
             onAuthStateChanged(auth, async (user) => {
                 try {
                     if (user) { 
@@ -1220,9 +1298,6 @@
             });
         },
         computed: {
-            catLevel2() { return this.categories.filter(c => c.parentId === this.formProduct.categoryId_L1); },
-            catLevel3() { return this.categories.filter(c => c.parentId === this.formProduct.categoryId_L2); },
-
             structuredCategories() {
                 let res = []; let map = {};
                 this.categories.forEach(c => map[c.id] = {...c, children: []});
@@ -1256,18 +1331,17 @@
             filteredProducts() { 
                 let filtered = this.products;
 
-                // 1. Kategori Filter (Check if Product is in L1, L2, or L3)
                 if (this.posCategoryFilter) {
                     filtered = filtered.filter(p => 
+                        this.isCategoryOrDescendant(p.categoryId, this.posCategoryFilter) || 
                         p.categoryId_L1 === this.posCategoryFilter || 
                         p.categoryId_L2 === this.posCategoryFilter || 
                         p.categoryId_L3 === this.posCategoryFilter
                     );
                 }
 
-                // 2. Text Search Filter
                 const q = this.searchQuery.toLowerCase().trim();
-                if (q) {
+                if (q && this.posSearchMode === 'text') {
                     filtered = filtered.filter(p => {
                         const matchName = (p.name || '').toLowerCase().includes(q);
                         const matchSku = (p.sku || '').toLowerCase().includes(q);
@@ -1282,17 +1356,13 @@
                         return matchName || matchSku || matchVar;
                     }); 
                 }
-                
                 return filtered;
             },
             
             hasVariants() { return this.activeProduct && this.activeProduct.variants && this.activeProduct.variants.length > 0; },
-            
             posActiveOutlet() { return this.outlets.find(o => o.id === this.posActiveOutletId); },
             totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
-            
             subtotalBase() { return this.cart.reduce((sum, item) => sum + (this.getPriceBeforePosDiscount(item) * item.qty), 0); },
-
             posDiscountAmount() {
                 return this.cart.reduce((sum, item) => {
                     let before = this.getPriceBeforePosDiscount(item);
@@ -1300,9 +1370,7 @@
                     return sum + ((before - after) * item.qty);
                 }, 0);
             },
-
             subtotal() { return this.cart.reduce((sum, item) => sum + (this.getFinalItemPrice(item) * item.qty), 0); },
-            
             discountAmount() { const membershipId = this.selectedCustomer ? this.selectedCustomer.membershipId : null; return (this.subtotal) * (this.getMembershipDiscount(membershipId) / 100); },
             netSubtotal() { return this.subtotal - this.discountAmount; },
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
@@ -1314,12 +1382,27 @@
             total(newVal) { if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; }
         },
         methods: {
+            // UI KONFIRMASI GLOBAL PENGGANTI ALERT/CONFIRM
+            askConfirm(title, message, callback) {
+                this.confirmTitle = title;
+                this.confirmMessage = message;
+                this.confirmCallback = callback;
+                this.showModal('confirmModal');
+            },
+            async executeConfirm() {
+                this.hideModal('confirmModal');
+                if (this.confirmCallback) {
+                    await this.confirmCallback();
+                    this.confirmCallback = null;
+                }
+            },
+
             resetPosDate() {
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 this.posCustomDate = now.toISOString().slice(0,16);
             },
-            getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] }; },
+            getEmptyProductForm() { return { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] }; },
             async fetchUserProfile(user) {
                 const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
                 if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
@@ -1333,7 +1416,12 @@
                 } catch(e) { this.authError = "Email atau password salah."; }
                 this.isProcessingAuth = false;
             },
-            async logout() { if(confirm('Tutup Sesi?')) { await signOut(auth); this.cart = []; this.selectedCustomer = null; } },
+            
+            logout() { 
+                this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => {
+                    await signOut(auth); this.cart = []; this.selectedCustomer = null; 
+                });
+            },
             
             initAppListeners() {
                 const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'stockLogs'];
@@ -1345,13 +1433,108 @@
             getMembershipName(id) { if (!id) return 'Reguler'; const m = this.memberships.find(x => x.id === id); return m ? (m.tierName || 'Reguler') : 'Reguler'; },
             getOutletAddress(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.location : '-'; },
             
+            getCategoryLabel(cat) {
+                let prefix = '\u00A0\u00A0\u00A0'.repeat(cat.treeLevel);
+                if (cat.treeLevel > 0) prefix += '↳ ';
+                return prefix + cat.name;
+            },
+            
+            isCategoryOrDescendant(categoryId, filterId) {
+                if (!categoryId) return false;
+                if (categoryId === filterId) return true;
+                let current = this.categories.find(c => c.id === categoryId);
+                while (current && current.parentId) {
+                    if (current.parentId === filterId) return true;
+                    current = this.categories.find(c => c.id === current.parentId);
+                }
+                return false;
+            },
+
             getCategoryPath(p) {
+                if (p.categoryId) {
+                    let path = []; let currentId = p.categoryId;
+                    while (currentId) {
+                        let cat = this.categories.find(c => c.id === currentId);
+                        if (cat) { path.unshift(cat.name); currentId = cat.parentId; } else break;
+                    }
+                    if (path.length > 0) return path.join(' > ');
+                }
+                // Fallback
                 let path = [];
                 const getCatName = (id) => { const c = this.categories.find(x => x.id === id); return c ? c.name : null; };
                 if (p.categoryId_L1) { const n1 = getCatName(p.categoryId_L1); if(n1) path.push(n1); }
                 if (p.categoryId_L2) { const n2 = getCatName(p.categoryId_L2); if(n2) path.push(n2); }
                 if (p.categoryId_L3) { const n3 = getCatName(p.categoryId_L3); if(n3) path.push(n3); }
                 return path.length > 0 ? path.join(' > ') : 'Tanpa Kategori';
+            },
+
+            showBarcode(sku) {
+                if(!sku || sku === 'N/A' || sku === '-') return;
+                this.activeBarcodeSku = sku;
+                this.showModal('barcodeModal');
+                setTimeout(() => {
+                    try {
+                        JsBarcode("#barcode-canvas", sku, {
+                            format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false
+                        });
+                    } catch(e) { console.error("Barcode Error", e); }
+                }, 200);
+            },
+
+            startCameraScanner() {
+                this.showModal('cameraScannerModal');
+                setTimeout(() => {
+                    if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
+                    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+                    
+                    this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                        // Jika berhasil scan
+                        this.stopCameraScanner();
+                        this.searchQuery = decodedText;
+                        this.posSearchMode = 'scan';
+                        this.handlePosSearchEnter();
+                    }).catch(err => {
+                        this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => {
+                            this.stopCameraScanner();
+                        });
+                    });
+                }, 400);
+            },
+            
+            stopCameraScanner() {
+                if(this.html5QrCode) {
+                    this.html5QrCode.stop().then(() => {
+                        this.hideModal('cameraScannerModal');
+                    }).catch(err => { this.hideModal('cameraScannerModal'); });
+                } else {
+                    this.hideModal('cameraScannerModal');
+                }
+            },
+
+            handlePosSearchEnter() {
+                if (this.posSearchMode === 'scan' && this.searchQuery) {
+                    const q = this.searchQuery.trim().toLowerCase();
+                    let foundProduct = null;
+                    let foundVariant = null;
+
+                    for (let p of this.products) {
+                        if (p.sku && p.sku.toLowerCase() === q) {
+                            foundProduct = p; break;
+                        }
+                        if (p.variants && p.variants.length > 0) {
+                            let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
+                            if (v) { foundProduct = p; foundVariant = v; break; }
+                        }
+                    }
+
+                    if (foundProduct) {
+                        this.activeProduct = foundProduct;
+                        this.addToCart(foundVariant || null);
+                    } else {
+                        this.askConfirm('Produk Tidak Ditemukan', `Barcode (${this.searchQuery}) tidak terdaftar di sistem.`, null);
+                    }
+                    this.searchQuery = ''; // Clear for next scan
+                }
             },
 
             showModal(id) { const el = document.getElementById(id); if (el) bootstrap.Modal.getOrCreateInstance(el).show(); },
@@ -1363,7 +1546,7 @@
                     this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
                 }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
-                else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', membershipId:''};
+                else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', address:'', membershipId:''};
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
                 else if(modalId === 'addOutletModal') this.formOutlet = {id:null, code:'', name:'', location:'', taxPercent: 0, serviceChargePercent: 0};
                 this.showModal(modalId);
@@ -1375,6 +1558,7 @@
                     if (!copy.baseOutletStocks) copy.baseOutletStocks = {};
                     if (!copy.variants) copy.variants = [];
                     if (!copy.tiers) copy.tiers = [];
+                    if (!copy.categoryId) copy.categoryId = '';
                     copy.variants.forEach(v => { 
                         if (!v.outletStocks) v.outletStocks = {}; 
                         if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; }
@@ -1391,7 +1575,11 @@
                 this.showModal(modalId);
             },
             
-            async removeData(colName, id) { if(confirm("Hapus Permanen?")) await deleteDoc(doc(db, colName, id)); },
+            removeData(colName, id) { 
+                this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => {
+                    await deleteDoc(doc(db, colName, id)); 
+                });
+            },
             
             async saveData(colName, formObj, modalId) {
                 this.isSaving = true;
@@ -1400,7 +1588,7 @@
                     if (!dataToSave.id) { delete dataToSave.id; dataToSave.createdAt = serverTimestamp(); await addDoc(collection(db, colName), dataToSave); } 
                     else { const docId = dataToSave.id; delete dataToSave.id; await updateDoc(doc(db, colName, docId), dataToSave); }
                     this.hideModal(modalId);
-                } catch(e) { alert("Kegagalan Cloud Sync."); }
+                } catch(e) { this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); }
                 this.isSaving = false;
             },
 
@@ -1573,7 +1761,6 @@
                 this.isProcessing = true; 
                 const newInvId = 'INV-' + Math.floor(Math.random() * 90000 + 10000);
                 
-                // MENGGUNAKAN TANGGAL CUSTOM (BACKDATE ATAU SAAT INI)
                 const trxDateObj = this.posCustomDate ? new Date(this.posCustomDate) : new Date();
                 const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
 
@@ -1584,7 +1771,7 @@
                     id: newInvId, dateStr: dateStr, customer: this.selectedCustomer ? this.selectedCustomer.name : 'Umum', cashierName: this.userProfile.name, 
                     outletId: this.posActiveOutletId, total: this.total, taxAmt: this.taxAmount, serviceAmt: this.serviceAmount, 
                     paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived,
-                    items: storedItems, createdAt: serverTimestamp() // Biarkan createdAt server sebagai referensi sistem
+                    items: storedItems, createdAt: serverTimestamp()
                 };
 
                 await addDoc(collection(db, "transactions"), trxData);
@@ -1599,7 +1786,6 @@
 
                 this.hideModal('paymentModal'); this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
                 
-                // Reset Tanggal kembali ke jam saat ini untuk transaksi berikutnya
                 this.resetPosDate();
             },
             triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 300); }
