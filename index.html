@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V4.9</title>
+    <title>Quinsah Collection ERP - Full Enterprise V5.0</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -76,8 +76,10 @@
         .modal { z-index: 1070 !important; }
         .modal-backdrop { z-index: 1065 !important; }
         /* Confirm & Camera Modal always on top */
-        #confirmModal { z-index: 1085 !important; }
-        #cameraScannerModal { z-index: 1085 !important; }
+        #confirmModal { z-index: 1100 !important; }
+        #cameraScannerModal { z-index: 1100 !important; }
+        /* Quick Add Modals on top of addProductModal */
+        .quick-add-modal { z-index: 1085 !important; }
 
         /* ELEGANT MOBILE & TABLET OPTIMIZATION */
         @media (max-width: 1199px) {
@@ -191,11 +193,13 @@
         <aside class="sidebar-left">
             <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
             <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'"><i class="bi bi-display"></i> POS</div>
+            <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="userRole === 'Admin'"><i class="bi bi-cart-plus"></i> Pembelian</div>
             <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="userRole === 'Admin'"><i class="bi bi-tags"></i> Master</div>
             <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="userRole === 'Admin'"><i class="bi bi-box-seam"></i> Inventori</div>
             <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'"><i class="bi bi-people"></i> CRM</div>
             <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="userRole === 'Admin'"><i class="bi bi-shop"></i> Outlets</div>
             <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'"><i class="bi bi-receipt-cutoff"></i> Laporan</div>
+            <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="userRole === 'Admin'"><i class="bi bi-gear"></i> Pengaturan</div>
         </aside>
 
         <main class="main-content">
@@ -288,6 +292,82 @@
                 </div>
             </div>
 
+            <!-- PURCHASE VIEW -->
+            <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Riwayat Pembelian & Stok Masuk</h6>
+                    <button class="btn btn-sm btn-primary-custom" @click="openModal('addPurchaseModal')"><i class="bi bi-plus-lg me-1"></i> Transaksi Pembelian Baru</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle text-nowrap">
+                        <thead><tr><th>No. PO</th><th>Tanggal</th><th>Supplier</th><th>Outlet Tujuan</th><th>Total Pembelian</th></tr></thead>
+                        <tbody>
+                            <tr v-for="po in purchases" :key="po.id">
+                                <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
+                                <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+                                <td class="fw-bold small">{{ getSupplierName(po.supplierId) }}</td>
+                                <td><span class="badge bg-light border text-dark">{{ getOutletName(po.outletId) }}</span></td>
+                                <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
+                            </tr>
+                            <tr v-if="purchases.length === 0"><td colspan="5" class="text-center py-4 text-muted small">Belum ada riwayat pembelian.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SETTINGS VIEW -->
+            <div v-if="currentView === 'settings' && userRole === 'Admin'">
+                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2">
+                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
+                </ul>
+
+                <div v-if="settingTab==='uoms'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Master Satuan Produk (UOM)</h6>
+                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addUomModal')"><i class="bi bi-plus-lg me-1"></i> Tambah UOM</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Nama Satuan</th><th>Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="u in uoms" :key="u.id">
+                                    <td class="fw-bold small">{{ u.name }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('uoms', u, 'formUom', 'addUomModal')"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('uoms', u.id)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="uoms.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div v-if="settingTab==='tags'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Master Tag Produk Khusus</h6>
+                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addTagModal')"><i class="bi bi-plus-lg me-1"></i> Tambah Tag</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Nama Tag</th><th>Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="t in tags" :key="t.id">
+                                    <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ t.name }}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('tags', t, 'formTag', 'addTagModal')"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('tags', t.id)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="tags.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CATALOG VIEW -->
             <div v-if="currentView === 'catalog' && userRole === 'Admin'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Master Produk</a></li>
@@ -465,9 +545,10 @@
             </div>
 
             <div v-if="currentView === 'crm'">
-                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2">
+                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='customers', 'bg-primary-custom': crmTab==='customers'}" href="#" @click.prevent="crmTab='customers'">Pelanggan</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='memberships', 'bg-primary-custom': crmTab==='memberships'}" href="#" @click.prevent="crmTab='memberships'">Membership</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='suppliers', 'bg-primary-custom': crmTab==='suppliers'}" href="#" @click.prevent="crmTab='suppliers'">Data Supplier</a></li>
                 </ul>
                 <div v-if="crmTab==='customers'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -511,6 +592,29 @@
                         </table>
                     </div>
                 </div>
+                <div v-if="crmTab==='suppliers'" class="dashboard-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Database Supplier (Pemasok)</h6>
+                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addSupplierModal')"><i class="bi bi-truck me-1"></i>Tambah Supplier</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-custom align-middle">
+                            <thead><tr><th>Nama Pemasok</th><th>No. Telp/WA</th><th>Alamat Pemasok</th><th>Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="s in suppliers" :key="s.id">
+                                    <td class="fw-bold small">{{ s.name }}</td>
+                                    <td class="small">{{ s.phone }}</td>
+                                    <td><span class="text-muted" style="font-size:0.75rem;">{{ s.address || '-' }}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" @click="editData('suppliers', s, 'formSupplier', 'addSupplierModal')"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-sm btn-light border text-danger px-2 py-1" @click="removeData('suppliers', s.id)"><i class="bi bi-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="suppliers.length === 0"><td colspan="4" class="text-center py-4 text-muted small">Belum ada data supplier.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div v-if="currentView === 'outlets' && userRole === 'Admin'" class="dashboard-card">
@@ -538,7 +642,7 @@
             </div>
 
             <div v-if="currentView === 'reports'" class="dashboard-card">
-                <h6 class="fw-bold mb-3">Riwayat Transaksi</h6>
+                <h6 class="fw-bold mb-3">Riwayat Transaksi Penjualan (POS)</h6>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle text-nowrap">
                         <thead><tr><th>No. Inv</th><th>Waktu</th><th>Pelanggan</th><th>Pembayaran</th><th>Total</th><th>Aksi Cetak</th></tr></thead>
@@ -648,6 +752,7 @@
             </div>
         </aside>
 
+        <!-- MODAL GLOBAL KONFIRMASI -->
         <div class="modal fade" id="confirmModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow-lg text-center p-4">
@@ -662,6 +767,7 @@
             </div>
         </div>
 
+        <!-- MODAL KAMERA SCANNER -->
         <div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg bg-dark">
@@ -677,6 +783,7 @@
             </div>
         </div>
 
+        <!-- MODAL BARCODE -->
         <div class="modal fade" id="barcodeModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow">
@@ -693,6 +800,7 @@
             </div>
         </div>
 
+        <!-- MODAL HOLD TRANSAKSI -->
         <div class="modal fade" id="holdModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
@@ -716,17 +824,16 @@
             </div>
         </div>
 
-        <div class="modal fade" id="addCategoryModal" tabindex="-1">
+        <!-- MODAL MASTER KATEGORI -->
+        <div class="modal fade quick-add-modal" id="addCategoryModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow">
+                    <div class="modal-header p-3 border-bottom"><h6 class="fw-bold mb-0"><i class="bi bi-folder-plus text-primary-custom me-2"></i>Kategori Baru</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body p-4">
-                        <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-folder-plus text-primary-custom me-2"></i>Kategori Baru</h6>
-                        
                         <div class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-tag me-1"></i>Nama Kategori</label>
                             <input type="text" class="form-control form-control-sm" v-model="formCategory.name" placeholder="Cth: Pakaian Wanita">
                         </div>
-                        
                         <div class="mb-4">
                             <label class="form-label small fw-bold"><i class="bi bi-diagram-2 me-1"></i>Sub-Kategori Dari (Opsional)</label>
                             <select class="form-select form-select-sm" v-model="formCategory.parentId">
@@ -735,8 +842,149 @@
                             </select>
                             <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Pilih jika ini adalah anak dari kategori lain.</small>
                         </div>
-                        
                         <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveCategory"><i class="bi bi-save me-1"></i> Simpan Kategori</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL MASTER UOM -->
+        <div class="modal fade quick-add-modal" id="addUomModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header p-3 border-bottom"><h6 class="fw-bold mb-0"><i class="bi bi-rulers text-primary-custom me-2"></i>Tambah Satuan (UOM)</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Nama Satuan / UOM</label>
+                            <input type="text" class="form-control form-control-sm" v-model="formUom.name" placeholder="Cth: Dus, Pack, Kg...">
+                        </div>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('uoms', formUom, 'addUomModal')"><i class="bi bi-save me-1"></i> Simpan UOM</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL MASTER TAG -->
+        <div class="modal fade quick-add-modal" id="addTagModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header p-3 border-bottom"><h6 class="fw-bold mb-0"><i class="bi bi-tag-fill text-primary-custom me-2"></i>Tambah Master Tag</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Nama Tag</label>
+                            <input type="text" class="form-control form-control-sm" v-model="formTag.name" placeholder="Cth: Promo Ramadhan, Baru...">
+                        </div>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('tags', formTag, 'addTagModal')"><i class="bi bi-save me-1"></i> Simpan Tag</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL SUPPLIER -->
+        <div class="modal fade" id="addSupplierModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header p-3 border-bottom"><h6 class="fw-bold mb-0"><i class="bi bi-truck text-primary-custom me-2"></i>Data Supplier Baru</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body p-4">
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Nama Perusahaan/Supplier</label>
+                            <input type="text" class="form-control form-control-sm" v-model="formSupplier.name" placeholder="Ketik nama supplier...">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">No. Telp/WA</label>
+                            <input type="text" class="form-control form-control-sm" v-model="formSupplier.phone" placeholder="08xxxxxx">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Alamat Lengkap</label>
+                            <textarea class="form-control form-control-sm" v-model="formSupplier.address" rows="2" placeholder="Alamat supplier..."></textarea>
+                        </div>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('suppliers', formSupplier, 'addSupplierModal')"><i class="bi bi-save me-1"></i> Simpan Supplier</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL PEMBELIAN (PURCHASE) -->
+        <div class="modal fade" id="addPurchaseModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Stok Masuk (Pembelian ke Supplier)</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body bg-white p-4">
+                        <div class="row g-2 mb-3 border-bottom pb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
+                                <select class="form-select form-select-sm fw-semibold" v-model="formPurchase.supplierId">
+                                    <option value="">-- Pilih Supplier --</option>
+                                    <option v-for="s in suppliers" :value="s.id">{{ s.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok (Outlet)</label>
+                                <select class="form-select form-select-sm fw-semibold border-primary" v-model="formPurchase.outletId">
+                                    <option value="">-- Pilih Cabang Outlet --</option>
+                                    <option v-for="o in outlets" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold small mb-2"><i class="bi bi-boxes me-1"></i>Tambahkan Item Pembelian</h6>
+                        <div class="row g-2 mb-3 align-items-end p-2 bg-light border rounded">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold mb-1">Produk Induk</label>
+                                <select class="form-select form-select-sm" v-model="formPurchaseItem.productId" @change="onPurchaseProductChange">
+                                    <option value="">-- Pilih --</option>
+                                    <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold mb-1">Varian (Jika Ada)</label>
+                                <select class="form-select form-select-sm" v-model="formPurchaseItem.variantSku" :disabled="purchaseActiveVariants.length === 0">
+                                    <option value="">-- Pilih Varian --</option>
+                                    <option v-for="v in purchaseActiveVariants" :value="v.variantSku">{{ v.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold mb-1">Qty Masuk</label>
+                                <input type="number" class="form-control form-control-sm" v-model.number="formPurchaseItem.qty" placeholder="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold mb-1">Hrg Beli Satuan</label>
+                                <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="formPurchaseItem.price" placeholder="Rp">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary-custom btn-sm w-100" @click="addPurchaseItem"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-light"><tr><th>Nama Barang</th><th>SKU</th><th>Qty</th><th>Hrg Beli</th><th>Subtotal</th><th>Aksi</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(i, idx) in formPurchase.items" :key="idx">
+                                        <td class="fw-bold">{{ i.productName }} <div class="text-muted" style="font-size:0.65rem;" v-if="i.variantName">{{ i.variantName }}</div></td>
+                                        <td>{{ i.variantSku || i.sku }}</td>
+                                        <td class="text-center fw-bold">{{ i.qty }}</td>
+                                        <td class="text-success">Rp {{ formatNumber(i.price) }}</td>
+                                        <td class="text-primary-custom fw-bold">Rp {{ formatNumber(i.qty * i.price) }}</td>
+                                        <td class="text-center"><button class="btn btn-sm text-danger py-0 px-1" @click="formPurchase.items.splice(idx,1)"><i class="bi bi-trash"></i></button></td>
+                                    </tr>
+                                    <tr v-if="formPurchase.items.length === 0"><td colspan="6" class="text-center text-muted py-3">Belum ada item ditambahkan.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <div class="fw-bold fs-6">TOTAL PEMBELIAN:</div>
+                            <div class="fw-bold fs-5 text-danger">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-top p-3">
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId">
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI STOK KE SERVER
+                        </button>
                     </div>
                 </div>
             </div>
@@ -865,24 +1113,23 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">Kategori Produk</label>
-                                <select class="form-select form-select-sm mb-2 fw-semibold" v-model="formProduct.categoryId">
-                                    <option value="">-- Pilih Kategori --</option>
-                                    <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                                </select>
+                                <div class="input-group input-group-sm mb-2">
+                                    <select class="form-select fw-semibold" v-model="formProduct.categoryId">
+                                        <option value="">-- Pilih Kategori --</option>
+                                        <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                                    </select>
+                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Kategori Baru" @click="openModal('addCategoryModal')"><i class="bi bi-plus-lg"></i></button>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small fw-bold">Satuan (UOM)</label>
-                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.uom" list="uomOptions" placeholder="Pcs, Dus...">
-                                <datalist id="uomOptions">
-                                    <option value="Pcs"></option>
-                                    <option value="Dus"></option>
-                                    <option value="Box"></option>
-                                    <option value="Pack"></option>
-                                    <option value="Lusin"></option>
-                                    <option value="Kg"></option>
-                                    <option value="Gram"></option>
-                                    <option value="Meter"></option>
-                                </datalist>
+                                <div class="input-group input-group-sm mb-2">
+                                    <select class="form-select fw-semibold" v-model="formProduct.uom">
+                                        <option value="Pcs">Pcs (Default)</option>
+                                        <option v-for="u in uoms" :value="u.name">{{ u.name }}</option>
+                                    </select>
+                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master UOM Baru" @click="openModal('addUomModal')"><i class="bi bi-plus-lg"></i></button>
+                                </div>
                             </div>
                             
                             <div class="col-md-4">
@@ -904,8 +1151,12 @@
                             <div class="col-md-12">
                                 <label class="form-label small fw-bold">Tag / Label Produk Khusus (Opsional)</label>
                                 <div class="input-group input-group-sm mb-2">
-                                    <input type="text" class="form-control" v-model="formProduct.productTagInput" @keydown.enter.prevent="pushProductTag" placeholder="Ketik label (cth: Terlaris, Diskon Promo) lalu tekan enter/tambah">
-                                    <button class="btn btn-outline-secondary" type="button" @click="pushProductTag"><i class="bi bi-plus-lg"></i> Tambah Tag</button>
+                                    <select class="form-select" v-model="formProduct.productTagInput">
+                                        <option value="">-- Pilih Master Tag Tersedia --</option>
+                                        <option v-for="t in tags" :value="t.name">{{ t.name }}</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary" type="button" @click="pushProductTag"><i class="bi bi-plus-lg"></i> Hubungkan Tag Ke Produk</button>
+                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Tag Baru" @click="openModal('addTagModal')"><i class="bi bi-tag-fill"></i> + Baru</button>
                                 </div>
                                 <div v-if="formProduct.productTags && formProduct.productTags.length > 0">
                                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2 fw-normal px-2 py-1" style="font-size: 0.75rem;" v-for="(tag, idx) in formProduct.productTags" :key="idx">{{ tag }} <i class="bi bi-x-circle-fill ms-1 cursor-pointer" @click="formProduct.productTags.splice(idx, 1)"></i></span>
@@ -1153,7 +1404,7 @@
                             <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
                         <div class="modal-body bg-white p-4" v-else>
-                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN:</p>
+                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN NAMA VARIAN:</p>
                             <div class="row g-3">
                                 <div class="col-md-3 col-sm-4 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
                                     <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantDisplayStock(v) <= 0}" @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
@@ -1289,22 +1540,28 @@
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
 
-                currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks',
-                viewTitles: { pos: 'Mesin Kasir', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori' },
+                currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'uoms',
+                viewTitles: { pos: 'Mesin Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem' },
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
-                products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], cart: [], selectedCustomer: null, 
+                products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
                 formCategory: { id: null, name: '', parentId: '' },
+                formUom: { id: null, name: '' },
+                formTag: { id: null, name: '' },
+                formSupplier: { id: null, name: '', phone: '', address: '' },
                 formCustomer: { id: null, name: '', phone: '', address: '', membershipId: '' },
                 formMembership: { id: null, tierName: '', discountPercent: 0 },
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
-                formProduct: { id: null, sku: '', name: '', categoryId: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
+                formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
+
+                formPurchase: { id: null, supplierId: '', outletId: '', items: [], note: '', total: 0 },
+                formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
 
@@ -1389,6 +1646,13 @@
                 return filtered;
             },
             
+            purchaseActiveVariants() {
+                if(!this.formPurchaseItem.productId) return [];
+                const p = this.products.find(x => x.id === this.formPurchaseItem.productId);
+                if(p && p.variants && p.variants.length > 0) return p.variants;
+                return [];
+            },
+
             hasVariants() { return this.activeProduct && this.activeProduct.variants && this.activeProduct.variants.length > 0; },
             posActiveOutlet() { return this.outlets.find(o => o.id === this.posActiveOutletId); },
             totalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
@@ -1460,7 +1724,7 @@
             },
             
             initAppListeners() {
-                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'stockLogs'];
+                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'stockLogs', 'uoms', 'tags', 'suppliers', 'purchases'];
                 collections.forEach(col => { onSnapshot(query(collection(db, col), orderBy("createdAt", "desc")), snap => { const r = []; snap.forEach(d => r.push({ id: d.id, ...d.data() })); this[col] = r; }, e => console.error(e)); });
             },
             
@@ -1468,6 +1732,8 @@
             getMembershipDiscount(id) { if (!id) return 0; const m = this.memberships.find(x => x.id === id); return m ? (m.discountPercent || 0) : 0; },
             getMembershipName(id) { if (!id) return 'Reguler'; const m = this.memberships.find(x => x.id === id); return m ? (m.tierName || 'Reguler') : 'Reguler'; },
             getOutletAddress(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.location : '-'; },
+            getOutletName(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.name : '-'; },
+            getSupplierName(id) { if (!id) return '-'; const s = this.suppliers.find(x => x.id === id); return s ? s.name : '-'; },
             
             getCategoryLabel(cat) {
                 let prefix = '\u00A0\u00A0\u00A0'.repeat(cat.treeLevel);
@@ -1581,9 +1847,13 @@
                     this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
                 }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
+                else if(modalId === 'addUomModal') this.formUom = {id:null, name:''};
+                else if(modalId === 'addTagModal') this.formTag = {id:null, name:''};
+                else if(modalId === 'addSupplierModal') this.formSupplier = {id:null, name:'', phone:'', address:''};
                 else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', address:'', membershipId:''};
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
                 else if(modalId === 'addOutletModal') this.formOutlet = {id:null, code:'', name:'', location:'', taxPercent: 0, serviceChargePercent: 0};
+                else if(modalId === 'addPurchaseModal') { this.formPurchase = {id:null, supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0}; this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; }
                 this.showModal(modalId);
             },
             
@@ -1790,7 +2060,7 @@
                 let pPrice = variant ? this.getEffectiveVariantPrice(this.activeProduct, variant) : this.getEffectiveBasePrice(this.activeProduct);
                 
                 let item = { 
-                    id: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
+                    id: this.activeProduct.id, productId: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
                     basePrice: bPrice, promoPrice: pPrice, qty: 1, tiers: this.activeProduct.tiers || [],
                     posDiscountType: 'none', posDiscountValue: 0, note: '',
                     uom: this.activeProduct.uom || 'Pcs'
@@ -1834,6 +2104,85 @@
                 this.isMobileCartOpen = true;
             },
 
+            onPurchaseProductChange() {
+                if(this.formPurchaseItem.productId) {
+                    const p = this.products.find(x => x.id === this.formPurchaseItem.productId);
+                    if(p) this.formPurchaseItem.price = p.hppPrice || 0;
+                    this.formPurchaseItem.variantSku = '';
+                }
+            },
+            
+            addPurchaseItem() {
+                if(!this.formPurchaseItem.productId || !this.formPurchaseItem.qty || this.formPurchaseItem.qty <= 0) return;
+                const p = this.products.find(x => x.id === this.formPurchaseItem.productId);
+                if(!p) return;
+                
+                let vName = '';
+                let vSku = p.sku;
+                if(this.formPurchaseItem.variantSku) {
+                    const v = p.variants.find(vx => vx.variantSku === this.formPurchaseItem.variantSku);
+                    if(v) { vName = v.name || v.attributes; vSku = v.variantSku; }
+                } else if(p.variants && p.variants.length > 0) {
+                    this.askConfirm('Pilih Varian', 'Produk ini memiliki varian. Harap pilih varian terlebih dahulu.', null);
+                    return;
+                }
+
+                this.formPurchase.items.push({
+                    productId: p.id, productName: p.name, sku: p.sku, 
+                    variantSku: this.formPurchaseItem.variantSku, variantName: vName,
+                    qty: this.formPurchaseItem.qty, price: this.formPurchaseItem.price || 0
+                });
+                this.formPurchaseItem = {productId: '', variantSku: '', qty: '', price: ''};
+            },
+
+            async savePurchase() {
+                this.isSaving = true;
+                try {
+                    const trxDateObj = new Date();
+                    const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
+                    const newId = 'PO-' + Math.floor(Math.random() * 90000 + 10000);
+                    
+                    let total = this.formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+                    
+                    const dataToSave = {
+                        id: newId, dateStr: dateStr, supplierId: this.formPurchase.supplierId, outletId: this.formPurchase.outletId,
+                        items: this.formPurchase.items, total: total, note: this.formPurchase.note, createdAt: serverTimestamp()
+                    };
+                    
+                    await addDoc(collection(db, 'purchases'), dataToSave);
+                    
+                    // Add Stock Logs & Update Product Stocks via Promise.all
+                    const updatePromises = [];
+                    for(let item of this.formPurchase.items) {
+                        updatePromises.push(addDoc(collection(db, "stockLogs"), {
+                            dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.productName, variantName: item.variantName || '-',
+                            qtyChange: item.qty, type: 'IN', refId: newId, outletId: this.formPurchase.outletId, createdAt: serverTimestamp()
+                        }));
+                        
+                        // Update Actual Stock
+                        let prod = this.products.find(p => p.id === item.productId);
+                        if(prod) {
+                            let pCopy = JSON.parse(JSON.stringify(prod));
+                            if(item.variantSku) {
+                                let v = pCopy.variants.find(vx => vx.variantSku === item.variantSku);
+                                if(v) {
+                                    if(!v.outletStocks) v.outletStocks = {};
+                                    v.outletStocks[this.formPurchase.outletId] = (v.outletStocks[this.formPurchase.outletId] || 0) + item.qty;
+                                }
+                            } else {
+                                if(!pCopy.baseOutletStocks) pCopy.baseOutletStocks = {};
+                                pCopy.baseOutletStocks[this.formPurchase.outletId] = (pCopy.baseOutletStocks[this.formPurchase.outletId] || 0) + item.qty;
+                            }
+                            updatePromises.push(updateDoc(doc(db, "products", prod.id), { baseOutletStocks: pCopy.baseOutletStocks, variants: pCopy.variants }));
+                        }
+                    }
+                    await Promise.all(updatePromises);
+                    
+                    this.hideModal('addPurchaseModal');
+                } catch(e) { console.error(e); this.askConfirm("Error", "Gagal menyimpan pembelian.", null); }
+                this.isSaving = false;
+            },
+
             async processTransaction() {
                 this.isProcessing = true; 
                 const newInvId = 'INV-' + Math.floor(Math.random() * 90000 + 10000);
@@ -1853,13 +2202,31 @@
 
                 await addDoc(collection(db, "transactions"), trxData);
                 
-                const logPromises = this.cart.map(item => {
-                    return addDoc(collection(db, "stockLogs"), {
+                const updatePromises = [];
+                for(let item of storedItems) {
+                    updatePromises.push(addDoc(collection(db, "stockLogs"), {
                         dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.variantName || '-',
                         qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp()
-                    });
-                });
-                await Promise.all(logPromises);
+                    }));
+
+                    // Deduct Actual Stock
+                    let prod = this.products.find(p => p.id === item.productId);
+                    if(prod) {
+                        let pCopy = JSON.parse(JSON.stringify(prod));
+                        if(item.variantSku) {
+                            let v = pCopy.variants.find(vx => vx.variantSku === item.variantSku);
+                            if(v) {
+                                if(!v.outletStocks) v.outletStocks = {};
+                                v.outletStocks[this.posActiveOutletId] = (v.outletStocks[this.posActiveOutletId] || 0) - item.qty;
+                            }
+                        } else {
+                            if(!pCopy.baseOutletStocks) pCopy.baseOutletStocks = {};
+                            pCopy.baseOutletStocks[this.posActiveOutletId] = (pCopy.baseOutletStocks[this.posActiveOutletId] || 0) - item.qty;
+                        }
+                        updatePromises.push(updateDoc(doc(db, "products", prod.id), { baseOutletStocks: pCopy.baseOutletStocks, variants: pCopy.variants }));
+                    }
+                }
+                await Promise.all(updatePromises);
 
                 this.hideModal('paymentModal'); this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
                 
