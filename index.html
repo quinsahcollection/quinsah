@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V6.3</title>
+    <title>Quinsah Collection ERP - Full Enterprise V6.4</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -455,7 +455,6 @@
                                     <td>
                                         <div v-if="!p.variants || p.variants.length === 0" class="text-muted small">- Tanpa Varian -</div>
                                         <div v-else class="d-flex flex-column gap-1">
-                                            <!-- KLIK HANYA UNTUK VIEWER DETAIL, BUKAN EDIT -->
                                             <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal cursor-pointer" style="font-size: 0.65rem; transition: 0.2s;" onmouseover="this.classList.replace('bg-light','bg-primary'); this.classList.replace('text-dark','text-white')" onmouseout="this.classList.replace('bg-primary','bg-light'); this.classList.replace('text-white','text-dark')" @click="openVariantDetail(p, v, idx)">
                                                 <i class="bi bi-info-circle me-1"></i>{{ v.name || v.attributes }} <span class="fw-bold ms-1">({{ v.variantSku || '-' }})</span>
                                             </span>
@@ -543,6 +542,29 @@
                 </ul>
 
                 <div v-if="invTab==='stocks'" class="dashboard-card">
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Pencarian</label>
+                            <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Cari nama, SKU, Varian...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Kategori</label>
+                            <select class="form-select form-select-sm" v-model="invCategoryFilter">
+                                <option value="">-- Semua Kategori --</option>
+                                <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Pilih Produk</label>
+                            <select class="form-select form-select-sm" v-model="invProductFilter">
+                                <option value="">-- Semua Produk --</option>
+                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="invSearchQuery=''; invCategoryFilter=''; invProductFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
                             <thead class="table-light text-center">
@@ -560,7 +582,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <template v-for="p in products" :key="p.id">
+                                <template v-for="p in filteredInventoryProducts" :key="p.id">
                                     <tr class="table-secondary fw-bold">
                                         <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
                                         <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
@@ -591,17 +613,31 @@
                                         </td>
                                     </tr>
                                 </template>
+                                <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="outlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 <div v-if="invTab==='logs'" class="dashboard-card">
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Mulai Tanggal</label>
+                            <input type="date" class="form-control form-control-sm" v-model="logStartDate">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Sampai Tanggal</label>
+                            <input type="date" class="form-control form-control-sm" v-model="logEndDate">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="logStartDate=''; logEndDate=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
                             <thead><tr><th>Waktu</th><th>Ref. Transaksi</th><th>Nama Item (SKU)</th><th>Qty</th><th>Status</th><th>User / PIC</th></tr></thead>
                             <tbody>
-                                <tr v-for="log in stockLogs" :key="log.id">
+                                <tr v-for="log in filteredStockLogs" :key="log.id">
                                     <td class="text-muted" style="font-size: 0.7rem;">{{ log.dateStr }}</td>
                                     <td class="fw-bold small">{{ log.refId }}</td>
                                     <td>
@@ -615,7 +651,7 @@
                                     <td><span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : 'badge-in'">{{ log.type === 'OUT' ? 'KELUAR' : 'MASUK' }}</span></td>
                                     <td><span class="badge bg-light text-dark border" style="font-size:0.65rem;"><i class="bi bi-person me-1"></i>{{ log.userName || log.cashierName || 'Sistem' }}</span></td>
                                 </tr>
-                                <tr v-if="stockLogs.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat mutasi.</td></tr>
+                                <tr v-if="filteredStockLogs.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat mutasi / Sesuai filter.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -641,6 +677,25 @@
                         <div class="col-md-2 d-flex align-items-end">
                             <button class="btn btn-sm btn-outline-danger bg-white w-100 fw-bold py-1" @click="resetStockFilter"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
                         </div>
+                        
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label small fw-bold">Pencarian</label>
+                            <input type="text" class="form-control form-control-sm" v-model="stockCardSearchQuery" placeholder="Cari nama, SKU, Varian...">
+                        </div>
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label small fw-bold">Kategori</label>
+                            <select class="form-select form-select-sm" v-model="stockCardCategoryFilter">
+                                <option value="">-- Semua Kategori --</option>
+                                <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label small fw-bold">Pilih Produk</label>
+                            <select class="form-select form-select-sm" v-model="stockCardProductFilter">
+                                <option value="">-- Semua Produk --</option>
+                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom table-hover align-middle text-nowrap">
@@ -648,6 +703,7 @@
                                 <tr>
                                     <th>Nama Produk & Varian</th>
                                     <th>SKU</th>
+                                    <th class="text-center text-secondary">Tgl Awal</th>
                                     <th class="text-center text-primary">Stok Awal</th>
                                     <th class="text-center text-success">Masuk (In)</th>
                                     <th class="text-center text-danger">Keluar (Out)</th>
@@ -662,6 +718,7 @@
                                         <div class="text-muted" style="font-size:0.65rem;" v-if="log.variantName && log.variantName !== '-'">{{ log.variantName }}</div>
                                     </td>
                                     <td><span class="sku-badge">{{ log.sku }}</span></td>
+                                    <td class="text-center text-muted fw-semibold" style="font-size: 0.7rem;">{{ log.displayDate }}</td>
                                     <td class="text-center text-primary fw-bold">{{ log.stokAwal }}</td>
                                     <td class="text-center text-success fw-bold">{{ log.masuk }}</td>
                                     <td class="text-center text-danger fw-bold">{{ log.keluar }}</td>
@@ -673,7 +730,7 @@
                                         <span v-else class="text-muted small">-</span>
                                     </td>
                                 </tr>
-                                <tr v-if="stockCardSummary.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada data produk/kartu stok.</td></tr>
+                                <tr v-if="stockCardSummary.length === 0"><td colspan="8" class="text-center py-4 text-muted small">Tidak ada data produk/kartu stok sesuai filter.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1988,6 +2045,11 @@
 
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
+                // FILTER INVENTORY & STOCK CARD
+                stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', stockCardStartDate: '', stockCardEndDate: '', stockCardOutlet: '',
+                invSearchQuery: '', invCategoryFilter: '', invProductFilter: '',
+                logStartDate: '', logEndDate: '',
+
                 formCategory: { id: null, name: '', parentId: '' },
                 formUom: { id: null, name: '' },
                 formTag: { id: null, name: '' },
@@ -2006,7 +2068,7 @@
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
                 
-                stockCardStartDate: '', stockCardEndDate: '', stockCardOutlet: '', activeStockDetail: null,
+                activeStockDetail: null,
 
                 isSaving: false, activeProduct: null, printMode: 'receipt', activePrintData: null,
                 isProcessing: false, isMobileCartOpen: false, heldTransactions: []
@@ -2091,6 +2153,51 @@
                 }
                 return filtered;
             },
+
+            filteredInventoryProducts() {
+                let filtered = this.products;
+                if (this.invCategoryFilter) {
+                    filtered = filtered.filter(p => 
+                        this.isCategoryOrDescendant(p.categoryId, this.invCategoryFilter) || 
+                        p.categoryId_L1 === this.invCategoryFilter || 
+                        p.categoryId_L2 === this.invCategoryFilter || 
+                        p.categoryId_L3 === this.invCategoryFilter
+                    );
+                }
+                if (this.invProductFilter) {
+                    filtered = filtered.filter(p => p.id === this.invProductFilter);
+                }
+                const q = this.invSearchQuery.toLowerCase().trim();
+                if (q) {
+                    filtered = filtered.filter(p => {
+                        const matchName = (p.name || '').toLowerCase().includes(q);
+                        const matchSku = (p.sku || '').toLowerCase().includes(q);
+                        let matchVar = false;
+                        if (p.variants && p.variants.length > 0) {
+                            matchVar = p.variants.some(v => 
+                                (v.name || '').toLowerCase().includes(q) || 
+                                (v.attributes || '').toLowerCase().includes(q) ||
+                                (v.variantSku || '').toLowerCase().includes(q)
+                            );
+                        }
+                        return matchName || matchSku || matchVar;
+                    });
+                }
+                return filtered;
+            },
+
+            filteredStockLogs() {
+                let logs = this.stockLogs;
+                if(this.logStartDate || this.logEndDate) {
+                    let sTime = this.logStartDate ? new Date(this.logStartDate).setHours(0,0,0,0) : 0;
+                    let eTime = this.logEndDate ? new Date(this.logEndDate).setHours(23,59,59,999) : Infinity;
+                    logs = logs.filter(l => {
+                        let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
+                        return logTime >= sTime && logTime <= eTime;
+                    });
+                }
+                return logs;
+            },
             
             purchaseActiveVariants() {
                 if(!this.formPurchaseItem.productId) return [];
@@ -2103,10 +2210,32 @@
                 let sTime = this.stockCardStartDate ? new Date(this.stockCardStartDate).setHours(0,0,0,0) : 0;
                 let eTime = this.stockCardEndDate ? new Date(this.stockCardEndDate).setHours(23,59,59,999) : Infinity;
                 let outletFilter = this.stockCardOutlet;
-                let summary = [];
                 
-                this.products.forEach(p => {
+                let filteredProducts = this.products;
+                if (this.stockCardCategoryFilter) {
+                    filteredProducts = filteredProducts.filter(p => 
+                        this.isCategoryOrDescendant(p.categoryId, this.stockCardCategoryFilter) || 
+                        p.categoryId_L1 === this.stockCardCategoryFilter || 
+                        p.categoryId_L2 === this.stockCardCategoryFilter || 
+                        p.categoryId_L3 === this.stockCardCategoryFilter
+                    );
+                }
+                if (this.stockCardProductFilter) {
+                    filteredProducts = filteredProducts.filter(p => p.id === this.stockCardProductFilter);
+                }
+
+                let summary = [];
+                let displayDate = this.stockCardStartDate ? new Date(this.stockCardStartDate).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID');
+                const q = this.stockCardSearchQuery.toLowerCase().trim();
+                
+                filteredProducts.forEach(p => {
                     if (!p.variants || p.variants.length === 0) {
+                        if (q) {
+                            const matchName = (p.name || '').toLowerCase().includes(q);
+                            const matchSku = (p.sku || '').toLowerCase().includes(q);
+                            if (!matchName && !matchSku) return; // skip if doesn't match search
+                        }
+
                         let currentStock = outletFilter ? this.getProductStockAtOutlet(p, outletFilter) : this.getBaseTotalStock(p);
                         let sku = p.sku || '-';
                         let logs = this.stockLogs.filter(l => l.sku === sku);
@@ -2131,9 +2260,17 @@
                         let stokAkhir = currentStock - afterRangeIn + afterRangeOut;
                         let stokAwal = stokAkhir - inRangeIn + inRangeOut;
 
-                        summary.push({ id: p.id, name: p.name, variantName: '-', sku: sku, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
+                        summary.push({ id: p.id, name: p.name, variantName: '-', sku: sku, displayDate, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
                     } else {
                         p.variants.forEach(v => {
+                            if (q) {
+                                const matchName = (p.name || '').toLowerCase().includes(q);
+                                const matchSku = (p.sku || '').toLowerCase().includes(q);
+                                const matchVarName = (v.name || v.attributes || '').toLowerCase().includes(q);
+                                const matchVarSku = (v.variantSku || '').toLowerCase().includes(q);
+                                if (!matchName && !matchSku && !matchVarName && !matchVarSku) return; // skip this variant
+                            }
+
                             let currentStock = outletFilter ? (v.outletStocks && v.outletStocks[outletFilter] ? v.outletStocks[outletFilter] : 0) : this.getVariantTotalStock(v);
                             let sku = v.variantSku || '-';
                             let logs = this.stockLogs.filter(l => l.sku === sku || l.variantSku === sku);
@@ -2158,7 +2295,7 @@
                             let stokAkhir = currentStock - afterRangeIn + afterRangeOut;
                             let stokAwal = stokAkhir - inRangeIn + inRangeOut;
 
-                            summary.push({ id: p.id + '-' + sku, name: p.name, variantName: v.name || v.attributes, sku: sku, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
+                            summary.push({ id: p.id + '-' + sku, name: p.name, variantName: v.name || v.attributes, sku: sku, displayDate, stokAwal, masuk: inRangeIn, keluar: inRangeOut, stokAkhir, inRangeLogs });
                         });
                     }
                 });
@@ -2364,7 +2501,6 @@
                 if(modalId === 'addProductModal') { 
                     this.formProduct = this.getEmptyProductForm(); 
                     this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
-                    // Set Original State untuk tracker stok
                     this.formProductOriginalState = JSON.parse(JSON.stringify(this.formProduct));
                 }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
@@ -2391,7 +2527,6 @@
                     copy.variants.forEach(v => { if (!v.outletStocks) v.outletStocks = {}; if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; } });
                     if (!copy.dynamicVariantsData || copy.dynamicVariantsData.length === 0) { copy.dynamicVariantsData = [{ name: 'Warna', tags: [], input: '' }]; }
                     
-                    // SAVE ORIGINAL STATE SEBELUM DIEDIT
                     this.formProductOriginalState = JSON.parse(JSON.stringify(copy));
                 }
                 if (formName === 'formOutlet') {
@@ -2403,9 +2538,6 @@
             
             removeData(colName, id) { this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => { await deleteDoc(doc(db, colName, id)); }); },
             
-            // ==========================================
-            // FIX 3: ADD USER LOGGING + FIX 2: LOGGING MASTER EDIT
-            // ==========================================
             async saveData(colName, formObj, modalId) {
                 this.isSaving = true;
                 try {
@@ -2426,7 +2558,6 @@
                         await updateDoc(doc(db, colName, finalDocId), dataToSave); 
                     }
 
-                    // Trik log untuk perubahan stok via Edit Master Produk
                     if (colName === 'products') {
                         await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
                     }
@@ -2443,7 +2574,6 @@
                 const currentUser = this.userProfile.name || 'Admin';
                 const nowStr = new Date().toLocaleString('id-ID');
 
-                // Log Produk Tanpa Varian
                 if ((!newP.variants || newP.variants.length === 0) && newP.baseOutletStocks) {
                     for (let outlet of this.outlets) {
                         let oldQty = (oldP && oldP.baseOutletStocks) ? (oldP.baseOutletStocks[outlet.id] || 0) : 0;
@@ -2461,7 +2591,6 @@
                         }
                     }
                 }
-                // Log Produk Dengan Varian
                 if (newP.variants && newP.variants.length > 0) {
                     for (let nVar of newP.variants) {
                         let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => v.variantSku === nVar.variantSku || v.attributes === nVar.attributes) : null;
@@ -2516,9 +2645,6 @@
                 this.formProduct.dynamicVariantsData[index].input = '';
             },
 
-            // ==========================================
-            // FIX 1: GENERATE NON-DESTRUCTIVE
-            // ==========================================
             generateDynamicMatrix() {
                 const validAttrs = this.formProduct.dynamicVariantsData.filter(a => a.tags.length > 0); 
                 if (validAttrs.length === 0) return;
@@ -2526,19 +2652,16 @@
                 const cartesian = arrays.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
                 
                 let matrix = [];
-                let oldVariants = this.formProduct.variants || []; // Simpan state tabel lama
+                let oldVariants = this.formProduct.variants || [];
 
                 cartesian.forEach(combo => {
                     const attrStr = combo.join(' - '); 
                     
-                    // Cek apakah varian dengan atribut ini sudah pernah digenerate di tabel
                     let existing = oldVariants.find(ov => ov.attributes === attrStr);
 
                     if (existing) {
-                        // Jika sudah ada, PERTAHANKAN seluruh datanya (stok, harga, foto, sku)
                         matrix.push(existing);
                     } else {
-                        // Jika belum ada, buat baru
                         const vSku = `${this.formProduct.sku}-${combo.join('-')}`.replace(/\s+/g, '').toUpperCase();
                         let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
                         matrix.push({ 
@@ -2549,7 +2672,6 @@
                     }
                 });
                 
-                // Replace array lama dengan gabungan yang sudah difilter
                 this.formProduct.variants = matrix;
             },
 
@@ -2761,7 +2883,7 @@
                                 variantName: item.variantName || '-',
                                 qtyChange: -item.qty,
                                 outletId: trxData.outletId,
-                                userName: this.userProfile.name || 'Admin' // Merekam Pembuat
+                                userName: this.userProfile.name || 'Admin' 
                             });
                         }
                     }
@@ -2850,7 +2972,7 @@
                     delete dataToSave.originalPo;
                     dataToSave.id = String(this.formPurchase.invoiceNo || '').replace(/\//g, '-');
                     dataToSave.createdAt = serverTimestamp();
-                    dataToSave.userName = this.userProfile.name || 'Admin'; // Simpan Info Pembuat
+                    dataToSave.userName = this.userProfile.name || 'Admin'; 
 
                     await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
 
@@ -2884,7 +3006,7 @@
                                 variantName: item.variantName || '-',
                                 qtyChange: item.qty,
                                 outletId: dataToSave.outletId,
-                                userName: this.userProfile.name || 'Admin' // Merekam Pembuat
+                                userName: this.userProfile.name || 'Admin' 
                             });
                         }
                     }
@@ -3047,6 +3169,9 @@
                 this.stockCardStartDate = '';
                 this.stockCardEndDate = '';
                 this.stockCardOutlet = '';
+                this.stockCardSearchQuery = '';
+                this.stockCardCategoryFilter = '';
+                this.stockCardProductFilter = '';
             },
             openStockDetail(logSummary) {
                 this.activeStockDetail = logSummary;
