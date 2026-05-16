@@ -70,7 +70,7 @@
         .badge-in { background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
 
         /* Barcode Canvas Auto-scale */
-        #barcode-canvas { width: 100% !important; max-width: 100%; height: auto !important; object-fit: contain; }
+        #barcode-canvas, #variant-detail-barcode-canvas { width: 100% !important; max-width: 100%; height: auto !important; object-fit: contain; }
 
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -290,16 +290,19 @@
             <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
                 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0">Riwayat Pembelian & Stok Masuk</h6>
-                    <button class="btn btn-sm btn-primary-custom" @click="openModal('addPurchaseModal')"><i class="bi bi-plus-lg me-1"></i> Transaksi Pembelian Baru</button>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="text" class="form-control form-control-sm" v-model="purchaseSearchQuery" placeholder="Cari No. PO / Supplier...">
+                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addPurchaseModal')"><i class="bi bi-plus-lg me-1"></i> Transaksi Baru</button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle text-nowrap">
                         <thead><tr><th>No. Invoice / PO</th><th>Tanggal</th><th>Supplier</th><th>Outlet Tujuan</th><th>Total Pembelian</th><th class="text-center">Aksi</th></tr></thead>
                         <tbody>
-                            <tr v-for="po in purchases" :key="po.id">
+                            <tr v-for="po in filteredPurchases" :key="po.id">
                                 <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
                                 <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
-                                <td class="fw-bold small">{{ getSupplierName(po.supplierId) }}</td>
+                                <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">{{ getSupplierName(po.supplierId) }}</td>
                                 <td><span class="badge bg-light border text-dark">{{ getOutletName(po.outletId) }}</span></td>
                                 <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
                                 <td class="text-center">
@@ -310,7 +313,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="purchases.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat pembelian.</td></tr>
+                            <tr v-if="filteredPurchases.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -428,7 +431,10 @@
                 <div v-if="catalogTab==='products'" class="dashboard-card">
                     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Daftar Induk Produk</h6>
-                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addProductModal')"><i class="bi bi-plus-lg me-1"></i> Tambah Baru</button>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="text" class="form-control form-control-sm" v-model="catalogProductSearch" placeholder="Cari Produk / SKU...">
+                            <button class="btn btn-sm btn-primary-custom" @click="openModal('addProductModal')" style="white-space: nowrap;"><i class="bi bi-plus-lg me-1"></i> Tambah Baru</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
@@ -442,7 +448,7 @@
                                 <th>Aksi</th>
                             </tr></thead>
                             <tbody>
-                                <tr v-for="p in products" :key="p.id">
+                                <tr v-for="p in filteredCatalogProducts" :key="p.id">
                                     <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">
@@ -470,21 +476,32 @@
                                         <button class="btn btn-sm btn-light border text-danger" @click="removeData('products', p.id)"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
+                                <tr v-if="filteredCatalogProducts.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada produk sesuai pencarian.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
                 <div v-if="catalogTab==='variants'" class="dashboard-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">Database SKU Varian</h6>
-                        <span class="text-muted small d-none d-sm-block">Otomatis dari Induk</span>
+                    <div class="row g-2 mb-3 bg-light p-2 rounded border align-items-center">
+                        <div class="col-md-4">
+                            <h6 class="fw-bold mb-0">Database SKU Varian</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" v-model="catalogVariantSearch" placeholder="Cari Varian / SKU / Induk...">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm fw-semibold" v-model="catalogVariantOutletFilter">
+                                <option value="">-- Semua Outlet (Total Stok) --</option>
+                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>Stok Total</th></tr></thead>
+                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>{{ catalogVariantOutletFilter ? 'Stok Outlet' : 'Stok Total' }}</th></tr></thead>
                             <tbody>
-                                <tr v-for="(v, index) in allVariantsList" :key="index">
+                                <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
                                     <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
                                     <td class="text-muted fw-semibold small">
                                         {{ v.parentName }}
@@ -497,9 +514,9 @@
                                         <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
                                         <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
                                     </td>
-                                    <td><span class="badge" :class="v.stock > 0 ? 'bg-success' : 'bg-danger'">{{ v.stock }}</span></td>
+                                    <td><span class="badge" :class="getDisplayVariantStock(v) > 0 ? 'bg-success' : 'bg-danger'">{{ getDisplayVariantStock(v) }}</span></td>
                                 </tr>
-                                <tr v-if="allVariantsList.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Belum ada varian produk.</td></tr>
+                                <tr v-if="filteredAllVariantsList.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Belum ada varian produk sesuai filter.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -791,7 +808,7 @@
                             <thead><tr><th>Nama</th><th>Kontak & Alamat</th><th>Membership (Diskon)</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="c in customers" :key="c.id">
-                                    <td class="fw-bold small">{{ c.name }}</td>
+                                    <td class="fw-bold small text-primary cursor-pointer text-decoration-underline" @click="openCustomerDetail(c)" title="Klik untuk lihat detail histori transaksi">{{ c.name }}</td>
                                     <td class="small">{{ c.phone }}<br><span class="text-muted" style="font-size:0.7rem;">{{ c.address || '-' }}</span></td>
                                     <td><span class="badge bg-warning text-dark">{{ getMembershipName(c.membershipId) }} ({{ getMembershipDiscount(c.membershipId) }}%)</span></td>
                                     <td>
@@ -833,7 +850,7 @@
                             <thead><tr><th>Nama Pemasok</th><th>No. Telp/WA</th><th>Alamat Pemasok</th><th>Aksi</th></tr></thead>
                             <tbody>
                                 <tr v-for="s in suppliers" :key="s.id">
-                                    <td class="fw-bold small">{{ s.name }}</td>
+                                    <td class="fw-bold small text-primary cursor-pointer text-decoration-underline" @click="openSupplierDetail(s)" title="Klik untuk lihat histori PO">{{ s.name }}</td>
                                     <td class="small">{{ s.phone }}</td>
                                     <td><span class="text-muted" style="font-size:0.75rem;">{{ s.address || '-' }}</span></td>
                                     <td>
@@ -875,15 +892,18 @@
 
             <!-- REPORTS VIEW -->
             <div v-if="currentView === 'reports'" class="dashboard-card">
-                <h6 class="fw-bold mb-3">Riwayat Transaksi Penjualan (POS)</h6>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 class="fw-bold mb-0">Riwayat Transaksi Penjualan (POS)</h6>
+                    <input type="text" class="form-control form-control-sm w-auto" v-model="reportSearchQuery" placeholder="Cari No. Inv / Pelanggan...">
+                </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle text-nowrap">
                         <thead><tr><th>No. Inv</th><th>Waktu</th><th>Pelanggan</th><th>Pembayaran</th><th>Total</th><th class="text-center">Aksi Lanjutan</th></tr></thead>
                         <tbody>
-                            <tr v-for="trx in transactions" :key="trx.id">
+                            <tr v-for="trx in filteredTransactions" :key="trx.id">
                                 <td class="fw-bold text-primary-custom small">{{ trx.id }}</td>
                                 <td style="font-size: 0.7rem;">{{ trx.dateStr }}</td>
-                                <td class="small">{{ trx.customer }}</td>
+                                <td class="small cursor-pointer text-primary text-decoration-underline" @click="openCustomerDetail({id: trx.customerId, name: trx.customer})">{{ trx.customer }}</td>
                                 <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
                                 <td class="fw-bold text-success small">Rp {{ formatNumber(trx.total) }}</td>
                                 <td class="text-center">
@@ -898,7 +918,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="transactions.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada transaksi.</td></tr>
+                            <tr v-if="filteredTransactions.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada transaksi / Sesuai pencarian.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1012,6 +1032,97 @@
                             <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                             <span v-else>Ya, Lanjutkan</span>
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CUSTOMER DETAIL (CRM) -->
+        <div class="modal fade" id="customerDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-person-lines-fill me-2"></i>Detail & Histori Pelanggan</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0 bg-white" v-if="activeCustomerDetail">
+                        <div class="p-3 border-bottom bg-light">
+                            <div class="row">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <h5 class="fw-bold text-dark mb-1">{{ activeCustomerDetail.name }}</h5>
+                                    <div class="text-muted small"><i class="bi bi-telephone-fill me-1"></i> {{ activeCustomerDetail.phone || '-' }}</div>
+                                </div>
+                                <div class="col-md-6 text-md-start text-md-end">
+                                    <span class="badge bg-warning text-dark mb-1">{{ getMembershipName(activeCustomerDetail.membershipId) }} (Diskon {{ getMembershipDiscount(activeCustomerDetail.membershipId) }}%)</span>
+                                    <div class="text-muted small"><i class="bi bi-geo-alt-fill me-1"></i> {{ activeCustomerDetail.address || '-' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <h6 class="fw-bold small mb-2"><i class="bi bi-receipt me-1"></i>Histori Transaksi (POS)</h6>
+                            <div class="table-responsive" style="max-height: 40vh; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
+                                    <thead class="table-light sticky-top">
+                                        <tr><th>Tgl Transaksi</th><th>No. Invoice</th><th>Metode</th><th>Total Belanja</th><th>Kasir</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="trx in activeCustomerTransactions" :key="trx.id">
+                                            <td>{{ trx.dateStr }}</td>
+                                            <td><a href="#" class="fw-bold text-primary text-decoration-underline" @click.prevent="goToTransaction(trx.id)" title="Klik untuk melompat ke invoice ini">{{ trx.id }}</a></td>
+                                            <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod }}</span></td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(trx.total) }}</td>
+                                            <td>{{ trx.cashierName }}</td>
+                                        </tr>
+                                        <tr v-if="activeCustomerTransactions.length === 0"><td colspan="5" class="text-center py-3 text-muted">Belum ada histori transaksi untuk pelanggan ini.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL SUPPLIER DETAIL (CRM) -->
+        <div class="modal fade" id="supplierDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-truck me-2"></i>Detail & Histori Supplier</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0 bg-white" v-if="activeSupplierDetail">
+                        <div class="p-3 border-bottom bg-light">
+                            <div class="row">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <h5 class="fw-bold text-dark mb-1">{{ activeSupplierDetail.name }}</h5>
+                                    <div class="text-muted small"><i class="bi bi-telephone-fill me-1"></i> {{ activeSupplierDetail.phone || '-' }}</div>
+                                </div>
+                                <div class="col-md-6 text-md-start text-md-end">
+                                    <div class="text-muted small mt-1 mt-md-0"><i class="bi bi-geo-alt-fill me-1"></i> {{ activeSupplierDetail.address || '-' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <h6 class="fw-bold small mb-2"><i class="bi bi-cart-plus me-1"></i>Histori Purchase Order (PO)</h6>
+                            <div class="table-responsive" style="max-height: 40vh; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
+                                    <thead class="table-light sticky-top">
+                                        <tr><th>Tgl PO</th><th>No. PO</th><th>Outlet Tujuan</th><th>Total Nilai PO</th><th>User / Admin</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="po in activeSupplierPurchases" :key="po.id">
+                                            <td>{{ po.dateStr }}</td>
+                                            <td><a href="#" class="fw-bold text-primary text-decoration-underline" @click.prevent="goToPurchase(po.id)" title="Klik untuk melompat ke PO ini">{{ po.id }}</a></td>
+                                            <td>{{ getOutletName(po.outletId) }}</td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(po.total) }}</td>
+                                            <td>{{ po.userName || 'Admin' }}</td>
+                                        </tr>
+                                        <tr v-if="activeSupplierPurchases.length === 0"><td colspan="5" class="text-center py-3 text-muted">Belum ada histori PO dari supplier ini.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1132,7 +1243,11 @@
                         </div>
                         <div class="mb-2 text-center">
                             <h6 class="fw-bold text-primary-custom mb-1">{{ variantDetail.v.name || variantDetail.v.attributes }}</h6>
-                            <span class="badge bg-dark font-monospace text-white">{{ variantDetail.v.variantSku }}</span>
+                            <span class="badge bg-dark font-monospace text-white">{{ variantDetail.v.variantSku || variantDetail.p.sku || '-' }}</span>
+                            <!-- Elemen Barcode Ditambahkan di Sini -->
+                            <div class="mt-2 text-center">
+                                <svg id="variant-detail-barcode-canvas"></svg>
+                            </div>
                         </div>
                         <div class="row g-2 text-center my-3 border-top border-bottom py-2">
                             <div class="col-6">
@@ -2081,6 +2196,11 @@
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 
+                // PENCARIAN & FILTER BARU
+                catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
+                reportSearchQuery: '', purchaseSearchQuery: '',
+                activeCustomerDetail: null, activeSupplierDetail: null,
+
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
                 appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD' },
@@ -2102,7 +2222,7 @@
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
-                formProductOriginalState: null, // Merekam stok lama untuk logging edit
+                formProductOriginalState: null,
 
                 formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, isEdit: false },
                 formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
@@ -2149,6 +2269,28 @@
                 flatten(roots, 0); return res;
             },
 
+            // MASTER PRODUCT & SKU VARIANT FILTERING
+            filteredCatalogProducts() {
+                let list = this.products;
+                const q = this.catalogProductSearch.toLowerCase().trim();
+                if(q) {
+                    list = list.filter(p => {
+                        const matchName = (p.name || '').toLowerCase().includes(q);
+                        const matchSku = (p.sku || '').toLowerCase().includes(q);
+                        let matchVar = false;
+                        if (p.variants && p.variants.length > 0) {
+                            matchVar = p.variants.some(v =>
+                                (v.name || '').toLowerCase().includes(q) ||
+                                (v.attributes || '').toLowerCase().includes(q) ||
+                                (v.variantSku || '').toLowerCase().includes(q)
+                            );
+                        }
+                        return matchName || matchSku || matchVar;
+                    });
+                }
+                return list;
+            },
+
             allVariantsList() {
                 let list = [];
                 this.products.forEach(p => {
@@ -2156,10 +2298,12 @@
                         p.variants.forEach(v => { 
                             let vSell = this.getEffectiveVariantPrice(p, v);
                             list.push({ 
-                                parentName: p.name, sku: v.variantSku, 
+                                parentName: p.name, sku: v.variantSku || '-', 
                                 name: v.name || v.attributes || 'Varian', 
                                 hpp: v.hppPrice, base: v.sellPrice || p.sellPrice, sell: vSell, 
-                                stock: this.getVariantTotalStock(v), imageBase64: v.imageBase64 || p.imageBase64,
+                                stock: this.getVariantTotalStock(v), 
+                                outletStocks: v.outletStocks || {},
+                                imageBase64: v.imageBase64 || p.imageBase64,
                                 categoryPath: this.getCategoryPath(p)
                             }); 
                         });
@@ -2168,6 +2312,49 @@
                 return list;
             },
 
+            filteredAllVariantsList() {
+                let list = this.allVariantsList;
+                const q = this.catalogVariantSearch.toLowerCase().trim();
+                if (q) {
+                    list = list.filter(v =>
+                        (v.name||'').toLowerCase().includes(q) ||
+                        (v.sku||'').toLowerCase().includes(q) ||
+                        (v.parentName||'').toLowerCase().includes(q)
+                    );
+                }
+                return list;
+            },
+
+            // FILTERING CRM TRANSACTIONS
+            filteredTransactions() {
+                let list = this.transactions;
+                if(this.reportSearchQuery) {
+                    const q = this.reportSearchQuery.toLowerCase();
+                    list = list.filter(t => t.id.toLowerCase().includes(q) || (t.customer || '').toLowerCase().includes(q));
+                }
+                return list;
+            },
+
+            filteredPurchases() {
+                let list = this.purchases;
+                if(this.purchaseSearchQuery) {
+                    const q = this.purchaseSearchQuery.toLowerCase();
+                    list = list.filter(p => p.id.toLowerCase().includes(q) || this.getSupplierName(p.supplierId).toLowerCase().includes(q));
+                }
+                return list;
+            },
+
+            activeCustomerTransactions() {
+                if(!this.activeCustomerDetail) return [];
+                return this.transactions.filter(t => t.customerId === this.activeCustomerDetail.id || t.customer === this.activeCustomerDetail.name);
+            },
+
+            activeSupplierPurchases() {
+                if(!this.activeSupplierDetail) return [];
+                return this.purchases.filter(p => p.supplierId === this.activeSupplierDetail.id);
+            },
+
+            // POS & INVENTORY FILTERING
             filteredProducts() { 
                 let filtered = this.products;
                 if (this.posCategoryFilter) {
@@ -2574,6 +2761,13 @@
                 return path.length > 0 ? path.join(' > ') : 'Tanpa Kategori';
             },
 
+            getDisplayVariantStock(v) {
+                if (this.catalogVariantOutletFilter) {
+                    return (v.outletStocks && v.outletStocks[this.catalogVariantOutletFilter]) ? v.outletStocks[this.catalogVariantOutletFilter] : 0;
+                }
+                return v.stock;
+            },
+
             showBarcode(sku) {
                 if(!sku || sku === 'N/A' || sku === '-') return;
                 this.activeBarcodeSku = sku;
@@ -2736,6 +2930,39 @@
             openVariantDetail(product, variant, index) {
                 this.variantDetail = { p: JSON.parse(JSON.stringify(product)), v: JSON.parse(JSON.stringify(variant)), idx: index };
                 this.showModal('variantDetailModal');
+                
+                setTimeout(() => {
+                    try {
+                        let sku = variant.variantSku || product.sku || '-';
+                        if (sku !== '-' && sku !== '') {
+                            JsBarcode("#variant-detail-barcode-canvas", sku, { 
+                                format: "CODE128", lineColor: "#000", width: 1.5, height: 40, displayValue: false, margin: 0 
+                            });
+                        }
+                    } catch(e) { console.error("Barcode Error", e); }
+                }, 300);
+            },
+
+            openCustomerDetail(cust) {
+                this.activeCustomerDetail = cust;
+                this.showModal('customerDetailModal');
+            },
+
+            openSupplierDetail(sup) {
+                this.activeSupplierDetail = sup;
+                this.showModal('supplierDetailModal');
+            },
+
+            goToTransaction(trxId) {
+                this.hideModal('customerDetailModal');
+                this.currentView = 'reports';
+                this.reportSearchQuery = trxId;
+            },
+
+            goToPurchase(poId) {
+                this.hideModal('supplierDetailModal');
+                this.currentView = 'purchase';
+                this.purchaseSearchQuery = poId;
             },
 
             pushProductTag() {
