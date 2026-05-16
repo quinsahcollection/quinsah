@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V6.2</title>
+    <title>Quinsah Collection ERP - Full Enterprise V6.3</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -599,7 +599,7 @@
                 <div v-if="invTab==='logs'" class="dashboard-card">
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Waktu</th><th>Ref. Transaksi</th><th>Nama Item (SKU)</th><th>Qty</th><th>Status</th></tr></thead>
+                            <thead><tr><th>Waktu</th><th>Ref. Transaksi</th><th>Nama Item (SKU)</th><th>Qty</th><th>Status</th><th>User / PIC</th></tr></thead>
                             <tbody>
                                 <tr v-for="log in stockLogs" :key="log.id">
                                     <td class="text-muted" style="font-size: 0.7rem;">{{ log.dateStr }}</td>
@@ -613,8 +613,9 @@
                                     </td>
                                     <td class="fw-bold" :class="log.qtyChange > 0 ? 'text-success' : 'text-danger'">{{ log.qtyChange > 0 ? '+'+log.qtyChange : log.qtyChange }}</td>
                                     <td><span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : 'badge-in'">{{ log.type === 'OUT' ? 'KELUAR' : 'MASUK' }}</span></td>
+                                    <td><span class="badge bg-light text-dark border" style="font-size:0.65rem;"><i class="bi bi-person me-1"></i>{{ log.userName || log.cashierName || 'Sistem' }}</span></td>
                                 </tr>
-                                <tr v-if="stockLogs.length === 0"><td colspan="5" class="text-center py-4 text-muted small">Belum ada riwayat mutasi.</td></tr>
+                                <tr v-if="stockLogs.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat mutasi.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -977,18 +978,19 @@
                         <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
                             <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
                                 <thead class="table-light sticky-top">
-                                    <tr><th>Tanggal Transaksi</th><th>Ref ID (Invoice / PO)</th><th>Tipe Transaksi</th><th>Qty Mutasi</th><th>Lokasi Outlet</th></tr>
+                                    <tr><th>Tanggal Transaksi</th><th>Ref ID (Invoice / PO)</th><th>Tipe Transaksi</th><th>Qty Mutasi</th><th>Lokasi Outlet</th><th>User / PIC</th></tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="l in activeStockDetail?.inRangeLogs" :key="l.id">
                                         <td>{{ l.dateStr }}</td>
                                         <td class="fw-bold text-primary-custom">{{ l.refId }}</td>
-                                        <td><span class="badge" :class="l.type === 'IN' ? 'badge-in' : 'badge-out'">{{ l.type === 'IN' ? 'MASUK (PO)' : 'KELUAR (INV)' }}</span></td>
+                                        <td><span class="badge" :class="l.type === 'IN' ? 'badge-in' : 'badge-out'">{{ l.type === 'IN' ? 'MASUK' : 'KELUAR' }}</span></td>
                                         <td class="fw-bold fs-6" :class="l.type === 'IN' ? 'text-success' : 'text-danger'">{{ l.type === 'IN' ? '+' : '-' }}{{ Math.abs(l.qtyChange) }}</td>
                                         <td>{{ getOutletName(l.outletId) }}</td>
+                                        <td><span class="badge bg-light text-dark border"><i class="bi bi-person me-1"></i>{{ l.userName || l.cashierName || 'Sistem' }}</span></td>
                                     </tr>
                                     <tr v-if="!activeStockDetail?.inRangeLogs || activeStockDetail?.inRangeLogs.length === 0">
-                                        <td colspan="5" class="text-center py-4 text-muted small">Tidak ada histori mutasi pada rentang tanggal terpilih.</td>
+                                        <td colspan="6" class="text-center py-4 text-muted small">Tidak ada histori mutasi pada rentang tanggal terpilih.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1245,6 +1247,7 @@
             </div>
         </div>
 
+        <!-- MODAL CRM... -->
         <div class="modal fade" id="addMembershipModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow">
@@ -1994,6 +1997,7 @@
                 formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
                 
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
+                formProductOriginalState: null, // Merekam stok lama untuk logging edit
 
                 formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, isEdit: false },
                 formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
@@ -2357,7 +2361,12 @@
             hideModal(id) { const el = document.getElementById(id); if (el) { const m = bootstrap.Modal.getInstance(el); if(m) m.hide(); setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.style.overflow = ''; }, 300); } },
             
             openModal(modalId) {
-                if(modalId === 'addProductModal') { this.formProduct = this.getEmptyProductForm(); this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); }
+                if(modalId === 'addProductModal') { 
+                    this.formProduct = this.getEmptyProductForm(); 
+                    this.outlets.forEach(o => this.formProduct.baseOutletStocks[o.id] = 0); 
+                    // Set Original State untuk tracker stok
+                    this.formProductOriginalState = JSON.parse(JSON.stringify(this.formProduct));
+                }
                 else if(modalId === 'addCategoryModal') this.formCategory = {id:null, name:'', parentId:''};
                 else if(modalId === 'addUomModal') this.formUom = {id:null, name:''};
                 else if(modalId === 'addTagModal') this.formTag = {id:null, name:''};
@@ -2381,6 +2390,9 @@
                     copy.productTagInput = '';
                     copy.variants.forEach(v => { if (!v.outletStocks) v.outletStocks = {}; if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; } });
                     if (!copy.dynamicVariantsData || copy.dynamicVariantsData.length === 0) { copy.dynamicVariantsData = [{ name: 'Warna', tags: [], input: '' }]; }
+                    
+                    // SAVE ORIGINAL STATE SEBELUM DIEDIT
+                    this.formProductOriginalState = JSON.parse(JSON.stringify(copy));
                 }
                 if (formName === 'formOutlet') {
                     if (!copy.taxPercent) copy.taxPercent = 0;
@@ -2391,15 +2403,85 @@
             
             removeData(colName, id) { this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => { await deleteDoc(doc(db, colName, id)); }); },
             
+            // ==========================================
+            // FIX 3: ADD USER LOGGING + FIX 2: LOGGING MASTER EDIT
+            // ==========================================
             async saveData(colName, formObj, modalId) {
                 this.isSaving = true;
                 try {
                     const dataToSave = { ...formObj };
-                    if (!dataToSave.id) { delete dataToSave.id; dataToSave.createdAt = serverTimestamp(); await addDoc(collection(db, colName), dataToSave); } 
-                    else { const docId = dataToSave.id; delete dataToSave.id; await updateDoc(doc(db, colName, docId), dataToSave); }
+                    dataToSave.updatedBy = this.userProfile.name || 'Admin';
+
+                    let finalDocId = null;
+
+                    if (!dataToSave.id) { 
+                        delete dataToSave.id; 
+                        dataToSave.createdAt = serverTimestamp(); 
+                        dataToSave.createdBy = this.userProfile.name || 'Admin';
+                        const addedDoc = await addDoc(collection(db, colName), dataToSave); 
+                        finalDocId = addedDoc.id;
+                    } else { 
+                        finalDocId = dataToSave.id; 
+                        delete dataToSave.id; 
+                        await updateDoc(doc(db, colName, finalDocId), dataToSave); 
+                    }
+
+                    // Trik log untuk perubahan stok via Edit Master Produk
+                    if (colName === 'products') {
+                        await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
+                    }
+
                     this.hideModal(modalId);
-                } catch(e) { this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); }
+                } catch(e) { 
+                    console.error("Gagal Save Data", e);
+                    this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+                }
                 this.isSaving = false;
+            },
+
+            async logProductStockDifferences(oldP, newP, productId) {
+                const currentUser = this.userProfile.name || 'Admin';
+                const nowStr = new Date().toLocaleString('id-ID');
+
+                // Log Produk Tanpa Varian
+                if ((!newP.variants || newP.variants.length === 0) && newP.baseOutletStocks) {
+                    for (let outlet of this.outlets) {
+                        let oldQty = (oldP && oldP.baseOutletStocks) ? (oldP.baseOutletStocks[outlet.id] || 0) : 0;
+                        let newQty = newP.baseOutletStocks[outlet.id] || 0;
+                        let diff = newQty - oldQty;
+                        if (diff !== 0) {
+                            await addDoc(collection(db, "stockLogs"), {
+                                createdAt: serverTimestamp(), dateStr: nowStr,
+                                refId: 'EDIT MASTER', type: diff > 0 ? 'IN' : 'OUT',
+                                productId: productId, sku: newP.sku || '-', productName: newP.name || '-',
+                                variantSku: null, variantName: '-',
+                                qtyChange: diff, outletId: outlet.id,
+                                userName: currentUser
+                            });
+                        }
+                    }
+                }
+                // Log Produk Dengan Varian
+                if (newP.variants && newP.variants.length > 0) {
+                    for (let nVar of newP.variants) {
+                        let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => v.variantSku === nVar.variantSku || v.attributes === nVar.attributes) : null;
+                        for (let outlet of this.outlets) {
+                            let oldQty = (oVar && oVar.outletStocks) ? (oVar.outletStocks[outlet.id] || 0) : 0;
+                            let newQty = (nVar.outletStocks && nVar.outletStocks[outlet.id]) ? nVar.outletStocks[outlet.id] : 0;
+                            let diff = newQty - oldQty;
+                            if (diff !== 0) {
+                                await addDoc(collection(db, "stockLogs"), {
+                                    createdAt: serverTimestamp(), dateStr: nowStr,
+                                    refId: 'EDIT MASTER', type: diff > 0 ? 'IN' : 'OUT',
+                                    productId: productId, sku: newP.sku || '-', productName: newP.name || '-',
+                                    variantSku: nVar.variantSku, variantName: nVar.name || nVar.attributes || '-',
+                                    qtyChange: diff, outletId: outlet.id,
+                                    userName: currentUser
+                                });
+                            }
+                        }
+                    }
+                }
             },
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
@@ -2407,28 +2489,6 @@
             openVariantDetail(product, variant, index) {
                 this.variantDetail = { p: JSON.parse(JSON.stringify(product)), v: JSON.parse(JSON.stringify(variant)), idx: index };
                 this.showModal('variantDetailModal');
-            },
-            
-            async saveVariantDetail() {
-                this.isSaving = true;
-                try {
-                    let pCopy = this.variantDetail.p; pCopy.variants[this.variantDetail.idx] = this.variantDetail.v;
-                    await updateDoc(doc(db, "products", pCopy.id), { variants: pCopy.variants });
-                    this.hideModal('variantDetailModal');
-                } catch(e) { alert('Gagal menyimpan detail varian.'); }
-                this.isSaving = false;
-            },
-
-            async deleteVariantDetail() {
-                this.askConfirm('Hapus Varian?', 'Yakin ingin menghapus varian spesifik ini?', async () => {
-                    this.isSaving = true;
-                    try {
-                        let pCopy = this.variantDetail.p; pCopy.variants.splice(this.variantDetail.idx, 1);
-                        await updateDoc(doc(db, "products", pCopy.id), { variants: pCopy.variants });
-                        this.hideModal('variantDetailModal');
-                    } catch(e) {}
-                    this.isSaving = false;
-                });
             },
 
             pushProductTag() {
@@ -2456,15 +2516,40 @@
                 this.formProduct.dynamicVariantsData[index].input = '';
             },
 
+            // ==========================================
+            // FIX 1: GENERATE NON-DESTRUCTIVE
+            // ==========================================
             generateDynamicMatrix() {
-                const validAttrs = this.formProduct.dynamicVariantsData.filter(a => a.tags.length > 0); if (validAttrs.length === 0) return;
-                const arrays = validAttrs.map(a => a.tags); const cartesian = arrays.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
+                const validAttrs = this.formProduct.dynamicVariantsData.filter(a => a.tags.length > 0); 
+                if (validAttrs.length === 0) return;
+                const arrays = validAttrs.map(a => a.tags); 
+                const cartesian = arrays.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())), [[]]);
+                
                 let matrix = [];
+                let oldVariants = this.formProduct.variants || []; // Simpan state tabel lama
+
                 cartesian.forEach(combo => {
-                    const attrStr = combo.join(' - '); const vSku = `${this.formProduct.sku}-${combo.join('-')}`.replace(/\s+/g, '').toUpperCase();
-                    let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
-                    matrix.push({ name: attrStr, attributes: attrStr, variantSku: vSku, hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks });
+                    const attrStr = combo.join(' - '); 
+                    
+                    // Cek apakah varian dengan atribut ini sudah pernah digenerate di tabel
+                    let existing = oldVariants.find(ov => ov.attributes === attrStr);
+
+                    if (existing) {
+                        // Jika sudah ada, PERTAHANKAN seluruh datanya (stok, harga, foto, sku)
+                        matrix.push(existing);
+                    } else {
+                        // Jika belum ada, buat baru
+                        const vSku = `${this.formProduct.sku}-${combo.join('-')}`.replace(/\s+/g, '').toUpperCase();
+                        let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                        matrix.push({ 
+                            name: attrStr, attributes: attrStr, variantSku: vSku, 
+                            hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, 
+                            discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks 
+                        });
+                    }
                 });
+                
+                // Replace array lama dengan gabungan yang sudah difilter
                 this.formProduct.variants = matrix;
             },
 
@@ -2610,13 +2695,9 @@
                 this.showModal('paymentModal');
             },
 
-            // ==========================================
-            // FIX: PROCESS TRANSACTION (POS)
-            // ==========================================
             async processTransaction() {
                 this.isProcessing = true;
                 try {
-                    // Paksa membersihkan semua data undefined dengan trik stringify-parse
                     let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
                         ...c,
                         sku: c.sku || '-',
@@ -2627,7 +2708,7 @@
                     })));
 
                     let trxRaw = {
-                        id: String(this.posCustomInvoice || '').replace(/\//g, '-'), // Wajib membuang garis miring
+                        id: String(this.posCustomInvoice || '').replace(/\//g, '-'),
                         dateStr: new Date().toLocaleString('id-ID'),
                         customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
                         customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
@@ -2645,16 +2726,13 @@
                         items: cleanItems
                     };
 
-                    // Buang seluruh undefined agar Firestore tidak CRASH
                     let trxData = JSON.parse(JSON.stringify(trxRaw));
-                    trxData.createdAt = serverTimestamp(); // Assign Object khusus Firestore setelah dibersihkan
+                    trxData.createdAt = serverTimestamp();
                     
-                    this.posCustomInvoice = trxData.id; // Sinkronkan UI dengan ID bersih
+                    this.posCustomInvoice = trxData.id;
 
-                    // 1. SIMPAN INVOICE KE FIRESTORE (EKSEKUSI PERTAMA)
                     await setDoc(doc(db, "transactions", trxData.id), trxData);
 
-                    // 2. POTONG STOK & CATAT LOG (Jika error di sini, Invoice setidaknya sudah masuk, stok gagal potong lebih aman daripada stok terpotong tapi tak ada nota)
                     for (let item of trxData.items) {
                         let prod = this.products.find(p => p.id === item.productId);
                         if (prod) {
@@ -2682,7 +2760,8 @@
                                 variantSku: item.variantSku || null,
                                 variantName: item.variantName || '-',
                                 qtyChange: -item.qty,
-                                outletId: trxData.outletId
+                                outletId: trxData.outletId,
+                                userName: this.userProfile.name || 'Admin' // Merekam Pembuat
                             });
                         }
                     }
@@ -2756,13 +2835,9 @@
                 this.formPurchaseItem.price = '';
             },
 
-            // ==========================================
-            // FIX: SAVE PURCHASE (PO)
-            // ==========================================
             async savePurchase() {
                 this.isSaving = true;
                 try {
-                    // Revert stok PO lama jika ini adalah mode EDIT PO
                     if (this.formPurchase.isEdit && this.formPurchase.originalPo) {
                         await this.revertPurchaseStock(this.formPurchase.originalPo);
                     }
@@ -2770,17 +2845,15 @@
                     this.formPurchase.total = this.formPurchase.items.reduce((s, i) => s + (i.qty * i.price), 0);
                     this.formPurchase.dateStr = new Date().toLocaleString('id-ID');
                     
-                    // Bersihkan cache property & blokir karakter / pada Nomor PO
                     let dataToSave = JSON.parse(JSON.stringify(this.formPurchase));
                     delete dataToSave.isEdit;
                     delete dataToSave.originalPo;
                     dataToSave.id = String(this.formPurchase.invoiceNo || '').replace(/\//g, '-');
                     dataToSave.createdAt = serverTimestamp();
+                    dataToSave.userName = this.userProfile.name || 'Admin'; // Simpan Info Pembuat
 
-                    // 1. SIMPAN DATA PO DULUAN (Cegah stok terlanjur masuk)
                     await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
 
-                    // 2. TAMBAH STOK BARANG & CATAT LOG
                     for (let item of dataToSave.items) {
                         let prod = this.products.find(p => p.id === item.productId);
                         if (prod) {
@@ -2810,7 +2883,8 @@
                                 variantSku: item.variantSku || null,
                                 variantName: item.variantName || '-',
                                 qtyChange: item.qty,
-                                outletId: dataToSave.outletId
+                                outletId: dataToSave.outletId,
+                                userName: this.userProfile.name || 'Admin' // Merekam Pembuat
                             });
                         }
                     }
@@ -2825,9 +2899,6 @@
                 this.isSaving = false;
             },
 
-            // ==========================================
-            // FIX: FUNGSI INTI UNTUK REVERT/TARIK STOK
-            // ==========================================
             async revertPurchaseStock(po) {
                 for (let item of po.items) {
                     let prod = this.products.find(p => p.id === item.productId);
@@ -2872,9 +2943,6 @@
                 for (let l of logsToDel) { await deleteDoc(doc(db, "stockLogs", l.id)); }
             },
 
-            // ==========================================
-            // FIX: IMPLEMENTASI EDIT MAKSIMAL
-            // ==========================================
             editPurchase(po) {
                 this.askConfirm('Revisi Data Pembelian?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, stok lama akan otomatis ditarik & diganti dengan stok yang baru.', () => {
                     this.formPurchase = JSON.parse(JSON.stringify(po));
