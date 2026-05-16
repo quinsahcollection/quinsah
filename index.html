@@ -2944,11 +2944,20 @@
             },
 
             openCustomerDetail(cust) {
+                // Cari data lengkap berdasarkan ID agar alamat & telp muncul dari riwayat
+                if (cust && cust.id) {
+                    const fullCust = this.customers.find(c => c.id === cust.id);
+                    if (fullCust) cust = fullCust;
+                }
                 this.activeCustomerDetail = cust;
                 this.showModal('customerDetailModal');
             },
-
             openSupplierDetail(sup) {
+                // Cari data lengkap berdasarkan ID agar alamat & telp muncul dari riwayat
+                if (sup && sup.id) {
+                    const fullSup = this.suppliers.find(s => s.id === sup.id);
+                    if (fullSup) sup = fullSup;
+                }
                 this.activeSupplierDetail = sup;
                 this.showModal('supplierDetailModal');
             },
