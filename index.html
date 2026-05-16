@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V6.0</title>
+    <title>Quinsah Collection ERP - Full Enterprise V6.2</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -16,6 +16,9 @@
     <style>
         :root { --primary-color: #dc2626; --primary-dark: #991b1b; --bg-main: #f8f9fa; --bg-panel: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        
+        [v-cloak] { display: none !important; }
+
         .app-container { display: flex; height: 100vh; position: relative; }
         
         /* Auth Styles */
@@ -145,7 +148,7 @@
 </head>
 <body>
 
-<div id="app">
+<div id="app" v-cloak>
     <div v-if="!isAppReady" class="auth-wrapper d-print-none">
         <div class="text-center">
             <div class="spinner-border text-danger mb-3" style="width: 3rem; height: 3rem;"></div>
@@ -302,7 +305,7 @@
                                 <td class="text-center">
                                     <div class="btn-group btn-group-sm">
                                         <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)"><i class="bi bi-file-earmark-text"></i> A4</button>
-                                        <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)"><i class="bi bi-pencil"></i></button>
                                         <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
@@ -795,7 +798,7 @@
                                         <button class="btn btn-outline-secondary fw-bold" @click="triggerPrint(trx, 'invoiceA4')" title="Invoice A4"><i class="bi bi-file-earmark-text"></i> A4</button>
                                     </div>
                                     <div class="btn-group btn-group-sm mb-1">
-                                        <button class="btn btn-outline-primary" @click="editPosTransaction(trx)" title="Edit & Retur Stok"><i class="bi bi-pencil"></i></button>
+                                        <button class="btn btn-outline-primary" @click="editPosTransaction(trx)" title="Edit, Batal, & Revisi Invoice"><i class="bi bi-pencil"></i></button>
                                         <button class="btn btn-outline-danger" @click="deletePosTransaction(trx)" title="Hapus Permanen & Retur Stok"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
@@ -1155,27 +1158,27 @@
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-light border-bottom p-3">
                         <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Stok Masuk (Pembelian)</h6>
-                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close shadow-none" @click="cancelPurchaseEdit"></button>
                     </div>
                     <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
                         <div class="row g-3 mb-3 border-bottom pb-3">
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">Nomor Invoice / PO</label>
-                                <input type="text" class="form-control fw-bold text-primary-custom" v-model="formPurchase.invoiceNo" placeholder="Invoice Pembelian..." :disabled="!!formPurchase.id">
+                                <input type="text" class="form-control fw-bold text-primary-custom" v-model="formPurchase.invoiceNo" placeholder="Invoice Pembelian..." :disabled="formPurchase.isEdit">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
                                 <div class="input-group">
-                                    <select class="form-select fw-semibold" v-model="formPurchase.supplierId">
+                                    <select class="form-select fw-semibold" v-model="formPurchase.supplierId" :disabled="formPurchase.isEdit">
                                         <option value="">-- Pilih Supplier --</option>
                                         <option v-for="s in suppliers" :value="s.id">{{ s.name }}</option>
                                     </select>
-                                    <button class="btn btn-outline-primary-custom" type="button" @click="openModal('addSupplierModal')" title="Tambah Supplier Baru"><i class="bi bi-plus-lg"></i></button>
+                                    <button class="btn btn-outline-primary-custom" type="button" @click="openModal('addSupplierModal')" title="Tambah Supplier Baru" :disabled="formPurchase.isEdit"><i class="bi bi-plus-lg"></i></button>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok (Outlet)</label>
-                                <select class="form-select fw-semibold border-primary" v-model="formPurchase.outletId">
+                                <select class="form-select fw-semibold border-primary" v-model="formPurchase.outletId" :disabled="formPurchase.isEdit">
                                     <option value="">-- Pilih Cabang Outlet --</option>
                                     <option v-for="o in outlets" :value="o.id">{{ o.name }}</option>
                                 </select>
@@ -1957,13 +1960,14 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    
+    const firebaseApp = initializeApp(firebaseConfig);
+    const db = getFirestore(firebaseApp);
+    const auth = getAuth(firebaseApp);
 
     const { createApp } = Vue;
 
-    createApp({
+    const vueApp = createApp({
         data() {
             return {
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
@@ -1991,7 +1995,7 @@
                 
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
 
-                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0 },
+                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, isEdit: false },
                 formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
 
                 variantDetail: { p: null, v: null, idx: -1 },
@@ -2361,7 +2365,7 @@
                 else if(modalId === 'addCustomerModal') this.formCustomer = {id:null, name:'', phone:'', address:'', membershipId:''};
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
                 else if(modalId === 'addOutletModal') this.formOutlet = {id:null, code:'', name:'', location:'', taxPercent: 0, serviceChargePercent: 0};
-                else if(modalId === 'addPurchaseModal') { this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0 }; this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; }
+                else if(modalId === 'addPurchaseModal') { this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false }; this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; }
                 this.showModal(modalId);
             },
             
@@ -2526,221 +2530,464 @@
             getFinalItemPrice(cartItem) {
                 let currentPrice = this.getPriceBeforePosDiscount(cartItem);
                 if (cartItem.posDiscountType && cartItem.posDiscountType !== 'none') {
-                    if (cartItem.posDiscountType === 'nominal') { let discountVal = parseFloat(cartItem.posDiscountValue) || 0; return Math.max(0, currentPrice - discountVal); }
-                    else if (cartItem.posDiscountType === 'percent') { let discountVal = parseFloat(cartItem.posDiscountValue) || 0; return Math.max(0, currentPrice - (currentPrice * discountVal / 100)); }
-                    else if (cartItem.posDiscountType === 'multi') {
-                        let cascadeStr = (cartItem.posDiscountValue || "").toString().split('+'); let cascadeResult = currentPrice;
-                        cascadeStr.forEach(d => { let pct = parseFloat(d.trim()); if (!isNaN(pct) && pct > 0) { cascadeResult = cascadeResult - (cascadeResult * (pct / 100)); } });
-                        return Math.max(0, cascadeResult);
+                    if (cartItem.posDiscountType === 'nominal') {
+                        let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
+                        return Math.max(0, currentPrice - discountVal);
+                    } else if (cartItem.posDiscountType === 'percent') {
+                        let discountVal = parseFloat(cartItem.posDiscountValue) || 0;
+                        return Math.max(0, currentPrice - (currentPrice * discountVal / 100));
+                    } else if (cartItem.posDiscountType === 'multi') {
+                        let parts = (cartItem.posDiscountValue || '').split('+').map(p => parseFloat(p) || 0);
+                        let price = currentPrice;
+                        parts.forEach(p => { price = price - (price * p / 100); });
+                        return Math.max(0, price);
                     }
                 }
                 return currentPrice;
             },
 
-            getProductDisplayStock(product) {
-                if (this.posActiveOutletId) { return this.getProductStockAtOutlet(product, this.posActiveOutletId); }
-                return this.getBaseTotalStock(product);
+            openPosModifier(product) {
+                this.activeProduct = product;
+                if(!this.hasVariants) {
+                    this.showModal('posModifierModal');
+                } else {
+                    this.showModal('posModifierModal');
+                }
             },
 
-            getVariantDisplayStock(variant) {
-                if (this.posActiveOutletId) { return (variant.outletStocks && variant.outletStocks[this.posActiveOutletId]) ? variant.outletStocks[this.posActiveOutletId] : 0; }
-                return this.getVariantTotalStock(variant);
-            },
-
-            getVariantTotalStock(variant) { if (!variant || !variant.outletStocks) return 0; return Object.values(variant.outletStocks).reduce((a, b) => a + (b || 0), 0); },
-            getBaseTotalStock(product) { if (!product) return 0; if (product.baseOutletStocks && Object.keys(product.baseOutletStocks).length > 0) { return Object.values(product.baseOutletStocks).reduce((a, b) => a + (b || 0), 0); } return product.baseStock || 0; },
-            getProductStockAtOutlet(p, outletId) { if (!p || !p.baseOutletStocks) return 0; return p.baseOutletStocks[outletId] || 0; },
-
-            openPosModifier(product) { this.activeProduct = product; this.showModal('posModifierModal'); },
-            
-            addToCart(variant) {
-                if(!this.activeProduct) return;
-                let cartId = this.activeProduct.id; 
-                let bPrice = variant ? (variant.sellPrice || this.activeProduct.sellPrice) : (this.activeProduct.sellPrice || this.activeProduct.basePrice);
-                let pPrice = variant ? this.getEffectiveVariantPrice(this.activeProduct, variant) : this.getEffectiveBasePrice(this.activeProduct);
-                
-                let item = { 
-                    id: this.activeProduct.id, productId: this.activeProduct.id, name: this.activeProduct.name, sku: this.activeProduct.sku, 
-                    basePrice: bPrice, promoPrice: pPrice, qty: 1, tiers: this.activeProduct.tiers || [],
-                    posDiscountType: 'none', posDiscountValue: 0, note: '', uom: this.activeProduct.uom || 'Pcs'
+            addToCart(variant = null) {
+                let item = {
+                    cartId: Date.now() + Math.random().toString(36).substring(7),
+                    productId: this.activeProduct.id,
+                    name: this.activeProduct.name,
+                    sku: this.activeProduct.sku,
+                    uom: this.activeProduct.uom,
+                    qty: 1,
+                    promoPrice: variant ? this.getEffectiveVariantPrice(this.activeProduct, variant) : this.getEffectiveBasePrice(this.activeProduct),
+                    posDiscountType: 'none', posDiscountValue: 0,
+                    note: '',
+                    tiers: JSON.parse(JSON.stringify(this.activeProduct.tiers || []))
                 };
+                if(variant) {
+                    item.variantName = variant.name || variant.attributes;
+                    item.variantSku = variant.variantSku;
+                }
                 
-                if (variant) { cartId += `-${variant.variantSku}`; item.variantName = variant.name || variant.attributes || 'Varian Khusus'; item.variantSku = variant.variantSku || variant.sku || '-'; }
-                item.cartId = cartId; const ex = this.cart.find(i => i.cartId === cartId); if (ex) ex.qty++; else this.cart.push(item);
+                let existing = this.cart.find(c => c.productId === item.productId && c.variantSku === item.variantSku);
+                if(existing) {
+                    existing.qty += 1;
+                } else {
+                    this.cart.push(item);
+                }
                 this.hideModal('posModifierModal');
             },
-            
-            updateQty(id, chg) { const i=this.cart.findIndex(x=>x.cartId===id); if(i>-1) { this.cart[i].qty+=chg; if(this.cart[i].qty<=0) this.cart.splice(i,1); } },
-            openEditCartItem(item) { this.cartItemEdit = item; this.showModal('editCartItemModal'); },
-            saveCartItemEdit() { if (this.cartItemEdit.qty <= 0) { const i = this.cart.findIndex(x => x.cartId === this.cartItemEdit.cartId); if(i>-1) this.cart.splice(i, 1); } this.hideModal('editCartItemModal'); },
-            openPaymentModal() { this.paymentData.amountReceived = this.total; this.showModal('paymentModal'); },
-            
-            holdTransaction() {
-                if(this.cart.length === 0) return;
-                this.heldTransactions.push({ id: 'HOLD-' + Date.now(), time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}), customer: this.selectedCustomer, cart: [...this.cart], total: this.total, totalQty: this.totalQty });
-                this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false;
-            },
-            restoreTransaction(index) {
-                const held = this.heldTransactions[index]; this.cart = held.cart; this.selectedCustomer = held.customer;
-                this.heldTransactions.splice(index, 1); this.hideModal('holdModal'); this.isMobileCartOpen = true;
-            },
 
-            onPurchaseProductChange() {
-                if(this.formPurchaseItem.productId) {
-                    const p = this.products.find(x => x.id === this.formPurchaseItem.productId);
-                    if(p) this.formPurchaseItem.price = p.hppPrice || 0;
-                    this.formPurchaseItem.variantSku = '';
+            updateQty(cartId, delta) {
+                let item = this.cart.find(c => c.cartId === cartId);
+                if(item) {
+                    item.qty += delta;
+                    if(item.qty < 1) {
+                        this.cart = this.cart.filter(c => c.cartId !== cartId);
+                    }
                 }
             },
-            
-            addPurchaseItem() {
-                if(!this.formPurchaseItem.productId || !this.formPurchaseItem.qty || this.formPurchaseItem.qty <= 0) return;
-                const p = this.products.find(x => x.id === this.formPurchaseItem.productId); if(!p) return;
-                
-                let vName = ''; let vSku = p.sku;
-                if(this.formPurchaseItem.variantSku) {
-                    const v = p.variants.find(vx => vx.variantSku === this.formPurchaseItem.variantSku);
-                    if(v) { vName = v.name || v.attributes; vSku = v.variantSku; }
-                } else if(p.variants && p.variants.length > 0) { this.askConfirm('Pilih Varian', 'Produk ini memiliki varian. Harap pilih varian terlebih dahulu.', null); return; }
 
-                this.formPurchase.items.push({ productId: p.id, productName: p.name, sku: p.sku, variantSku: this.formPurchaseItem.variantSku, variantName: vName, qty: this.formPurchaseItem.qty, price: this.formPurchaseItem.price || 0 });
-                this.formPurchaseItem = {productId: '', variantSku: '', qty: '', price: ''};
+            openEditCartItem(item) {
+                this.cartItemEdit = JSON.parse(JSON.stringify(item));
+                this.showModal('editCartItemModal');
             },
 
-            async savePurchase() {
-                this.isSaving = true;
-                try {
-                    const trxDateObj = new Date(); const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
-                    const newId = this.formPurchase.invoiceNo || this.generateInvoiceNumber('PO');
-                    let total = this.formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-                    
-                    const dataToSave = { id: newId, dateStr: dateStr, supplierId: this.formPurchase.supplierId, outletId: this.formPurchase.outletId, items: this.formPurchase.items, total: total, note: this.formPurchase.note, createdAt: serverTimestamp() };
-                    await addDoc(collection(db, 'purchases'), dataToSave);
-                    
-                    const updatePromises = [];
-                    for(let item of this.formPurchase.items) {
-                        updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.productName, variantName: item.variantName || '-', qtyChange: item.qty, type: 'IN', refId: newId, outletId: this.formPurchase.outletId, createdAt: serverTimestamp() }));
-                        let prod = this.products.find(p => p.id === item.productId);
-                        if(prod) {
-                            let pCopy = JSON.parse(JSON.stringify(prod));
-                            if(item.variantSku) { let v = pCopy.variants.find(vx => vx.variantSku === item.variantSku); if(v) { if(!v.outletStocks) v.outletStocks = {}; v.outletStocks[this.formPurchase.outletId] = (v.outletStocks[this.formPurchase.outletId] || 0) + item.qty; } } 
-                            else { if(!pCopy.baseOutletStocks) pCopy.baseOutletStocks = {}; pCopy.baseOutletStocks[this.formPurchase.outletId] = (pCopy.baseOutletStocks[this.formPurchase.outletId] || 0) + item.qty; }
-                            updatePromises.push(updateDoc(doc(db, "products", prod.id), { baseOutletStocks: pCopy.baseOutletStocks, variants: pCopy.variants }));
-                        }
-                    }
-                    await Promise.all(updatePromises);
-                    this.hideModal('addPurchaseModal');
-                } catch(e) { console.error(e); this.askConfirm("Error", "Gagal menyimpan pembelian.", null); }
-                this.isSaving = false;
+            saveCartItemEdit() {
+                let idx = this.cart.findIndex(c => c.cartId === this.cartItemEdit.cartId);
+                if(idx !== -1) {
+                    this.cart[idx] = JSON.parse(JSON.stringify(this.cartItemEdit));
+                }
+                this.hideModal('editCartItemModal');
             },
 
+            openPaymentModal() {
+                this.paymentData = { method: 'CASH', amountReceived: this.total };
+                this.showModal('paymentModal');
+            },
+
+            // ==========================================
+            // FIX: PROCESS TRANSACTION (POS)
+            // ==========================================
             async processTransaction() {
-                this.isProcessing = true; 
-                const newInvId = this.posCustomInvoice || this.generateInvoiceNumber('POS');
-                const trxDateObj = this.posCustomDate ? new Date(this.posCustomDate) : new Date();
-                const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
-
-                let storedItems = JSON.parse(JSON.stringify(this.cart)); storedItems.forEach(i => i.finalPrice = this.getFinalItemPrice(i));
-                const trxData = {
-                    id: newInvId, dateStr: dateStr, 
-                    customer: this.selectedCustomer ? this.selectedCustomer.name : 'Umum', 
-                    customerPhone: this.selectedCustomer ? this.selectedCustomer.phone : '-',
-                    customerAddress: this.selectedCustomer ? this.selectedCustomer.address : '-',
-                    cashierName: this.userProfile.name, 
-                    outletId: this.posActiveOutletId, total: this.total, taxAmt: this.taxAmount, serviceAmt: this.serviceAmount, 
-                    paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived, items: storedItems, createdAt: serverTimestamp()
-                };
-
-                await addDoc(collection(db, "transactions"), trxData);
-                
-                const updatePromises = [];
-                for(let item of storedItems) {
-                    updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.variantName || '-', qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp() }));
-                    let prod = this.products.find(p => p.id === item.productId);
-                    if(prod) {
-                        let pCopy = JSON.parse(JSON.stringify(prod));
-                        if(item.variantSku) { let v = pCopy.variants.find(vx => vx.variantSku === item.variantSku); if(v) { if(!v.outletStocks) v.outletStocks = {}; v.outletStocks[this.posActiveOutletId] = (v.outletStocks[this.posActiveOutletId] || 0) - item.qty; } } 
-                        else { if(!pCopy.baseOutletStocks) pCopy.baseOutletStocks = {}; pCopy.baseOutletStocks[this.posActiveOutletId] = (pCopy.baseOutletStocks[this.posActiveOutletId] || 0) - item.qty; }
-                        updatePromises.push(updateDoc(doc(db, "products", prod.id), { baseOutletStocks: pCopy.baseOutletStocks, variants: pCopy.variants }));
-                    }
-                }
-                await Promise.all(updatePromises);
-                this.posCustomInvoice = this.generateInvoiceNumber('POS');
-                this.hideModal('paymentModal'); this.cart = []; this.selectedCustomer = null; this.isMobileCartOpen = false; this.currentView = 'reports'; this.isProcessing = false;
-                this.resetPosDate();
-            },
-
-            async deleteRecordWithStockReversal(collectionName, record, isOutward) {
                 this.isProcessing = true;
                 try {
-                    const multiplier = isOutward ? 1 : -1;
-                    for (let item of record.items) {
+                    // Paksa membersihkan semua data undefined dengan trik stringify-parse
+                    let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
+                        ...c,
+                        sku: c.sku || '-',
+                        variantSku: c.variantSku || null,
+                        variantName: c.variantName || null,
+                        note: c.note || '',
+                        finalPrice: this.getFinalItemPrice(c)
+                    })));
+
+                    let trxRaw = {
+                        id: String(this.posCustomInvoice || '').replace(/\//g, '-'), // Wajib membuang garis miring
+                        dateStr: new Date().toLocaleString('id-ID'),
+                        customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
+                        customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
+                        customerPhone: this.selectedCustomer ? (this.selectedCustomer.phone || '') : '',
+                        customerAddress: this.selectedCustomer ? (this.selectedCustomer.address || '') : '',
+                        outletId: this.posActiveOutletId || '',
+                        cashierName: this.userProfile.name || 'Admin',
+                        paymentMethod: this.paymentData.method || 'CASH',
+                        amountReceived: this.paymentData.amountReceived || this.total,
+                        subtotal: this.subtotalBase || 0,
+                        discountAmt: (this.discountAmount + this.posDiscountAmount) || 0,
+                        taxAmt: this.taxAmt || 0,
+                        serviceAmt: this.serviceAmount || 0,
+                        total: this.total || 0,
+                        items: cleanItems
+                    };
+
+                    // Buang seluruh undefined agar Firestore tidak CRASH
+                    let trxData = JSON.parse(JSON.stringify(trxRaw));
+                    trxData.createdAt = serverTimestamp(); // Assign Object khusus Firestore setelah dibersihkan
+                    
+                    this.posCustomInvoice = trxData.id; // Sinkronkan UI dengan ID bersih
+
+                    // 1. SIMPAN INVOICE KE FIRESTORE (EKSEKUSI PERTAMA)
+                    await setDoc(doc(db, "transactions", trxData.id), trxData);
+
+                    // 2. POTONG STOK & CATAT LOG (Jika error di sini, Invoice setidaknya sudah masuk, stok gagal potong lebih aman daripada stok terpotong tapi tak ada nota)
+                    for (let item of trxData.items) {
                         let prod = this.products.find(p => p.id === item.productId);
                         if (prod) {
-                            let pCopy = JSON.parse(JSON.stringify(prod));
-                            if (item.variantSku) {
-                                let v = pCopy.variants.find(vx => vx.variantSku === item.variantSku);
-                                if (v) { if (!v.outletStocks) v.outletStocks = {}; v.outletStocks[record.outletId] = (v.outletStocks[record.outletId] || 0) + (item.qty * multiplier); }
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            if(item.variantSku) {
+                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                                if(vIdx !== -1) {
+                                    if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                    prodCopy.variants[vIdx].outletStocks[trxData.outletId] = (prodCopy.variants[vIdx].outletStocks[trxData.outletId] || 0) - item.qty;
+                                }
                             } else {
-                                if (!pCopy.baseOutletStocks) pCopy.baseOutletStocks = {}; pCopy.baseOutletStocks[record.outletId] = (pCopy.baseOutletStocks[record.outletId] || 0) + (item.qty * multiplier);
+                                if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                prodCopy.baseOutletStocks[trxData.outletId] = (prodCopy.baseOutletStocks[trxData.outletId] || 0) - item.qty;
                             }
-                            await updateDoc(doc(db, "products", prod.id), { baseOutletStocks: pCopy.baseOutletStocks, variants: pCopy.variants });
+                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                            await addDoc(collection(db, "stockLogs"), {
+                                createdAt: serverTimestamp(),
+                                dateStr: new Date().toLocaleString('id-ID'),
+                                refId: trxData.id,
+                                type: 'OUT',
+                                productId: prod.id,
+                                sku: prod.sku || '-',
+                                productName: prod.name || '-',
+                                variantSku: item.variantSku || null,
+                                variantName: item.variantName || '-',
+                                qtyChange: -item.qty,
+                                outletId: trxData.outletId
+                            });
                         }
                     }
-                    const logs = this.stockLogs.filter(l => l.refId === record.id);
-                    for (let log of logs) { await deleteDoc(doc(db, "stockLogs", log.id)); }
-                    await deleteDoc(doc(db, collectionName, record.id));
-                } catch (e) { console.error(e); alert("Gagal membatalkan transaksi."); }
+
+                    this.activePrintData = trxData;
+                    this.printMode = 'receipt';
+                    this.hideModal('paymentModal');
+
+                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                    this.cart = [];
+                    this.selectedCustomer = null;
+                    setTimeout(() => window.print(), 500);
+
+                } catch(e) {
+                    console.error("Gagal bayar:", e);
+                    alert("Gagal memproses transaksi. Cek kembali kelengkapan form.");
+                }
                 this.isProcessing = false;
             },
 
-            deletePosTransaction(trx) {
-                this.askConfirm('Hapus & Batalkan Invoice?', 'Stok barang akan dikembalikan ke outlet dan data penjualan ini akan dihapus permanen.', async () => {
-                    await this.deleteRecordWithStockReversal("transactions", trx, true);
+            holdTransaction() {
+                this.heldTransactions.push({
+                    time: new Date().toLocaleTimeString('id-ID'),
+                    cart: JSON.parse(JSON.stringify(this.cart)),
+                    customer: this.selectedCustomer,
+                    total: this.total,
+                    totalQty: this.totalQty
                 });
+                this.cart = [];
+                this.selectedCustomer = null;
+            },
+            restoreTransaction(index) {
+                let h = this.heldTransactions[index];
+                this.cart = h.cart;
+                this.selectedCustomer = h.customer;
+                this.heldTransactions.splice(index, 1);
+                this.hideModal('holdModal');
+            },
+
+            onPurchaseProductChange() {
+                this.formPurchaseItem.variantSku = '';
+                let p = this.products.find(x => x.id === this.formPurchaseItem.productId);
+                if(p) {
+                    this.formPurchaseItem.price = p.hppPrice || 0;
+                }
+            },
+
+            addPurchaseItem() {
+                let p = this.products.find(x => x.id === this.formPurchaseItem.productId);
+                if(!p) return;
+                let vName = '';
+                if(this.formPurchaseItem.variantSku) {
+                    let v = p.variants.find(vx => vx.variantSku === this.formPurchaseItem.variantSku);
+                    if(v) vName = v.name || v.attributes;
+                }
+
+                this.formPurchase.items.push({
+                    productId: p.id,
+                    productName: p.name,
+                    sku: p.sku || '-',
+                    variantSku: this.formPurchaseItem.variantSku || null,
+                    variantName: vName || '-',
+                    qty: this.formPurchaseItem.qty || 1,
+                    price: this.formPurchaseItem.price || 0,
+                    uom: p.uom || 'Pcs'
+                });
+
+                this.formPurchaseItem.productId = '';
+                this.formPurchaseItem.variantSku = '';
+                this.formPurchaseItem.qty = '';
+                this.formPurchaseItem.price = '';
+            },
+
+            // ==========================================
+            // FIX: SAVE PURCHASE (PO)
+            // ==========================================
+            async savePurchase() {
+                this.isSaving = true;
+                try {
+                    // Revert stok PO lama jika ini adalah mode EDIT PO
+                    if (this.formPurchase.isEdit && this.formPurchase.originalPo) {
+                        await this.revertPurchaseStock(this.formPurchase.originalPo);
+                    }
+
+                    this.formPurchase.total = this.formPurchase.items.reduce((s, i) => s + (i.qty * i.price), 0);
+                    this.formPurchase.dateStr = new Date().toLocaleString('id-ID');
+                    
+                    // Bersihkan cache property & blokir karakter / pada Nomor PO
+                    let dataToSave = JSON.parse(JSON.stringify(this.formPurchase));
+                    delete dataToSave.isEdit;
+                    delete dataToSave.originalPo;
+                    dataToSave.id = String(this.formPurchase.invoiceNo || '').replace(/\//g, '-');
+                    dataToSave.createdAt = serverTimestamp();
+
+                    // 1. SIMPAN DATA PO DULUAN (Cegah stok terlanjur masuk)
+                    await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
+
+                    // 2. TAMBAH STOK BARANG & CATAT LOG
+                    for (let item of dataToSave.items) {
+                        let prod = this.products.find(p => p.id === item.productId);
+                        if (prod) {
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            if(item.variantSku) {
+                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                                if(vIdx !== -1) {
+                                    if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                    prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] = (prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] || 0) + item.qty;
+                                    prodCopy.variants[vIdx].hppPrice = item.price;
+                                }
+                            } else {
+                                if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                prodCopy.baseOutletStocks[dataToSave.outletId] = (prodCopy.baseOutletStocks[dataToSave.outletId] || 0) + item.qty;
+                                prodCopy.hppPrice = item.price;
+                            }
+                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, hppPrice: prodCopy.hppPrice });
+
+                            await addDoc(collection(db, "stockLogs"), {
+                                createdAt: serverTimestamp(),
+                                dateStr: new Date().toLocaleString('id-ID'),
+                                refId: dataToSave.id,
+                                type: 'IN',
+                                productId: prod.id,
+                                sku: prod.sku || '-',
+                                productName: prod.name || '-',
+                                variantSku: item.variantSku || null,
+                                variantName: item.variantName || '-',
+                                qtyChange: item.qty,
+                                outletId: dataToSave.outletId
+                            });
+                        }
+                    }
+
+                    this.hideModal('addPurchaseModal');
+                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: '', items:[], note:'', total:0, isEdit: false };
+
+                } catch(e) {
+                    console.error("Gagal PO:", e);
+                    alert("Gagal memproses PO.");
+                }
+                this.isSaving = false;
+            },
+
+            // ==========================================
+            // FIX: FUNGSI INTI UNTUK REVERT/TARIK STOK
+            // ==========================================
+            async revertPurchaseStock(po) {
+                for (let item of po.items) {
+                    let prod = this.products.find(p => p.id === item.productId);
+                    if (prod) {
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        if (item.variantSku) {
+                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[po.outletId] = Math.max(0, (prodCopy.variants[vIdx].outletStocks[po.outletId] || 0) - item.qty);
+                            }
+                        } else {
+                            if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[po.outletId] = Math.max(0, (prodCopy.baseOutletStocks[po.outletId] || 0) - item.qty);
+                        }
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                    }
+                }
+                let logsToDel = this.stockLogs.filter(l => l.refId === po.id);
+                for (let l of logsToDel) { await deleteDoc(doc(db, "stockLogs", l.id)); }
+            },
+
+            async revertPosStock(trx) {
+                for (let item of trx.items) {
+                    let prod = this.products.find(p => p.id === item.productId);
+                    if (prod) {
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        if (item.variantSku) {
+                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[trx.outletId] = (prodCopy.variants[vIdx].outletStocks[trx.outletId] || 0) + item.qty;
+                            }
+                        } else {
+                            if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + item.qty;
+                        }
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                    }
+                }
+                let logsToDel = this.stockLogs.filter(l => l.refId === trx.id);
+                for (let l of logsToDel) { await deleteDoc(doc(db, "stockLogs", l.id)); }
+            },
+
+            // ==========================================
+            // FIX: IMPLEMENTASI EDIT MAKSIMAL
+            // ==========================================
+            editPurchase(po) {
+                this.askConfirm('Revisi Data Pembelian?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, stok lama akan otomatis ditarik & diganti dengan stok yang baru.', () => {
+                    this.formPurchase = JSON.parse(JSON.stringify(po));
+                    this.formPurchase.isEdit = true;
+                    this.formPurchase.originalPo = JSON.parse(JSON.stringify(po));
+                    this.formPurchase.invoiceNo = po.id;
+                    this.showModal('addPurchaseModal');
+                });
+            },
+            
+            cancelPurchaseEdit() {
+                this.hideModal('addPurchaseModal');
+                this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
             },
 
             editPosTransaction(trx) {
-                this.askConfirm('Edit & Retur Invoice?', 'Invoice ini akan dibatalkan, stok dikembalikan, dan data belanja dimasukkan kembali ke keranjang kasir untuk diedit.', async () => {
-                    await this.deleteRecordWithStockReversal("transactions", trx, true);
-                    this.cart = JSON.parse(JSON.stringify(trx.items));
-                    this.posCustomInvoice = trx.id;
-                    this.posActiveOutletId = trx.outletId;
-                    let cust = this.customers.find(c => c.name === trx.customer);
-                    this.selectedCustomer = cust || null;
-                    this.currentView = 'pos';
-                    this.isMobileCartOpen = true;
+                this.askConfirm('Edit & Batal Invoice?', 'Invoice ini akan DIBATALKAN dari sistem, stok dikembalikan penuh, dan barang akan dipindah ulang ke keranjang untuk Anda ubah. Lanjutkan?', async () => {
+                    this.isProcessing = true;
+                    try {
+                        await this.revertPosStock(trx);
+                        await deleteDoc(doc(db, "transactions", trx.id));
+                        
+                        this.cart = JSON.parse(JSON.stringify(trx.items));
+                        let cust = this.customers.find(c => c.name === trx.customer);
+                        this.selectedCustomer = cust || null;
+                        this.posCustomInvoice = trx.id;
+                        this.posActiveOutletId = trx.outletId;
+                        
+                        this.currentView = 'pos';
+                    } catch(e) { console.error(e); alert("Terjadi error saat merevisi invoice."); }
+                    this.isProcessing = false;
                 });
             },
 
             deletePurchase(po) {
-                this.askConfirm('Hapus PO / Pembelian?', 'Stok barang yang masuk akan ditarik kembali dan data PO ini dihapus permanen.', async () => {
-                    await this.deleteRecordWithStockReversal("purchases", po, false);
+                this.askConfirm('Hapus & Retur Stok PO?', `Apakah Anda yakin ingin menghapus PO ${po.id} dan MENGURANGI KEMBALI stok yang sudah masuk ke gudang?`, async () => {
+                    try {
+                        await this.revertPurchaseStock(po);
+                        await deleteDoc(doc(db, "purchases", po.id));
+                    } catch (e) {
+                        console.error("Gagal Hapus PO:", e);
+                        alert("Terjadi kesalahan saat menghapus PO.");
+                    }
                 });
             },
 
-            editPurchase(po) {
-                this.askConfirm('Edit PO / Pembelian?', 'PO ini akan dibatalkan, stok ditarik kembali, dan data dikembalikan ke form untuk diedit.', async () => {
-                    await this.deleteRecordWithStockReversal("purchases", po, false);
-                    this.formPurchase = { id: null, invoiceNo: po.id, supplierId: po.supplierId, outletId: po.outletId, items: JSON.parse(JSON.stringify(po.items)), note: po.note || '', total: po.total };
-                    this.showModal('addPurchaseModal');
+            deletePosTransaction(trx) {
+                this.askConfirm('Hapus & Retur Stok Invoice?', `Apakah Anda yakin ingin membatalkan Invoice ${trx.id} dan MENGEMBALIKAN STOK yang sudah terjual?`, async () => {
+                    try {
+                        await this.revertPosStock(trx);
+                        await deleteDoc(doc(db, "transactions", trx.id));
+                    } catch (e) {
+                        console.error("Gagal Hapus Transaksi:", e);
+                        alert("Terjadi kesalahan saat menghapus transaksi.");
+                    }
                 });
             },
 
-            triggerPrint(trx, mode) { this.activePrintData = trx; this.printMode = mode; setTimeout(() => { window.print(); }, 400); },
+            triggerPrint(data, mode) {
+                this.activePrintData = data;
+                this.printMode = mode;
+                setTimeout(() => window.print(), 300);
+            },
 
+            getProductDisplayStock(p) {
+                let s = 0;
+                if (this.posActiveOutletId) {
+                    if(p.variants && p.variants.length > 0) {
+                        p.variants.forEach(v => s += (v.outletStocks && v.outletStocks[this.posActiveOutletId] ? v.outletStocks[this.posActiveOutletId] : 0));
+                    } else {
+                        s = p.baseOutletStocks && p.baseOutletStocks[this.posActiveOutletId] ? p.baseOutletStocks[this.posActiveOutletId] : 0;
+                    }
+                } else {
+                    s = this.getBaseTotalStock(p);
+                }
+                return s;
+            },
+            getVariantDisplayStock(v) {
+                if (this.posActiveOutletId) return (v.outletStocks && v.outletStocks[this.posActiveOutletId] ? v.outletStocks[this.posActiveOutletId] : 0);
+                return this.getVariantTotalStock(v);
+            },
+            getBaseTotalStock(p) {
+                if(p.variants && p.variants.length > 0) {
+                    return p.variants.reduce((sum, v) => sum + this.getVariantTotalStock(v), 0);
+                }
+                let s = 0;
+                if(p.baseOutletStocks) Object.values(p.baseOutletStocks).forEach(v => s += (v||0));
+                return s;
+            },
+            getVariantTotalStock(v) {
+                let s = 0;
+                if(v.outletStocks) Object.values(v.outletStocks).forEach(val => s += (val||0));
+                return s;
+            },
+            getProductStockAtOutlet(p, outletId) {
+                if(p.variants && p.variants.length > 0) {
+                    return p.variants.reduce((sum, v) => sum + (v.outletStocks && v.outletStocks[outletId] ? v.outletStocks[outletId] : 0), 0);
+                }
+                return p.baseOutletStocks && p.baseOutletStocks[outletId] ? p.baseOutletStocks[outletId] : 0;
+            },
             resetStockFilter() {
                 this.stockCardStartDate = '';
                 this.stockCardEndDate = '';
                 this.stockCardOutlet = '';
             },
-
-            openStockDetail(logData) {
-                this.activeStockDetail = logData;
+            openStockDetail(logSummary) {
+                this.activeStockDetail = logSummary;
                 this.showModal('stockDetailModal');
             }
         }
-    }).mount('#app');
+    });
+
+    vueApp.mount('#app');
 </script>
 </body>
 </html>
