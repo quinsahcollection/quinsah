@@ -2108,7 +2108,7 @@
                         let inRangeLogs = [];
 
                         logs.forEach(l => {
-                            let logTime = l.timestamp || ((l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now());
+                            let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
                             let qty = Math.abs(l.qtyChange);
                             if (logTime > eTime) {
                                 if (l.type === 'IN') afterRangeIn += qty;
@@ -2135,7 +2135,7 @@
                             let inRangeLogs = [];
 
                             logs.forEach(l => {
-                                let logTime = l.timestamp || ((l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now());
+                                let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
                                 let qty = Math.abs(l.qtyChange);
                                 if (logTime > eTime) {
                                     if (l.type === 'IN') afterRangeIn += qty;
@@ -2271,11 +2271,9 @@
                     onSnapshot(collection(db, col), snap => { 
                         const r = []; 
                         snap.forEach(d => r.push({ id: d.id, ...d.data() })); 
-                        
-                        // FIX SORTING TIMESTAMP
                         r.sort((a,b) => {
-                            let tA = a.timestamp || (a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0);
-                            let tB = b.timestamp || (b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0);
+                            let tA = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now();
+                            let tB = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now();
                             return tB - tA;
                         });
                         this[col] = r; 
@@ -2612,18 +2610,16 @@
             async savePurchase() {
                 this.isSaving = true;
                 try {
-                    const trxDateObj = new Date(); 
-                    const currentMs = trxDateObj.getTime(); // ADD ABSOLUTE LOCAL TIMESTAMP
-                    const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
+                    const trxDateObj = new Date(); const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
                     const newId = this.formPurchase.invoiceNo || this.generateInvoiceNumber('PO');
                     let total = this.formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
                     
-                    const dataToSave = { id: newId, dateStr: dateStr, supplierId: this.formPurchase.supplierId, outletId: this.formPurchase.outletId, items: this.formPurchase.items, total: total, note: this.formPurchase.note, createdAt: serverTimestamp(), timestamp: currentMs };
+                    const dataToSave = { id: newId, dateStr: dateStr, supplierId: this.formPurchase.supplierId, outletId: this.formPurchase.outletId, items: this.formPurchase.items, total: total, note: this.formPurchase.note, createdAt: serverTimestamp() };
                     await addDoc(collection(db, 'purchases'), dataToSave);
                     
                     const updatePromises = [];
                     for(let item of this.formPurchase.items) {
-                        updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.productName, variantName: item.variantName || '-', qtyChange: item.qty, type: 'IN', refId: newId, outletId: this.formPurchase.outletId, createdAt: serverTimestamp(), timestamp: currentMs }));
+                        updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.productName, variantName: item.variantName || '-', qtyChange: item.qty, type: 'IN', refId: newId, outletId: this.formPurchase.outletId, createdAt: serverTimestamp() }));
                         let prod = this.products.find(p => p.id === item.productId);
                         if(prod) {
                             let pCopy = JSON.parse(JSON.stringify(prod));
@@ -2642,7 +2638,6 @@
                 this.isProcessing = true; 
                 const newInvId = this.posCustomInvoice || this.generateInvoiceNumber('POS');
                 const trxDateObj = this.posCustomDate ? new Date(this.posCustomDate) : new Date();
-                const currentMs = trxDateObj.getTime(); // ADD ABSOLUTE LOCAL TIMESTAMP
                 const dateStr = trxDateObj.toLocaleString('id-ID', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'});
 
                 let storedItems = JSON.parse(JSON.stringify(this.cart)); storedItems.forEach(i => i.finalPrice = this.getFinalItemPrice(i));
@@ -2653,14 +2648,14 @@
                     customerAddress: this.selectedCustomer ? this.selectedCustomer.address : '-',
                     cashierName: this.userProfile.name, 
                     outletId: this.posActiveOutletId, total: this.total, taxAmt: this.taxAmount, serviceAmt: this.serviceAmount, 
-                    paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived, items: storedItems, createdAt: serverTimestamp(), timestamp: currentMs
+                    paymentMethod: this.paymentData.method, amountReceived: this.paymentData.amountReceived, items: storedItems, createdAt: serverTimestamp()
                 };
 
                 await addDoc(collection(db, "transactions"), trxData);
                 
                 const updatePromises = [];
                 for(let item of storedItems) {
-                    updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.variantName || '-', qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp(), timestamp: currentMs }));
+                    updatePromises.push(addDoc(collection(db, "stockLogs"), { dateStr: dateStr, sku: item.variantSku || item.sku || '-', productName: item.name, variantName: item.variantName || '-', qtyChange: -item.qty, type: 'OUT', refId: newInvId, outletId: this.posActiveOutletId, createdAt: serverTimestamp() }));
                     let prod = this.products.find(p => p.id === item.productId);
                     if(prod) {
                         let pCopy = JSON.parse(JSON.stringify(prod));
