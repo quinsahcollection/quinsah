@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V6.4</title>
+    <title>Quinsah Collection ERP - Full Enterprise V6.5</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -541,81 +541,118 @@
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
                 </ul>
 
-                <div v-if="invTab==='stocks'" class="dashboard-card">
-                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Pencarian</label>
-                            <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Cari nama, SKU, Varian...">
+                <div v-if="invTab==='stocks'">
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-primary fw-bold small"><i class="bi bi-wallet2 me-1"></i>Total Aset (HPP)</div>
+                                    <h4 class="text-primary mb-0 fw-bold">Rp {{ formatNumber(totalAsetStok) }}</h4>
+                                    <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
+                                </div>
+                                <i class="bi bi-box-seam text-primary opacity-50" style="font-size: 2.5rem;"></i>
+                            </div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Kategori</label>
-                            <select class="form-select form-select-sm" v-model="invCategoryFilter">
-                                <option value="">-- Semua Kategori --</option>
-                                <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Pilih Produk</label>
-                            <select class="form-select form-select-sm" v-model="invProductFilter">
-                                <option value="">-- Semua Produk --</option>
-                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} ({{ p.sku }})</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="invSearchQuery=''; invCategoryFilter=''; invProductFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-success bg-opacity-10 border border-success rounded d-flex justify-content-between align-items-center h-100">
+                                <div>
+                                    <div class="text-success fw-bold small"><i class="bi bi-graph-up-arrow me-1"></i>Total Potensi Omset (Hrg Jual)</div>
+                                    <h4 class="text-success mb-0 fw-bold">Rp {{ formatNumber(totalPotensiOmset) }}</h4>
+                                    <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
+                                </div>
+                                <i class="bi bi-cash-coin text-success opacity-50" style="font-size: 2.5rem;"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
-                            <thead class="table-light text-center">
-                                <tr>
-                                    <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
-                                    <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
-                                    <th :colspan="outlets.length > 0 ? outlets.length : 1">Stok Outlet</th>
-                                    <th rowspan="2" class="align-middle bg-danger text-white">Total Keseluruhan</th>
-                                </tr>
-                                <tr>
-                                    <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
-                                    <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
-                                    <th v-for="out in outlets" :key="out.id">{{ out.name }}</th>
-                                    <th v-if="outlets.length === 0">-</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template v-for="p in filteredInventoryProducts" :key="p.id">
-                                    <tr class="table-secondary fw-bold">
-                                        <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
-                                        <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
-                                        <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
-                                        
-                                        <td v-for="out in outlets" :key="out.id" class="text-center fw-bold">
-                                            {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                        </td>
-                                        <td v-if="outlets.length === 0" class="text-center">-</td>
-                                        <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
-                                            {{ getBaseTotalStock(p) }} <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                        </td>
+
+                    <div class="dashboard-card">
+                        <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Pencarian</label>
+                                <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Cari nama, SKU, Varian...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Kategori</label>
+                                <select class="form-select form-select-sm" v-model="invCategoryFilter">
+                                    <option value="">-- Semua Kategori --</option>
+                                    <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Pilih Produk</label>
+                                <select class="form-select form-select-sm" v-model="invProductFilter">
+                                    <option value="">-- Semua Produk --</option>
+                                    <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Filter Outlet</label>
+                                <select class="form-select form-select-sm" v-model="invOutletFilter">
+                                    <option value="">-- Semua Cabang --</option>
+                                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="invSearchQuery=''; invCategoryFilter=''; invProductFilter=''; invOutletFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
+                                        <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
+                                        <th :colspan="displayOutlets.length > 0 ? displayOutlets.length : 1">Stok Outlet</th>
+                                        <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
                                     </tr>
-                                    <tr v-for="(v, index) in p.variants" :key="index">
-                                        <td class="ps-3 text-muted">
-                                            <i class="bi bi-arrow-return-right me-1"></i>{{ v.name || v.attributes || 'Varian '+(index+1) }}
-                                            <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
-                                        </td>
-                                        <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
-                                        <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
-                                        
-                                        <td v-for="out in outlets" :key="out.id" class="text-center fw-semibold">
-                                            {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                        </td>
-                                        <td v-if="outlets.length === 0" class="text-center">-</td>
-                                        <td class="text-center fw-bold fs-6">
-                                            {{ getVariantTotalStock(v) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                        </td>
+                                    <tr>
+                                        <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
+                                        <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
+                                        <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
+                                        <th v-if="displayOutlets.length === 0">-</th>
                                     </tr>
-                                </template>
-                                <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="outlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td></tr>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <template v-for="p in filteredInventoryProducts" :key="p.id">
+                                        <!-- BARIS PRODUK INDUK -->
+                                        <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
+                                            <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
+                                            <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
+                                            <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
+                                            
+                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
+                                                {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                            </td>
+                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                            <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
+                                                {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : getBaseTotalStock(p) }} 
+                                                <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                            </td>
+                                        </tr>
+                                        <!-- BARIS VARIAN -->
+                                        <tr v-for="(v, index) in p.variants" :key="index">
+                                            <td class="ps-3 text-muted">
+                                                <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes || 'Varian '+(index+1) }}</span>
+                                                <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
+                                            </td>
+                                            <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
+                                            <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
+                                            
+                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
+                                                {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                            </td>
+                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                            <td class="text-center fw-bold fs-6">
+                                                {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : getVariantTotalStock(v) }} 
+                                                <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="displayOutlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk/varian yang sesuai filter.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -703,7 +740,7 @@
                                 <tr>
                                     <th>Nama Produk & Varian</th>
                                     <th>SKU</th>
-                                    <th class="text-center text-secondary">Tgl Awal</th>
+                                    <th class="text-center text-secondary">Tgl Awal - Akhir</th>
                                     <th class="text-center text-primary">Stok Awal</th>
                                     <th class="text-center text-success">Masuk (In)</th>
                                     <th class="text-center text-danger">Keluar (Out)</th>
@@ -2029,6 +2066,11 @@
 
     const vueApp = createApp({
         data() {
+            const getLocalToday = () => {
+                const d = new Date();
+                d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                return d.toISOString().slice(0, 10);
+            };
             return {
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
@@ -2046,8 +2088,9 @@
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
                 // FILTER INVENTORY & STOCK CARD
-                stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', stockCardStartDate: '', stockCardEndDate: '', stockCardOutlet: '',
-                invSearchQuery: '', invCategoryFilter: '', invProductFilter: '',
+                stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
+                stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
+                invSearchQuery: '', invCategoryFilter: '', invProductFilter: '', invOutletFilter: '',
                 logStartDate: '', logEndDate: '',
 
                 formCategory: { id: null, name: '', parentId: '' },
@@ -2154,43 +2197,99 @@
                 return filtered;
             },
 
+            displayOutlets() {
+                if (this.invOutletFilter) return this.outlets.filter(o => o.id === this.invOutletFilter);
+                return this.outlets;
+            },
+
             filteredInventoryProducts() {
-                let filtered = this.products;
-                if (this.invCategoryFilter) {
-                    filtered = filtered.filter(p => 
-                        this.isCategoryOrDescendant(p.categoryId, this.invCategoryFilter) || 
-                        p.categoryId_L1 === this.invCategoryFilter || 
-                        p.categoryId_L2 === this.invCategoryFilter || 
-                        p.categoryId_L3 === this.invCategoryFilter
-                    );
-                }
-                if (this.invProductFilter) {
-                    filtered = filtered.filter(p => p.id === this.invProductFilter);
-                }
+                let filtered = [];
                 const q = this.invSearchQuery.toLowerCase().trim();
-                if (q) {
-                    filtered = filtered.filter(p => {
+                const cat = this.invCategoryFilter;
+                const prodFil = this.invProductFilter;
+
+                this.products.forEach(p => {
+                    if (cat) {
+                        if (!(this.isCategoryOrDescendant(p.categoryId, cat) || 
+                              p.categoryId_L1 === cat || 
+                              p.categoryId_L2 === cat || 
+                              p.categoryId_L3 === cat)) {
+                            return; 
+                        }
+                    }
+                    if (prodFil && p.id !== prodFil) return; 
+
+                    if (q) {
                         const matchName = (p.name || '').toLowerCase().includes(q);
                         const matchSku = (p.sku || '').toLowerCase().includes(q);
-                        let matchVar = false;
+
                         if (p.variants && p.variants.length > 0) {
-                            matchVar = p.variants.some(v => 
+                            const matchedVariants = p.variants.filter(v => 
                                 (v.name || '').toLowerCase().includes(q) || 
                                 (v.attributes || '').toLowerCase().includes(q) ||
                                 (v.variantSku || '').toLowerCase().includes(q)
                             );
+
+                            if (matchName || matchSku) {
+                                filtered.push(p);
+                            } else if (matchedVariants.length > 0) {
+                                let pCopy = { ...p, variants: matchedVariants };
+                                filtered.push(pCopy);
+                            }
+                        } else {
+                            if (matchName || matchSku) filtered.push(p);
                         }
-                        return matchName || matchSku || matchVar;
-                    });
-                }
+                    } else {
+                        filtered.push(p);
+                    }
+                });
                 return filtered;
+            },
+
+            totalAsetStok() {
+                let total = 0;
+                this.filteredInventoryProducts.forEach(p => {
+                    if (p.variants && p.variants.length > 0) {
+                        p.variants.forEach(v => {
+                            let qty = this.invOutletFilter ? (v.outletStocks && v.outletStocks[this.invOutletFilter] ? v.outletStocks[this.invOutletFilter] : 0) : this.getVariantTotalStock(v);
+                            total += (qty * (v.hppPrice || 0));
+                        });
+                    } else {
+                        let qty = this.invOutletFilter ? this.getProductStockAtOutlet(p, this.invOutletFilter) : this.getBaseTotalStock(p);
+                        total += (qty * (p.hppPrice || 0));
+                    }
+                });
+                return total;
+            },
+
+            totalPotensiOmset() {
+                let total = 0;
+                this.filteredInventoryProducts.forEach(p => {
+                    if (p.variants && p.variants.length > 0) {
+                        p.variants.forEach(v => {
+                            let qty = this.invOutletFilter ? (v.outletStocks && v.outletStocks[this.invOutletFilter] ? v.outletStocks[this.invOutletFilter] : 0) : this.getVariantTotalStock(v);
+                            total += (qty * (this.getEffectiveVariantPrice(p, v) || 0));
+                        });
+                    } else {
+                        let qty = this.invOutletFilter ? this.getProductStockAtOutlet(p, this.invOutletFilter) : this.getBaseTotalStock(p);
+                        total += (qty * (this.getEffectiveBasePrice(p) || 0));
+                    }
+                });
+                return total;
             },
 
             filteredStockLogs() {
                 let logs = this.stockLogs;
                 if(this.logStartDate || this.logEndDate) {
-                    let sTime = this.logStartDate ? new Date(this.logStartDate).setHours(0,0,0,0) : 0;
-                    let eTime = this.logEndDate ? new Date(this.logEndDate).setHours(23,59,59,999) : Infinity;
+                    let sTime = 0, eTime = Infinity;
+                    if (this.logStartDate) {
+                        let [y,m,d] = this.logStartDate.split('-');
+                        sTime = new Date(y, m-1, d, 0, 0, 0, 0).getTime();
+                    }
+                    if (this.logEndDate) {
+                        let [y,m,d] = this.logEndDate.split('-');
+                        eTime = new Date(y, m-1, d, 23, 59, 59, 999).getTime();
+                    }
                     logs = logs.filter(l => {
                         let logTime = (l.createdAt && typeof l.createdAt.toMillis === 'function') ? l.createdAt.toMillis() : Date.now();
                         return logTime >= sTime && logTime <= eTime;
@@ -2207,8 +2306,16 @@
             },
 
             stockCardSummary() {
-                let sTime = this.stockCardStartDate ? new Date(this.stockCardStartDate).setHours(0,0,0,0) : 0;
-                let eTime = this.stockCardEndDate ? new Date(this.stockCardEndDate).setHours(23,59,59,999) : Infinity;
+                let sTime = 0, eTime = Infinity;
+                if (this.stockCardStartDate) {
+                    let [y,m,d] = this.stockCardStartDate.split('-');
+                    sTime = new Date(y, m-1, d, 0, 0, 0, 0).getTime();
+                }
+                if (this.stockCardEndDate) {
+                    let [y,m,d] = this.stockCardEndDate.split('-');
+                    eTime = new Date(y, m-1, d, 23, 59, 59, 999).getTime();
+                }
+                
                 let outletFilter = this.stockCardOutlet;
                 
                 let filteredProducts = this.products;
@@ -2225,7 +2332,18 @@
                 }
 
                 let summary = [];
-                let displayDate = this.stockCardStartDate ? new Date(this.stockCardStartDate).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID');
+                let displayDate = 'Keseluruhan Waktu';
+                
+                if (this.stockCardStartDate && this.stockCardEndDate) {
+                    let startFormatted = new Date(sTime).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'2-digit'});
+                    let endFormatted = new Date(eTime).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'2-digit'});
+                    displayDate = `${startFormatted} - ${endFormatted}`;
+                } else if (this.stockCardStartDate) {
+                    displayDate = `Sejak ${new Date(sTime).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'2-digit'})}`;
+                } else if (this.stockCardEndDate) {
+                    displayDate = `Hingga ${new Date(eTime).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'2-digit'})}`;
+                }
+
                 const q = this.stockCardSearchQuery.toLowerCase().trim();
                 
                 filteredProducts.forEach(p => {
@@ -2233,7 +2351,7 @@
                         if (q) {
                             const matchName = (p.name || '').toLowerCase().includes(q);
                             const matchSku = (p.sku || '').toLowerCase().includes(q);
-                            if (!matchName && !matchSku) return; // skip if doesn't match search
+                            if (!matchName && !matchSku) return; 
                         }
 
                         let currentStock = outletFilter ? this.getProductStockAtOutlet(p, outletFilter) : this.getBaseTotalStock(p);
@@ -2268,7 +2386,7 @@
                                 const matchSku = (p.sku || '').toLowerCase().includes(q);
                                 const matchVarName = (v.name || v.attributes || '').toLowerCase().includes(q);
                                 const matchVarSku = (v.variantSku || '').toLowerCase().includes(q);
-                                if (!matchName && !matchSku && !matchVarName && !matchVarSku) return; // skip this variant
+                                if (!matchName && !matchSku && !matchVarName && !matchVarSku) return; 
                             }
 
                             let currentStock = outletFilter ? (v.outletStocks && v.outletStocks[outletFilter] ? v.outletStocks[outletFilter] : 0) : this.getVariantTotalStock(v);
