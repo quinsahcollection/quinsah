@@ -309,7 +309,7 @@
                                     <div class="btn-group btn-group-sm">
                                         <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)"><i class="bi bi-file-earmark-text"></i> A4</button>
                                         <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -3537,14 +3537,34 @@
                 });
             },
 
-            deletePurchase(po) {
-                this.askConfirm('Hapus & Retur Stok PO?', `Apakah Anda yakin ingin menghapus PO ${po.id} dan MENGURANGI KEMBALI stok yang sudah masuk ke gudang?`, async () => {
+            // Catatan: Sesuaikan nama fungsinya dengan yang ada di script Anda (misal: deletePurchase atau deletePO)
+            deletePurchase(po) { 
+                
+                // PENGUNCI 1: Mencegah klik ganda beruntun sebelum konfirmasi muncul
+                if (this.isProcessing) return;
+
+                this.askConfirm('Hapus PO & Tarik Stok?', `Apakah Anda yakin ingin membatalkan PO ${po.id} dan MENARIK KEMBALI stok yang sudah terlanjur masuk gudang?`, async () => {
+                    
+                    // PENGUNCI 2: Cegah proses ganda saat tombol 'Ok/Yes' diklik berkali-kali
+                    if (this.isProcessing) return;
+                    
+                    // AKTIFKAN PENGUNCI
+                    this.isProcessing = true;
+
                     try {
+                        // 1. Tarik kembali stok pembelanjaan (logika ini sudah kita perbaiki sebelumnya)
                         await this.revertPurchaseStock(po);
-                        await deleteDoc(doc(db, "purchases", po.id));
+                        
+                        // 2. Hapus data PO dari database
+                        // Pastikan nama koleksinya sesuai, biasanya "purchases" atau "purchaseOrders"
+                        await deleteDoc(doc(db, "purchases", po.id)); 
+                        
                     } catch (e) {
                         console.error("Gagal Hapus PO:", e);
                         alert("Terjadi kesalahan saat menghapus PO.");
+                    } finally {
+                        // MATIKAN PENGUNCI SETELAH SELESAI (SUKSES MAUPUN ERROR)
+                        this.isProcessing = false;
                     }
                 });
             },
