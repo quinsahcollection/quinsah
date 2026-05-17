@@ -916,37 +916,78 @@
 
             <!-- REPORTS VIEW -->
             <div v-if="currentView === 'reports'" class="dashboard-card">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-                    <h6 class="fw-bold mb-0">Riwayat Transaksi Penjualan (POS)</h6>
-                    <input type="text" class="form-control form-control-sm w-auto" v-model="reportSearchQuery" placeholder="Cari No. Inv / Pelanggan...">
+            
+            <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Transaksi Penjualan (POS)</h6>
+            
+            <div class="row mb-3 align-items-end">
+                
+                <div class="col-12 col-md-4 mb-2">
+                    <label class="form-label small fw-bold text-muted">Cari Invoice / Pelanggan</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" v-model="reportSearchQuery" placeholder="Ketik nomor invoice atau nama...">
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-custom align-middle text-nowrap">
-                        <thead><tr><th>No. Inv</th><th>Waktu</th><th>Pelanggan</th><th>Pembayaran</th><th>Total</th><th class="text-center">Aksi Lanjutan</th></tr></thead>
-                        <tbody>
-                            <tr v-for="trx in filteredTransactions" :key="trx.id">
-                                <td class="fw-bold text-primary-custom small">{{ trx.id }}</td>
-                                <td style="font-size: 0.7rem;">{{ trx.dateStr }}</td>
-                                <td class="small cursor-pointer text-primary text-decoration-underline" @click="openCustomerDetail({id: trx.customerId, name: trx.customer})">{{ trx.customer }}</td>
-                                <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
-                                <td class="fw-bold text-success small">Rp {{ formatNumber(trx.total) }}</td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm mb-1 me-1">
-                                        <button class="btn btn-outline-secondary" @click="triggerPrint(trx, 'receipt')" title="Struk Thermal"><i class="bi bi-receipt"></i></button>
-                                        <button class="btn btn-outline-secondary" @click="triggerPrint(trx, 'label')" title="Label Resi"><i class="bi bi-box"></i></button>
-                                        <button class="btn btn-outline-secondary fw-bold" @click="triggerPrint(trx, 'invoiceA4')" title="Invoice A4"><i class="bi bi-file-earmark-text"></i> A4</button>
-                                    </div>
-                                    <div class="btn-group btn-group-sm mb-1">
-                                        <button class="btn btn-outline-primary" @click="editPosTransaction(trx)" title="Edit, Batal, & Revisi Invoice"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-outline-danger" @click="deletePosTransaction(trx)" title="Hapus Permanen & Retur Stok" :disabled="isProcessing"><i class="bi bi-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="filteredTransactions.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada transaksi / Sesuai pencarian.</td></tr>
-                        </tbody>
-                    </table>
+
+                <div class="col-6 col-md-3 mb-2">
+                    <label class="form-label small fw-bold text-muted">Dari Tgl</label>
+                    <input type="date" class="form-control" v-model="transactionStartDate">
                 </div>
+                <div class="col-6 col-md-3 mb-2">
+                    <label class="form-label small fw-bold text-muted">Sampai Tgl</label>
+                    <input type="date" class="form-control" v-model="transactionEndDate">
+                </div>
+
+                <div class="col-12 col-md-2 mb-2">
+                    <button class="btn btn-outline-danger w-100" @click="transactionStartDate = ''; transactionEndDate = ''; reportSearchQuery = '';">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                    </button>
+                </div>
+                
             </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom align-middle text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>No. Inv</th>
+                            <th>Waktu</th>
+                            <th>Pelanggan</th>
+                            <th>Pembayaran</th>
+                            <th>Total</th>
+                            <th class="text-center">Aksi Lanjutan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="trx in filteredTransactions" :key="trx.id">
+                            <td class="fw-bold text-primary-custom small">{{ trx.id }}</td>
+                            <td style="font-size: 0.7rem;">{{ trx.dateStr }}</td>
+                            <td class="small cursor-pointer text-primary text-decoration-underline" @click="openCustomerDetail({id: trx.customerId, name: trx.customer})">
+                                {{ trx.customer }}
+                            </td>
+                            <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
+                            <td class="fw-bold text-success small">Rp {{ formatNumber(trx.total) }}</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm mb-1 me-1">
+                                    <button class="btn btn-outline-secondary" @click="triggerPrint(trx, 'receipt')" title="Struk Thermal"><i class="bi bi-receipt"></i></button>
+                                    <button class="btn btn-outline-secondary" @click="triggerPrint(trx, 'label')" title="Label Resi"><i class="bi bi-box"></i></button>
+                                    <button class="btn btn-outline-secondary fw-bold" @click="triggerPrint(trx, 'invoiceA4')" title="Invoice A4"><i class="bi bi-file-earmark-text"></i> A4</button>
+                                </div>
+                                <div class="btn-group btn-group-sm mb-1">
+                                    <button class="btn btn-outline-primary" @click="editPosTransaction(trx)" title="Edit, Batal, & Revisi Invoice"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-outline-danger" @click="deletePosTransaction(trx)" title="Hapus Permanen & Retur Stok" :disabled="isProcessing"><i class="bi bi-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredTransactions.length === 0">
+                            <td colspan="6" class="text-center py-4 text-muted small">
+                                Belum ada transaksi / Data tidak ditemukan sesuai filter.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         </main>
 
         <!-- POS SIDEBAR RIGHT -->
@@ -2245,7 +2286,10 @@
                 purchaseStartDate: '',
                 purchaseEndDate: '',
                 purchaseSearchQuery: '',
-                
+                transactionStartDate: '',
+                transactionEndDate: '',
+                transactionSearchQuery: '', 
+            
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -2366,11 +2410,61 @@
 
             // FILTERING CRM TRANSACTIONS
             filteredTransactions() {
-                let list = this.transactions;
-                if(this.reportSearchQuery) {
-                    const q = this.reportSearchQuery.toLowerCase();
-                    list = list.filter(t => t.id.toLowerCase().includes(q) || (t.customer || '').toLowerCase().includes(q));
+                // Gunakan || [] agar tidak error jika data transactions sedang kosong
+                let list = this.transactions || [];
+
+                // 1. FILTER RENTANG TANGGAL
+                // Pastikan Anda sudah membuat variabel transactionStartDate & transactionEndDate di data()
+                if (this.transactionStartDate || this.transactionEndDate) {
+                    list = list.filter(trx => {
+                        if (!trx.dateStr) return true; // Abaikan jika data tidak memiliki tanggal
+
+                        // Ambil tanggal saja dari "17/05/2026, 12:00:00" -> "17/05/2026"
+                        let trxDateStr = String(trx.dateStr).split(',')[0].trim(); 
+                        
+                        // Pecah menjadi array [DD, MM, YYYY]
+                        let parts = trxDateStr.split('/');
+                        if (parts.length !== 3) return true; // Abaikan jika format tanggal tidak valid
+
+                        // Ubah format menjadi YYYY-MM-DD agar komputer bisa membandingkan ukurannya
+                        let isoTrxDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+
+                        let isAfterStart = true;
+                        let isBeforeEnd = true;
+
+                        // Cek batas awal
+                        if (this.transactionStartDate) {
+                            isAfterStart = isoTrxDate >= this.transactionStartDate;
+                        }
+                        // Cek batas akhir
+                        if (this.transactionEndDate) {
+                            isBeforeEnd = isoTrxDate <= this.transactionEndDate;
+                        }
+
+                        return isAfterStart && isBeforeEnd;
+                    });
                 }
+
+                // 2. FILTER PENCARIAN TEKS (Bawaan skrip Anda)
+                if (this.reportSearchQuery) {
+                    const q = this.reportSearchQuery.toLowerCase();
+                    list = list.filter(t => {
+                        // Tambahkan fallback '' (string kosong) agar tidak error jika id/customer kosong
+                        let trxId = t.id ? String(t.id).toLowerCase() : '';
+                        let custName = t.customer ? String(t.customer).toLowerCase() : '';
+                        
+                        return trxId.includes(q) || custName.includes(q);
+                    });
+                }
+
+                // 3. PENGURUTAN (Sort)
+                // Mengurutkan agar transaksi paling baru (ID terbaru) berada di paling atas tabel
+                list = list.sort((a, b) => {
+                    let idA = String(a.id || '');
+                    let idB = String(b.id || '');
+                    return idB.localeCompare(idA);
+                });
+
                 return list;
             },
 
