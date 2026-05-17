@@ -959,6 +959,15 @@
             </div>
             
             <div class="flex-grow-1 overflow-auto pe-1 mb-2">
+            <div v-if="isEditingInvoice" class="alert alert-warning py-2 px-3 mb-2 d-flex justify-content-between align-items-center shadow-sm border-warning">
+                    <div style="font-size: 0.8rem;">
+                        <i class="bi bi-pencil-square fw-bold me-1"></i> Mode Edit: <strong>{{ originalEditTrx?.id }}</strong>
+                    </div>
+                    <button class="btn btn-sm btn-danger py-1 px-2 fw-bold" style="font-size: 0.75rem;" @click="cancelEditInvoice">
+                        <i class="bi bi-x-circle me-1"></i>Batal Edit
+                    </button>
+                </div>
+                
                 <div v-if="cart.length===0" class="text-center text-muted mt-5"><i class="bi bi-cart-x fs-2 mb-2 d-block"></i><small>Kosong</small></div>
                 
                 <div class="cart-item" v-for="item in cart" :key="item.cartId">
@@ -2207,6 +2216,9 @@
 
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
+                isEditingInvoice: false,  // Status penanda apakah sedang mengedit invoice
+                originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
+
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -3174,6 +3186,17 @@
             async processTransaction() {
                 this.isProcessing = true;
                 try {
+                    // =================================================================
+                    // 1. TAMBAHKAN LOGIKA EDIT DI SINI (Paling atas sebelum proses baru)
+                    // =================================================================
+                    if (this.isEditingInvoice && this.originalEditTrx) {
+                        // Kembalikan stok transaksi lama ke gudang terlebih dahulu
+                        await this.revertPosStock(this.originalEditTrx);
+                        // Hapus dokumen transaksi lama
+                        await deleteDoc(doc(db, "transactions", this.originalEditTrx.id));
+                    }
+                    // =================================================================
+
                     let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
                         ...c,
                         sku: c.sku || '-',
@@ -3249,6 +3272,14 @@
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
                     this.cart = [];
                     this.selectedCustomer = null;
+
+                    // =================================================================
+                    // 2. TAMBAHKAN RESET STATUS EDIT DI SINI (Setelah transaksi sukses)
+                    // =================================================================
+                    this.isEditingInvoice = false;
+                    this.originalEditTrx = null;
+                    // =================================================================
+
                     setTimeout(() => window.print(), 500);
 
                 } catch(e) {
@@ -3435,21 +3466,36 @@
             },
 
             editPosTransaction(trx) {
-                this.askConfirm('Edit & Batal Invoice?', 'Invoice ini akan DIBATALKAN dari sistem, stok dikembalikan penuh, dan barang akan dipindah ulang ke keranjang untuk Anda ubah. Lanjutkan?', async () => {
-                    this.isProcessing = true;
-                    try {
-                        await this.revertPosStock(trx);
-                        await deleteDoc(doc(db, "transactions", trx.id));
-                        
-                        this.cart = JSON.parse(JSON.stringify(trx.items));
-                        let cust = this.customers.find(c => c.name === trx.customer);
-                        this.selectedCustomer = cust || null;
-                        this.posCustomInvoice = trx.id;
-                        this.posActiveOutletId = trx.outletId;
-                        
-                        this.currentView = 'pos';
-                    } catch(e) { console.error(e); alert("Terjadi error saat merevisi invoice."); }
-                    this.isProcessing = false;
+                this.askConfirm('Edit Invoice?', 'Invoice ini akan dimuat ulang ke keranjang untuk Anda ubah. Transaksi lama baru akan ditimpa/dihapus SETELAH Anda menyelesaikan pembayaran. Lanjutkan?', () => {
+                    
+                    // 1. Masukkan barang ke cart tanpa menghapus database
+                    this.cart = JSON.parse(JSON.stringify(trx.items));
+                    
+                    // 2. Set Customer, Outlet, dan ID Invoice yang dipertahankan
+                    let cust = this.customers.find(c => c.name === trx.customer);
+                    this.selectedCustomer = cust || null;
+                    this.posCustomInvoice = trx.id;
+                    this.posActiveOutletId = trx.outletId;
+                    
+                    // 3. AKTIFKAN STATUS EDIT
+                    this.isEditingInvoice = true;
+                    this.originalEditTrx = JSON.parse(JSON.stringify(trx)); // Backup data asli
+                    
+                    // 4. Pindah ke layar POS
+                    this.currentView = 'pos';
+                });
+            },
+            
+            cancelEditInvoice() {
+                this.askConfirm('Batalkan Edit?', 'Yakin ingin membatalkan edit? Keranjang akan dibersihkan dan transaksi asli tetap aman.', () => {
+                    this.cart = [];
+                    this.selectedCustomer = null;
+                    this.posCustomInvoice = '';
+                    this.posActiveOutletId = '';
+                    
+                    // Matikan status edit
+                    this.isEditingInvoice = false;
+                    this.originalEditTrx = null;
                 });
             },
 
