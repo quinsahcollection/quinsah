@@ -506,6 +506,9 @@
                                     <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
                                     <td class="fw-bold">
                                         {{ p.name || '-' }}
+                                        
+                                        <span v-if="p.isActive === false" class="badge bg-danger ms-2" style="font-size: 0.6rem;">Discontinue</span>
+
                                         <div class="mt-1" v-if="p.productTags && p.productTags.length > 0">
                                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size:0.6rem;" v-for="(t,i) in p.productTags" :key="i">{{ t }}</span>
                                         </div>
@@ -526,7 +529,13 @@
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-light border text-primary me-1" @click="editData('products', p, 'formProduct', 'addProductModal')" title="Edit Keseluruhan Produk"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-light border text-danger" @click="removeData('products', p.id)"><i class="bi bi-trash"></i></button>
+                                        
+                                        <button v-if="p.isActive !== false" class="btn btn-sm btn-light border text-warning" @click="toggleProductStatus(p)" title="Nonaktifkan Produk (Discontinue)" :disabled="isProcessing">
+                                            <i class="bi bi-archive"></i>
+                                        </button>
+                                        <button v-else class="btn btn-sm btn-light border text-success" @click="toggleProductStatus(p)" title="Aktifkan Kembali Produk" :disabled="isProcessing">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
                                     </td>
                                 </tr>
                                 <tr v-if="filteredCatalogProducts.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada produk sesuai pencarian.</td></tr>
@@ -2565,7 +2574,9 @@
 
             // POS & INVENTORY FILTERING
             filteredProducts() { 
-                let filtered = this.products;
+                // Tambahkan filter ini agar produk yang dicontinue (isActive === false) otomatis hilang dari kasir
+                let filtered = (this.products || []).filter(p => p.isActive !== false);
+
                 if (this.posCategoryFilter) {
                     filtered = filtered.filter(p => 
                         this.isCategoryOrDescendant(p.categoryId, this.posCategoryFilter) || 
@@ -3003,6 +3014,10 @@
                 if (this.posSearchMode === 'scan' && this.searchQuery) {
                     const q = this.searchQuery.trim().toLowerCase(); let foundProduct = null; let foundVariant = null;
                     for (let p of this.products) {
+                        
+                        // PENGAMAN: Jika produk sudah discontinue, lewati dan jangan masukkan ke keranjang
+                        if (p.isActive === false) continue;
+
                         if (p.sku && p.sku.toLowerCase() === q) { foundProduct = p; break; }
                         if (p.variants && p.variants.length > 0) {
                             let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
@@ -3014,7 +3029,7 @@
                     this.searchQuery = '';
                 }
             },
-
+            
             showModal(id) { const el = document.getElementById(id); if (el) bootstrap.Modal.getOrCreateInstance(el).show(); },
             hideModal(id) { const el = document.getElementById(id); if (el) { const m = bootstrap.Modal.getInstance(el); if(m) m.hide(); setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(b => b.remove()); document.body.style.overflow = ''; }, 300); } },
             
@@ -3058,6 +3073,44 @@
             },
             
             removeData(colName, id) { this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => { await deleteDoc(doc(db, colName, id)); }); },
+            
+            async toggleProductStatus(prod) {
+                if (this.isProcessing) return;
+
+                let actionText = prod.isActive === false ? 'MENGAKTIFKAN' : 'MENONAKTIFKAN (Discontinue)';
+                
+                this.askConfirm(`${actionText} Produk?`, `Apakah Anda yakin ingin ${actionText.toLowerCase()} produk ${prod.name}? Produk yang dinonaktifkan tidak akan muncul di menu Kasir dan Pembelian.`, async () => {
+                    this.isProcessing = true;
+                    try {
+                        let newStatus = prod.isActive === false ? true : false;
+                        
+                        // Update status di Firebase
+                        await updateDoc(doc(db, "products", prod.id), { 
+                            isActive: newStatus 
+                        });
+                        
+                        // Update di lokal array Vue
+                        let idx = this.products.findIndex(p => p.id === prod.id);
+                        if (idx !== -1) {
+                            this.products[idx].isActive = newStatus;
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Status Diperbarui',
+                            text: `Produk berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}.`,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                    } catch (e) {
+                        console.error("Gagal mengubah status produk:", e);
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal mengubah status produk.' });
+                    } finally {
+                        this.isProcessing = false;
+                    }
+                });
+            },
             
             async saveData(colName, formObj, modalId) {
                 this.isSaving = true;
