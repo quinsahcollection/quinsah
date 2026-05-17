@@ -914,7 +914,7 @@
                                     </div>
                                     <div class="btn-group btn-group-sm mb-1">
                                         <button class="btn btn-outline-primary" @click="editPosTransaction(trx)" title="Edit, Batal, & Revisi Invoice"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-outline-danger" @click="deletePosTransaction(trx)" title="Hapus Permanen & Retur Stok"><i class="bi bi-trash"></i></button>
+                                        <button class="btn btn-outline-danger" @click="deletePosTransaction(trx)" title="Hapus Permanen & Retur Stok" :disabled="isProcessing"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -3407,6 +3407,8 @@
             },
 
             async revertPurchaseStock(po) {
+                if (!po || !po.items) return;
+                
                 for (let item of po.items) {
                     let prod = this.products.find(p => p.id === item.productId);
                     if (prod) {
@@ -3421,14 +3423,33 @@
                             if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
                             prodCopy.baseOutletStocks[po.outletId] = Math.max(0, (prodCopy.baseOutletStocks[po.outletId] || 0) - item.qty);
                         }
+                        
+                        // Update stok produk
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        
+                        // TAMBAHAN: Catat log mutasi KELUAR karena PO dibatalkan
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(),
+                            dateStr: new Date().toLocaleString('id-ID'),
+                            refId: po.id + ' (BATAL)', 
+                            type: 'OUT', 
+                            productId: prod.id,
+                            sku: prod.sku || '-',
+                            productName: prod.name || '-',
+                            variantSku: item.variantSku || null,
+                            variantName: item.variantName || '-',
+                            qtyChange: -item.qty, 
+                            outletId: po.outletId,
+                            userName: this.userProfile ? this.userProfile.name : 'Admin' 
+                        });
                     }
                 }
-                let logsToDel = this.stockLogs.filter(l => l.refId === po.id);
-                for (let l of logsToDel) { await deleteDoc(doc(db, "stockLogs", l.id)); }
+                // Baris deleteDoc dihapus agar riwayat mutasi awal tetap aman
             },
 
             async revertPosStock(trx) {
+                if (!trx || !trx.items) return;
+                
                 for (let item of trx.items) {
                     let prod = this.products.find(p => p.id === item.productId);
                     if (prod) {
@@ -3443,11 +3464,28 @@
                             if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
                             prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + item.qty;
                         }
+                        
+                        // Update stok produk
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        
+                        // TAMBAHAN: Catat log mutasi MASUK karena Invoice Kasir dibatalkan/diedit
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(),
+                            dateStr: new Date().toLocaleString('id-ID'),
+                            refId: trx.id + ' (BATAL)',
+                            type: 'IN',
+                            productId: prod.id,
+                            sku: prod.sku || '-',
+                            productName: prod.name || '-',
+                            variantSku: item.variantSku || null,
+                            variantName: item.variantName || '-',
+                            qtyChange: item.qty,
+                            outletId: trx.outletId,
+                            userName: this.userProfile ? this.userProfile.name : 'Admin' 
+                        });
                     }
                 }
-                let logsToDel = this.stockLogs.filter(l => l.refId === trx.id);
-                for (let l of logsToDel) { await deleteDoc(doc(db, "stockLogs", l.id)); }
+                // Baris deleteDoc dihapus agar riwayat mutasi awal tetap aman
             },
 
             editPurchase(po) {
@@ -3512,13 +3550,27 @@
             },
 
             deletePosTransaction(trx) {
+                // PENGUNCI 1: Cegah klik ganda beruntun sebelum modal muncul
+                if (this.isProcessing) return;
+
                 this.askConfirm('Hapus & Retur Stok Invoice?', `Apakah Anda yakin ingin membatalkan Invoice ${trx.id} dan MENGEMBALIKAN STOK yang sudah terjual?`, async () => {
+                    
+                    // PENGUNCI 2: Pastikan tidak ada eksekusi ganda yang lolos ke dalam sini
+                    if (this.isProcessing) return;
+                    
+                    // AKTIFKAN STATUS LOADING/PROSES
+                    this.isProcessing = true;
+
                     try {
                         await this.revertPosStock(trx);
                         await deleteDoc(doc(db, "transactions", trx.id));
                     } catch (e) {
                         console.error("Gagal Hapus Transaksi:", e);
                         alert("Terjadi kesalahan saat menghapus transaksi.");
+                    } finally {
+                        // MATIKAN STATUS LOADING SETELAH SELESAI (PENTING!)
+                        // Pastikan ditaruh di dalam 'finally' agar tetap tereksekusi meskipun terjadi error
+                        this.isProcessing = false;
                     }
                 });
             },
