@@ -1514,7 +1514,9 @@
                                 <label class="form-label small fw-bold mb-1">Produk Induk</label>
                                 <select class="form-select form-select-sm" v-model="formPurchaseItem.productId" @change="onPurchaseProductChange">
                                     <option value="">-- Pilih Produk --</option>
-                                    <option v-for="p in products" :value="p.id">{{ p.name }} (SKU: {{ p.sku }})</option>
+                                    <option v-for="p in products.filter(x => x.isActive !== false)" :key="p.id" :value="p.id">
+        {{ p.name }} {{ p.sku ? `(${p.sku})` : '' }}
+    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
