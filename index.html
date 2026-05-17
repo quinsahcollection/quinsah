@@ -292,9 +292,32 @@
                 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0">Riwayat Pembelian & Stok Masuk</h6>
                     <div class="d-flex gap-2 align-items-center">
-                        <input type="text" class="form-control form-control-sm" v-model="purchaseSearchQuery" placeholder="Cari No. PO / Supplier...">
                         <button class="btn btn-sm btn-primary-custom" @click="openModal('addPurchaseModal')"><i class="bi bi-plus-lg me-1"></i> Transaksi Baru</button>
                     </div>
+                    <div class="row mb-3 align-items-end">
+    <div class="col-md-4 mb-2">
+        <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
+        <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Cari...">
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
+        <input type="date" class="form-control" v-model="purchaseStartDate">
+    </div>
+    <div class="col-md-3 mb-2">
+        <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
+        <input type="date" class="form-control" v-model="purchaseEndDate">
+    </div>
+
+    <div class="col-md-2 mb-2">
+        <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
+            <i class="bi bi-arrow-clockwise"></i> Reset
+        </button>
+    </div>
+</div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle text-nowrap">
@@ -2219,7 +2242,10 @@
                 
                 isEditingInvoice: false,  // Status penanda apakah sedang mengedit invoice
                 originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
-
+                purchaseStartDate: '',
+                purchaseEndDate: '',
+                purchaseSearchQuery: '',
+                
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -2349,11 +2375,58 @@
             },
 
             filteredPurchases() {
-                let list = this.purchases;
-                if(this.purchaseSearchQuery) {
-                    const q = this.purchaseSearchQuery.toLowerCase();
-                    list = list.filter(p => p.id.toLowerCase().includes(q) || this.getSupplierName(p.supplierId).toLowerCase().includes(q));
+                let list = this.purchases || [];
+
+                // 1. FILTER RENTANG TANGGAL
+                if (this.purchaseStartDate || this.purchaseEndDate) {
+                    list = list.filter(po => {
+                        if (!po.dateStr) return true; // Jika data tidak punya tanggal, tampilkan saja
+
+                        // Ambil tanggal PO dari format "DD/MM/YYYY, HH:MM:SS" menjadi "DD/MM/YYYY"
+                        let poDateStr = String(po.dateStr).split(',')[0].trim(); 
+                        
+                        // Pecah menjadi array [DD, MM, YYYY]
+                        let parts = poDateStr.split('/');
+                        if (parts.length !== 3) return true; // Jika formatnya aneh, abaikan filter
+
+                        // Ubah format menjadi YYYY-MM-DD standar agar bisa dibandingkan nilainya
+                        let isoPoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+
+                        let isAfterStart = true;
+                        let isBeforeEnd = true;
+
+                        // Pengecekan >= (Lebih dari sama dengan Tanggal Mulai)
+                        if (this.purchaseStartDate) {
+                            isAfterStart = isoPoDate >= this.purchaseStartDate;
+                        }
+                        // Pengecekan <= (Kurang dari sama dengan Tanggal Akhir)
+                        if (this.purchaseEndDate) {
+                            isBeforeEnd = isoPoDate <= this.purchaseEndDate;
+                        }
+
+                        return isAfterStart && isBeforeEnd;
+                    });
                 }
+
+                // 2. FILTER PENCARIAN TEKS (Bawaan Anda)
+                if (this.purchaseSearchQuery) {
+                    const q = this.purchaseSearchQuery.toLowerCase();
+                    list = list.filter(p => {
+                        let poId = p.id ? p.id.toLowerCase() : '';
+                        let supName = this.getSupplierName(p.supplierId) ? this.getSupplierName(p.supplierId).toLowerCase() : '';
+                        
+                        return poId.includes(q) || supName.includes(q);
+                    });
+                }
+
+                // 3. PENGURUTAN (Sort)
+                // Mengurutkan agar transaksi paling baru (ID terbesar/terbaru) berada paling atas
+                list = list.sort((a, b) => {
+                    let idA = a.id || '';
+                    let idB = b.id || '';
+                    return idB.localeCompare(idA);
+                });
+
                 return list;
             },
 
