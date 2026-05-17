@@ -11,6 +11,7 @@
     
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
     <style>
@@ -3195,7 +3196,14 @@
                     let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
                     
                     if (!currentInvoiceId) {
-                        alert("Gagal: Nomor invoice tidak boleh kosong!");
+                        // Alert UI Cantik: Nomor Kosong
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Data Tidak Lengkap',
+                            text: 'Nomor invoice tidak boleh kosong!',
+                            confirmButtonColor: '#dc2626',
+                            confirmButtonText: 'Mengerti'
+                        });
                         this.isProcessing = false;
                         return;
                     }
@@ -3214,7 +3222,14 @@
                         });
 
                         if (isDuplicate) {
-                            alert(`Gagal menyimpan! Nomor Invoice "${currentInvoiceId}" sudah terdaftar di sistem. Silakan ubah ke nomor lain.`);
+                            // Alert UI Cantik: Duplikat
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Nomor Invoice Duplikat!',
+                                html: `Gagal menyimpan! Nomor Invoice <strong>${currentInvoiceId}</strong> sudah terdaftar di sistem.<br>Silakan ubah ke nomor lain.`,
+                                confirmButtonColor: '#dc2626',
+                                confirmButtonText: 'Baik, Saya Ubah'
+                            });
                             this.isProcessing = false;
                             return; // Hentikan eksekusi di sini agar tidak memotong stok / menimpa data
                         }
@@ -3320,7 +3335,13 @@
 
                 } catch(e) {
                     console.error("Gagal bayar:", e);
-                    alert("Gagal memproses transaksi. Cek kembali kelengkapan form.");
+                    // Alert UI Cantik: Sistem Error
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Sistem Gagal Menyimpan',
+                        text: 'Gagal memproses transaksi. Cek koneksi internet atau kelengkapan form Anda.',
+                        confirmButtonColor: '#dc2626'
+                    });
                 }
                 this.isProcessing = false;
             },
