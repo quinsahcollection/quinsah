@@ -947,7 +947,7 @@
             <div class="mb-2 pb-2 border-bottom">
                 <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
                     <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
-                    <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="Nomor Invoice...">
+                    <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="No Invoice" :disabled="isEditingInvoice">
                 </div>
                 <div class="input-group input-group-sm">
                     <select class="form-select fw-semibold border-danger" v-model="selectedCustomer">
@@ -3184,8 +3184,44 @@
             },
 
             async processTransaction() {
+                // Cegah klik ganda
+                if (this.isProcessing) return;
                 this.isProcessing = true;
+
                 try {
+                    // =================================================================
+                    // 0. VALIDASI NOMOR INVOICE DUPLIKAT
+                    // =================================================================
+                    let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
+                    
+                    if (!currentInvoiceId) {
+                        alert("Gagal: Nomor invoice tidak boleh kosong!");
+                        this.isProcessing = false;
+                        return;
+                    }
+
+                    // Cek duplikat di array riwayat transaksi (Sesuaikan 'this.transactions' jika nama variabel Anda berbeda)
+                    if (this.transactions && this.transactions.length > 0) {
+                        let isDuplicate = this.transactions.some(t => {
+                            let existingId = String(t.id).trim();
+                            
+                            // Jika sedang MODE EDIT, izinkan ID yang sama dengan ID asli transaksi yang sedang diedit
+                            if (this.isEditingInvoice && this.originalEditTrx) {
+                                return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
+                            }
+                            // Jika BUAT BARU, cek apakah ID sudah terpakai di transaksi manapun
+                            return existingId === currentInvoiceId;
+                        });
+
+                        if (isDuplicate) {
+                            alert(`Gagal menyimpan! Nomor Invoice "${currentInvoiceId}" sudah terdaftar di sistem. Silakan ubah ke nomor lain.`);
+                            this.isProcessing = false;
+                            return; // Hentikan eksekusi di sini agar tidak memotong stok / menimpa data
+                        }
+                    }
+                    // =================================================================
+
+
                     // =================================================================
                     // 1. TAMBAHKAN LOGIKA EDIT DI SINI (Paling atas sebelum proses baru)
                     // =================================================================
@@ -3207,7 +3243,7 @@
                     })));
 
                     let trxRaw = {
-                        id: String(this.posCustomInvoice || '').replace(/\//g, '-'),
+                        id: currentInvoiceId, // Gunakan ID yang sudah divalidasi di atas
                         dateStr: new Date().toLocaleString('id-ID'),
                         customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
                         customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
@@ -3274,7 +3310,7 @@
                     this.selectedCustomer = null;
 
                     // =================================================================
-                    // 2. TAMBAHKAN RESET STATUS EDIT DI SINI (Setelah transaksi sukses)
+                    // 2. RESET STATUS EDIT (Setelah transaksi sukses)
                     // =================================================================
                     this.isEditingInvoice = false;
                     this.originalEditTrx = null;
