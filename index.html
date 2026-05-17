@@ -289,59 +289,88 @@
 
             <!-- PURCHASE VIEW -->
             <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
-                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0">Riwayat Pembelian & Stok Masuk</h6>
-                    <div class="d-flex gap-2 align-items-center">
-                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addPurchaseModal')"><i class="bi bi-plus-lg me-1"></i> Transaksi Baru</button>
-                    </div>
-                    <div class="row mb-3 align-items-end">
-    <div class="col-md-4 mb-2">
-        <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
-        <div class="input-group">
-            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-            <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Cari...">
-        </div>
-    </div>
-
-    <div class="col-md-3 mb-2">
-        <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
-        <input type="date" class="form-control" v-model="purchaseStartDate">
-    </div>
-    <div class="col-md-3 mb-2">
-        <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
-        <input type="date" class="form-control" v-model="purchaseEndDate">
-    </div>
-
-    <div class="col-md-2 mb-2">
-        <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
-            <i class="bi bi-arrow-clockwise"></i> Reset
-        </button>
-    </div>
-</div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-custom align-middle text-nowrap">
-                        <thead><tr><th>No. Invoice / PO</th><th>Tanggal</th><th>Supplier</th><th>Outlet Tujuan</th><th>Total Pembelian</th><th class="text-center">Aksi</th></tr></thead>
-                        <tbody>
-                            <tr v-for="po in filteredPurchases" :key="po.id">
-                                <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
-                                <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
-                                <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">{{ getSupplierName(po.supplierId) }}</td>
-                                <td><span class="badge bg-light border text-dark">{{ getOutletName(po.outletId) }}</span></td>
-                                <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)"><i class="bi bi-file-earmark-text"></i> A4</button>
-                                        <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing"><i class="bi bi-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="filteredPurchases.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+    
+    <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & Stok Masuk</h6>
+    
+    <div class="row mb-3 align-items-end">
+        
+        <div class="col-12 col-md-3 mb-2">
+            <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Ketik pencarian...">
             </div>
+        </div>
+
+        <div class="col-12 col-md-3 mb-2">
+            <button class="btn btn-primary-custom w-100" @click="openModal('addPurchaseModal')">
+                <i class="bi bi-plus-lg me-1"></i> Transaksi Baru
+            </button>
+        </div>
+
+        <div class="col-6 col-md-2 mb-2">
+            <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
+            <input type="date" class="form-control" v-model="purchaseStartDate">
+        </div>
+        
+        <div class="col-6 col-md-2 mb-2">
+            <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
+            <input type="date" class="form-control" v-model="purchaseEndDate">
+        </div>
+
+        <div class="col-12 col-md-2 mb-2">
+            <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
+                <i class="bi bi-arrow-clockwise me-1"></i> Reset
+            </button>
+        </div>
+        
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-custom align-middle text-nowrap">
+            <thead>
+                <tr>
+                    <th>No. Invoice / PO</th>
+                    <th>Tanggal</th>
+                    <th>Supplier</th>
+                    <th>Outlet Tujuan</th>
+                    <th>Total Pembelian</th>
+                    <th class="text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="po in filteredPurchases" :key="po.id">
+                    <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
+                    <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+                    <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
+                        {{ getSupplierName(po.supplierId) }}
+                    </td>
+                    <td><span class="badge bg-light border text-dark">{{ getOutletName(po.outletId) }}</span></td>
+                    <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
+                                <i class="bi bi-file-earmark-text"></i> A4
+                            </button>
+                            <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr v-if="filteredPurchases.length === 0">
+                    <td colspan="6" class="text-center py-4 text-muted small">
+                        Belum ada riwayat pembelian sesuai filter.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+</div>
 
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings' && userRole === 'Admin'">
