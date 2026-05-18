@@ -3761,6 +3761,20 @@
                     }
                     // =================================================================
 
+                    // =================================================================
+                    // 2. KUNCI SEMUA VARIABEL TOTALAN SEBELUM TER-RESET
+                    // =================================================================
+                    let currentSubtotalBase = this.subtotalBase || 0;
+                    let currentGlobalDiscountType = this.globalDiscountType || 'none';
+                    let currentGlobalDiscountValue = this.globalDiscountValue || 0;
+                    let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
+                    let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
+                    
+                    // KUNCI PPN DAN SERVICE (Ini yang membuat Struk Anda bisa memunculkannya)
+                    let currentTaxAmt = this.taxAmount || 0;
+                    let currentServiceAmt = this.serviceAmount || 0;
+                    let currentTotal = this.total || 0;
+
                     let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
                         ...c,
                         sku: c.sku || '-',
@@ -3780,17 +3794,18 @@
                         outletId: this.posActiveOutletId || '',
                         cashierName: this.userProfile.name || 'Admin',
                         paymentMethod: this.paymentData.method || 'CASH',
-                        amountReceived: this.paymentData.amountReceived || this.total,
-                        subtotal: this.subtotalBase || 0,
-                        // UBAH BARIS discountAmt LAMA MENJADI INI:
-                        discountAmt: (this.discountAmount + this.posDiscountAmount + this.globalDiscountAmount) || 0,
-                        globalDiscountAmt: this.globalDiscountAmount || 0,
-                        globalDiscountType: this.globalDiscountType || 'none',
-                        globalDiscountValue: this.globalDiscountValue || 0,
-                        // ----------------------------------------------------
-                        taxAmt: this.taxAmount || 0,       
-                        serviceAmt: this.serviceAmount || 0,
-                        total: this.total || 0,
+                        amountReceived: this.paymentData.amountReceived || currentTotal,
+                        
+                        subtotal: currentSubtotalBase,
+                        discountAmt: currentDiscountAmt,
+                        globalDiscountAmt: currentGlobalDiscountAmt,
+                        globalDiscountType: currentGlobalDiscountType,
+                        globalDiscountValue: currentGlobalDiscountValue,
+                        
+                        // GUNAKAN VARIABEL YANG SUDAH DIKUNCI DI ATAS
+                        taxAmt: currentTaxAmt,
+                        serviceAmt: currentServiceAmt,
+                        total: currentTotal,
                         items: cleanItems
                     };
 
@@ -3838,31 +3853,22 @@
                     this.printMode = 'receipt';
                     this.hideModal('paymentModal');
 
+                    // =================================================================
+                    // 3. RESET SEMUA VARIABEL HANYA SETELAH PRINT DATA AMAN
+                    // =================================================================
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
                     this.cart = [];
                     this.selectedCustomer = null;
                     // TAMBAHKAN INI AGAR DISKON MERESET SAAT TRANSAKSI SELESAI
                     this.globalDiscountType = 'none';
                     this.globalDiscountValue = 0;
+                    this.paymentData = { method: 'CASH', amountReceived: 0 };
+                    
+                    Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
 
-                    // =================================================================
-                    // 2. RESET STATUS EDIT (Setelah transaksi sukses)
-                    // =================================================================
-                    this.isEditingInvoice = false;
-                    this.originalEditTrx = null;
-                    // =================================================================
-
-                    setTimeout(() => window.print(), 500);
-
-                } catch(e) {
-                    console.error("Gagal bayar:", e);
-                    // Alert UI Cantik: Sistem Error
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Sistem Gagal Menyimpan',
-                        text: 'Gagal memproses transaksi. Cek koneksi internet atau kelengkapan form Anda.',
-                        confirmButtonColor: '#dc2626'
-                    });
+                } catch (err) {
+                    console.error("Gagal proses transaksi:", err);
+                    Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan transaksi.', 'error');
                 }
                 this.isProcessing = false;
             },
