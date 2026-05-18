@@ -3406,7 +3406,7 @@
                 }
                 if (newP.variants && newP.variants.length > 0) {
                     for (let nVar of newP.variants) {
-                        let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => v.variantSku === nVar.variantSku || v.attributes === nVar.attributes) : null;
+                        let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => v.variantId === nVar.variantId) : null;
                         for (let outlet of this.outlets) {
                             let oldQty = (oVar && oVar.outletStocks) ? (oVar.outletStocks[outlet.id] || 0) : 0;
                             let newQty = (nVar.outletStocks && nVar.outletStocks[outlet.id]) ? nVar.outletStocks[outlet.id] : 0;
@@ -3515,11 +3515,16 @@
                     let existing = oldVariants.find(ov => ov.attributes === attrStr);
 
                     if (existing) {
+                        // PERBAIKAN: Pastikan varian lama tetap memiliki variantId jika berasal dari data versi sebelumnya
+                        if (!existing.variantId) {
+                            existing.variantId = crypto.randomUUID();
+                        }
                         matrix.push(existing);
                     } else {
                         const vSku = `${this.formProduct.sku}-${combo.join('-')}`.replace(/\s+/g, '').toUpperCase();
                         let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
                         matrix.push({ 
+                            variantId: crypto.randomUUID(), // <--- PENAMBAHAN IDENTIFIER UNIK
                             name: attrStr, attributes: attrStr, variantSku: vSku, 
                             hppPrice: this.formProduct.hppPrice, sellPrice: this.formProduct.sellPrice, 
                             discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks 
@@ -3528,6 +3533,15 @@
                 });
                 
                 this.formProduct.variants = matrix;
+            },
+
+            addManualVariant() {
+                let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                this.formProduct.variants.push({
+                    variantId: crypto.randomUUID(), // <--- PENAMBAHAN IDENTIFIER UNIK
+                    name: '', attributes: '', variantSku: this.formProduct.sku ? this.formProduct.sku + '-V' + (this.formProduct.variants.length + 1) : '',
+                    hppPrice: this.formProduct.hppPrice || 0, sellPrice: this.formProduct.sellPrice || 0, discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks
+                });
             },
 
             addManualVariant() {
