@@ -3311,7 +3311,30 @@
                 this[formName] = copy; this.showModal(modalId);
             },
             
-            removeData(colName, id) { this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => { await deleteDoc(doc(db, colName, id)); }); },
+            removeData(colName, id) { 
+                // 1. PENGAMAN KATEGORI
+                if (colName === 'categories') {
+                    const isUsed = this.products.some(p => p.categoryId === id || p.categoryId_L1 === id || p.categoryId_L2 === id);
+                    if (isUsed) {
+                        Swal.fire('Ditolak', 'Kategori ini tidak bisa dihapus karena masih digunakan oleh produk di Katalog.', 'error');
+                        return; // Berhenti di sini, fungsi tidak akan lanjut ke bawah
+                    }
+                }
+
+                // 2. PENGAMAN SATUAN / UNIT (Tambahan jika diperlukan)
+                if (colName === 'units') {
+                    const isUsed = this.products.some(p => p.unitId === id);
+                    if (isUsed) {
+                        Swal.fire('Ditolak', 'Satuan ini tidak bisa dihapus karena masih digunakan oleh produk di Katalog.', 'error');
+                        return; // Berhenti di sini
+                    }
+                }
+
+                // 3. JIKA LOLOS PENGECEKAN, JALANKAN KONFIRMASI HAPUS (KODE ASLI ANDA)
+                this.askConfirm('Hapus Data Permanen?', 'Tindakan ini tidak dapat dibatalkan. Lanjutkan menghapus?', async () => { 
+                    await deleteDoc(doc(db, colName, id)); 
+                }); 
+            },
             
             async toggleProductStatus(prod) {
                 if (this.isProcessing) return;
