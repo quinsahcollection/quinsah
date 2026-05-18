@@ -1162,62 +1162,79 @@
                 <div v-if="cart.length===0" class="text-center text-muted mt-5"><i class="bi bi-cart-x fs-2 mb-2 d-block"></i><small>Kosong</small></div>
                 
                 <div class="cart-item" v-for="item in cart" :key="item.cartId">
-                    <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
-                        <div class="fw-bold text-truncate" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
-                        <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
-                    </div>
-                    <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 4px;">
-                        <span v-if="item.variantName" class="fw-semibold">
-                            <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }} 
-                            <span class="sku-badge bg-dark text-white ms-1">{{ item.variantSku }}</span>
-                        </span>
-                    </div>
-                    <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
-                        <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex flex-column">
-                            <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
-                            <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
+                        <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
+                            <div class="fw-bold text-truncate" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
+                            <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
                         </div>
-                        <div class="d-flex align-items-center bg-light border p-0 rounded">
-                            <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
-                            <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
-                            <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
+                        <div class="text-muted" style="font-size: 0.65rem; margin-bottom: 4px;">
+                            <span v-if="item.variantName" class="fw-semibold">
+                                <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }} 
+                                <span class="sku-badge bg-dark text-white ms-1">{{ item.variantSku }}</span>
+                            </span>
+                        </div>
+                        <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
+                            <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex flex-column">
+                                <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
+                                <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
+                            </div>
+                            <div class="d-flex align-items-center bg-light border p-0 rounded">
+                                <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
+                                <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
+                                <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="mt-auto border-top pt-2" style="font-size: 0.8rem;">
-                <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
                 
-                <template v-if="posDiscountAmount > 0">
-                    <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
-                        <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
-                        <span class="fw-bold">- Rp {{ formatNumber((getPriceBeforePosDiscount(item) - getFinalItemPrice(item)) * item.qty) }}</span>
+                <div class="mb-2 p-2 bg-danger bg-opacity-10 border border-danger rounded mx-1">
+                    <label class="form-label small fw-bold text-danger mb-1"><i class="bi bi-tag-fill me-1"></i>Diskon Global (Per Invoice)</label>
+                    <div class="input-group input-group-sm">
+                        <select class="form-select bg-white fw-semibold" style="max-width: 45%;" v-model="globalDiscountType" @change="globalDiscountValue = 0">
+                            <option value="none">Tanpa Diskon</option>
+                            <option value="percent">% Persen</option>
+                            <option value="nominal">Rp Nominal</option>
+                        </select>
+                        <input type="number" class="form-control text-end fw-bold text-danger" v-model.number="globalDiscountValue" :disabled="globalDiscountType === 'none'" placeholder="0">
                     </div>
-                </template>
+                </div>
 
-                <div class="d-flex justify-content-between mb-1 text-success fw-bold" v-if="discountAmount > 0">
-                    <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer ? selectedCustomer.membershipId : null) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
+                <div class="mt-auto border-top pt-2" style="font-size: 0.8rem;">
+                    <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
+                    
+                    <template v-if="posDiscountAmount > 0">
+                        <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
+                            <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
+                            <span class="fw-bold">- Rp {{ formatNumber((getPriceBeforePosDiscount(item) - getFinalItemPrice(item)) * item.qty) }}</span>
+                        </div>
+                    </template>
+
+                    <div class="d-flex justify-content-between mb-1 text-success fw-bold" v-if="discountAmount > 0">
+                        <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer ? selectedCustomer.membershipId : null) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-1 text-danger fw-bold" v-if="globalDiscountAmount > 0">
+                        <span>Diskon Invoice ({{ globalDiscountType === 'percent' ? globalDiscountValue + '%' : 'Manual' }})</span><span>- Rp {{ formatNumber(globalDiscountAmount) }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-1 text-danger fw-semibold" v-if="taxAmount > 0">
+                        <span>PPN ({{ posActiveOutlet?.taxPercent }}%)</span><span>+ Rp {{ formatNumber(taxAmount) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-warning fw-semibold" v-if="serviceAmount > 0" style="color: #d97706 !important;">
+                        <span>Service ({{ posActiveOutlet?.serviceChargePercent }}%)</span><span>+ Rp {{ formatNumber(serviceAmount) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
+                        <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
+                    </div>
+                    <button class="btn bg-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || !posCustomInvoice || isProcessing">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                        <span v-else><i class="bi bi-wallet2 me-1"></i> LANJUT BAYAR</span>
+                    </button>
+                    <div v-if="!posActiveOutletId && cart.length > 0" class="text-danger text-center mt-1" style="font-size: 0.65rem;">*Pilih Cabang (Outlet) Terlebih Dahulu</div>
                 </div>
-                <div class="d-flex justify-content-between mb-1 text-danger fw-semibold" v-if="taxAmount > 0">
-                    <span>PPN ({{ posActiveOutlet?.taxPercent }}%)</span><span>+ Rp {{ formatNumber(taxAmount) }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2 text-warning fw-semibold" v-if="serviceAmount > 0" style="color: #d97706 !important;">
-                    <span>Service ({{ posActiveOutlet?.serviceChargePercent }}%)</span><span>+ Rp {{ formatNumber(serviceAmount) }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
-                    <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
-                </div>
-                <button class="btn bg-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || !posCustomInvoice || isProcessing">
-                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-                    <span v-else><i class="bi bi-wallet2 me-1"></i> LANJUT BAYAR</span>
-                </button>
-                <div v-if="!posActiveOutletId && cart.length > 0" class="text-danger text-center mt-1" style="font-size: 0.65rem;">*Pilih Cabang (Outlet) Terlebih Dahulu</div>
-            </div>
-        </aside>
+            </aside>
 
         <!-- MODAL GLOBAL KONFIRMASI -->
         <div class="modal fade" id="confirmModal" tabindex="-1">
@@ -2060,13 +2077,13 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-danger"><i class="bi bi-tags-fill me-1"></i>Diskon Tambahan (Dari Kasir)</label>
+                            <label class="form-label small fw-bold text-danger"><i class="bi bi-tags-fill me-1"></i>Diskon Tambahan</label>
                             <div class="input-group input-group-sm">
                                 <select class="form-select bg-white" style="max-width: 50%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = (cartItemEdit.posDiscountType === 'multi' ? '' : 0)">
                                     <option value="none">Tanpa Diskon</option>
                                     <option value="percent">% Tunggal</option>
                                     <option value="multi">% Bertingkat</option>
-                                    <option value="nominal">Nominal (Rp)</option>
+                                    <option value="nominal">Nominal / item</option>
                                 </select>
                                 <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
                                 <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
@@ -2193,6 +2210,7 @@
             
             <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
             <table style="width:100%; font-size:11px; font-weight:bold;">
+                <tr v-if="activePrintData.globalDiscountAmt > 0"><td>Diskon Inv</td><td style="text-align:right;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
                 <tr v-if="activePrintData.taxAmt > 0"><td>PPN</td><td style="text-align:right;">{{ formatNumber(activePrintData.taxAmt) }}</td></tr>
                 <tr v-if="activePrintData.serviceAmt > 0"><td>Service Chg</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt) }}</td></tr>
                 <tr><td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td><td style="text-align:right; font-size:14px; padding-top:5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
@@ -2320,9 +2338,9 @@
 
             <div style="display:flex; justify-content:flex-end; margin-top:20px;">
                 <table style="width:40%; font-size:13px; border-collapse:collapse;">
-                    <tr v-if="activePrintData.taxAmt > 0">
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee;">PPN</td>
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.taxAmt) }}</td>
+                    <tr v-if="activePrintData.globalDiscountAmt > 0">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; color:red;">Diskon Invoice</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; color:red;">- Rp {{ formatNumber(activePrintData.globalDiscountAmt) }}</td>
                     </tr>
                     <tr v-if="activePrintData.serviceAmt > 0">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee;">Service Charge</td>
@@ -2507,7 +2525,7 @@
                 variantDetail: { p: null, v: null, idx: -1 },
 
                 posActiveOutletId: '', paymentData: { method: 'CASH', amountReceived: 0 }, cartItemEdit: {},
-                
+                globalDiscountType: 'none', globalDiscountValue: 0,
                 activeStockDetail: null,
 
                 isSaving: false, activeProduct: null, printMode: 'receipt', activePrintData: null,
@@ -2996,7 +3014,15 @@
             },
             subtotal() { return this.cart.reduce((sum, item) => sum + (this.getFinalItemPrice(item) * item.qty), 0); },
             discountAmount() { const membershipId = this.selectedCustomer ? this.selectedCustomer.membershipId : null; return (this.subtotal) * (this.getMembershipDiscount(membershipId) / 100); },
-            netSubtotal() { return this.subtotal - this.discountAmount; },
+            // TAMBAHAN: Hitung Diskon Global
+            globalDiscountAmount() { 
+                if (this.globalDiscountType === 'nominal') return this.globalDiscountValue || 0;
+                if (this.globalDiscountType === 'percent') return this.subtotal * ((this.globalDiscountValue || 0) / 100);
+                return 0;
+            },
+            
+            // UBAH: netSubtotal dikurangi globalDiscountAmount juga
+            netSubtotal() { return this.subtotal - this.discountAmount - this.globalDiscountAmount; },
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() { return Math.round(this.netSubtotal + this.taxAmount + this.serviceAmount); }
@@ -3674,7 +3700,12 @@
                         paymentMethod: this.paymentData.method || 'CASH',
                         amountReceived: this.paymentData.amountReceived || this.total,
                         subtotal: this.subtotalBase || 0,
-                        discountAmt: (this.discountAmount + this.posDiscountAmount) || 0,
+                        // UBAH BARIS discountAmt LAMA MENJADI INI:
+                        discountAmt: (this.discountAmount + this.posDiscountAmount + this.globalDiscountAmount) || 0,
+                        globalDiscountAmt: this.globalDiscountAmount || 0,
+                        globalDiscountType: this.globalDiscountType || 'none',
+                        globalDiscountValue: this.globalDiscountValue || 0,
+                        // ----------------------------------------------------
                         taxAmt: this.taxAmt || 0,
                         serviceAmt: this.serviceAmount || 0,
                         total: this.total || 0,
@@ -3728,6 +3759,9 @@
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
                     this.cart = [];
                     this.selectedCustomer = null;
+                    // TAMBAHKAN INI AGAR DISKON MERESET SAAT TRANSAKSI SELESAI
+                    this.globalDiscountType = 'none';
+                    this.globalDiscountValue = 0;
 
                     // =================================================================
                     // 2. RESET STATUS EDIT (Setelah transaksi sukses)
