@@ -2228,11 +2228,11 @@
                 <tr v-if="activePrintData.globalDiscountAmt > 0">
                     <td>Diskon Invoice</td><td style="text-align:right;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td>
                 </tr>
-                <tr v-if="activePrintData.taxAmt > 0">
-                    <td>PPN</td><td style="text-align:right;">{{ formatNumber(activePrintData.taxAmt) }}</td>
+                <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0">
+                    <td>PPN</td><td style="text-align:right;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td>
                 </tr>
-                <tr v-if="activePrintData.serviceAmt > 0">
-                    <td>Service Chg</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt) }}</td>
+                <tr v-if="(activePrintData.serviceAmt || activePrintData.serviceAmount || 0) > 0">
+                    <td>Service Chg</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt || activePrintData.serviceAmount) }}</td>
                 </tr>
                 <tr>
                     <td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td>
@@ -2382,13 +2382,13 @@
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; color:red;">Diskon Invoice</td>
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; color:red;">- Rp {{ formatNumber(activePrintData.globalDiscountAmt) }}</td>
                     </tr>
-                    <tr v-if="activePrintData.taxAmt > 0">
+                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee;">PPN (Tax)</td>
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.taxAmt) }}</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td>
                     </tr>
-                    <tr v-if="activePrintData.serviceAmt > 0">
+                    <tr v-if="(activePrintData.serviceAmt || activePrintData.serviceAmount || 0) > 0">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee;">Service Charge</td>
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.serviceAmt) }}</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.serviceAmt || activePrintData.serviceAmount) }}</td>
                     </tr>
                     <tr>
                         <td style="padding:10px; font-weight:bold; font-size:16px;">TOTAL TAGIHAN</td>
@@ -3788,7 +3788,7 @@
                         globalDiscountType: this.globalDiscountType || 'none',
                         globalDiscountValue: this.globalDiscountValue || 0,
                         // ----------------------------------------------------
-                        taxAmt: this.taxAmt || 0,
+                        taxAmt: this.taxAmount || 0,       
                         serviceAmt: this.serviceAmount || 0,
                         total: this.total || 0,
                         items: cleanItems
