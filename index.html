@@ -3427,16 +3427,33 @@
                         }
                     }
                 }
-                if (newP.variants && newP.variants.length > 0) {
+                                if (newP.variants && newP.variants.length > 0) {
                     for (let nVar of newP.variants) {
-                        let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => v.variantId === nVar.variantId) : null;
+                        
+                        // PERBAIKAN 1: Suntikkan ID Unik otomatis jika produk lama belum punya ID
+                        if (!nVar.variantId) {
+                            nVar.variantId = crypto.randomUUID();
+                        }
+
+                        // PERBAIKAN 2: Smart Matching (Bisa baca data baru & data lawas)
+                        let oVar = (oldP && oldP.variants) ? oldP.variants.find(v => {
+                            // Cek jika keduanya punya ID dan cocok
+                            if (v.variantId && nVar.variantId && v.variantId === nVar.variantId) {
+                                return true; 
+                            }
+                            // FALLBACK: Jika produk lawas tidak punya ID, cocokkan pakai SKU atau Atribut
+                            return v.variantSku === nVar.variantSku || v.attributes === nVar.attributes;
+                        }) : null;
+
+                        // PERHITUNGAN STOK (Tetap sama seperti milik Anda)
                         for (let outlet of this.outlets) {
                             let oldQty = (oVar && oVar.outletStocks) ? (oVar.outletStocks[outlet.id] || 0) : 0;
                             let newQty = (nVar.outletStocks && nVar.outletStocks[outlet.id]) ? nVar.outletStocks[outlet.id] : 0;
                             let diff = newQty - oldQty;
+                            
                             if (diff !== 0) {
                                 await addDoc(collection(db, "stockLogs"), {
-                                    createdAt: serverTimestamp(), dateStr: nowStr,
+                                    createdAt: serverTimestamp(), dateStr: nowStr, // Pastikan nowStr sudah didefinisikan sebelumnya di fungsi Anda
                                     refId: 'EDIT MASTER', type: diff > 0 ? 'IN' : 'OUT',
                                     productId: productId, sku: newP.sku || '-', productName: newP.name || '-',
                                     variantSku: nVar.variantSku, variantName: nVar.name || nVar.attributes || '-',
@@ -3447,6 +3464,7 @@
                         }
                     }
                 }
+
             },
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
