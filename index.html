@@ -4086,6 +4086,36 @@
                 this.hideModal('addPurchaseModal');
                 this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
             },
+            
+            // ============================================
+            // SISIPKAN FUNGSI PEMBATALAN INVOICE DI SINI
+            // ============================================
+            deletePosTransaction(trx) {
+                // PENGUNCI 1: Cegah klik ganda beruntun sebelum modal muncul
+                if (this.isProcessing) return;
+
+                this.askConfirm('Hapus & Retur Stok Invoice?', `Apakah Anda yakin ingin membatalkan Invoice ${trx.id} dan MENGEMBALIKAN STOK yang sudah terjual?`, async () => {
+                    
+                    // PENGUNCI 2: Pastikan tidak ada eksekusi ganda yang lolos ke dalam sini
+                    if (this.isProcessing) return;
+                    
+                    // AKTIFKAN STATUS LOADING/PROSES
+                    this.isProcessing = true;
+
+                    try {
+                        await this.revertPosStock(trx);
+                        await deleteDoc(doc(db, "transactions", trx.id));
+                        
+                        Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Transaksi dibatalkan dan stok dikembalikan.', timer: 2000 });
+                    } catch (e) {
+                        console.error("Gagal Hapus Transaksi:", e);
+                        alert("Terjadi kesalahan saat menghapus transaksi.");
+                    } finally {
+                        // MATIKAN STATUS LOADING SETELAH SELESAI (PENTING!)
+                        this.isProcessing = false;
+                    }
+                });
+            },
 
             editPosTransaction(trx) {
                 this.askConfirm('Edit Invoice?', 'Invoice ini akan dimuat ulang ke keranjang untuk Anda ubah. Transaksi lama baru akan ditimpa/dihapus SETELAH Anda menyelesaikan pembayaran. Lanjutkan?', () => {
