@@ -2185,9 +2185,8 @@
 
     </div> 
     
-    <div id="print-section" class="d-none d-print-block">
+            <div id="print-section" class="d-none d-print-block">
         
-        <!-- STRUK THERMAL POS -->
         <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt">
             <div style="text-align:center; font-weight:bold; font-size:16px; margin-bottom:5px;">QUINSAH COLLECTION</div>
             <div style="text-align:center; font-size:11px; margin-bottom:10px;">{{ getOutletAddress(activePrintData.outletId) }}</div>
@@ -2205,6 +2204,12 @@
                 <div style="font-weight:bold;">{{ i.name }}</div>
                 <div v-if="i.variantName" style="font-size:10px; color:#333;">Varian: {{ i.variantName }} ({{ i.variantSku }})</div>
                 <div v-if="i.note" style="font-size:10px; font-style:italic;">Note: {{ i.note }}</div>
+                
+                <div v-if="i.posDiscountType && i.posDiscountType !== 'none'" style="font-size:10px; color:#555;">
+                    <span style="text-decoration: line-through;">Rp {{ formatNumber(i.promoPrice) }}</span> 
+                    (Diskon: {{ i.posDiscountType === 'percent' || i.posDiscountType === 'multi' ? i.posDiscountValue + '%' : 'Manual' }})
+                </div>
+                
                 <div style="display:flex; justify-content:space-between; margin-top:2px;">
                     <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice) }}</span>
                     <span>{{ formatNumber(i.qty * i.finalPrice) }}</span>
@@ -2212,19 +2217,40 @@
             </div>
             
             <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+            
             <table style="width:100%; font-size:11px; font-weight:bold;">
-                <tr v-if="activePrintData.globalDiscountAmt > 0"><td>Diskon Inv</td><td style="text-align:right;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
-                <tr v-if="activePrintData.taxAmt > 0"><td>PPN</td><td style="text-align:right;">{{ formatNumber(activePrintData.taxAmt) }}</td></tr>
-                <tr v-if="activePrintData.serviceAmt > 0"><td>Service Chg</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt) }}</td></tr>
-                <tr><td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td><td style="text-align:right; font-size:14px; padding-top:5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
-                <tr><td style="padding-top:5px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align:right; padding-top:5px;">{{ formatNumber(activePrintData.amountReceived) }}</td></tr>
-                <tr v-if="activePrintData.paymentMethod === 'CASH'"><td>KEMBALIAN</td><td style="text-align:right;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td></tr>
+                <tr v-if="activePrintData.subtotal > 0">
+                    <td>Subtotal</td><td style="text-align:right;">{{ formatNumber(activePrintData.subtotal) }}</td>
+                </tr>
+                <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0">
+                    <td>Diskon Member/Item</td><td style="text-align:right;">-{{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td>
+                </tr>
+                <tr v-if="activePrintData.globalDiscountAmt > 0">
+                    <td>Diskon Invoice</td><td style="text-align:right;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td>
+                </tr>
+                <tr v-if="activePrintData.taxAmt > 0">
+                    <td>PPN</td><td style="text-align:right;">{{ formatNumber(activePrintData.taxAmt) }}</td>
+                </tr>
+                <tr v-if="activePrintData.serviceAmt > 0">
+                    <td>Service Chg</td><td style="text-align:right;">{{ formatNumber(activePrintData.serviceAmt) }}</td>
+                </tr>
+                <tr>
+                    <td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td>
+                    <td style="text-align:right; font-size:14px; padding-top:5px;">Rp {{ formatNumber(activePrintData.total) }}</td>
+                </tr>
+                <tr>
+                    <td style="padding-top:5px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td>
+                    <td style="text-align:right; padding-top:5px;">{{ formatNumber(activePrintData.amountReceived) }}</td>
+                </tr>
+                <tr v-if="activePrintData.paymentMethod === 'CASH'">
+                    <td>KEMBALIAN</td>
+                    <td style="text-align:right;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+                </tr>
             </table>
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             <div style="text-align:center; font-size:10px;">Terima Kasih Atas Kunjungan Anda<br>Barang yang sudah dibeli tidak dapat ditukar</div>
         </div>
 
-        <!-- LABEL PACKING SLIP -->
         <div v-if="printMode === 'label' && activePrintData" class="mode-label">
             <div class="label-border-box">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;">
@@ -2284,7 +2310,6 @@
             </div>
         </div>
 
-        <!-- PRINT A4 INVOICE POS -->
         <div v-if="printMode === 'invoiceA4' && activePrintData" class="mode-a4">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px;">
                 <div style="width: 50%;">
@@ -2315,35 +2340,51 @@
             <table class="a4-table">
                 <thead>
                     <tr>
-                        <th style="width:5%;">No</th>
+                        <th style="width:5%; text-align:center;">No</th>
                         <th style="width:40%;">Deskripsi Produk</th>
-                        <th style="width:15%;">SKU</th>
-                        <th style="width:10%;">Qty</th>
-                        <th style="width:15%;">Harga Satuan</th>
-                        <th style="width:15%;">Total</th>
+                        <th style="width:15%; text-align:center;">SKU</th>
+                        <th style="width:10%; text-align:center;">Qty</th>
+                        <th style="width:15%; text-align:right;">Harga Satuan</th>
+                        <th style="width:15%; text-align:right;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(item, idx) in activePrintData.items" :key="idx">
-                        <td style="text-align:center;">{{ idx + 1 }}</td>
+                        <td style="text-align:center; vertical-align: top;">{{ idx + 1 }}</td>
                         <td>
                             <b>{{ item.name }}</b>
                             <div style="font-size:11px; color:#555; margin-top:2px;" v-if="item.variantName">Varian: {{ item.variantName }}</div>
                             <div style="font-size:11px; color:#888; font-style:italic;" v-if="item.note">Catatan: {{ item.note }}</div>
                         </td>
-                        <td style="text-align:center; font-family:monospace;">{{ item.variantSku || item.sku || '-' }}</td>
-                        <td style="text-align:center; font-weight:bold;">{{ item.qty }} {{ item.uom || 'Pcs' }}</td>
-                        <td style="text-align:right;">Rp {{ formatNumber(item.finalPrice) }}</td>
-                        <td style="text-align:right; font-weight:bold;">Rp {{ formatNumber(item.qty * item.finalPrice) }}</td>
+                        <td style="text-align:center; font-family:monospace; vertical-align: top;">{{ item.variantSku || item.sku || '-' }}</td>
+                        <td style="text-align:center; font-weight:bold; vertical-align: top;">{{ item.qty }} {{ item.uom || 'Pcs' }}</td>
+                        <td style="text-align:right; vertical-align: top;">
+                            <span v-if="item.posDiscountType && item.posDiscountType !== 'none'" style="text-decoration:line-through; font-size:10px; color:#888; display:block;">Rp {{ formatNumber(item.promoPrice) }}</span>
+                            Rp {{ formatNumber(item.finalPrice) }}
+                            <div v-if="item.posDiscountType && item.posDiscountType !== 'none'" style="font-size:10px; color:red;">(Diskon {{ item.posDiscountType === 'percent' || item.posDiscountType === 'multi' ? item.posDiscountValue + '%' : 'Manual' }})</div>
+                        </td>
+                        <td style="text-align:right; font-weight:bold; vertical-align: top;">Rp {{ formatNumber(item.qty * item.finalPrice) }}</td>
                     </tr>
                 </tbody>
             </table>
 
             <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                <table style="width:40%; font-size:13px; border-collapse:collapse;">
+                <table style="width:45%; font-size:13px; border-collapse:collapse;">
+                    <tr v-if="activePrintData.subtotal > 0">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee;">Subtotal Produk</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.subtotal) }}</td>
+                    </tr>
+                    <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; color:red;">Diskon Member/Item</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; color:red;">- Rp {{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td>
+                    </tr>
                     <tr v-if="activePrintData.globalDiscountAmt > 0">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; color:red;">Diskon Invoice</td>
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; color:red;">- Rp {{ formatNumber(activePrintData.globalDiscountAmt) }}</td>
+                    </tr>
+                    <tr v-if="activePrintData.taxAmt > 0">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee;">PPN (Tax)</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.taxAmt) }}</td>
                     </tr>
                     <tr v-if="activePrintData.serviceAmt > 0">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee;">Service Charge</td>
@@ -2374,6 +2415,8 @@
                 Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.
             </div>
         </div>
+
+    </div>
 
         <!-- PRINT A4 PURCHASE ORDER (PO) -->
         <div v-if="printMode === 'poA4' && activePrintData" class="mode-a4">
