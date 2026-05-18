@@ -4220,11 +4220,18 @@
                 });
             },
 
-            triggerPrint(data, mode) {
-                this.activePrintData = data;
-                this.printMode = mode;
-                setTimeout(() => window.print(), 300);
-            },
+            triggerPrint(trx, mode) {
+    // Set data terlebih dahulu
+    this.activePrintData = trx;
+    this.printMode = mode;
+    
+    // Tunggu DOM Vue benar-benar diperbarui dengan data struk baru
+    this.$nextTick(() => {
+        setTimeout(() => { // Kasih delay render ekstra sedikit 150ms agar gambar/CSS ikut ke-load (opsional tapi disarankan)
+            window.print();
+        }, 150);
+    });
+},
 
             getProductDisplayStock(p) {
                 let s = 0;
