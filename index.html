@@ -3536,19 +3536,24 @@
             },
 
             addManualVariant() {
-                let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                let oStocks = {}; 
+                this.outlets.forEach(o => { oStocks[o.id] = 0; });
+                
+                // Buat nomor acak 3 digit agar SKU tidak bentrok meski ada varian yang dihapus
+                let randomSuffix = Math.floor(100 + Math.random() * 900); 
+                
                 this.formProduct.variants.push({
-                    variantId: crypto.randomUUID(), // <--- PENAMBAHAN IDENTIFIER UNIK
-                    name: '', attributes: '', variantSku: this.formProduct.sku ? this.formProduct.sku + '-V' + (this.formProduct.variants.length + 1) : '',
-                    hppPrice: this.formProduct.hppPrice || 0, sellPrice: this.formProduct.sellPrice || 0, discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks
-                });
-            },
-
-            addManualVariant() {
-                let oStocks = {}; this.outlets.forEach(o => { oStocks[o.id] = 0; });
-                this.formProduct.variants.push({
-                    name: '', attributes: '', variantSku: this.formProduct.sku ? this.formProduct.sku + '-V' + (this.formProduct.variants.length + 1) : '',
-                    hppPrice: this.formProduct.hppPrice || 0, sellPrice: this.formProduct.sellPrice || 0, discountType: 'none', discountValue: 0, imageBase64: '', outletStocks: oStocks
+                    variantId: crypto.randomUUID(), // <--- PENGAMAN STOK (Agar tidak hilang saat diedit)
+                    name: '', 
+                    attributes: '', 
+                    // PENGAMAN SKU: Pakai randomSuffix, bukan lagi (length + 1)
+                    variantSku: this.formProduct.sku ? `${this.formProduct.sku}-V${randomSuffix}` : '',
+                    hppPrice: this.formProduct.hppPrice || 0, 
+                    sellPrice: this.formProduct.sellPrice || 0, 
+                    discountType: 'none', 
+                    discountValue: 0, 
+                    imageBase64: '', 
+                    outletStocks: oStocks
                 });
             },
 
