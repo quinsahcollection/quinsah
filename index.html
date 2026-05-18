@@ -3757,47 +3757,60 @@
 
                 try {
                     // =================================================================
-                    // 0. VALIDASI NOMOR INVOICE DUPLIKAT
+                    // 0. VALIDASI NOMOR INVOICE LOKAL (KODE ANDA YANG SUDAH ADA)
                     // =================================================================
                     let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
                     
                     if (!currentInvoiceId) {
-                        // Alert UI Cantik: Nomor Kosong
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Data Tidak Lengkap',
-                            text: 'Nomor invoice tidak boleh kosong!',
-                            confirmButtonColor: '#dc2626',
-                            confirmButtonText: 'Mengerti'
-                        });
+                        Swal.fire({ icon: 'warning', title: 'Data Tidak Lengkap', text: 'Nomor invoice tidak boleh kosong!' });
                         this.isProcessing = false;
                         return;
                     }
 
-                    // Cek duplikat di array riwayat transaksi (Sesuaikan 'this.transactions' jika nama variabel Anda berbeda)
+                    // Cek duplikat di array riwayat transaksi lokal
                     if (this.transactions && this.transactions.length > 0) {
                         let isDuplicate = this.transactions.some(t => {
                             let existingId = String(t.id).trim();
-                            
-                            // Jika sedang MODE EDIT, izinkan ID yang sama dengan ID asli transaksi yang sedang diedit
                             if (this.isEditingInvoice && this.originalEditTrx) {
                                 return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
                             }
-                            // Jika BUAT BARU, cek apakah ID sudah terpakai di transaksi manapun
                             return existingId === currentInvoiceId;
                         });
 
                         if (isDuplicate) {
-                            // Alert UI Cantik: Duplikat
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Nomor Invoice Duplikat!',
-                                html: `Gagal menyimpan! Nomor Invoice <strong>${currentInvoiceId}</strong> sudah terdaftar di sistem.<br>Silakan ubah ke nomor lain.`,
-                                confirmButtonColor: '#dc2626',
-                                confirmButtonText: 'Baik, Saya Ubah'
-                            });
+                            Swal.fire({ icon: 'error', title: 'Nomor Invoice Duplikat!', text: 'Gagal menyimpan! Nomor Invoice sudah terdaftar di memori lokal.' });
                             this.isProcessing = false;
-                            return; // Hentikan eksekusi di sini agar tidak memotong stok / menimpa data
+                            return;
+                        }
+                    }
+
+                    // =================================================================
+                    // TAMBAHKAN KODE BARU INI (PENGAMAN KE FIREBASE / SERVER-SIDE)
+                    // =================================================================
+                    // Kita cek langsung ke database Firebase (Bukan cuma ngecek memori lokal)
+                    const trxRef = doc(db, "transactions", currentInvoiceId);
+                    const trxSnap = await getDoc(trxRef);
+
+                    // Jika di database aslinya sudah ada (biasanya dipakai kasir lain beberapa detik lalu)
+                    if (trxSnap.exists()) {
+                        // Namun, kecualikan jika ini adalah MODE EDIT (artinya memang numpang nimpa data sendiri)
+                        const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
+                        
+                        if (!isNumpangEdit) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Bentrok Nomor Invoice',
+                                html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain beberapa detik lalu.<br>Silakan ganti nomor invoice atau klik bayar ulang untuk mendapat nomor urut baru.`,
+                                confirmButtonColor: '#dc2626'
+                            });
+                            
+                            // (Opsional) Langsung buatkan nomor baru otomatis
+                            if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
+                                await this.generateInvoiceNumber(); 
+                            }
+                            
+                            this.isProcessing = false;
+                            return; // Stop. Jangan lanjutkan simpan data
                         }
                     }
                     // =================================================================
