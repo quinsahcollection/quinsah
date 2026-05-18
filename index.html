@@ -2090,12 +2090,15 @@
                             </div>
                         </div>
 
-                        <div class="mb-4 border-top pt-3">
+                                                <div class="mb-4 border-top pt-3">
                             <label class="form-label small fw-bold"><i class="bi bi-pencil-square me-1"></i>Catatan Khusus</label>
                             <textarea class="form-control form-control-sm" v-model="cartItemEdit.note" rows="2" placeholder="Tulis instruksi khusus (Cth: Jangan dibungkus plastik)..."></textarea>
                         </div>
                         
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveCartItemEdit"><i class="bi bi-check-circle me-1"></i> Terapkan Perubahan</button>
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="saveCartItemEdit"><i class="bi bi-check-circle me-1"></i> Terapkan Perubahan</button>
+                        
+                        <button class="btn btn-outline-success w-100 fw-bold py-2" @click="duplicateItemAsBonus"><i class="bi bi-plus-square me-1"></i> Jadikan Baris Baru (Bonus)</button>
+
                     </div>
                 </div>
             </div>
@@ -3560,7 +3563,7 @@
                 }
             },
 
-            addToCart(variant = null) {
+                        addToCart(variant = null) {
                 let item = {
                     cartId: Date.now() + Math.random().toString(36).substring(7),
                     productId: this.activeProduct.id,
@@ -3573,19 +3576,28 @@
                     note: '',
                     tiers: JSON.parse(JSON.stringify(this.activeProduct.tiers || []))
                 };
+                
                 if(variant) {
                     item.variantName = variant.name || variant.attributes;
                     item.variantSku = variant.variantSku;
                 }
                 
-                let existing = this.cart.find(c => c.productId === item.productId && c.variantSku === item.variantSku);
+                // LOGIKA AMAN: Cari barang yang sama, TAPI abaikan barang yang sudah ditandai "isSeparated" (Barang Bonus)
+                let existing = this.cart.find(c => 
+                    c.productId === item.productId && 
+                    c.variantSku === item.variantSku && 
+                    !c.isSeparated
+                );
+                
                 if(existing) {
                     existing.qty += 1;
                 } else {
                     this.cart.push(item);
                 }
+                
                 this.hideModal('posModifierModal');
             },
+
 
             updateQty(cartId, delta) {
                 let item = this.cart.find(c => c.cartId === cartId);
@@ -3609,6 +3621,33 @@
                 }
                 this.hideModal('editCartItemModal');
             },
+
+            // FUNGSI MENDUPLIKAT BARANG JADI BARIS BARU (HARGA NORMAL)
+            duplicateItemAsBonus() {
+                // 1. Copy item yang sedang dibuka
+                let newItem = JSON.parse(JSON.stringify(this.cartItemEdit));
+                
+                // 2. Beri ID keranjang baru agar pisah
+                newItem.cartId = Date.now() + Math.random().toString(36).substring(7);
+                
+                // 3. Reset Qty ke 1
+                newItem.qty = 1;
+                
+                // 4. KUNCI RAHASIA: Beri penanda ini agar tidak menyatu dengan barang aslinya
+                newItem.isSeparated = true; 
+                
+                // 5. KOSONGKAN DISKON (Biarkan harga kembali normal)
+                newItem.posDiscountType = 'none';
+                newItem.posDiscountValue = 0;
+                newItem.note = 'Baris Terpisah'; // Kasir bisa ubah catatan ini nanti
+                
+                // 6. Masukkan ke keranjang
+                this.cart.push(newItem);
+                
+                // 7. Simpan item asli & Tutup modal
+                this.saveCartItemEdit();
+            },
+
 
             openPaymentModal() {
                 this.paymentData = { method: 'CASH', amountReceived: this.total };
