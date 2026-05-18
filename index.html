@@ -3061,11 +3061,22 @@
             subtotal() { return this.cart.reduce((sum, item) => sum + (this.getFinalItemPrice(item) * item.qty), 0); },
             discountAmount() { const membershipId = this.selectedCustomer ? this.selectedCustomer.membershipId : null; return (this.subtotal) * (this.getMembershipDiscount(membershipId) / 100); },
             // TAMBAHAN: Hitung Diskon Global
-            globalDiscountAmount() { 
-                if (this.globalDiscountType === 'nominal') return this.globalDiscountValue || 0;
-                if (this.globalDiscountType === 'percent') return this.subtotal * ((this.globalDiscountValue || 0) / 100);
-                return 0;
-            },
+            globalDiscountAmount() {
+    // Konversi kuat ke tipe data Angka (jika string kosong atau null, jadi 0)
+    let val = Number(this.globalDiscountValue);
+    if (isNaN(val)) val = 0;
+
+    let subTotalVal = Number(this.subtotal);
+    if (isNaN(subTotalVal)) subTotalVal = 0;
+
+    if (this.globalDiscountType === 'nominal') {
+        return val;
+    } 
+    if (this.globalDiscountType === 'percent') {
+        return subTotalVal * (val / 100);
+    }
+    return 0;
+},
             
             // UBAH: netSubtotal dikurangi globalDiscountAmount juga
             netSubtotal() { return this.subtotal - this.discountAmount - this.globalDiscountAmount; },
