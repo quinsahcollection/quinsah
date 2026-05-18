@@ -860,8 +860,9 @@
                             <h6 class="fw-bold mb-0">Form Penyesuaian Stok (Opname)</h6>
                             <p class="text-muted small mb-0">Samakan stok di sistem dengan fisik di gudang/toko.</p>
                         </div>
-                        <button class="btn btn-sm btn-primary-custom" :disabled="!invOutletFilter">
-                            <i class="bi bi-save me-1"></i> Simpan Penyesuaian
+                        <button class="btn btn-sm btn-primary-custom" :disabled="!invOutletFilter || isProcessing" @click="saveStokOpname">
+                            <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-save me-1"></i> Simpan Penyesuaian
                         </button>
                     </div>
 
@@ -910,10 +911,10 @@
                                             {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : '-' }}
                                         </td>
                                         <td class="bg-warning bg-opacity-10">
-                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" :disabled="!invOutletFilter">
+                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]" :disabled="!invOutletFilter">
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." :disabled="!invOutletFilter">
+                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]" :disabled="!invOutletFilter">
                                         </td>
                                     </tr>
                                     <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
@@ -925,10 +926,10 @@
                                             {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : '-' }}
                                         </td>
                                         <td class="bg-warning bg-opacity-10">
-                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" :disabled="!invOutletFilter">
+                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]" :disabled="!invOutletFilter">
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." :disabled="!invOutletFilter">
+                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]" :disabled="!invOutletFilter">
                                         </td>
                                     </tr>
                                 </template>
@@ -2488,7 +2489,7 @@
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
                 invSearchQuery: '', invCategoryFilter: '', invProductFilter: '', invOutletFilter: '',
                 logStartDate: '', logEndDate: '',
-
+                opnameFisik: {}, opnameNote: {},
                 formCategory: { id: null, name: '', parentId: '' },
                 formUom: { id: null, name: '' },
                 formTag: { id: null, name: '' },
@@ -4220,9 +4221,114 @@
             openStockDetail(logSummary) {
                 this.activeStockDetail = logSummary;
                 this.showModal('stockDetailModal');
+            }, // <--- JANGAN LUPA KOMA DI SINI
+
+            // ----------------------------------------
+            // FUNGSI UNTUK MENYIMPAN STOK OPNAME
+            // ----------------------------------------
+            async saveStokOpname() {
+                if (!this.invOutletFilter) return;
+
+                let updatesToMake = [];
+                let outletName = this.getOutletName(this.invOutletFilter);
+
+                // Kumpulkan data yang diisi (dicocokkan perbedaannya)
+                this.filteredInventoryProducts.forEach(p => {
+                    if (!p.variants || p.variants.length === 0) {
+                        let fisikVal = this.opnameFisik[p.id];
+                        if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
+                            let stokSistem = this.getProductStockAtOutlet(p, this.invOutletFilter);
+                            let diff = parseInt(fisikVal) - stokSistem;
+                            if (diff !== 0) {
+                                updatesToMake.push({
+                                    isVariant: false, product: p, variant: null,
+                                    sku: p.sku || '-', name: p.name,
+                                    diff: diff, note: this.opnameNote[p.id] || 'Penyesuaian Opname Fisik'
+                                });
+                            }
+                        }
+                    } else {
+                        p.variants.forEach(v => {
+                            let fisikVal = this.opnameFisik[v.variantSku];
+                            if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
+                                let stokSistem = (v.outletStocks && v.outletStocks[this.invOutletFilter]) ? v.outletStocks[this.invOutletFilter] : 0;
+                                let diff = parseInt(fisikVal) - stokSistem;
+                                if (diff !== 0) {
+                                    updatesToMake.push({
+                                        isVariant: true, product: p, variant: v,
+                                        sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
+                                        diff: diff, note: this.opnameNote[v.variantSku] || 'Penyesuaian Opname Fisik'
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (updatesToMake.length === 0) {
+                    Swal.fire({ icon: 'info', title: 'Tidak Ada Perubahan', text: 'Tidak ada perbedaan stok yang diisi, atau Anda belum memasukkan angka fisik.' });
+                    return;
+                }
+
+                this.askConfirm('Simpan Stok Opname?', `Ditemukan ${updatesToMake.length} produk/varian yang akan disesuaikan stoknya untuk cabang ${outletName}. Lanjutkan?`, async () => {
+                    this.isProcessing = true;
+                    try {
+                        let nowStr = new Date().toLocaleString('id-ID');
+                        let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+                        let batchId = 'OPN-' + Math.floor(Math.random() * 90000 + 10000);
+
+                        for (let update of updatesToMake) {
+                            let prod = this.products.find(x => x.id === update.product.id);
+                            if (!prod) continue;
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                            // Update angka stok di tabel Products
+                            if (update.isVariant) {
+                                let vIdx = prodCopy.variants.findIndex(x => x.variantSku === update.variant.variantSku);
+                                if (vIdx !== -1) {
+                                    if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                    prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] = (prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] || 0) + update.diff;
+                                }
+                            } else {
+                                if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                prodCopy.baseOutletStocks[this.invOutletFilter] = (prodCopy.baseOutletStocks[this.invOutletFilter] || 0) + update.diff;
+                            }
+                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                            // Tulis riwayat di Log Mutasi / Kartu Stok
+                            await addDoc(collection(db, "stockLogs"), {
+                                createdAt: serverTimestamp(),
+                                dateStr: nowStr,
+                                refId: batchId,
+                                type: update.diff > 0 ? 'IN' : 'OUT',
+                                productId: prod.id,
+                                sku: update.sku,
+                                productName: update.name,
+                                variantSku: update.isVariant ? update.variant.variantSku : null,
+                                variantName: update.isVariant ? update.variantName : '-',
+                                qtyChange: update.diff,
+                                outletId: this.invOutletFilter,
+                                userName: currentUser,
+                                note: update.note
+                            });
+                        }
+
+                        Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dengan stok fisik aktual.', timer: 2000, showConfirmButton: false});
+                        
+                        // Kosongkan form input
+                        this.opnameFisik = {};
+                        this.opnameNote = {};
+
+                    } catch (err) {
+                        console.error("Gagal Opname", err);
+                        Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat menyimpan data opname.'});
+                    }
+                    this.isProcessing = false;
+                });
             }
-        }
-    });
+
+        } // Penutup utama dari 'methods'
+    }); // Penutup dari 'createApp'
 
     vueApp.mount('#app');
 </script>
