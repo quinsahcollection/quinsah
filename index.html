@@ -125,58 +125,83 @@
         }
 
         /* ======================================================= */
-        /* CSS ANTI-BLANK KHUSUS MOBILE BROWSER                    */
+        /* PRINT MEDIA CSS FIXES (MOBILE OPTIMIZED)                */
         /* ======================================================= */
-        
-        /* 1. SAAT DI LAYAR HP/PC BIASA: SEMBUNYIKAN KERTAS CETAK */
-        @media screen {
-            #print-section { 
+        @media print {
+            @page { 
+                margin: 0; 
+                size: auto; /* Biarkan HP yang mengatur ukuran kertas otomatis */
+            }
+            
+            /* 1. BONGKAR KUNCIAN BOOTSTRAP MODAL */
+            html, body, .modal-open { 
+                background-color: white !important; 
+                height: auto !important; 
+                min-height: auto !important;
+                overflow: visible !important; /* PENTING: Bebaskan scroll */
+            }
+            
+            /* 2. SEMBUNYIKAN UI APLIKASI DAN MODAL */
+            .d-print-none, 
+            .app-container, 
+            .auth-wrapper,
+            .modal, 
+            .modal-backdrop,
+            .offcanvas { 
                 display: none !important; 
             }
-        }
-
-        /* 2. SAAT MASUK MODE PRINT: MUNCULKAN KERTAS, SEMBUNYIKAN APLIKASI */
-        @media print {
-            @page { margin: 0; }
             
-            /* Paksa Body agar siap menerima ukuran kertas A4 */
-            html, body {
-                width: 100% !important;
-                height: 100% !important; 
-                margin: 0 !important;
-                padding: 0 !important;
-                background-color: white !important;
-                overflow: visible !important;
-                -webkit-print-color-adjust: exact !important; /* Wajib untuk browser Chrome/Safari HP */
-            }
-
-            /* Sembunyikan semua elemen aplikasi utama */
-            .auth-wrapper, 
-            .app-container, 
-            .modal, 
-            .modal-backdrop {
-                display: none !important;
-                height: 0 !important;
-                overflow: hidden !important;
-            }
-
-            /* MUNCULKAN KARDUS CETAKAN KE DEPAN */
-            #print-section {
+            /* 3. TAMPILKAN AREA CETAK (Gunakan Relative, BUKAN Absolute) */
+            .d-print-block { display: block !important; }
+            #print-section { 
                 display: block !important;
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                background-color: white !important;
-                visibility: visible !important;
-                z-index: 999999 !important;
+                position: relative !important; /* BUKAN absolute */
+                left: 0; top: 0; 
+                margin: 0; padding: 0; 
+                background: #fff; 
+                width: 100%; 
+                z-index: 99999; 
             }
             
-            /* (Pastikan class .mode-a4 dan .mode-receipt Anda tetap ada di bawah ini seperti biasa) */
-            .mode-receipt { width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0; }
-            .mode-a4 { width: 210mm; padding: 15mm; margin: 0 auto; background: #fff; color: #000; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-            .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; }
+            /* 4. UKURAN RESPONSIVE AGAR HP TIDAK BINGUNG */
+            .mode-receipt { 
+                width: 100%; 
+                max-width: 80mm; /* Gunakan max-width, bukan width mati */
+                font-family: 'Courier New', Courier, monospace; 
+                color: #000; 
+                padding: 5mm; 
+                margin: 0 auto; 
+            }
+            .mode-label { 
+                width: 100%; 
+                max-width: 100mm; 
+                height: 150mm; 
+                font-family: 'Inter', sans-serif; 
+                color: #000; 
+                padding: 5mm; 
+                box-sizing: border-box; 
+                margin: 0 auto; 
+                border: none; 
+            }
+            .label-border-box { border: 2px solid #000; height: 100%; padding: 10px; }
+
+            /* A4 Print Format */
+            .mode-a4 { 
+                width: 100%; 
+                max-width: 210mm; /* Biarkan HP mengecilkan tabel jika kurang muat */
+                padding: 10mm 15mm; 
+                margin: 0 auto; 
+                background: #fff; 
+                color: #000; 
+                font-family: 'Inter', sans-serif; 
+                box-sizing: border-box; 
+            }
+            .mode-a4 .header-title { font-size: 24px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; page-break-inside: auto; }
+            .mode-a4 table.a4-table tr { page-break-inside: avoid; page-break-after: auto; }
             .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
+            .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; color: black; }
+            .mode-a4 .info-box { width: 48%; display: inline-block; vertical-align: top; font-size: 13px; line-height: 1.5; }
         }
 
     </style>
@@ -4730,10 +4755,10 @@ async fetchRolesFromDatabase() {
                 this.activePrintData = po;
                 this.printMode = 'poA4';
 
-                // UBAH JEDA MENJADI 1500 JUGA DI SINI
+                // UBAH JEDA MENJADI 1000 JUGA DI SINI
                 setTimeout(() => {
                     window.print();
-                }, 1500);
+                }, 1000);
             });
         },
 
@@ -4866,10 +4891,10 @@ async fetchRolesFromDatabase() {
                 this.activePrintData = trx;
                 this.printMode = mode;
                 
-                // UBAH JEDA MENJADI 1500 (1.5 Detik) AGAR HP SEMPAT MERENDER!
+                // UBAH JEDA MENJADI 1000 (1 Detik) AGAR HP SEMPAT MERENDER!
                 setTimeout(() => {
                     window.print();
-                }, 1500); 
+                }, 1000); 
             });
         },
 
