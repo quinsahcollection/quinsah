@@ -125,11 +125,8 @@
         }
 
         /* PRINT MEDIA CSS FIXES */
-        /* PRINT MEDIA CSS FIXES */
         @media print {
             @page { margin: 0; }
-            
-            /* 1. Reset tinggi dan overflow html & body agar tidak terpotong di HP */
             html, body { 
                 background-color: white !important; 
                 font-size: 12px; 
@@ -137,11 +134,18 @@
                 height: auto !important; 
             }
             
-            .d-print-none { display: none !important; }
+            /* TAMBAHKAN: Sembunyikan Modal dan Backdrop saat Print */
+            .app-container,
+            .modal-backdrop,
+            .modal,
+            .d-print-none { 
+                display: none !important; 
+            }
+            
             .d-print-block { display: block !important; }
             
-            /* 2. Ubah position dari absolute menjadi relative untuk #print-section */
             #print-section { 
+                display: block !important;
                 position: relative !important; 
                 left: 0; 
                 top: 0; 
@@ -149,8 +153,10 @@
                 padding: 0; 
                 background: #fff; 
                 width: 100%; 
-                z-index: 99999; 
+                z-index: 999999; /* Pastikan z-index super tinggi */
             }
+            
+            /* ... (biarkan sisa kode .mode-receipt dll di bawahnya tetap sama) ... */
 
             .mode-receipt { width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0; }
             .mode-label { width: 100mm; height: 150mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; box-sizing: border-box; margin: 0; border: none; }
@@ -2793,8 +2799,11 @@ isEditingUser: false,
             // PENGAMAN PRINT MOBILE: Reset tampilan setelah print batal/selesai
             // =======================================================
             window.addEventListener('afterprint', () => {
-                this.activePrintData = null; 
-                this.printMode = null;
+                // Beri delay 300ms agar layar transisi dengan mulus kembali ke aplikasi
+                setTimeout(() => {
+                    this.activePrintData = null; 
+                    this.printMode = null;
+                }, 300);
             });
             // =======================================================
 
@@ -4712,18 +4721,19 @@ async fetchRolesFromDatabase() {
             },
 
             printPurchase(po) {
-            // 1. Pastikan Anda mengisi data ke variabel yang memicu tampilan cetak
-            // (Bisa activePrintData, atau variabel khusus PO Anda)
-            this.activePrintData = po; 
-            this.printMode = 'a4'; // Mode A4
+    // Sama seperti di atas, gunakan pendekatan yang konsisten
+    this.activePrintData = null;
+    
+    this.$nextTick(() => {
+        this.activePrintData = po;
+        this.printMode = 'a4';
 
-            // 2. WAJIB tambahkan delay ini agar layar PO ter-render sebelum diprint
-            this.$nextTick(() => {
-            setTimeout(() => {
+        setTimeout(() => {
             window.print();
         }, 500);
     });
 },
+        
             // ============================================
             // SISIPKAN FUNGSI PEMBATALAN INVOICE DI SINI
             // ============================================
@@ -4847,15 +4857,19 @@ async fetchRolesFromDatabase() {
             },
 
             triggerPrint(trx, mode) {
-    // Set data terlebih dahulu
-    this.activePrintData = trx;
-    this.printMode = mode;
+    // 1. Reset data print lama agar tidak ada "sisa" tampilan
+    this.activePrintData = null;
     
-    // Tunggu DOM Vue benar-benar diperbarui dengan data struk baru
+    // 2. Set data baru
     this.$nextTick(() => {
-        setTimeout(() => { // Kasih delay render ekstra sedikit 150ms agar gambar/CSS ikut ke-load (opsional tapi disarankan)
+        this.activePrintData = trx;
+        this.printMode = mode;
+        
+        // 3. Delay minimal 300ms - 500ms sangat wajib untuk mobile (iOS/Android)
+        // agar browser sempat merender DOM dari 'display: none' ke 'display: block'
+        setTimeout(() => {
             window.print();
-        }, 150);
+        }, 500);
     });
 },
 
