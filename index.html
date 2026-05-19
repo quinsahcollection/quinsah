@@ -125,14 +125,33 @@
         }
 
         /* PRINT MEDIA CSS FIXES */
+        /* PRINT MEDIA CSS FIXES */
         @media print {
             @page { margin: 0; }
-            body { background-color: white !important; font-size: 12px; }
+            
+            /* 1. Reset tinggi dan overflow html & body agar tidak terpotong di HP */
+            html, body { 
+                background-color: white !important; 
+                font-size: 12px; 
+                overflow: visible !important; 
+                height: auto !important; 
+            }
+            
             .d-print-none { display: none !important; }
             .d-print-block { display: block !important; }
             
-            #print-section { position: absolute; left: 0; top: 0; margin: 0; padding: 0; background: #fff; width: 100%; z-index: 99999; }
-            
+            /* 2. Ubah position dari absolute menjadi relative untuk #print-section */
+            #print-section { 
+                position: relative !important; 
+                left: 0; 
+                top: 0; 
+                margin: 0; 
+                padding: 0; 
+                background: #fff; 
+                width: 100%; 
+                z-index: 99999; 
+            }
+
             .mode-receipt { width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0; }
             .mode-label { width: 100mm; height: 150mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; box-sizing: border-box; margin: 0; border: none; }
             .label-border-box { border: 2px solid #000; height: 100%; padding: 10px; }
