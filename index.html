@@ -124,87 +124,38 @@
             .product-img { height: 130px !important; }
         }
 
+                 /* ======================================================= */
+        /* CSS FIX TOTAL MOBILE PRINTING                           */
         /* ======================================================= */
-        /* PRINT MEDIA CSS FIXES (MOBILE OPTIMIZED)                */
-        /* ======================================================= */
-        @media print {
-            @page { 
-                margin: 0; 
-                size: auto; /* Biarkan HP yang mengatur ukuran kertas otomatis */
-            }
-            
-            /* 1. BONGKAR KUNCIAN BOOTSTRAP MODAL */
-            html, body, .modal-open { 
-                background-color: white !important; 
-                height: auto !important; 
-                min-height: auto !important;
-                overflow: visible !important; /* PENTING: Bebaskan scroll */
-            }
-            
-            /* 2. SEMBUNYIKAN UI APLIKASI DAN MODAL */
-            .d-print-none, 
-            .app-container, 
-            .auth-wrapper,
-            .modal, 
-            .modal-backdrop,
-            .offcanvas { 
-                display: none !important; 
-            }
-            
-            /* 3. TAMPILKAN AREA CETAK (Gunakan Relative, BUKAN Absolute) */
-            .d-print-block { display: block !important; }
+        
+        /* 1. SAAT DI LAYAR: Sembunyikan dengan cara "transparan" BUKAN display:none */
+        @media screen {
             #print-section { 
-                display: block !important;
-                position: relative !important; /* BUKAN absolute */
-                left: 0; top: 0; 
-                margin: 0; padding: 0; 
-                background: #fff; 
-                width: 100%; 
-                z-index: 99999; 
+                position: fixed !important;
+                top: 0; left: 0;
+                opacity: 0 !important; /* Dibuat tembus pandang agar HP tetap merender */
+                z-index: -9999 !important;
+                pointer-events: none !important;
             }
-            
-            /* 4. UKURAN RESPONSIVE AGAR HP TIDAK BINGUNG */
-            .mode-receipt { 
-                width: 100%; 
-                max-width: 80mm; /* Gunakan max-width, bukan width mati */
-                font-family: 'Courier New', Courier, monospace; 
-                color: #000; 
-                padding: 5mm; 
-                margin: 0 auto; 
-            }
-            .mode-label { 
-                width: 100%; 
-                max-width: 100mm; 
-                height: 150mm; 
-                font-family: 'Inter', sans-serif; 
-                color: #000; 
-                padding: 5mm; 
-                box-sizing: border-box; 
-                margin: 0 auto; 
-                border: none; 
-            }
-            .label-border-box { border: 2px solid #000; height: 100%; padding: 10px; }
-
-            /* A4 Print Format */
-            .mode-a4 { 
-                width: 100%; 
-                max-width: 210mm; /* Biarkan HP mengecilkan tabel jika kurang muat */
-                padding: 10mm 15mm; 
-                margin: 0 auto; 
-                background: #fff; 
-                color: #000; 
-                font-family: 'Inter', sans-serif; 
-                box-sizing: border-box; 
-            }
-            .mode-a4 .header-title { font-size: 24px; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-            .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; page-break-inside: auto; }
-            .mode-a4 table.a4-table tr { page-break-inside: avoid; page-break-after: auto; }
-            .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
-            .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; color: black; }
-            .mode-a4 .info-box { width: 48%; display: inline-block; vertical-align: top; font-size: 13px; line-height: 1.5; }
         }
-
-    </style>
+  
+            /* Tampilkan Area Kertas */
+            #print-section {
+    display: none;
+}
+   
+            /* Format Ukuran Kertas Spesifik */
+            .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
+            
+            .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
+            .label-border-box { border: 2px solid #000; padding: 10px; }
+            
+            .mode-a4 { width: 100%; max-width: 210mm; padding: 15mm; margin: 0 auto; color: #000; background: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+            .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
+            .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
+        }
+</style>
 </head>
 <body>
 
@@ -4748,20 +4699,6 @@ async fetchRolesFromDatabase() {
                 this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
             },
 
-            printPurchase(po) {
-            this.activePrintData = null;
-            
-            this.$nextTick(() => {
-                this.activePrintData = po;
-                this.printMode = 'poA4';
-
-                // UBAH JEDA MENJADI 1000 JUGA DI SINI
-                setTimeout(() => {
-                    window.print();
-                }, 1000);
-            });
-        },
-
             // ============================================
             // SISIPKAN FUNGSI PEMBATALAN INVOICE DI SINI
             // ============================================
@@ -4884,17 +4821,95 @@ async fetchRolesFromDatabase() {
                 });
             },
 
-            triggerPrint(trx, mode) {
-            this.activePrintData = null; // Bersihkan data lama
-            
-            this.$nextTick(() => {
-                this.activePrintData = trx;
-                this.printMode = mode;
+                    // 1. TAMBAHKAN FUNGSI BARU INI UNTUK IFRAME PRINTING
+        doActualPrint() {
+            const printContent = document.getElementById('print-section');
+            if (!printContent) return;
+
+            // Buat layar bayangan (Iframe) rahasia sebesar layar HP
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.width = '100vw';
+            iframe.style.height = '100vh';
+            iframe.style.opacity = '0'; // Tembus pandang agar tak mengganggu layar
+            iframe.style.zIndex = '-9999';
+            iframe.style.pointerEvents = 'none';
+            document.body.appendChild(iframe);
+
+            const iframeDoc = iframe.contentWindow.document;
+
+            // Ambil semua style CSS dari aplikasi kita
+            const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+            let styleHTML = '';
+            styles.forEach(s => styleHTML += s.outerHTML);
+
+            // Suntikkan desain struk/PO ke dalam layar bayangan tersebut
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    ${styleHTML}
+                    <style>
+                        /* Paksa print-section tampil sempurna di iframe */
+                        body { background: white !important; margin: 0; padding: 0; }
+                        #print-section { 
+                            display: block !important; 
+                            opacity: 1 !important; 
+                            visibility: visible !important; 
+                            position: static !important;
+                            width: 100% !important;
+                        }
+                        @media print {
+                            @page { margin: 0; size: auto; }
+                            body { -webkit-print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent.outerHTML}
+                </body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            // Beri jeda agar HP memproses HTML, lalu tembak perintah Print
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
                 
-                // UBAH JEDA MENJADI 1000 (1 Detik) AGAR HP SEMPAT MERENDER!
+                // Bersihkan memori HP setelah selesai
                 setTimeout(() => {
-                    window.print();
-                }, 1000); 
+                    document.body.removeChild(iframe);
+                }, 3000);
+            }, 1000); 
+        },
+
+        // 2. TIMPA FUNGSI triggerPrint LAMA ANDA
+        triggerPrint(trx, mode) {
+            this.activePrintData = trx;
+            this.printMode = mode;
+            
+            // Biarkan Vue memasukkan data ke HTML, lalu panggil fungsi Iframe
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.doActualPrint();
+                }, 300);
+            });
+        },
+
+        // 3. TIMPA FUNGSI printPurchase LAMA ANDA
+        printPurchase(po) {
+            this.activePrintData = po;
+            this.printMode = 'poA4';
+
+            // Biarkan Vue memasukkan data ke HTML, lalu panggil fungsi Iframe
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.doActualPrint();
+                }, 300);
             });
         },
 
