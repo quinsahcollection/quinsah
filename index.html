@@ -206,14 +206,38 @@
         
         <aside class="sidebar-left">
             <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
-            <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'"><i class="bi bi-display"></i> POS</div>
-            <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="userRole === 'Admin'"><i class="bi bi-cart-plus"></i> Pembelian</div>
-            <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="userRole === 'Admin'"><i class="bi bi-tags"></i> Master</div>
-            <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="userRole === 'Admin'"><i class="bi bi-box-seam"></i> Inventori</div>
-            <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'"><i class="bi bi-people"></i> CRM</div>
-            <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="userRole === 'Admin'"><i class="bi bi-shop"></i> Outlets</div>
-            <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'"><i class="bi bi-receipt-cutoff"></i> Laporan</div>
-            <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="userRole === 'Admin'"><i class="bi bi-gear"></i> Setelan</div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
+                <i class="bi bi-display"></i> POS
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
+                <i class="bi bi-cart-plus"></i> Pembelian
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="hasAccess('catalog', 'read')">
+                <i class="bi bi-tags"></i> Master
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
+                <i class="bi bi-box-seam"></i> Inventori
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
+                <i class="bi bi-people"></i> CRM
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="hasAccess('outlets', 'read')">
+                <i class="bi bi-shop"></i> Outlets
+            </div>
+            
+            <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
+                <i class="bi bi-receipt-cutoff"></i> Laporan
+            </div>
+            
+            <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
+                <i class="bi bi-gear"></i> Setelan
+            </div>
         </aside>
 
         <main class="main-content">
@@ -393,104 +417,225 @@
 
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings' && userRole === 'Admin'">
-                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
-                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
-                </ul>
+    <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='hak_akses', 'bg-primary-custom': settingTab==='hak_akses'}" href="#" @click.prevent="settingTab='hak_akses'">Hak Akses (Role)</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='users', 'bg-primary-custom': settingTab==='users'}" href="#" @click.prevent="settingTab='users'">Manajemen User</a></li>
+    </ul>
 
-                <div v-if="settingTab==='invoice'" class="dashboard-card">
+    <div v-if="settingTab==='invoice'" class="dashboard-card">
+        <div class="mb-3">
+            <h6 class="fw-bold mb-1">Pengaturan Penomoran Invoice Otomatis</h6>
+            <p class="text-muted small">Atur prefix/awalan dan pola penomoran untuk transaksi kasir (POS) maupun Purchase Order (PO).</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="p-3 bg-light border rounded">
+                    <h6 class="fw-bold text-primary-custom mb-3"><i class="bi bi-display me-2"></i>Invoice POS (Penjualan)</h6>
                     <div class="mb-3">
-                        <h6 class="fw-bold mb-1">Pengaturan Penomoran Invoice Otomatis</h6>
-                        <p class="text-muted small">Atur prefix/awalan dan pola penomoran untuk transaksi kasir (POS) maupun Purchase Order (PO).</p>
+                        <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
+                        <input type="text" class="form-control form-control-sm" v-model="appSettings.posPrefix" placeholder="Cth: INV">
                     </div>
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light border rounded">
-                                <h6 class="fw-bold text-primary-custom mb-3"><i class="bi bi-display me-2"></i>Invoice POS (Penjualan)</h6>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
-                                    <input type="text" class="form-control form-control-sm" v-model="appSettings.posPrefix" placeholder="Cth: INV">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
-                                    <select class="form-select form-select-sm" v-model="appSettings.posPattern">
-                                        <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
-                                        <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
-                                        <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
-                                        <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-light border rounded">
-                                <h6 class="fw-bold text-success mb-3"><i class="bi bi-cart-plus me-2"></i>Invoice PO (Pembelian)</h6>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
-                                    <input type="text" class="form-control form-control-sm" v-model="appSettings.poPrefix" placeholder="Cth: PO">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
-                                    <select class="form-select form-select-sm" v-model="appSettings.poPattern">
-                                        <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
-                                        <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
-                                        <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
-                                        <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary-custom mt-4 fw-bold px-4 w-100 w-md-auto" @click="saveSettings" :disabled="isSaving">
-                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Format Invoice
-                    </button>
-                </div>
-
-                <div v-if="settingTab==='uoms'" class="dashboard-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">Master Satuan Produk (UOM)</h6>
-                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addUomModal')"><i class="bi bi-plus-lg me-1"></i> Tambah UOM</button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom align-middle">
-                            <thead><tr><th>Nama Satuan</th><th>Aksi</th></tr></thead>
-                            <tbody>
-                                <tr v-for="u in uoms" :key="u.id">
-                                    <td class="fw-bold small">{{ u.name }}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('uoms', u, 'formUom', 'addUomModal')"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('uoms', u.id)"><i class="bi bi-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr v-if="uoms.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div v-if="settingTab==='tags'" class="dashboard-card">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">Master Tag Produk Khusus</h6>
-                        <button class="btn btn-sm btn-primary-custom" @click="openModal('addTagModal')"><i class="bi bi-plus-lg me-1"></i> Tambah Tag</button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom align-middle">
-                            <thead><tr><th>Nama Tag</th><th>Aksi</th></tr></thead>
-                            <tbody>
-                                <tr v-for="t in tags" :key="t.id">
-                                    <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ t.name }}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('tags', t, 'formTag', 'addTagModal')"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('tags', t.id)"><i class="bi bi-trash"></i></button>
-                                    </td>
-                                </tr>
-                                <tr v-if="tags.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
+                        <select class="form-select form-select-sm" v-model="appSettings.posPattern">
+                            <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
+                            <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
+                            <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
+                            <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
+                        </select>
                     </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="p-3 bg-light border rounded">
+                    <h6 class="fw-bold text-success mb-3"><i class="bi bi-cart-plus me-2"></i>Invoice PO (Pembelian)</h6>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Prefiks / Awalan Huruf</label>
+                        <input type="text" class="form-control form-control-sm" v-model="appSettings.poPrefix" placeholder="Cth: PO">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pola Tanggal Tengah</label>
+                        <select class="form-select form-select-sm" v-model="appSettings.poPattern">
+                            <option value="none">Tanpa Tanggal (Hanya Angka Acak/Urut)</option>
+                            <option value="YYYYMMDD">TahunBulanHari (Cth: 20260515)</option>
+                            <option value="YYYYMM">TahunBulan (Cth: 202605)</option>
+                            <option value="YYMM">2 Digit Tahun + Bulan (Cth: 2605)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary-custom mt-4 fw-bold px-4 w-100 w-md-auto" @click="saveSettings" :disabled="isSaving">
+            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Format Invoice
+        </button>
+    </div>
+
+    <div v-if="settingTab==='uoms'" class="dashboard-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Master Satuan Produk (UOM)</h6>
+            <button class="btn btn-sm btn-primary-custom" @click="openModal('addUomModal')"><i class="bi bi-plus-lg me-1"></i> Tambah UOM</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead><tr><th>Nama Satuan</th><th>Aksi</th></tr></thead>
+                <tbody>
+                    <tr v-for="u in uoms" :key="u.id">
+                        <td class="fw-bold small">{{ u.name }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('uoms', u, 'formUom', 'addUomModal')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('uoms', u.id)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr v-if="uoms.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div v-if="settingTab==='tags'" class="dashboard-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Master Tag Produk Khusus</h6>
+            <button class="btn btn-sm btn-primary-custom" @click="openModal('addTagModal')"><i class="bi bi-plus-lg me-1"></i> Tambah Tag</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead><tr><th>Nama Tag</th><th>Aksi</th></tr></thead>
+                <tbody>
+                    <tr v-for="t in tags" :key="t.id">
+                        <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ t.name }}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('tags', t, 'formTag', 'addTagModal')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('tags', t.id)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    <tr v-if="tags.length === 0"><td colspan="2" class="text-center py-3 text-muted small">Data kosong.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div v-if="settingTab === 'hak_akses'" class="dashboard-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Level Otorisasi Jabatan (Hak Akses)</h6>
+            <button class="btn btn-sm btn-primary-custom" @click="initNewRole()"><i class="bi bi-plus-lg me-1"></i> Buat Level Baru</button>
+        </div>
+
+        <div class="card bg-light border-0 mb-4" v-if="formRole.id">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">{{ isEditingRole ? 'Edit Matriks Hak Akses' : 'Buat Level Akses Baru' }}</h6>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nama Jabatan / Role</label>
+                    <input type="text" class="form-control" v-model="formRole.name" placeholder="Contoh: Admin Gudang, Kasir">
+                </div>
+
+                <div class="table-responsive bg-white rounded border">
+                    <table class="table table-sm table-custom align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Modul Sistem</th>
+                                <th class="text-center">Lihat (Read)</th>
+                                <th class="text-center">Ubah/Hapus (Write)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="mod in appModules" :key="mod.id">
+                                <td class="fw-bold small">{{ mod.name }}</td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" v-model="formRole.permissions[mod.id].read">
+                                </td>
+                                <td class="text-center">
+                                    <input class="form-check-input" type="checkbox" v-model="formRole.permissions[mod.id].write" @change="formRole.permissions[mod.id].write ? formRole.permissions[mod.id].read = true : null">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button class="btn btn-sm btn-secondary" @click="formRole.id = null">Batal</button>
+                    <button class="btn btn-sm btn-primary-custom" @click="saveRole()">Simpan Hak Akses</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead><tr><th>ID</th><th>Nama Jabatan</th><th>Aksi</th></tr></thead>
+                <tbody>
+                    <tr v-for="role in roles" :key="role.id">
+                        <td class="text-muted small">#{{ role.id }}</td>
+                        <td class="fw-bold">{{ role.name }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" :disabled="role.id === 1" @click="editRole(role)"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger py-1" :disabled="role.id === 1 || role.id === 2" @click="deleteRole(role.id)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div v-if="settingTab === 'users'" class="dashboard-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Manajemen Kredensial User</h6>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm" :value="loggedInUser ? loggedInUser.id : ''" @change="switchUserSimulate($event.target.value)" style="width: 150px;">
+                    <option v-for="u in usersList" :key="u.id" :value="u.id">Login: {{ u.namaLengkap }}</option>
+                </select>
+                <button class="btn btn-sm btn-primary-custom" @click="initNewUser()"><i class="bi bi-person-plus me-1"></i> Tambah User</button>
+            </div>
+        </div>
+
+        <div class="card bg-light border-0 mb-4" v-if="formUser.id">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">{{ isEditingUser ? 'Edit Data User' : 'Registrasi User Baru' }}</h6>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formUser.namaLengkap">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Jabatan / Hak Akses</label>
+                        <select class="form-select form-select-sm" v-model="formUser.roleId">
+                            <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formUser.username">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Password</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formUser.password">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button class="btn btn-sm btn-secondary" @click="formUser.id = null">Batal</button>
+                    <button class="btn btn-sm btn-primary-custom" @click="saveUser()">Simpan User</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead><tr><th>Nama Karyawan</th><th>Username</th><th>Role / Jabatan</th><th>Aksi</th></tr></thead>
+                <tbody>
+                    <tr v-for="u in usersList" :key="u.id">
+                        <td class="fw-bold small">{{ u.namaLengkap }}</td>
+                        <td><code>{{ u.username }}</code></td>
+                        <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ getRoleName(u.roleId) }}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editUser(u)"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger py-1" :disabled="u.id === 1" @click="deleteUser(u.id)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
             <!-- CATALOG VIEW -->
             <div v-if="currentView === 'catalog' && userRole === 'Admin'">
@@ -2567,6 +2712,42 @@
                 transactionEndDate: '',
                 transactionSearchQuery: '', 
             
+                // --- SALIN DARI SINI DAN MASUKKAN KE DALAM DATA() ---
+appModules: [
+    { id: 'dashboard', name: 'Dashboard Utama' },
+    { id: 'pos', name: 'Point of Sales (Kasir)' },
+    { id: 'produk', name: 'Manajemen Produk & Stok' },
+    { id: 'laporan', name: 'Laporan Keuangan & Penjualan' },
+    { id: 'pengaturan', name: 'Pengaturan Sistem & Hak Akses' }
+],
+roles: [
+    { 
+        id: 1, 
+        name: 'Super Admin', 
+        permissions: {} // Super Admin otomatis bypass semua hak akses (bisa semua)
+    },
+    { 
+        id: 2, 
+        name: 'Kasir', 
+        permissions: {
+            'dashboard': { read: true, write: false },
+            'pos': { read: true, write: true },
+            'produk': { read: true, write: false },
+            'laporan': { read: false, write: false },
+            'pengaturan': { read: false, write: false }
+        }
+    }
+],
+usersList: [
+    { id: 1, username: 'admin', password: '123', roleId: 1, namaLengkap: 'Budi Owner' },
+    { id: 2, username: 'kasir1', password: '123', roleId: 2, namaLengkap: 'Siti Aminah' }
+],
+loggedInUser: { id: 1, username: 'admin', roleId: 1, namaLengkap: 'Budi Owner' }, // Contoh user default yang sedang login
+currentSettingTab: 'hak_akses', // Tab default di menu setting
+formRole: { id: null, name: '', permissions: {} },
+formUser: { id: null, username: '', password: '', roleId: null, namaLengkap: '' },
+isEditingRole: false,
+isEditingUser: false,
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -2597,6 +2778,7 @@
                 isProcessing: false, isMobileCartOpen: false, heldTransactions: []
             }
         },
+
         mounted() {
             this.resetPosDate();
             
@@ -3127,6 +3309,109 @@
                 this.hideModal('confirmModal');
                 if (this.confirmCallback) { await this.confirmCallback(); this.confirmCallback = null; }
             },
+
+            // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
+hasAccess(moduleId, action = 'read') {
+    if (!this.loggedInUser) return false;
+    
+    // Super Admin (roleId: 1) selalu memiliki semua akses penuh
+    if (this.loggedInUser.roleId === 1 || this.loggedInUser.roleId === '1') return true;
+
+    const userRole = this.roles.find(r => r.id == this.loggedInUser.roleId);
+    if (!userRole || !userRole.permissions || !userRole.permissions[moduleId]) return false;
+
+    return userRole.permissions[moduleId][action] === true;
+},
+getRoleName(roleId) {
+    const role = this.roles.find(r => r.id == roleId);
+    return role ? role.name : 'Tidak Ada Role';
+},
+initNewRole() {
+    this.isEditingRole = false;
+    this.formRole = { id: Date.now(), name: '', permissions: {} };
+    this.appModules.forEach(mod => {
+        this.formRole.permissions[mod.id] = { read: false, write: false };
+    });
+},
+editRole(role) {
+    this.isEditingRole = true;
+    this.formRole = JSON.parse(JSON.stringify(role));
+    // Validasi jika ada modul baru yang belum terdaftar di role lama
+    this.appModules.forEach(mod => {
+        if (!this.formRole.permissions[mod.id]) {
+            this.formRole.permissions[mod.id] = { read: false, write: false };
+        }
+    });
+},
+saveRole() {
+    if (!this.formRole.name.trim()) {
+        Swal.fire('Error', 'Nama Role tidak boleh kosong!', 'error');
+        return;
+    }
+    if (this.isEditingRole) {
+        const index = this.roles.findIndex(r => r.id === this.formRole.id);
+        if (index !== -1) this.roles[index] = JSON.parse(JSON.stringify(this.formRole));
+    } else {
+        this.roles.push(JSON.parse(JSON.stringify(this.formRole)));
+    }
+    Swal.fire('Berhasil', 'Data Hak Akses berhasil disimpan.', 'success');
+    this.formRole = { id: null, name: '', permissions: {} };
+},
+deleteRole(roleId) {
+    if (roleId === 1 || roleId === 2) {
+        Swal.fire('Ditolak', 'Role bawaan sistem tidak boleh dihapus!', 'warning');
+        return;
+    }
+    Swal.fire({
+        title: 'Apakah anda yakin?',
+        text: "User dengan Role ini akan kehilangan akses!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.roles = this.roles.filter(r => r.id !== roleId);
+            Swal.fire('Terhapus', 'Role berhasil didelete.', 'success');
+        }
+    });
+},
+initNewUser() {
+    this.isEditingUser = false;
+    this.formUser = { id: Date.now(), username: '', password: '', roleId: '', namaLengkap: '' };
+},
+editUser(user) {
+    this.isEditingUser = true;
+    this.formUser = { ...user };
+},
+saveUser() {
+    if (!this.formUser.username || !this.formUser.password || !this.formUser.roleId) {
+        Swal.fire('Error', 'Semua field user wajib diisi!', 'error');
+        return;
+    }
+    if (this.isEditingUser) {
+        const index = this.usersList.findIndex(u => u.id === this.formUser.id);
+        if (index !== -1) this.usersList[index] = { ...this.formUser };
+    } else {
+        this.usersList.push({ ...this.formUser });
+    }
+    Swal.fire('Berhasil', 'Data User berhasil disimpan.', 'success');
+    this.formUser = { id: null, username: '', password: '', roleId: null, namaLengkap: '' };
+},
+deleteUser(userId) {
+    if (userId === 1) {
+        Swal.fire('Ditolak', 'Super Admin utama tidak bisa dihapus!', 'warning');
+        return;
+    }
+    this.usersList = this.usersList.filter(u => u.id !== userId);
+    Swal.fire('Terhapus', 'User berhasil dihapus.', 'success');
+},
+switchUserSimulate(userId) {
+    const user = this.usersList.find(u => u.id == userId);
+    if(user) {
+        this.loggedInUser = user;
+        Swal.fire('Simulasi Login', `Sekarang Anda masuk sebagai: ${user.namaLengkap} (${this.getRoleName(user.roleId)})`, 'info');
+    }
+},
 
             generateInvoiceNumber(type) {
                 const s = this.appSettings;
