@@ -2806,8 +2806,9 @@ isEditingUser: false,
                         this.initAppListeners(); 
                         
                         // ===== LETAKKAN DI SINI =====
-                        // Ambil daftar user dari Firestore HANYA setelah dipastikan berhasil login
+                        // Ambil daftar user dan role dari Firestore HANYA setelah dipastikan berhasil login
                         this.fetchUsersFromDatabase();
+                        this.fetchRolesFromDatabase(); // <--- TAMBAHKAN BARIS INI DI SINI
                         // ============================
                         
                     } else { 
@@ -2820,7 +2821,7 @@ isEditingUser: false,
                     this.isAppReady = true; 
                 }
             });
-        },
+            },
         
         computed: {
             structuredCategories() {
@@ -3373,35 +3374,65 @@ editRole(role) {
         }
     });
 },
-saveRole() {
+async saveRole() {
     if (!this.formRole.name.trim()) {
         Swal.fire('Error', 'Nama Role tidak boleh kosong!', 'error');
         return;
     }
-    if (this.isEditingRole) {
-        const index = this.roles.findIndex(r => r.id === this.formRole.id);
-        if (index !== -1) this.roles[index] = JSON.parse(JSON.stringify(this.formRole));
-    } else {
-        this.roles.push(JSON.parse(JSON.stringify(this.formRole)));
+
+    try {
+        // Jika buat baru, gunakan timestamp sebagai ID unik dokumennya
+        const roleIdStr = String(this.formRole.id);
+        const roleRef = doc(db, "roles", roleIdStr);
+
+        // Simpan matriks ke Firestore
+        await setDoc(roleRef, {
+            name: this.formRole.name,
+            permissions: this.formRole.permissions
+        });
+
+        Swal.fire('Berhasil', 'Konfigurasi Hak Akses berhasil disimpan ke database cloud.', 'success');
+        
+        // Reset form
+        this.formRole = { id: null, name: '', permissions: {} };
+        this.isEditingRole = false;
+
+        // Refresh data di layar dari database terbaru
+        this.fetchRolesFromDatabase();
+
+    } catch (error) {
+        console.error("Gagal menyimpan role ke Firebase:", error);
+        Swal.fire('Error', 'Gagal menyimpan Hak Akses ke database.', 'error');
     }
-    Swal.fire('Berhasil', 'Data Hak Akses berhasil disimpan.', 'success');
-    this.formRole = { id: null, name: '', permissions: {} };
 },
-deleteRole(roleId) {
-    if (roleId === 1 || roleId === 2) {
-        Swal.fire('Ditolak', 'Role bawaan sistem tidak boleh dihapus!', 'warning');
+
+async deleteRole(roleId) {
+    // Proteksi agar role penting bawaan sistem tidak bisa terhapus sengaja/tidak sengaja
+    if (roleId === 1 || roleId === '1' || roleId === 2 || roleId === '2') {
+        Swal.fire('Ditolak', 'Role bawaan utama sistem tidak boleh dihapus!', 'warning');
         return;
     }
+
     Swal.fire({
         title: 'Apakah anda yakin?',
-        text: "User dengan Role ini akan kehilangan akses!",
+        text: "User yang terhubung dengan jabatan ini akan kehilangan akses masuk!",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Hapus!'
-    }).then((result) => {
+        confirmButtonText: 'Ya, Hapus Permanen!'
+    }).then(async (result) => {
         if (result.isConfirmed) {
-            this.roles = this.roles.filter(r => r.id !== roleId);
-            Swal.fire('Terhapus', 'Role berhasil didelete.', 'success');
+            try {
+                // Hapus dokumen role di Firestore
+                await deleteDoc(doc(db, "roles", String(roleId)));
+                
+                Swal.fire('Terhapus', 'Role berhasil dihapus dari database cloud.', 'success');
+                
+                // Refresh data di layar
+                this.fetchRolesFromDatabase();
+            } catch (error) {
+                console.error("Gagal mendelete role:", error);
+                Swal.fire('Error', 'Gagal menghapus data dari database.', 'error');
+            }
         }
     });
 },
@@ -3529,6 +3560,55 @@ async fetchUsersFromDatabase() {
                 Swal.fire('Error Firebase', error.message, 'error');
             }
         },
+
+async fetchRolesFromDatabase() {
+    try {
+        const rolesRef = collection(db, "roles");
+        const querySnapshot = await getDocs(rolesRef);
+        let dataDariFirebase = [];
+
+        querySnapshot.forEach((doc) => {
+            dataDariFirebase.push({
+                id: parseInt(doc.id) || doc.id, // Pertahankan ID sebagai angka atau string
+                ...doc.data()
+            });
+        });
+
+        // JIKA DI DATABASE FIREBASE MASIH KOSONG, ISI DENGAN DATA DEFAULT UTK AWAL
+        if (dataDariFirebase.length === 0) {
+            this.roles = [
+                { id: 1, name: 'Super Admin', permissions: {} },
+                { 
+                    id: 2, 
+                    name: 'Kasir', 
+                    permissions: {
+                        'pos': { read: true, write: true },
+                        'purchase': { read: false, write: false },
+                        'catalog': { read: true, write: false },
+                        'inventory': { read: false, write: false },
+                        'crm': { read: true, write: true },
+                        'outlets': { read: false, write: false },
+                        'reports': { read: false, write: false },
+                        'settings': { read: false, write: false }
+                    }
+                }
+            ];
+            // Langsung upload data awal ini ke Firebase agar database tidak kosong lagi
+            for (let r of this.roles) {
+                await setDoc(doc(db, "roles", String(r.id)), {
+                    name: r.name,
+                    permissions: r.permissions
+                });
+            }
+        } else {
+            // Jika ada isinya, pasang langsung ke aplikasi Vue
+            this.roles = dataDariFirebase;
+        }
+
+    } catch (error) {
+        console.error("Gagal memuat matriks hak akses:", error);
+    }
+},
 
             generateInvoiceNumber(type) {
                 const s = this.appSettings;
