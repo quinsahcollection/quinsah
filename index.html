@@ -3428,32 +3428,33 @@ switchUserSimulate(userId) {
 },
 
 async fetchUsersFromDatabase() {
-    try {
-        // Ganti URL di bawah dengan URL API Backend asli Anda (contoh: PHP, Node.js, atau Firebase)
-        const response = await fetch('https://api.tokoanda.com/v1/users'); 
-        
-        if (!response.ok) {
-            throw new Error('Gagal mengambil data dari server');
-        }
-        
-        const dataFromDB = await response.json();
-        
-        // Petakan (mapping) kolom dari database agar sesuai dengan variabel Vue kita
-        this.usersList = dataFromDB.map(user => {
-            return {
-                id: user.id_user,             // sesuaikan dengan nama kolom ID di database
-                username: user.email,         // karena daftarnya pakai email, gunakan email sebagai username
-                password: '***',              // password jangan ditampilkan demi keamanan
-                roleId: user.role_id,         // ID level akses (misal: 1 untuk Admin, 2 untuk Kasir)
-                namaLengkap: user.nama_user   // sesuaikan dengan nama kolom nama di database
-            };
-        });
+            try {
+                // MENGGUNAKAN FIREBASE FIRESTORE, BUKAN FETCH URL
+                const usersRef = collection(db, "users"); 
+                const querySnapshot = await getDocs(usersRef);
+                
+                let dataDariFirebase = [];
+                
+                querySnapshot.forEach((doc) => {
+                    let userData = doc.data(); 
+                    
+                    dataDariFirebase.push({
+                        id: doc.id, 
+                        username: userData.email || userData.username || '-', 
+                        password: '*** (Terenkripsi)', 
+                        roleId: userData.roleId || 2, 
+                        namaLengkap: userData.namaLengkap || userData.nama || 'User Tanpa Nama' 
+                    });
+                });
 
-    } catch (error) {
-        console.error("Gagal memuat data user:", error);
-        Swal.fire('Koneksi Gagal', 'Tidak dapat mengambil data user dari database asli.', 'error');
-    }
-},
+                // Memasukkan data ke tabel Vue
+                this.usersList = dataDariFirebase;
+
+            } catch (error) {
+                console.error("Gagal mengambil data dari Firebase:", error);
+                Swal.fire('Error Firebase', error.message, 'error');
+            }
+        },
 
             generateInvoiceNumber(type) {
                 const s = this.appSettings;
