@@ -2804,13 +2804,24 @@ isEditingUser: false,
                         await this.fetchUserProfile(user); 
                         this.isLoggedIn = true; 
                         this.initAppListeners(); 
+                        
+                        // ===== LETAKKAN DI SINI =====
+                        // Ambil daftar user dari Firestore HANYA setelah dipastikan berhasil login
+                        this.fetchUsersFromDatabase();
+                        // ============================
+                        
                     } else { 
                         this.isLoggedIn = false; 
                         this.userProfile = {}; 
                     }
-                } catch(err) { console.error("Login Check Failed: ", err); } finally { this.isAppReady = true; }
+                } catch(err) { 
+                    console.error("Login Check Failed: ", err); 
+                } finally { 
+                    this.isAppReady = true; 
+                }
             });
         },
+        
         computed: {
             structuredCategories() {
                 let res = []; let map = {};
@@ -3413,6 +3424,34 @@ switchUserSimulate(userId) {
     if(user) {
         this.loggedInUser = user;
         Swal.fire('Simulasi Login', `Sekarang Anda masuk sebagai: ${user.namaLengkap} (${this.getRoleName(user.roleId)})`, 'info');
+    }
+},
+
+async fetchUsersFromDatabase() {
+    try {
+        // Ganti URL di bawah dengan URL API Backend asli Anda (contoh: PHP, Node.js, atau Firebase)
+        const response = await fetch('https://api.tokoanda.com/v1/users'); 
+        
+        if (!response.ok) {
+            throw new Error('Gagal mengambil data dari server');
+        }
+        
+        const dataFromDB = await response.json();
+        
+        // Petakan (mapping) kolom dari database agar sesuai dengan variabel Vue kita
+        this.usersList = dataFromDB.map(user => {
+            return {
+                id: user.id_user,             // sesuaikan dengan nama kolom ID di database
+                username: user.email,         // karena daftarnya pakai email, gunakan email sebagai username
+                password: '***',              // password jangan ditampilkan demi keamanan
+                roleId: user.role_id,         // ID level akses (misal: 1 untuk Admin, 2 untuk Kasir)
+                namaLengkap: user.nama_user   // sesuaikan dengan nama kolom nama di database
+            };
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat data user:", error);
+        Swal.fire('Koneksi Gagal', 'Tidak dapat mengambil data user dari database asli.', 'error');
     }
 },
 
