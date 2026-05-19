@@ -4179,7 +4179,20 @@
                 this.hideModal('addPurchaseModal');
                 this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
             },
-            
+
+            printPurchase(po) {
+            // 1. Pastikan Anda mengisi data ke variabel yang memicu tampilan cetak
+            // (Bisa activePrintData, atau variabel khusus PO Anda)
+            this.activePrintData = po; 
+            this.printMode = 'a4'; // Mode A4
+
+            // 2. WAJIB tambahkan delay ini agar layar PO ter-render sebelum diprint
+            this.$nextTick(() => {
+            setTimeout(() => {
+            window.print();
+        }, 500);
+    });
+},
             // ============================================
             // SISIPKAN FUNGSI PEMBATALAN INVOICE DI SINI
             // ============================================
