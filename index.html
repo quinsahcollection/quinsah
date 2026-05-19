@@ -3326,16 +3326,32 @@ isEditingUser: false,
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
-    if (!this.loggedInUser) return false;
+    // 1. Ambil data profil (bisa dari userProfile Firebase atau variabel lokal)
+    const profile = this.userProfile || this.loggedInUser;
     
-    // Super Admin (roleId: 1) selalu memiliki semua akses penuh
-    if (this.loggedInUser.roleId === 1 || this.loggedInUser.roleId === '1') return true;
+    // Jika belum ada data sama sekali, tolak (tunggu loading selesai)
+    if (!profile) return false;
 
-    const userRole = this.roles.find(r => r.id == this.loggedInUser.roleId);
+    // 2. KUNCI PENYELAMAT (RESCUE): 
+    // Jika akun lama di database masih tertulis role: 'Admin' atau userRole global adalah 'Admin'
+    // ATAU roleId-nya adalah 1, berikan akses 100% penuh!
+    if (profile.role === 'Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
+        return true; 
+    }
+
+    // 3. KUNCI KEAMANAN: Tolak akses jika akun baru daftar (pending)
+    if (profile.roleId === 'pending') return false;
+
+    // 4. Proses Role Kasir / Karyawan
+    const userRole = this.roles.find(r => r.id == profile.roleId);
+    
+    // Jika data role tidak ditemukan di matriks Vue kita, tolak akses
     if (!userRole || !userRole.permissions || !userRole.permissions[moduleId]) return false;
 
+    // 5. Kembalikan izin berdasarkan centang read/write
     return userRole.permissions[moduleId][action] === true;
 },
+
 getRoleName(roleId) {
     const role = this.roles.find(r => r.id == roleId);
     return role ? role.name : 'Tidak Ada Role';
@@ -3397,32 +3413,90 @@ editUser(user) {
     this.isEditingUser = true;
     this.formUser = { ...user };
 },
-saveUser() {
-    if (!this.formUser.username || !this.formUser.password || !this.formUser.roleId) {
-        Swal.fire('Error', 'Semua field user wajib diisi!', 'error');
+async saveUser() {
+    // 1. Validasi Input (Password tidak wajib saat edit karena diatur oleh Firebase Auth)
+    if (!this.formUser.namaLengkap || !this.formUser.roleId) {
+        Swal.fire('Error', 'Nama Lengkap dan Jabatan wajib diisi!', 'error');
         return;
     }
-    if (this.isEditingUser) {
-        const index = this.usersList.findIndex(u => u.id === this.formUser.id);
-        if (index !== -1) this.usersList[index] = { ...this.formUser };
-    } else {
-        this.usersList.push({ ...this.formUser });
+
+    // Ubah roleId menjadi angka (integer) agar cocok dengan pengecekan di hasAccess
+    let roleIdNumber = parseInt(this.formUser.roleId);
+    if (isNaN(roleIdNumber)) roleIdNumber = this.formUser.roleId; // Fallback jika text (misal 'pending')
+
+    try {
+        if (this.isEditingUser) {
+            // ==========================================
+            // JIKA EDIT USER (Promosi Jabatan / Ubah Nama)
+            // ==========================================
+            const userRef = doc(db, "users", this.formUser.id);
+            
+            await updateDoc(userRef, {
+                namaLengkap: this.formUser.namaLengkap,
+                roleId: roleIdNumber
+            });
+            
+            Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate di database.', 'success');
+            
+        } else {
+            // ==========================================
+            // JIKA TAMBAH USER BARU DARI DALAM APLIKASI
+            // ==========================================
+            // Penting: Firebase Authentication akan secara otomatis melogout Admin 
+            // jika membuat akun baru dari dalam aplikasi menggunakan fungsi standar.
+            Swal.fire({
+                icon: 'info',
+                title: 'Informasi Keamanan Firebase',
+                text: 'Untuk menambah user baru, arahkan karyawan untuk mendaftar lewat halaman "Register" di awal. Setelah mereka mendaftar, Anda bisa mengubah jabatan mereka dari menu ini.'
+            });
+            return; // Hentikan eksekusi
+        }
+
+        // Bersihkan form kembali ke awal
+        this.formUser = { id: null, username: '', password: '', roleId: null, namaLengkap: '' };
+        this.isEditingUser = false;
+        
+        // Refresh tabel dari database agar otomatis berubah
+        this.fetchUsersFromDatabase();
+
+    } catch (error) {
+        console.error("Gagal menyimpan ke Firebase:", error);
+        Swal.fire('Error', 'Gagal menyimpan perubahan ke database.', 'error');
     }
-    Swal.fire('Berhasil', 'Data User berhasil disimpan.', 'success');
-    this.formUser = { id: null, username: '', password: '', roleId: null, namaLengkap: '' };
 },
-deleteUser(userId) {
-    if (userId === 1) {
+async deleteUser(userId) {
+    if (userId === 1 || userId === '1') {
         Swal.fire('Ditolak', 'Super Admin utama tidak bisa dihapus!', 'warning');
         return;
     }
-    this.usersList = this.usersList.filter(u => u.id !== userId);
-    Swal.fire('Terhapus', 'User berhasil dihapus.', 'success');
+    
+    Swal.fire({
+        title: 'Hapus Karyawan?',
+        text: "Data hak akses user ini akan dihapus dari database.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Hapus!'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                // Hapus data dari Firestore Database
+                await deleteDoc(doc(db, "users", userId));
+                
+                // Hapus dari tampilan tabel
+                this.usersList = this.usersList.filter(u => u.id !== userId);
+                Swal.fire('Terhapus', 'User berhasil dihapus dari database.', 'success');
+            } catch (error) {
+                console.error("Gagal menghapus user:", error);
+                Swal.fire('Error', 'Gagal menghapus data dari Firebase.', 'error');
+            }
+        }
+    });
 },
 switchUserSimulate(userId) {
     const user = this.usersList.find(u => u.id == userId);
     if(user) {
         this.loggedInUser = user;
+        this.userProfile = user;
         Swal.fire('Simulasi Login', `Sekarang Anda masuk sebagai: ${user.namaLengkap} (${this.getRoleName(user.roleId)})`, 'info');
     }
 },
@@ -3515,14 +3589,44 @@ async fetchUsersFromDatabase() {
                 if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
                 else { const newUser = { name: user.displayName || 'Karyawan', email: user.email, role: 'Karyawan', createdAt: serverTimestamp() }; await setDoc(userDocRef, newUser); this.userProfile = newUser; this.userRole = 'Karyawan'; }
             },
+            
             async handleAuthAction() {
-                this.authError = ''; this.isProcessingAuth = true;
-                try {
-                    if (this.authMode === 'login') await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
-                    else { const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password); await setDoc(doc(db, "users", res.user.uid), { name: this.authUser.name, email: this.authUser.email, role: 'Karyawan', createdAt: serverTimestamp() }); }
-                } catch(e) { this.authError = "Email atau password salah."; }
-                this.isProcessingAuth = false;
-            },
+    this.authError = ''; 
+    this.isProcessingAuth = true;
+    
+    try {
+        if (this.authMode === 'login') {
+            await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+        } else {
+            // PROSES REGISTRASI
+            const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+            
+            // Simpan ke Firestore dengan status 'pending'
+            await setDoc(doc(db, "users", res.user.uid), {
+                namaLengkap: this.authUser.name, // Pastikan ini sesuai dengan input di form Anda
+                email: this.authUser.email,
+                roleId: 'pending',              // <--- KUNCI KEAMANAN
+                createdAt: serverTimestamp()
+            });
+
+            // Berikan notifikasi bahwa akun sedang menunggu verifikasi
+            Swal.fire({
+                icon: 'success',
+                title: 'Registrasi Berhasil!',
+                text: 'Akun Anda telah dibuat. Mohon hubungi Admin untuk verifikasi hak akses.',
+                confirmButtonText: 'Mengerti'
+            });
+            
+            // Reset mode ke login setelah daftar
+            this.authMode = 'login';
+        }
+    } catch(e) {
+        // Tampilkan pesan error spesifik dari Firebase
+        this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
+    }
+    this.isProcessingAuth = false;
+},
+            
             logout() { this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { await signOut(auth); this.cart = []; this.selectedCustomer = null; }); },
             
             initAppListeners() {
