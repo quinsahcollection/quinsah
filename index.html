@@ -1169,7 +1169,7 @@
                                             <span class="badge" :class="op.status === 'VOID' ? 'bg-danger' : 'bg-success'">{{ op.status === 'VOID' ? 'VOID' : 'SELESAI' }}</span>
                                         </td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail"><i class="bi bi-eye"></i></button>
+                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewOpname(op.id)"><i class="bi bi-eye"></i></button>
                                             <button v-if="op.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
                                         </td>
                                     </tr>
@@ -4053,23 +4053,132 @@ async fetchRolesFromDatabase() {
             this.opnameView = 'form';
         },
         
-        voidOpname(id) {
+        // 1. FUNGSI LIHAT DETAIL OPNAME (Menggunakan Popup SweetAlert agar rapi)
+        viewOpname(id) {
+            let opname = this.opnameHistory.find(o => o.id === id);
+            if (!opname) return;
+
+            // Buat baris tabel dengan tambahan kolom SKU dan Note
+            let tableRows = opname.items.map(item => {
+                let diffText = item.diff > 0 ? `<span class="text-success">+${item.diff}</span>` : `<span class="text-danger">${item.diff}</span>`;
+                return `<tr>
+                            <td class="text-start">${item.name} <br><small class="text-muted">${item.variantName !== '-' ? item.variantName : ''}</small></td>
+                            <td class="text-center"><span class="badge bg-light text-dark border">${item.sku || '-'}</span></td>
+                            <td class="text-center">${item.stokSistem}</td>
+                            <td class="text-center fw-bold bg-warning bg-opacity-10">${item.stokFisik}</td>
+                            <td class="text-center fw-bold">${diffText}</td>
+                            <td class="text-start small text-muted" style="white-space: normal; min-width: 150px;">${item.note || '-'}</td>
+                        </tr>`;
+            }).join('');
+
+            // Tambahkan Header Tabel (SKU dan Catatan Item)
+            let htmlContent = `
+                <div class="text-start mb-3 p-3 bg-light rounded border" style="font-size: 0.85rem;">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <b>ID Dokumen:</b> <span class="text-primary">${opname.id}</span><br>
+                            <b>Waktu:</b> ${opname.dateStr}
+                        </div>
+                        <div class="col-sm-6">
+                            <b>PIC:</b> ${opname.pic}<br>
+                            <b>Catatan Jurnal:</b> ${opname.note}
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle text-nowrap" style="font-size: 0.8rem;">
+                        <thead class="table-secondary text-center">
+                            <tr>
+                                <th>Produk / Varian</th>
+                                <th>SKU</th>
+                                <th>Sistem</th>
+                                <th>Fisik</th>
+                                <th>Selisih</th>
+                                <th>Catatan Item</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            `;
+
             Swal.fire({
-                title: 'Batalkan (Void) Opname?',
-                text: 'Stok akan dikembalikan ke kondisi sebelum opname ini dilakukan. Lanjutkan?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                confirmButtonText: 'Ya, Void!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let opname = this.opnameHistory.find(o => o.id === id);
-                    if (opname) {
-                        opname.status = 'VOID';
-                        // TODO: Logika mengembalikan (reverse) stok produk ke database/lokal akan ditaruh di sini
+                title: 'Detail Stok Opname',
+                html: htmlContent,
+                width: '900px', // Lebar popup saya perbesar jadi 900px agar semua kolom muat
+                confirmButtonText: 'Tutup',
+                confirmButtonColor: '#6c757d'
+            });
+        },
+
+        // 2. FUNGSI VOID / BATALKAN OPNAME (Mengembalikan stok ke semula)
+        async voidOpname(id) {
+            let opname = this.opnameHistory.find(o => o.id === id);
+            if (!opname) return;
+            
+            if (opname.status === 'VOID') {
+                Swal.fire('Info', 'Dokumen ini sudah di-void sebelumnya.', 'info');
+                return;
+            }
+
+            // Gunakan fungsi konfirmasi bawaan Anda
+            this.askConfirm('Batalkan (Void) Opname?', `Anda yakin ingin membatalkan dokumen ${id}? Seluruh stok produk yang disesuaikan akan dikembalikan ke angka semula secara otomatis.`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+
+                    // Loop semua barang yang ada di dokumen opname ini untuk DIKEMBALIKAN (Reverse)
+                    for (let item of opname.items) {
+                        let prod = this.products.find(x => x.id === item.product.id);
+                        if (!prod) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        // LOGIKA REVERSE: Kalikan selisih dengan -1 (Minus jadi Plus, Plus jadi Minus)
+                        let reverseDiff = item.diff * -1; 
+
+                        // Update angka stok kembali ke database lokal & Firebase
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variant.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[opname.outletId] = (prodCopy.variants[vIdx].outletStocks[opname.outletId] || 0) + reverseDiff;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[opname.outletId] = (prodCopy.baseOutletStocks[opname.outletId] || 0) + reverseDiff;
+                        }
+                        
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        // Tulis riwayat pembalikan di Log Mutasi agar jejaknya jelas
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(),
+                            dateStr: nowStr,
+                            refId: id + '-VOID', // Tandai bahwa ini log dari proses void
+                            type: reverseDiff > 0 ? 'IN' : 'OUT',
+                            productId: prod.id,
+                            sku: item.sku,
+                            productName: item.name,
+                            variantSku: item.isVariant ? item.variant.variantSku : null,
+                            variantName: item.isVariant ? item.variantName : '-',
+                            qtyChange: reverseDiff,
+                            outletId: opname.outletId,
+                            userName: currentUser,
+                            note: `VOID REF: ${id}`
+                        });
                     }
-                    Swal.fire('Dibatalkan!', 'Stok Opname berhasil di-void.', 'success');
+
+                    // Ubah status di tabel UI menjadi VOID
+                    opname.status = 'VOID';
+                    
+                    Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok telah dikembalikan dengan aman.', timer: 2000, showConfirmButton: false});
+
+                } catch (err) {
+                    console.error("Gagal Void Opname", err);
+                    Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat memproses Void.'});
                 }
+                this.isProcessing = false;
             });
         },
 
