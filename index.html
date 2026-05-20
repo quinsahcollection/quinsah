@@ -1231,16 +1231,35 @@
                     <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='memberships', 'bg-primary-custom': crmTab==='memberships'}" href="#" @click.prevent="crmTab='memberships'">Membership</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='suppliers', 'bg-primary-custom': crmTab==='suppliers'}" href="#" @click.prevent="crmTab='suppliers'">Data Supplier</a></li>
                 </ul>
+
                 <div v-if="crmTab==='customers'" class="dashboard-card">
                     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0">Database Pelanggan</h6>
                         <button class="btn btn-sm btn-primary-custom" @click="openModal('addCustomerModal')"><i class="bi bi-person-plus me-1"></i>Tambah Baru</button>
                     </div>
+
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Cari Pelanggan</label>
+                            <input type="text" class="form-control form-control-sm" v-model="customerSearchQuery" placeholder="Ketik Nama, No. Telp, atau Alamat...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Filter Promo</label>
+                            <select class="form-select form-select-sm" v-model="customerPromoFilter">
+                                <option value="">-- Semua Pelanggan --</option>
+                                <option value="ada">Pelanggan Biasa (Tanpa Promo)</option>Pelanggan Biasa (Tanpa Promo)
+                                <option value="tidak">Hanya Pelanggan dengan Promo / Member</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="customerSearchQuery=''; customerPromoFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
                             <thead><tr><th>Nama</th><th>Kontak & Alamat</th><th>Membership (Diskon)</th><th>Aksi</th></tr></thead>
                             <tbody>
-                                <tr v-for="c in customers" :key="c.id">
+                                <tr v-for="c in filteredCustomers" :key="c.id">
                                     <td class="fw-bold small text-primary cursor-pointer text-decoration-underline" @click="openCustomerDetail(c)" title="Klik untuk lihat detail histori transaksi">{{ c.name }}</td>
                                     <td class="small">{{ c.phone }}<br><span class="text-muted" style="font-size:0.7rem;">{{ c.address || '-' }}</span></td>
                                     <td><span class="badge bg-warning text-dark">{{ getMembershipName(c.membershipId) }} ({{ getMembershipDiscount(c.membershipId) }}%)</span></td>
@@ -1248,6 +1267,10 @@
                                         <button class="btn btn-sm btn-light border text-primary me-1 px-2 py-1" @click="editData('customers', c, 'formCustomer', 'addCustomerModal')"><i class="bi bi-pencil"></i></button>
                                         <button class="btn btn-sm btn-light border text-danger px-2 py-1" @click="removeData('customers', c.id)"><i class="bi bi-trash"></i></button>
                                     </td>
+                                </tr>
+                                
+                                <tr v-if="filteredCustomers.length === 0">
+                                    <td colspan="4" class="text-center py-4 text-muted small">Tidak ada pelanggan yang sesuai dengan pencarian Anda.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1278,11 +1301,21 @@
                         <h6 class="fw-bold mb-0">Database Supplier (Pemasok)</h6>
                         <button class="btn btn-sm btn-primary-custom" @click="openModal('addSupplierModal')"><i class="bi bi-truck me-1"></i>Tambah Supplier</button>
                     </div>
+
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-10">
+                            <label class="form-label small fw-bold">Cari Supplier</label>
+                            <input type="text" class="form-control form-control-sm" v-model="supplierSearchQuery" placeholder="Ketik Nama Supplier, No. Telp, atau Alamat...">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="supplierSearchQuery=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-custom align-middle">
                             <thead><tr><th>Nama Pemasok</th><th>No. Telp/WA</th><th>Alamat Pemasok</th><th>Aksi</th></tr></thead>
                             <tbody>
-                                <tr v-for="s in suppliers" :key="s.id">
+                                <tr v-for="s in filteredSuppliers" :key="s.id">
                                     <td class="fw-bold small text-primary cursor-pointer text-decoration-underline" @click="openSupplierDetail(s)" title="Klik untuk lihat histori PO">{{ s.name }}</td>
                                     <td class="small">{{ s.phone }}</td>
                                     <td><span class="text-muted" style="font-size:0.75rem;">{{ s.address || '-' }}</span></td>
@@ -1291,7 +1324,10 @@
                                         <button class="btn btn-sm btn-light border text-danger px-2 py-1" @click="removeData('suppliers', s.id)"><i class="bi bi-trash"></i></button>
                                     </td>
                                 </tr>
-                                <tr v-if="suppliers.length === 0"><td colspan="4" class="text-center py-4 text-muted small">Belum ada data supplier.</td></tr>
+                                
+                                <tr v-if="filteredSuppliers.length === 0">
+                                    <td colspan="4" class="text-center py-4 text-muted small">Tidak ada data supplier yang sesuai dengan pencarian Anda.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -2813,7 +2849,10 @@
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
                 activeCustomerDetail: null, activeSupplierDetail: null,
-
+                // Variabel Pencarian & Filter
+                customerSearchQuery: '',
+                customerPromoFilter: '',
+                supplierSearchQuery: '',
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
                 appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD' },
@@ -3011,6 +3050,46 @@ isEditingUser: false,
                 return list;
             },
 
+        filteredCustomers() {
+            // Jika data customers belum dimuat, kembalikan array kosong
+            if (!this.customers) return [];
+            
+            return this.customers.filter(c => {
+                // 1. Logika Pencarian Teks (Nama, Telp, Alamat)
+                const q = this.customerSearchQuery.toLowerCase();
+                const matchSearch = 
+                    (c.name && c.name.toLowerCase().includes(q)) ||
+                    (c.phone && c.phone.toLowerCase().includes(q)) ||
+                    (c.address && c.address.toLowerCase().includes(q));
+
+                // 2. Logika Filter Promo (Cek nilai diskon dari membership-nya)
+                let matchPromo = true;
+                if (this.customerPromoFilter === 'ada') {
+                    // Ambil nilai diskon, jika lebih dari 0 berarti ADA PROMO
+                    const discount = this.getMembershipDiscount(c.membershipId) || 0;
+                    matchPromo = discount > 0; 
+                    
+                } else if (this.customerPromoFilter === 'tidak') {
+                    // Ambil nilai diskon, jika 0 (atau tidak punya membership) berarti PELANGGAN BIASA
+                    const discount = this.getMembershipDiscount(c.membershipId) || 0;
+                    matchPromo = discount === 0; 
+                }
+
+                return matchSearch && matchPromo;
+            });
+        },
+
+        filteredSuppliers() {
+            if (!this.suppliers) return [];
+            
+            return this.suppliers.filter(s => {
+                const q = this.supplierSearchQuery.toLowerCase();
+                return (s.name && s.name.toLowerCase().includes(q)) ||
+                       (s.phone && s.phone.toLowerCase().includes(q)) ||
+                       (s.address && s.address.toLowerCase().includes(q));
+            });
+        },
+        
             // FILTERING CRM TRANSACTIONS
             filteredTransactions() {
                 // Gunakan || [] agar tidak error jika data transactions sedang kosong
@@ -3137,6 +3216,43 @@ isEditingUser: false,
                 return this.purchases.filter(p => p.supplierId === this.activeSupplierDetail.id);
             },
 
+            // Letakkan di dalam blok computed: { ... }
+        filteredCustomers() {
+            // Jika data customers belum dimuat, kembalikan array kosong
+            if (!this.customers) return [];
+            
+            return this.customers.filter(c => {
+                // 1. Logika Pencarian Teks (Nama, Telp, Alamat)
+                const q = this.customerSearchQuery.toLowerCase();
+                const matchSearch = 
+                    (c.name && c.name.toLowerCase().includes(q)) ||
+                    (c.phone && c.phone.toLowerCase().includes(q)) ||
+                    (c.address && c.address.toLowerCase().includes(q));
+
+                // 2. Logika Filter Promo
+                let matchPromo = true;
+                if (this.customerPromoFilter === 'ada') {
+                    // Catatan: Sesuaikan 'c.promo' atau 'c.tier' dengan nama variabel promo di database Anda
+                    matchPromo = c.promo || c.tier || (c.discount && c.discount > 0); 
+                } else if (this.customerPromoFilter === 'tidak') {
+                    matchPromo = !c.promo && !c.tier && (!c.discount || c.discount === 0);
+                }
+
+                return matchSearch && matchPromo;
+            });
+        },
+
+        filteredSuppliers() {
+            if (!this.suppliers) return [];
+            
+            return this.suppliers.filter(s => {
+                const q = this.supplierSearchQuery.toLowerCase();
+                return (s.name && s.name.toLowerCase().includes(q)) ||
+                       (s.phone && s.phone.toLowerCase().includes(q)) ||
+                       (s.address && s.address.toLowerCase().includes(q));
+            });
+        },
+        
             // POS & INVENTORY FILTERING
             filteredProducts() { 
                 // Tambahkan filter ini agar produk yang dicontinue (isActive === false) otomatis hilang dari kasir
