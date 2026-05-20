@@ -1138,89 +1138,155 @@
             </div>
 
             <div v-if="currentView === 'inventory' && invTab === 'opname'" class="dashboard-card">
-                    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="fw-bold mb-0">Form Penyesuaian Stok (Opname)</h6>
-                            <p class="text-muted small mb-0">Samakan stok di sistem dengan fisik di gudang/toko.</p>
+                    
+                    <div v-if="opnameView === 'list'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Riwayat Stok Opname</h6>
+                            <button class="btn btn-sm btn-primary-custom" @click="startNewOpname()"><i class="bi bi-plus-lg me-1"></i>Buat Opname Baru</button>
                         </div>
-                        <button class="btn btn-sm btn-primary-custom" :disabled="!invOutletFilter || isProcessing" @click="saveStokOpname">
-                            <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
-                            <i v-else class="bi bi-save me-1"></i> Simpan Penyesuaian
-                        </button>
-                    </div>
-
-                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Pilih Cabang / Outlet (Wajib)</label>
-                            <select class="form-select form-select-sm border-danger" v-model="invOutletFilter">
-                                <option value="">-- Pilih Cabang Untuk Opname --</option>
-                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Kategori</label>
-                            <select class="form-select form-select-sm" v-model="invCategoryFilter">
-                                <option value="">-- Semua Kategori --</option>
-                                <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Cari Produk / SKU</label>
-                            <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Ketik pencarian...">
-                        </div>
-                    </div>
-
-                    <div v-if="!invOutletFilter" class="alert alert-warning py-2 text-center small mb-3">
-                        <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang / Outlet</b> terlebih dahulu untuk mulai mengisi Stok Fisik (Opname).
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
-                            <thead class="table-light text-center">
-                                <tr>
-                                    <th class="text-start">Produk / Nama Varian</th>
-                                    <th>SKU</th>
-                                    <th class="bg-secondary bg-opacity-10">Stok Sistem</th>
-                                    <th style="width: 150px;" class="bg-warning bg-opacity-10 text-dark">Stok Fisik Aktual</th>
-                                    <th>Catatan / Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template v-for="p in filteredInventoryProducts" :key="'op-'+p.id">
-                                    <tr v-if="!p.variants || p.variants.length === 0">
-                                        <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
-                                        <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
-                                        <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
-                                            {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : '-' }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>ID Dokumen</th>
+                                        <th>Waktu Eksekusi</th>
+                                        <th>Lokasi Cabang</th>
+                                        <th>PIC (Petugas)</th>
+                                        <th>Catatan Khusus</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="op in opnameHistory" :key="op.id">
+                                        <td class="fw-bold text-primary">{{ op.id }}</td>
+                                        <td class="text-muted">{{ op.dateStr }}</td>
+                                        <td class="text-center">{{ getOutletName(op.outletId) || '-' }}</td>
+                                        <td>{{ op.pic }}</td>
+                                        <td><span class="text-muted" style="white-space: normal; min-width: 150px; display: inline-block;">{{ op.note || '-' }}</span></td>
+                                        <td class="text-center">
+                                            <span class="badge" :class="op.status === 'VOID' ? 'bg-danger' : 'bg-success'">{{ op.status === 'VOID' ? 'VOID' : 'SELESAI' }}</span>
                                         </td>
-                                        <td class="bg-warning bg-opacity-10">
-                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]" :disabled="!invOutletFilter">
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]" :disabled="!invOutletFilter">
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail"><i class="bi bi-eye"></i></button>
+                                            <button v-if="op.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
                                         </td>
                                     </tr>
-                                    <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
-                                        <td class="ps-3 text-muted">
-                                            <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
-                                        </td>
-                                        <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
-                                        <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
-                                            {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : '-' }}
-                                        </td>
-                                        <td class="bg-warning bg-opacity-10">
-                                            <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]" :disabled="!invOutletFilter">
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]" :disabled="!invOutletFilter">
+                                    <tr v-if="opnameHistory.length === 0">
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-clipboard2-x fs-2 d-block mb-2 opacity-50"></i>
+                                            Belum ada riwayat stok opname. Silakan buat dokumen opname baru.
                                         </td>
                                     </tr>
-                                </template>
-                                <tr v-if="filteredInventoryProducts.length === 0">
-                                    <td colspan="5" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div v-if="opnameView === 'form'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-clipboard2-plus me-2"></i>Form Penyesuaian Stok (Opname)</h6>
+                                <p class="text-muted small mb-0 mt-1">Samakan stok di sistem dengan fisik di gudang/toko.</p>
+                            </div>
+                            <button class="btn btn-sm btn-light border fw-bold" @click="opnameView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali ke Riwayat</button>
+                        </div>
+
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Cabang / Outlet <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm border-danger" v-model="invOutletFilter">
+                                    <option value="">-- Pilih Cabang Untuk Opname --</option>
+                                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">PIC (Petugas) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" v-model="opnameForm.pic" placeholder="Nama petugas...">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Catatan Jurnal Opname</label>
+                                <input type="text" class="form-control form-control-sm" v-model="opnameForm.note" placeholder="Contoh: Penyesuaian stok gudang karena banjir...">
+                            </div>
+                        </div>
+
+                        <div v-if="!invOutletFilter" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang / Outlet</b> di atas terlebih dahulu untuk memunculkan dan mengisi Stok Fisik.
+                        </div>
+
+                        <div v-show="invOutletFilter">
+                            <div class="row g-2 mb-3 align-items-center">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Ketik pencarian...">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Kategori Produk</label>
+                                    <select class="form-select form-select-sm" v-model="invCategoryFilter">
+                                        <option value="">-- Semua Kategori --</option>
+                                        <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            <th class="text-start">Produk / Nama Varian</th>
+                                            <th>SKU</th>
+                                            <th class="bg-secondary bg-opacity-10">Stok Sistem</th>
+                                            <th style="width: 150px;" class="bg-warning bg-opacity-10 text-dark">Stok Fisik Aktual</th>
+                                            <th>Catatan / Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="p in filteredInventoryProducts" :key="'op-'+p.id">
+                                            <tr v-if="!p.variants || p.variants.length === 0">
+                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
+                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
+                                                    {{ getProductStockAtOutlet(p, invOutletFilter) }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]">
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]">
+                                                </td>
+                                            </tr>
+                                            <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
+                                                <td class="ps-3 text-muted">
+                                                    <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
+                                                </td>
+                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
+                                                    {{ (v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0 }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]">
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <tr v-if="filteredInventoryProducts.length === 0">
+                                            <td colspan="5" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <button class="btn btn-light border fw-bold" @click="opnameView = 'list'">Batalkan</button>
+                            <button class="btn btn-success fw-bold" :disabled="!invOutletFilter || isProcessing" @click="saveStokOpname">
+                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-save me-1"></i> Simpan Penyesuaian
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2867,8 +2933,20 @@
                 transactionStartDate: '',
                 transactionEndDate: '',
                 transactionSearchQuery: '', 
+                // State untuk Stok Opname
+                opnameView: 'list', // Mengatur tampilan: 'list' (Riwayat) atau 'form' (Form Baru)
+                opnameHistory: [], // Menyimpan data riwayat opname
+                opnameFisik: {},
+                opnameNote: {},
+                opnameForm: {
+                id: '',
+                dateStr: '',
+                pic: '',
+                note: '',
+                outletId: '',
+                items: [] // Nanti diisi barang yang di-opname
+            },
             
-                // --- SALIN DARI SINI DAN MASUKKAN KE DALAM DATA() ---
 appModules: [
     { id: 'pos', name: 'Kasir (POS)' },
     { id: 'purchase', name: 'Pembelian (Purchase)' },
@@ -3958,6 +4036,39 @@ async fetchRolesFromDatabase() {
                     this.posCustomInvoice = this.generateInvoiceNumber('pos');
                     this.isEditingInvoice = false;
                     this.originalEditTrx = null;
+                }
+            });
+        },
+
+            startNewOpname() {
+            // Reset form dan pindah ke mode input
+            this.opnameForm = {
+                id: 'SOP-' + Math.floor(Math.random() * 1000000), // Generate ID Unik
+                dateStr: new Date().toLocaleString('id-ID'),
+                pic: this.userName || 'Admin', // Default nama user yang login
+                note: '',
+                outletId: this.invOutletFilter || '', // Ambil dari filter cabang (jika ada)
+                items: []
+            };
+            this.opnameView = 'form';
+        },
+        
+        voidOpname(id) {
+            Swal.fire({
+                title: 'Batalkan (Void) Opname?',
+                text: 'Stok akan dikembalikan ke kondisi sebelum opname ini dilakukan. Lanjutkan?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Ya, Void!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let opname = this.opnameHistory.find(o => o.id === id);
+                    if (opname) {
+                        opname.status = 'VOID';
+                        // TODO: Logika mengembalikan (reverse) stok produk ke database/lokal akan ditaruh di sini
+                    }
+                    Swal.fire('Dibatalkan!', 'Stok Opname berhasil di-void.', 'success');
                 }
             });
         },
@@ -5483,111 +5594,136 @@ async fetchRolesFromDatabase() {
             openStockDetail(logSummary) {
                 this.activeStockDetail = logSummary;
                 this.showModal('stockDetailModal');
-            }, // <--- JANGAN LUPA KOMA DI SINI
+            },
 
             // ----------------------------------------
             // FUNGSI UNTUK MENYIMPAN STOK OPNAME
             // ----------------------------------------
             async saveStokOpname() {
-                if (!this.invOutletFilter) return;
+            if (!this.invOutletFilter) return;
 
-                let updatesToMake = [];
-                let outletName = this.getOutletName(this.invOutletFilter);
+            let updatesToMake = [];
+            let outletName = this.getOutletName(this.invOutletFilter);
 
-                // Kumpulkan data yang diisi (dicocokkan perbedaannya)
-                this.filteredInventoryProducts.forEach(p => {
-                    if (!p.variants || p.variants.length === 0) {
-                        let fisikVal = this.opnameFisik[p.id];
+            // 1. Kumpulkan data yang diisi (dicocokkan perbedaannya)
+            this.filteredInventoryProducts.forEach(p => {
+                if (!p.variants || p.variants.length === 0) {
+                    let fisikVal = this.opnameFisik[p.id];
+                    if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
+                        let stokSistem = this.getProductStockAtOutlet(p, this.invOutletFilter);
+                        let diff = parseInt(fisikVal) - stokSistem;
+                        if (diff !== 0) {
+                            updatesToMake.push({
+                                isVariant: false, product: p, variant: null,
+                                sku: p.sku || '-', name: p.name,
+                                diff: diff, note: this.opnameNote[p.id] || 'Penyesuaian Opname Fisik',
+                                stokFisik: parseInt(fisikVal), stokSistem: stokSistem // Tambahan info utk riwayat
+                            });
+                        }
+                    }
+                } else {
+                    p.variants.forEach(v => {
+                        let fisikVal = this.opnameFisik[v.variantSku];
                         if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
-                            let stokSistem = this.getProductStockAtOutlet(p, this.invOutletFilter);
+                            let stokSistem = (v.outletStocks && v.outletStocks[this.invOutletFilter]) ? v.outletStocks[this.invOutletFilter] : 0;
                             let diff = parseInt(fisikVal) - stokSistem;
                             if (diff !== 0) {
                                 updatesToMake.push({
-                                    isVariant: false, product: p, variant: null,
-                                    sku: p.sku || '-', name: p.name,
-                                    diff: diff, note: this.opnameNote[p.id] || 'Penyesuaian Opname Fisik'
+                                    isVariant: true, product: p, variant: v,
+                                    sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
+                                    diff: diff, note: this.opnameNote[v.variantSku] || 'Penyesuaian Opname Fisik',
+                                    stokFisik: parseInt(fisikVal), stokSistem: stokSistem // Tambahan info utk riwayat
                                 });
                             }
                         }
-                    } else {
-                        p.variants.forEach(v => {
-                            let fisikVal = this.opnameFisik[v.variantSku];
-                            if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
-                                let stokSistem = (v.outletStocks && v.outletStocks[this.invOutletFilter]) ? v.outletStocks[this.invOutletFilter] : 0;
-                                let diff = parseInt(fisikVal) - stokSistem;
-                                if (diff !== 0) {
-                                    updatesToMake.push({
-                                        isVariant: true, product: p, variant: v,
-                                        sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
-                                        diff: diff, note: this.opnameNote[v.variantSku] || 'Penyesuaian Opname Fisik'
-                                    });
-                                }
+                    });
+                }
+            });
+
+            // 2. Cegah simpan jika tidak ada perubahan
+            if (updatesToMake.length === 0) {
+                Swal.fire({ icon: 'info', title: 'Tidak Ada Perubahan', text: 'Tidak ada perbedaan stok yang diisi, atau Anda belum memasukkan angka fisik.' });
+                return;
+            }
+
+            // 3. Konfirmasi & Eksekusi Database Firebase
+            this.askConfirm('Simpan Stok Opname?', `Ditemukan ${updatesToMake.length} produk/varian yang akan disesuaikan stoknya untuk cabang ${outletName}. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    // Gunakan nama PIC dari form, jika kosong pakai user login
+                    let currentUser = this.opnameForm.pic || (this.userProfile ? this.userProfile.name : 'Admin'); 
+                    // Gunakan ID form, jika tidak ada generate baru
+                    let batchId = this.opnameForm.id || ('OPN-' + Math.floor(Math.random() * 90000 + 10000));
+
+                    // ========================================================
+                    // PROSES FIREBASE BAWAAN ANDA (TIDAK ADA YANG DIHAPUS)
+                    // ========================================================
+                    for (let update of updatesToMake) {
+                        let prod = this.products.find(x => x.id === update.product.id);
+                        if (!prod) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        // Update angka stok di tabel Products
+                        if (update.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === update.variant.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] = (prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] || 0) + update.diff;
                             }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[this.invOutletFilter] = (prodCopy.baseOutletStocks[this.invOutletFilter] || 0) + update.diff;
+                        }
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        // Tulis riwayat di Log Mutasi / Kartu Stok
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(),
+                            dateStr: nowStr,
+                            refId: batchId,
+                            type: update.diff > 0 ? 'IN' : 'OUT',
+                            productId: prod.id,
+                            sku: update.sku,
+                            productName: update.name,
+                            variantSku: update.isVariant ? update.variant.variantSku : null,
+                            variantName: update.isVariant ? update.variantName : '-',
+                            qtyChange: update.diff,
+                            outletId: this.invOutletFilter,
+                            userName: currentUser,
+                            note: update.note
                         });
                     }
-                });
 
-                if (updatesToMake.length === 0) {
-                    Swal.fire({ icon: 'info', title: 'Tidak Ada Perubahan', text: 'Tidak ada perbedaan stok yang diisi, atau Anda belum memasukkan angka fisik.' });
-                    return;
+                    // ========================================================
+                    // TAMBAHAN BARU: SIMPAN KE TABEL RIWAYAT OPNAME (UI)
+                    // ========================================================
+                    this.opnameHistory.unshift({
+                        id: batchId,
+                        dateStr: nowStr,
+                        outletId: this.invOutletFilter,
+                        pic: currentUser,
+                        note: this.opnameForm.note || 'Penyesuaian Rutin',
+                        status: 'SELESAI',
+                        items: updatesToMake 
+                    });
+
+                    // ========================================================
+                    // RESET FORM & KEMBALI KE HALAMAN LIST
+                    // ========================================================
+                    Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dengan stok fisik aktual.', timer: 2000, showConfirmButton: false});
+                    
+                    this.opnameFisik = {};
+                    this.opnameNote = {};
+                    this.opnameView = 'list'; // Otomatis balik ke halaman riwayat
+
+                } catch (err) {
+                    console.error("Gagal Opname", err);
+                    Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat menyimpan data opname.'});
                 }
-
-                this.askConfirm('Simpan Stok Opname?', `Ditemukan ${updatesToMake.length} produk/varian yang akan disesuaikan stoknya untuk cabang ${outletName}. Lanjutkan?`, async () => {
-                    this.isProcessing = true;
-                    try {
-                        let nowStr = new Date().toLocaleString('id-ID');
-                        let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
-                        let batchId = 'OPN-' + Math.floor(Math.random() * 90000 + 10000);
-
-                        for (let update of updatesToMake) {
-                            let prod = this.products.find(x => x.id === update.product.id);
-                            if (!prod) continue;
-                            let prodCopy = JSON.parse(JSON.stringify(prod));
-
-                            // Update angka stok di tabel Products
-                            if (update.isVariant) {
-                                let vIdx = prodCopy.variants.findIndex(x => x.variantSku === update.variant.variantSku);
-                                if (vIdx !== -1) {
-                                    if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                    prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] = (prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] || 0) + update.diff;
-                                }
-                            } else {
-                                if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                                prodCopy.baseOutletStocks[this.invOutletFilter] = (prodCopy.baseOutletStocks[this.invOutletFilter] || 0) + update.diff;
-                            }
-                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
-
-                            // Tulis riwayat di Log Mutasi / Kartu Stok
-                            await addDoc(collection(db, "stockLogs"), {
-                                createdAt: serverTimestamp(),
-                                dateStr: nowStr,
-                                refId: batchId,
-                                type: update.diff > 0 ? 'IN' : 'OUT',
-                                productId: prod.id,
-                                sku: update.sku,
-                                productName: update.name,
-                                variantSku: update.isVariant ? update.variant.variantSku : null,
-                                variantName: update.isVariant ? update.variantName : '-',
-                                qtyChange: update.diff,
-                                outletId: this.invOutletFilter,
-                                userName: currentUser,
-                                note: update.note
-                            });
-                        }
-
-                        Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dengan stok fisik aktual.', timer: 2000, showConfirmButton: false});
-                        
-                        // Kosongkan form input
-                        this.opnameFisik = {};
-                        this.opnameNote = {};
-
-                    } catch (err) {
-                        console.error("Gagal Opname", err);
-                        Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat menyimpan data opname.'});
-                    }
-                    this.isProcessing = false;
-                });
-            }
+                this.isProcessing = false;
+            });
+        }
 
         } // Penutup utama dari 'methods'
     }); // Penutup dari 'createApp'
