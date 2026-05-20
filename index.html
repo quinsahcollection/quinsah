@@ -3016,12 +3016,21 @@ isEditingUser: false,
             }
         },
 
-        mounted() {
+        async mounted() {
+            // 1. Fungsi reset tanggal bawaan Anda
             this.resetPosDate();
             
+            // 2. Fix untuk modal Bootstrap bertumpuk (Bawaan Anda)
             document.addEventListener('hidden.bs.modal', (event) => {
-                if (document.querySelectorAll('.modal.show').length > 0) { document.body.classList.add('modal-open'); }
+                if (document.querySelectorAll('.modal.show').length > 0) { 
+                    document.body.classList.add('modal-open'); 
+                }
             });
+
+            // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
+            if (typeof this.fetchOpnameHistory === 'function') {
+                await this.fetchOpnameHistory();
+            }    
 
             // =======================================================
             // PENGAMAN PRINT MOBILE: Reset tampilan setelah print batal/selesai
@@ -4130,7 +4139,8 @@ async fetchRolesFromDatabase() {
 
                     // Loop semua barang yang ada di dokumen opname ini untuk DIKEMBALIKAN (Reverse)
                     for (let item of opname.items) {
-                        let prod = this.products.find(x => x.id === item.product.id);
+                        // KOREKSI: Menggunakan item.productId karena data Firebase sudah dibersihkan
+                        let prod = this.products.find(x => x.id === item.productId);
                         if (!prod) continue;
                         let prodCopy = JSON.parse(JSON.stringify(prod));
 
@@ -4139,7 +4149,8 @@ async fetchRolesFromDatabase() {
 
                         // Update angka stok kembali ke database lokal & Firebase
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variant.variantSku);
+                            // KOREKSI: Menggunakan item.variantSku karena data Firebase sudah dibersihkan
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[opname.outletId] = (prodCopy.variants[vIdx].outletStocks[opname.outletId] || 0) + reverseDiff;
@@ -4160,8 +4171,8 @@ async fetchRolesFromDatabase() {
                             productId: prod.id,
                             sku: item.sku,
                             productName: item.name,
-                            variantSku: item.isVariant ? item.variant.variantSku : null,
-                            variantName: item.isVariant ? item.variantName : '-',
+                            variantSku: item.variantSku,
+                            variantName: item.variantName,
                             qtyChange: reverseDiff,
                             outletId: opname.outletId,
                             userName: currentUser,
@@ -4169,8 +4180,22 @@ async fetchRolesFromDatabase() {
                         });
                     }
 
-                    // Ubah status di tabel UI menjadi VOID
+                    // ========================================================
+                    // TAMBAHAN AMAN: UPDATE STATUS DOKUMEN MASTER DI FIREBASE
+                    // ========================================================
+                    if (opname.firestoreId) {
+                        await updateDoc(doc(db, "stockOpnames", opname.firestoreId), {
+                            status: 'VOID'
+                        });
+                    }
+
+                    // Ubah status di tabel UI lokal menjadi VOID
                     opname.status = 'VOID';
+                    
+                    // Tarik ulang data riwayat terbaru dari Firebase agar UI langsung sinkron
+                    if (typeof this.fetchOpnameHistory === 'function') {
+                        await this.fetchOpnameHistory();
+                    }
                     
                     Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok telah dikembalikan dengan aman.', timer: 2000, showConfirmButton: false});
 
@@ -5760,9 +5785,7 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = true;
                 try {
                     let nowStr = new Date().toLocaleString('id-ID');
-                    // Gunakan nama PIC dari form, jika kosong pakai user login
                     let currentUser = this.opnameForm.pic || (this.userProfile ? this.userProfile.name : 'Admin'); 
-                    // Gunakan ID form, jika tidak ada generate baru
                     let batchId = this.opnameForm.id || ('OPN-' + Math.floor(Math.random() * 90000 + 10000));
 
                     // ========================================================
@@ -5805,25 +5828,48 @@ async fetchRolesFromDatabase() {
                     }
 
                     // ========================================================
-                    // TAMBAHAN BARU: SIMPAN KE TABEL RIWAYAT OPNAME (UI)
+                    // TAMBAHAN BARU: SIMPAN DOKUMEN MASTER KE FIREBASE
                     // ========================================================
-                    this.opnameHistory.unshift({
+                    
+                    // Bersihkan array agar Firebase tidak error menolak objek "product" yang besar
+                    let cleanItemsForFirebase = updatesToMake.map(item => ({
+                        isVariant: item.isVariant,
+                        productId: item.product.id,
+                        variantSku: item.isVariant ? item.variant.variantSku : null,
+                        sku: item.sku,
+                        name: item.name,
+                        variantName: item.isVariant ? item.variantName : '-',
+                        diff: item.diff,
+                        note: item.note,
+                        stokFisik: item.stokFisik,
+                        stokSistem: item.stokSistem
+                    }));
+
+                    // Simpan ke koleksi stockOpnames
+                    await addDoc(collection(db, "stockOpnames"), {
                         id: batchId,
+                        createdAt: serverTimestamp(),
                         dateStr: nowStr,
                         outletId: this.invOutletFilter,
                         pic: currentUser,
                         note: this.opnameForm.note || 'Penyesuaian Rutin',
                         status: 'SELESAI',
-                        items: updatesToMake 
+                        items: cleanItemsForFirebase 
                     });
 
                     // ========================================================
-                    // RESET FORM & KEMBALI KE HALAMAN LIST
+                    // RESET FORM & TARIK ULANG RIWAYAT DARI FIREBASE
                     // ========================================================
-                    Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dengan stok fisik aktual.', timer: 2000, showConfirmButton: false});
+                    Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dan dicatat ke riwayat permanen.', timer: 2000, showConfirmButton: false});
                     
                     this.opnameFisik = {};
                     this.opnameNote = {};
+                    
+                    // Tarik riwayat terbaru dari Firebase agar langsung muncul di tabel
+                    if (typeof this.fetchOpnameHistory === 'function') {
+                        await this.fetchOpnameHistory();
+                    }
+                    
                     this.opnameView = 'list'; // Otomatis balik ke halaman riwayat
 
                 } catch (err) {
@@ -5832,7 +5878,33 @@ async fetchRolesFromDatabase() {
                 }
                 this.isProcessing = false;
             });
-        }
+        },
+        
+        async fetchOpnameHistory() {
+            try {
+                // Query mengambil koleksi stockOpnames diurutkan berdasarkan tanggal buat terbaru
+                const q = query(collection(db, "stockOpnames"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                let list = [];
+                querySnapshot.forEach((doc) => {
+                    let data = doc.data();
+                    list.push({
+                        firestoreId: doc.id, // ID Dokumen unik Firestore asli untuk kebutuhan Void nanti
+                        id: data.id,
+                        dateStr: data.dateStr,
+                        outletId: data.outletId,
+                        pic: data.pic,
+                        note: data.note,
+                        status: data.status,
+                        items: data.items || []
+                    });
+                });
+                this.opnameHistory = list;
+            } catch (err) {
+                console.error("Gagal memuat riwayat opname dari Firebase:", err);
+            }
+        },
 
         } // Penutup utama dari 'methods'
     }); // Penutup dari 'createApp'
