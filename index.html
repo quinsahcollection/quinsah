@@ -124,38 +124,53 @@
             .product-img { height: 130px !important; }
         }
 
-                 /* ======================================================= */
-        /* CSS FIX TOTAL MOBILE PRINTING                           */
         /* ======================================================= */
+        /* 1. DESAIN UKURAN KERTAS (DIBACA OLEH IFRAME)            */
+        /* ======================================================= */
+        .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
         
-        /* 1. SAAT DI LAYAR: Sembunyikan dengan cara "transparan" BUKAN display:none */
-        @media screen {
-            #print-section { 
-                position: fixed !important;
-                top: 0; left: 0;
-                opacity: 0 !important; /* Dibuat tembus pandang agar HP tetap merender */
-                z-index: -9999 !important;
-                pointer-events: none !important;
+        .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
+        .label-border-box { border: 2px solid #000; padding: 10px; }
+        
+        .mode-a4 { width: 100%; max-width: 210mm; padding: 15mm; margin: 0 auto; color: #000; background: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+        .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
+        .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
+
+        /* ======================================================= */
+        /* 2. SEMBUNYIKAN KARDUS CETAKAN DARI LAYAR UTAMA          */
+        /* ======================================================= */
+        #print-section {
+            display: none !important;
+        }
+
+        /* ======================================================= */
+        /* 3. CSS DARURAT: KEMBALIKAN SCROLL PC/LAPTOP             */
+        /* ======================================================= */
+        html, body {
+            overflow: visible !important;
+        }
+
+        @media (min-width: 992px) {
+            .app-container {
+                display: flex !important;
+                height: 100vh !important;
+                overflow: hidden !important;
+            }
+            .main-content {
+                flex-grow: 1 !important;
+                height: 100vh !important;
+                overflow-y: auto !important; /* INI KUNCI UTAMANYA AGAR BISA SCROLL DI PC */
+                padding-bottom: 50px !important;
             }
         }
-  
-            /* Tampilkan Area Kertas */
-            #print-section {
-    display: none;
-}
-   
-            /* Format Ukuran Kertas Spesifik */
-            .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
-            
-            .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
-            .label-border-box { border: 2px solid #000; padding: 10px; }
-            
-            .mode-a4 { width: 100%; max-width: 210mm; padding: 15mm; margin: 0 auto; color: #000; background: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-            .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
-            .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
+        /* ======================================================= */
+        /* FIX POPUP SWEETALERT TERTUTUP MODAL BOOTSTRAP           */
+        /* ======================================================= */
+        .swal2-container {
+            z-index: 999999 !important;
         }
-</style>
+    </style>
 </head>
 <body>
 
@@ -1590,10 +1605,14 @@
                         <div class="list-group list-group-flush">
                             <div v-for="(h, index) in heldTransactions" :key="index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                 <div>
+                                    <div class="fw-bold text-primary-custom mb-1" style="font-size: 0.85rem;"><i class="bi bi-receipt me-1"></i>{{ h.invoice || 'INV-XXX' }}</div>
                                     <div class="fw-bold small">{{ h.customer ? h.customer.name : 'Pelanggan Umum' }}</div>
                                     <div class="text-muted" style="font-size:0.75rem;">{{ h.time }} • {{ h.totalQty }} Item • Rp {{ formatNumber(h.total) }}</div>
                                 </div>
-                                <button class="btn btn-sm btn-primary-custom" @click="restoreTransaction(index)"><i class="bi bi-cart-check me-1"></i> Lanjutkan</button>
+                                <div class="btn-group shadow-sm">
+                                    <button class="btn btn-sm btn-primary-custom px-3" @click="restoreTransaction(index)" title="Lanjutkan Transaksi"><i class="bi bi-cart-check"></i></button>
+                                    <button class="btn btn-sm btn-danger px-2" @click="deleteHoldTransaction(index)" title="Hapus Antrian"><i class="bi bi-trash"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3599,26 +3618,31 @@ async fetchRolesFromDatabase() {
 },
 
             generateInvoiceNumber(type) {
-                const s = this.appSettings;
-                const prefix = type === 'POS' ? s.posPrefix : s.poPrefix;
-                const pattern = type === 'POS' ? s.posPattern : s.poPattern;
-                
-                let datePart = '';
-                const d = new Date();
-                if (pattern === 'YYYYMMDD') {
-                    const mo = String(d.getMonth()+1).padStart(2,'0');
-                    const da = String(d.getDate()).padStart(2,'0');
-                    datePart = `${d.getFullYear()}${mo}${da}`;
-                } else if (pattern === 'YYYYMM') {
-                    const mo = String(d.getMonth()+1).padStart(2,'0');
-                    datePart = `${d.getFullYear()}${mo}`;
-                } else if (pattern === 'YYMM') {
-                    const mo = String(d.getMonth()+1).padStart(2,'0');
-                    datePart = `${String(d.getFullYear()).slice(-2)}${mo}`;
-                }
-                const randomPart = Math.floor(Math.random() * 90000 + 10000); 
-                return `${prefix}${prefix && datePart ? '-' : ''}${datePart}${datePart ? '-' : ''}${randomPart}`;
-            },
+            const s = this.appSettings;
+            // Gunakan .toLowerCase() agar tidak peduli huruf besar atau kecil
+            const isPos = type.toLowerCase() === 'pos'; 
+            
+            const prefix = isPos ? s.posPrefix : s.poPrefix;
+            const pattern = isPos ? s.posPattern : s.poPattern;
+            
+            let datePart = '';
+            const d = new Date();
+            
+            if (pattern === 'YYYYMMDD') {
+                const mo = String(d.getMonth()+1).padStart(2,'0');
+                const da = String(d.getDate()).padStart(2,'0');
+                datePart = `${d.getFullYear()}${mo}${da}`;
+            } else if (pattern === 'YYYYMM') {
+                const mo = String(d.getMonth()+1).padStart(2,'0');
+                datePart = `${d.getFullYear()}${mo}`;
+            } else if (pattern === 'YYMM') {
+                const mo = String(d.getMonth()+1).padStart(2,'0');
+                datePart = `${String(d.getFullYear()).slice(-2)}${mo}`;
+            }
+            
+            const randomPart = Math.floor(Math.random() * 90000 + 10000); 
+            return `${prefix}${prefix && datePart ? '-' : ''}${datePart}${datePart ? '-' : ''}${randomPart}`;
+        },
 
             async saveSettings() {
                 this.isSaving = true;
@@ -3636,13 +3660,32 @@ async fetchRolesFromDatabase() {
                 this.posCustomDate = now.toISOString().slice(0,16);
             },
             
-            resetPos() {
-                this.askConfirm('Batalkan & Reset Kasir?', 'Semua keranjang akan dikosongkan dan nomor invoice dikembalikan seperti baru.', () => {
+            // MEMPERBAIKI resetPos (Tombol Tong Sampah di Kasir)
+        resetPos() {
+            if (this.cart.length === 0) return;
+            
+            // Tambahkan Notifikasi Konfirmasi sebelum menghapus
+            Swal.fire({
+                title: 'Batalkan Transaksi?',
+                text: "Semua pesanan di keranjang akan dihapus dan tidak bisa dikembalikan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Batalkan!',
+                cancelButtonText: 'Tidak'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     this.cart = [];
                     this.selectedCustomer = null;
-                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
-                });
-            },
+                    this.globalDiscountValue = 0;
+                    this.globalDiscountType = 'none';
+                    this.posCustomInvoice = this.generateInvoiceNumber('pos');
+                    this.isEditingInvoice = false;
+                    this.originalEditTrx = null;
+                }
+            });
+        },
 
             getEmptyProductForm() { 
                 return { 
@@ -4486,23 +4529,78 @@ async fetchRolesFromDatabase() {
             },
 
             holdTransaction() {
-                this.heldTransactions.push({
-                    time: new Date().toLocaleTimeString('id-ID'),
-                    cart: JSON.parse(JSON.stringify(this.cart)),
-                    customer: this.selectedCustomer,
-                    total: this.total,
-                    totalQty: this.totalQty
-                });
-                this.cart = [];
-                this.selectedCustomer = null;
-            },
+            if (this.cart.length === 0) return;
+            
+            // 1. Simpan keranjang ke memori Hold BESERTA Nomor Invoice-nya
+            this.heldTransactions.push({
+                invoice: this.posCustomInvoice, // <-- Ini yang sebelumnya kurang
+                cart: JSON.parse(JSON.stringify(this.cart)),
+                customer: this.selectedCustomer,
+                total: this.total,
+                totalQty: this.totalQty,
+                time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+            });
+            
+            // 2. Kosongkan kasir untuk pelanggan selanjutnya
+            this.cart = [];
+            this.selectedCustomer = null;
+            this.globalDiscountValue = 0;
+            this.globalDiscountType = 'none';
+            
+            // 3. GENERATE INVOICE BARU untuk pelanggan berikutnya
+            this.posCustomInvoice = this.generateInvoiceNumber('pos');
+            
+            Swal.fire({ icon: 'success', title: 'Masuk Antrian', text: 'Transaksi disimpan sementara. Kasir siap digunakan kembali.', timer: 1500, showConfirmButton: false });
+        },
             restoreTransaction(index) {
-                let h = this.heldTransactions[index];
-                this.cart = h.cart;
-                this.selectedCustomer = h.customer;
-                this.heldTransactions.splice(index, 1);
-                this.hideModal('holdModal');
-            },
+            // Mencegah transaksi tertimpa jika kasir sedang ada isinya
+            if (this.cart.length > 0) {
+                Swal.fire({ icon: 'warning', title: 'Kasir Belum Kosong', text: 'Harap batalkan atau selesaikan transaksi saat ini sebelum memanggil antrian.' });
+                return;
+            }
+
+            const h = this.heldTransactions[index];
+            this.cart = h.cart;
+            this.selectedCustomer = h.customer;
+            this.posCustomInvoice = h.invoice || this.generateInvoiceNumber('pos');
+            
+            // Hapus dari daftar antrian
+            this.heldTransactions.splice(index, 1);
+            
+            // Tutup modal Bootstrap
+            const modalEl = document.getElementById('holdModal');
+            if(modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if(modal) modal.hide();
+            }
+
+            // 🛑 PAKSA BUKA KUNCIAN SCROLL BOOTSTRAP (ANTI NYANGKUT)
+            setTimeout(() => {
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(b => b.remove());
+            }, 300);
+        },
+        
+        // FUNGSI BARU: Hapus antrian langsung dari daftar Hold
+        deleteHoldTransaction(index) {
+            Swal.fire({
+                title: 'Hapus Antrian?',
+                text: "Pesanan yang di-hold ini akan dihapus permanen.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Kembali'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.heldTransactions.splice(index, 1);
+                }
+            });
+        },
 
             onPurchaseProductChange() {
                 this.formPurchaseItem.variantSku = '';
