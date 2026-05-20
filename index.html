@@ -785,7 +785,7 @@
             <!-- INVENTORY VIEW -->
             <div v-if="currentView === 'inventory' && userRole === 'Admin'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Pemantauan Stok</a></li>
+                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Informasi Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='logs', 'bg-primary-custom': invTab==='logs'}" href="#" @click.prevent="invTab='logs'">Log Mutasi Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='opname', 'bg-primary-custom': invTab==='opname'}" href="#" @click.prevent="invTab='opname'"><i class="bi bi-clipboard2-check me-1"></i>Stok Opname</a></li>
@@ -990,7 +990,7 @@
                                 <tr>
                                     <th>Nama Produk & Varian</th>
                                     <th>SKU</th>
-                                    <th class="text-center text-secondary">Tgl Awal - Akhir</th>
+                                    <th class="text-center text-secondary">Tanggal</th>
                                     <th class="text-center text-primary">Stok Awal</th>
                                     <th class="text-center text-success">Masuk (In)</th>
                                     <th class="text-center text-danger">Keluar (Out)</th>
@@ -1193,7 +1193,7 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle">
-                        <thead><tr><th>Kode</th><th>Nama Outlet</th><th>Pajak (PPN)</th><th>Service Chg.</th><th>Aksi</th></tr></thead>
+                        <thead><tr><th>Kode</th><th>Nama Outlet</th><th>Pajak (PPN)</th><th>Service Charge</th><th>Aksi</th></tr></thead>
                         <tbody>
                             <tr v-for="o in outlets" :key="o.id">
                                 <td><span class="badge bg-dark">{{ o.code }}</span></td>
@@ -2271,7 +2271,7 @@
                         
                         <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="saveCartItemEdit"><i class="bi bi-check-circle me-1"></i> Terapkan Perubahan</button>
                         
-                        <button class="btn btn-outline-success w-100 fw-bold py-2" @click="duplicateItemAsBonus"><i class="bi bi-plus-square me-1"></i> Jadikan Baris Baru (Bonus)</button>
+                        <button class="btn btn-outline-success w-100 fw-bold py-2" @click="duplicateItemAsBonus"><i class="bi bi-plus-square me-1"></i> Tambah Produk di Baris Baru</button>
 
                     </div>
                 </div>
@@ -2333,7 +2333,7 @@
                             <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
                         <div class="modal-body bg-white p-4" v-else>
-                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> TENTUKAN NAMA VARIAN:</p>
+                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
                             <div class="row g-3">
                                 <div class="col-md-3 col-sm-4 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
                                     <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantDisplayStock(v) <= 0}" @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
@@ -2691,7 +2691,7 @@
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
 
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
-                viewTitles: { pos: 'Mesin Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem' },
+                viewTitles: { pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem' },
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
