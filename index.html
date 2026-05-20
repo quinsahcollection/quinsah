@@ -1166,11 +1166,20 @@
                                         <td>{{ op.pic }}</td>
                                         <td><span class="text-muted" style="white-space: normal; min-width: 150px; display: inline-block;">{{ op.note || '-' }}</span></td>
                                         <td class="text-center">
-                                            <span class="badge" :class="op.status === 'VOID' ? 'bg-danger' : 'bg-success'">{{ op.status === 'VOID' ? 'VOID' : 'SELESAI' }}</span>
+                                            <span class="badge" :class="{'bg-danger': op.status === 'VOID', 'bg-success': op.status === 'SELESAI', 'bg-warning text-dark': op.status === 'PENDING'}">
+                                                {{ op.status }}
+                                            </span>
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewOpname(op.id)"><i class="bi bi-eye"></i></button>
-                                            <button v-if="op.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
+                                            <template v-if="op.status === 'PENDING'">
+                                                <button class="btn btn-sm btn-light border text-warning me-1 py-1 px-2" title="Edit Draft" @click="editOpname(op.id)"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Setujui & Sesuaikan Stok" @click="approveOpname(op.id)"><i class="bi bi-check-circle"></i></button>
+                                            </template>
+
+                                            <button v-if="op.status === 'SELESAI'" class="btn btn-sm btn-light border text-danger py-1 px-2 me-1" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
+
+                                            <button v-if="op.status === 'VOID'" class="btn btn-sm btn-light border text-secondary py-1 px-2" title="Batalkan Void (Un-Void)" @click="unvoidOpname(op.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
                                         </td>
                                     </tr>
                                     <tr v-if="opnameHistory.length === 0">
@@ -1203,7 +1212,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">PIC (Petugas) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm" v-model="opnameForm.pic" placeholder="Nama petugas...">
+                                <input type="text" class="form-control form-control-sm bg-secondary bg-opacity-10 fw-bold" :value="userProfile ? userProfile.name : 'Admin'" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Catatan Jurnal Opname</label>
@@ -4050,15 +4059,17 @@ async fetchRolesFromDatabase() {
         },
 
             startNewOpname() {
-            // Reset form dan pindah ke mode input
             this.opnameForm = {
-                id: 'SOP-' + Math.floor(Math.random() * 1000000), // Generate ID Unik
+                id: 'OPN-' + Math.floor(Math.random() * 90000 + 10000),
+                firestoreId: null, // Penting untuk membedakan Edit dan Baru
                 dateStr: new Date().toLocaleString('id-ID'),
-                pic: this.userName || 'Admin', // Default nama user yang login
+                pic: this.userProfile ? this.userProfile.name : 'Admin',
                 note: '',
-                outletId: this.invOutletFilter || '', // Ambil dari filter cabang (jika ada)
+                outletId: this.invOutletFilter || '',
                 items: []
             };
+            this.opnameFisik = {};
+            this.opnameNote = {};
             this.opnameView = 'form';
         },
         
@@ -5737,144 +5748,69 @@ async fetchRolesFromDatabase() {
             if (!this.invOutletFilter) return;
 
             let updatesToMake = [];
-            let outletName = this.getOutletName(this.invOutletFilter);
-
-            // 1. Kumpulkan data yang diisi (dicocokkan perbedaannya)
             this.filteredInventoryProducts.forEach(p => {
                 if (!p.variants || p.variants.length === 0) {
                     let fisikVal = this.opnameFisik[p.id];
                     if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
                         let stokSistem = this.getProductStockAtOutlet(p, this.invOutletFilter);
-                        let diff = parseInt(fisikVal) - stokSistem;
-                        if (diff !== 0) {
-                            updatesToMake.push({
-                                isVariant: false, product: p, variant: null,
-                                sku: p.sku || '-', name: p.name,
-                                diff: diff, note: this.opnameNote[p.id] || 'Penyesuaian Opname Fisik',
-                                stokFisik: parseInt(fisikVal), stokSistem: stokSistem // Tambahan info utk riwayat
-                            });
-                        }
+                        updatesToMake.push({
+                            isVariant: false, productId: p.id, variantSku: null,
+                            sku: p.sku || '-', name: p.name, variantName: '-',
+                            diff: parseInt(fisikVal) - stokSistem, note: this.opnameNote[p.id] || 'Opname Fisik',
+                            stokFisik: parseInt(fisikVal), stokSistem: stokSistem
+                        });
                     }
                 } else {
                     p.variants.forEach(v => {
                         let fisikVal = this.opnameFisik[v.variantSku];
                         if (fisikVal !== undefined && fisikVal !== null && fisikVal !== '') {
                             let stokSistem = (v.outletStocks && v.outletStocks[this.invOutletFilter]) ? v.outletStocks[this.invOutletFilter] : 0;
-                            let diff = parseInt(fisikVal) - stokSistem;
-                            if (diff !== 0) {
-                                updatesToMake.push({
-                                    isVariant: true, product: p, variant: v,
-                                    sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
-                                    diff: diff, note: this.opnameNote[v.variantSku] || 'Penyesuaian Opname Fisik',
-                                    stokFisik: parseInt(fisikVal), stokSistem: stokSistem // Tambahan info utk riwayat
-                                });
-                            }
+                            updatesToMake.push({
+                                isVariant: true, productId: p.id, variantSku: v.variantSku,
+                                sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
+                                diff: parseInt(fisikVal) - stokSistem, note: this.opnameNote[v.variantSku] || 'Opname Fisik',
+                                stokFisik: parseInt(fisikVal), stokSistem: stokSistem
+                            });
                         }
                     });
                 }
             });
 
-            // 2. Cegah simpan jika tidak ada perubahan
             if (updatesToMake.length === 0) {
-                Swal.fire({ icon: 'info', title: 'Tidak Ada Perubahan', text: 'Tidak ada perbedaan stok yang diisi, atau Anda belum memasukkan angka fisik.' });
+                Swal.fire({ icon: 'info', title: 'Kosong', text: 'Anda belum memasukkan angka fisik apapun.' });
                 return;
             }
 
-            // 3. Konfirmasi & Eksekusi Database Firebase
-            this.askConfirm('Simpan Stok Opname?', `Ditemukan ${updatesToMake.length} produk/varian yang akan disesuaikan stoknya untuk cabang ${outletName}. Lanjutkan?`, async () => {
+            this.askConfirm('Simpan sebagai Draft?', `Dokumen akan disimpan dengan status PENDING dan stok sistem belum berubah hingga di-Approve. Lanjutkan?`, async () => {
                 this.isProcessing = true;
                 try {
                     let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.opnameForm.pic || (this.userProfile ? this.userProfile.name : 'Admin'); 
-                    let batchId = this.opnameForm.id || ('OPN-' + Math.floor(Math.random() * 90000 + 10000));
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin'; 
 
-                    // ========================================================
-                    // PROSES FIREBASE BAWAAN ANDA (TIDAK ADA YANG DIHAPUS)
-                    // ========================================================
-                    for (let update of updatesToMake) {
-                        let prod = this.products.find(x => x.id === update.product.id);
-                        if (!prod) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-
-                        // Update angka stok di tabel Products
-                        if (update.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === update.variant.variantSku);
-                            if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] = (prodCopy.variants[vIdx].outletStocks[this.invOutletFilter] || 0) + update.diff;
-                            }
-                        } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[this.invOutletFilter] = (prodCopy.baseOutletStocks[this.invOutletFilter] || 0) + update.diff;
-                        }
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
-
-                        // Tulis riwayat di Log Mutasi / Kartu Stok
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(),
-                            dateStr: nowStr,
-                            refId: batchId,
-                            type: update.diff > 0 ? 'IN' : 'OUT',
-                            productId: prod.id,
-                            sku: update.sku,
-                            productName: update.name,
-                            variantSku: update.isVariant ? update.variant.variantSku : null,
-                            variantName: update.isVariant ? update.variantName : '-',
-                            qtyChange: update.diff,
-                            outletId: this.invOutletFilter,
-                            userName: currentUser,
-                            note: update.note
-                        });
-                    }
-
-                    // ========================================================
-                    // TAMBAHAN BARU: SIMPAN DOKUMEN MASTER KE FIREBASE
-                    // ========================================================
-                    
-                    // Bersihkan array agar Firebase tidak error menolak objek "product" yang besar
-                    let cleanItemsForFirebase = updatesToMake.map(item => ({
-                        isVariant: item.isVariant,
-                        productId: item.product.id,
-                        variantSku: item.isVariant ? item.variant.variantSku : null,
-                        sku: item.sku,
-                        name: item.name,
-                        variantName: item.isVariant ? item.variantName : '-',
-                        diff: item.diff,
-                        note: item.note,
-                        stokFisik: item.stokFisik,
-                        stokSistem: item.stokSistem
-                    }));
-
-                    // Simpan ke koleksi stockOpnames
-                    await addDoc(collection(db, "stockOpnames"), {
-                        id: batchId,
-                        createdAt: serverTimestamp(),
+                    let docData = {
+                        id: this.opnameForm.id,
                         dateStr: nowStr,
                         outletId: this.invOutletFilter,
                         pic: currentUser,
-                        note: this.opnameForm.note || 'Penyesuaian Rutin',
-                        status: 'SELESAI',
-                        items: cleanItemsForFirebase 
-                    });
+                        note: this.opnameForm.note || 'Menunggu Persetujuan',
+                        status: 'PENDING', // STATUS AWAL ADALAH PENDING (TIDAK UBAH STOK)
+                        items: updatesToMake 
+                    };
 
-                    // ========================================================
-                    // RESET FORM & TARIK ULANG RIWAYAT DARI FIREBASE
-                    // ========================================================
-                    Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok sistem telah berhasil disamakan dan dicatat ke riwayat permanen.', timer: 2000, showConfirmButton: false});
-                    
-                    this.opnameFisik = {};
-                    this.opnameNote = {};
-                    
-                    // Tarik riwayat terbaru dari Firebase agar langsung muncul di tabel
-                    if (typeof this.fetchOpnameHistory === 'function') {
-                        await this.fetchOpnameHistory();
+                    // Jika ini adalah mode EDIT, lakukan Update. Jika baru, lakukan Add.
+                    if (this.opnameForm.firestoreId) {
+                        await updateDoc(doc(db, "stockOpnames", this.opnameForm.firestoreId), docData);
+                    } else {
+                        docData.createdAt = serverTimestamp();
+                        await addDoc(collection(db, "stockOpnames"), docData);
                     }
-                    
-                    this.opnameView = 'list'; // Otomatis balik ke halaman riwayat
 
+                    Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Menunggu proses persetujuan (Approve).', timer: 2000, showConfirmButton: false});
+                    
+                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+                    this.opnameView = 'list';
                 } catch (err) {
-                    console.error("Gagal Opname", err);
-                    Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat menyimpan data opname.'});
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan draf.'});
                 }
                 this.isProcessing = false;
             });
@@ -5905,6 +5841,128 @@ async fetchRolesFromDatabase() {
                 console.error("Gagal memuat riwayat opname dari Firebase:", err);
             }
         },
+        
+        // 1. FUNGSI EDIT OPNAME (Hanya untuk yang status PENDING)
+        editOpname(id) {
+            let op = this.opnameHistory.find(o => o.id === id);
+            if (!op || op.status !== 'PENDING') return;
+
+            // Load data ke dalam form
+            this.opnameForm = {
+                id: op.id, firestoreId: op.firestoreId, dateStr: op.dateStr,
+                pic: op.pic, note: op.note, outletId: op.outletId, items: []
+            };
+            this.invOutletFilter = op.outletId;
+            this.opnameFisik = {};
+            this.opnameNote = {};
+
+            // Masukkan kembali angka fisik ke kotak input
+            op.items.forEach(item => {
+                let key = item.isVariant ? item.variantSku : item.productId;
+                this.opnameFisik[key] = item.stokFisik;
+                this.opnameNote[key] = item.note;
+            });
+            this.opnameView = 'form';
+        },
+
+        // 2. FUNGSI APPROVE (Ini yang bertugas MEMOTONG STOK & MENCATAT LOG)
+        async approveOpname(id) {
+            let opname = this.opnameHistory.find(o => o.id === id);
+            if (!opname || opname.status !== 'PENDING') return;
+
+            this.askConfirm('Setujui Opname?', `Stok sistem akan disesuaikan secara permanen sesuai dokumen ${id}. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+
+                    // Update Stok Produk & Buat Log Mutasi
+                    for (let item of opname.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod || item.diff === 0) continue; // Abaikan jika tidak ada selisih
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[opname.outletId] = (prodCopy.variants[vIdx].outletStocks[opname.outletId] || 0) + item.diff;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[opname.outletId] = (prodCopy.baseOutletStocks[opname.outletId] || 0) + item.diff;
+                        }
+                        
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id,
+                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku,
+                            productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qtyChange: item.diff, outletId: opname.outletId, userName: currentUser, note: item.note
+                        });
+                    }
+
+                    // Ubah Status Master Menjadi SELESAI
+                    if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { status: 'SELESAI' });
+                    
+                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+                    Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
+                }
+                this.isProcessing = false;
+            });
+        },
+
+        // 3. FUNGSI UN-VOID (Mengaktifkan kembali dokumen yang ter-void)
+        async unvoidOpname(id) {
+            let opname = this.opnameHistory.find(o => o.id === id);
+            if (!opname || opname.status !== 'VOID') return;
+
+            this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen ${id} akan diaktifkan kembali dan stok akan disesuaikan ulang. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+
+                    // Logika persis seperti Approve (mengembalikan stok)
+                    for (let item of opname.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod || item.diff === 0) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[opname.outletId] = (prodCopy.variants[vIdx].outletStocks[opname.outletId] || 0) + item.diff;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[opname.outletId] = (prodCopy.baseOutletStocks[opname.outletId] || 0) + item.diff;
+                        }
+                        
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-UNVOID',
+                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku,
+                            productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qtyChange: item.diff, outletId: opname.outletId, userName: currentUser, note: `UN-VOID REF: ${id}`
+                        });
+                    }
+
+                    if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { status: 'SELESAI' });
+
+                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+                    Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah dikembalikan.', timer: 2000, showConfirmButton: false});
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Un-Void.'});
+                }
+                this.isProcessing = false;
+            });
+        }
 
         } // Penutup utama dari 'methods'
     }); // Penutup dari 'createApp'
