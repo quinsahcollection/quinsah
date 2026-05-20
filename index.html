@@ -848,39 +848,73 @@
                             </div>
                         </div>
                         <div class="table-responsive">
+                            
+                            <div v-if="invOutletFilter" class="alert alert-info py-2 small mb-3 fw-semibold d-flex align-items-center shadow-sm">
+                                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                Karena Anda memfilter 1 Outlet, sistem mengaktifkan mode <b>Alokasi Stok</b> untuk membedakan stok fisik (rak) dan stok ditahan (keranjang/antrian kasir).
+                            </div>
+
                             <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
                                 <thead class="table-light text-center">
                                     <tr>
                                         <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
                                         <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
-                                        <th :colspan="displayOutlets.length > 0 ? displayOutlets.length : 1">Stok Outlet</th>
-                                        <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
+                                        
+                                        <template v-if="invOutletFilter">
+                                            <th colspan="3" class="bg-primary bg-opacity-10 text-primary border-primary">Analisa Alokasi Stok Outlet Terpilih</th>
+                                        </template>
+                                        
+                                        <template v-else>
+                                            <th :colspan="displayOutlets.length > 0 ? displayOutlets.length : 1">Stok Outlet</th>
+                                            <th rowspan="2" class="align-middle bg-danger text-white">Total Keseluruhan</th>
+                                        </template>
                                     </tr>
                                     <tr>
                                         <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
                                         <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
-                                        <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
-                                        <th v-if="displayOutlets.length === 0">-</th>
+                                        
+                                        <template v-if="invOutletFilter">
+                                            <th class="bg-secondary bg-opacity-10">Stok Fisik (Rak)</th>
+                                            <th class="bg-warning bg-opacity-10 text-dark">Stok Ditahan (Kasir)</th>
+                                            <th class="bg-success text-white">Tersedia (Bisa Dijual)</th>
+                                        </template>
+                                        
+                                        <template v-else>
+                                            <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
+                                            <th v-if="displayOutlets.length === 0">-</th>
+                                        </template>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template v-for="p in filteredInventoryProducts" :key="p.id">
-                                        <!-- BARIS PRODUK INDUK -->
                                         <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
                                             <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
                                             <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
                                             <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
                                             
-                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
-                                                {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
-                                            <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
-                                                {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : getBaseTotalStock(p) }} 
-                                                <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
+                                            <template v-if="invOutletFilter">
+                                                <td class="text-center bg-secondary bg-opacity-10">
+                                                    {{ getProductStockAtOutlet(p, invOutletFilter) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td class="text-center bg-warning bg-opacity-10 text-danger fs-6">
+                                                    {{ getReservedStock(p.sku, invOutletFilter) }} <span class="fw-normal text-dark" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td class="text-center bg-success bg-opacity-10 text-success fs-6">
+                                                    {{ getAvailableStock(p, null, invOutletFilter) }} <span class="fw-normal text-muted" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                            </template>
+                                            
+                                            <template v-else>
+                                                <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
+                                                    {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                                <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
+                                                    {{ getBaseTotalStock(p) }} <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                            </template>
                                         </tr>
-                                        <!-- BARIS VARIAN -->
+
                                         <tr v-for="(v, index) in p.variants" :key="index">
                                             <td class="ps-3 text-muted">
                                                 <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes || 'Varian '+(index+1) }}</span>
@@ -889,21 +923,36 @@
                                             <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
                                             <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
                                             
-                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
-                                                {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
-                                            <td class="text-center fw-bold fs-6">
-                                                {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : getVariantTotalStock(v) }} 
-                                                <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
+                                            <template v-if="invOutletFilter">
+                                                <td class="text-center bg-secondary bg-opacity-10 fw-semibold">
+                                                    {{ (v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td class="text-center bg-warning bg-opacity-10 text-danger fw-bold fs-6">
+                                                    {{ getReservedStock(v.variantSku, invOutletFilter) }} <span class="fw-normal text-dark" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td class="text-center bg-success bg-opacity-10 text-success fw-bold fs-6">
+                                                    {{ getAvailableStock(p, v, invOutletFilter) }} <span class="fw-normal text-muted" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                            </template>
+                                            
+                                            <template v-else>
+                                                <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
+                                                    {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                                <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                                <td class="text-center fw-bold fs-6">
+                                                    {{ getVariantTotalStock(v) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                                </td>
+                                            </template>
                                         </tr>
                                     </template>
-                                    <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="displayOutlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk/varian yang sesuai filter.</td></tr>
+                                    <tr v-if="filteredInventoryProducts.length === 0">
+                                        <td :colspan="invOutletFilter ? 6 : (displayOutlets.length + 4)" class="text-center py-4 text-muted">Tidak ada data produk/varian yang sesuai filter.</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </div> 
                 </div>
 
                 <div v-if="invTab==='logs'" class="dashboard-card">
@@ -3644,6 +3693,52 @@ async fetchRolesFromDatabase() {
             return `${prefix}${prefix && datePart ? '-' : ''}${datePart}${datePart ? '-' : ''}${randomPart}`;
         },
 
+            // 1. Menghitung barang yang nyangkut di Keranjang & Hold
+        getReservedStock(sku, outletId) {
+            if (!sku || !outletId) return 0;
+            let reserved = 0;
+            
+            // Cek di keranjang kasir saat ini (jika outletnya sama)
+            if (this.posActiveOutletId === outletId) {
+                this.cart.forEach(item => {
+                    if (item.variantSku === sku || (!item.variantSku && item.sku === sku)) reserved += item.qty;
+                });
+            }
+            
+            // Cek di daftar Hold / Antrian
+            this.heldTransactions.forEach(trx => {
+                // Pastikan kita mengecek antrian dari cabang yang sama
+                if (trx.outletId === outletId) {
+                    trx.cart.forEach(item => {
+                        if (item.variantSku === sku || (!item.variantSku && item.sku === sku)) reserved += item.qty;
+                    });
+                }
+            });
+            return reserved;
+        },
+
+        // 2. Mendapatkan STOK TERSEDIA (Stok Fisik dikurangi Stok Ditahan)
+        getAvailableStock(p, v = null, outletId) {
+            if (!outletId) return 0;
+            let fisik = 0;
+            let sku = '';
+
+            // Ambil stok asli di database (Fisik)
+            if (v) {
+                fisik = (v.outletStocks && v.outletStocks[outletId]) ? v.outletStocks[outletId] : 0;
+                sku = v.variantSku;
+            } else {
+                fisik = (p.baseOutletStocks && p.baseOutletStocks[outletId]) ? p.baseOutletStocks[outletId] : 0;
+                sku = p.sku;
+            }
+
+            // Hitung yang ditahan
+            let ditahan = this.getReservedStock(sku, outletId);
+            
+            // Kembalikan sisa yang bisa dijual
+            return fisik - ditahan;
+        },
+
             async saveSettings() {
                 this.isSaving = true;
                 try {
@@ -4249,50 +4344,102 @@ async fetchRolesFromDatabase() {
             },
 
                         addToCart(variant = null) {
-                let item = {
-                    cartId: Date.now() + Math.random().toString(36).substring(7),
-                    productId: this.activeProduct.id,
-                    name: this.activeProduct.name,
-                    sku: this.activeProduct.sku,
-                    uom: this.activeProduct.uom,
-                    qty: 1,
-                    promoPrice: variant ? this.getEffectiveVariantPrice(this.activeProduct, variant) : this.getEffectiveBasePrice(this.activeProduct),
-                    posDiscountType: 'none', posDiscountValue: 0,
-                    note: '',
-                    tiers: JSON.parse(JSON.stringify(this.activeProduct.tiers || []))
-                };
-                
-                if(variant) {
-                    item.variantName = variant.name || variant.attributes;
-                    item.variantSku = variant.variantSku;
-                }
-                
-                // LOGIKA AMAN: Cari barang yang sama, TAPI abaikan barang yang sudah ditandai "isSeparated" (Barang Bonus)
-                let existing = this.cart.find(c => 
-                    c.productId === item.productId && 
-                    c.variantSku === item.variantSku && 
-                    !c.isSeparated
-                );
-                
-                if(existing) {
-                    existing.qty += 1;
-                } else {
-                    this.cart.push(item);
-                }
-                
-                this.hideModal('posModifierModal');
-            },
+            // PROTEKSI 1: Pastikan kasir sudah memilih cabang (Outlet)
+            if (!this.posActiveOutletId) {
+                Swal.fire('Pilih Cabang', 'Tentukan lokasi outlet kasir terlebih dahulu.', 'warning');
+                return;
+            }
+
+            let prod = this.activeProduct;
+
+            // PROTEKSI 2: Cek Sisa Stok Tersedia (Apakah masih ada sisa setelah ditahan kasir lain/antrian?)
+            let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
+            if (available < 1) {
+                Swal.fire({
+                    icon: 'error', 
+                    title: 'Stok Habis / Ditahan', 
+                    text: 'Stok tersedia tidak mencukupi (Mungkin sedang di-hold di antrian).'
+                });
+                return;
+            }
+
+            // LOGIKA BAWAAN ANDA (Ditambah basePrice & sellPrice untuk keamanan data riwayat)
+            let item = {
+                cartId: Date.now() + Math.random().toString(36).substring(7),
+                productId: prod.id,
+                name: prod.name,
+                sku: prod.sku,
+                uom: prod.uom,
+                qty: 1,
+                basePrice: prod.basePrice || prod.hppPrice, // Opsional: Bermanfaat untuk hitung laba di laporan
+                sellPrice: variant ? variant.sellPrice : prod.sellPrice,
+                promoPrice: variant ? this.getEffectiveVariantPrice(prod, variant) : this.getEffectiveBasePrice(prod),
+                posDiscountType: 'none', posDiscountValue: 0,
+                note: '',
+                tiers: JSON.parse(JSON.stringify(prod.tiers || []))
+            };
+            
+            if (variant) {
+                item.variantName = variant.name || variant.attributes;
+                item.variantSku = variant.variantSku;
+            }
+            
+            // LOGIKA AMAN: Cari barang yang sama, TAPI abaikan barang yang sudah ditandai "isSeparated" (Barang Bonus)
+            let existing = this.cart.find(c => 
+                c.productId === item.productId && 
+                c.variantSku === item.variantSku && 
+                !c.isSeparated
+            );
+            
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                this.cart.push(item);
+            }
+            
+            this.hideModal('posModifierModal');
+
+            // Opsional: Bunyikan suara scan jika fungsi beep tersedia
+            if (typeof this.playBeepSound === 'function') {
+                this.playBeepSound();
+            }
+        },
 
 
             updateQty(cartId, delta) {
-                let item = this.cart.find(c => c.cartId === cartId);
-                if(item) {
-                    item.qty += delta;
-                    if(item.qty < 1) {
-                        this.cart = this.cart.filter(c => c.cartId !== cartId);
+            let item = this.cart.find(c => c.cartId === cartId);
+            if(item) {
+                
+                // PROTEKSI STOK: Hanya dicek jika tombol (+) ditekan (delta positif)
+                if (delta > 0) {
+                    let prod = this.products.find(p => p.id === item.productId);
+                    if (prod) {
+                        let variant = item.variantSku && prod.variants ? prod.variants.find(v => v.variantSku === item.variantSku) : null;
+                        
+                        // Cek Sisa Stok Tersedia (Apakah masih ada sisa setelah dikurangi yang sudah di keranjang/hold?)
+                        let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
+                        
+                        // Jika stok tersedia sudah 0 (atau kurang dari jumlah yang mau ditambah), blokir!
+                        if (available < delta) {
+                            Swal.fire({ 
+                                icon: 'warning', 
+                                title: 'Batas Maksimal', 
+                                text: 'Sisa stok tersedia di cabang ini sudah habis dialokasikan.' 
+                            });
+                            return; // Hentikan fungsi di sini, kuantitas tidak akan bertambah
+                        }
                     }
                 }
-            },
+
+                // LOGIKA ASLI ANDA: Tambah/Kurangi kuantitas
+                item.qty += delta;
+                
+                // LOGIKA ASLI ANDA: Hapus otomatis dari keranjang jika qty di bawah 1
+                if(item.qty < 1) {
+                    this.cart = this.cart.filter(c => c.cartId !== cartId);
+                }
+            }
+        },
 
             openEditCartItem(item) {
                 this.cartItemEdit = JSON.parse(JSON.stringify(item));
@@ -4534,6 +4681,7 @@ async fetchRolesFromDatabase() {
             // 1. Simpan keranjang ke memori Hold BESERTA Nomor Invoice-nya
             this.heldTransactions.push({
                 invoice: this.posCustomInvoice, // <-- Ini yang sebelumnya kurang
+                outletId: this.posActiveOutletId,
                 cart: JSON.parse(JSON.stringify(this.cart)),
                 customer: this.selectedCustomer,
                 total: this.total,
@@ -5012,22 +5160,40 @@ async fetchRolesFromDatabase() {
         },
 
             getProductDisplayStock(p) {
-                let s = 0;
-                if (this.posActiveOutletId) {
-                    if(p.variants && p.variants.length > 0) {
-                        p.variants.forEach(v => s += (v.outletStocks && v.outletStocks[this.posActiveOutletId] ? v.outletStocks[this.posActiveOutletId] : 0));
-                    } else {
-                        s = p.baseOutletStocks && p.baseOutletStocks[this.posActiveOutletId] ? p.baseOutletStocks[this.posActiveOutletId] : 0;
-                    }
+            let s = 0;
+            if (this.posActiveOutletId) {
+                // KITA BERADA DI MODE KASIR (POS)
+                if (p.variants && p.variants.length > 0) {
+                    p.variants.forEach(v => {
+                        let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? v.outletStocks[this.posActiveOutletId] : 0;
+                        // Otomatis kurangi dengan barang yang sedang nyangkut di antrian/keranjang
+                        let ditahan = this.getReservedStock(v.variantSku, this.posActiveOutletId);
+                        s += (fisik - ditahan);
+                    });
                 } else {
-                    s = this.getBaseTotalStock(p);
+                    let fisik = (p.baseOutletStocks && p.baseOutletStocks[this.posActiveOutletId]) ? p.baseOutletStocks[this.posActiveOutletId] : 0;
+                    // Otomatis kurangi dengan barang yang sedang nyangkut di antrian/keranjang
+                    let ditahan = this.getReservedStock(p.sku, this.posActiveOutletId);
+                    s = (fisik - ditahan);
                 }
-                return s;
-            },
+            } else {
+                // MODE GLOBAL / DILUAR KASIR (Tampilkan stok total asli)
+                s = this.getBaseTotalStock(p);
+            }
+            return s;
+        },
             getVariantDisplayStock(v) {
-                if (this.posActiveOutletId) return (v.outletStocks && v.outletStocks[this.posActiveOutletId] ? v.outletStocks[this.posActiveOutletId] : 0);
-                return this.getVariantTotalStock(v);
-            },
+            if (this.posActiveOutletId) {
+                // KITA BERADA DI MODE KASIR (POS) - Hitung Stok Tersedia
+                let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? v.outletStocks[this.posActiveOutletId] : 0;
+                let ditahan = this.getReservedStock(v.variantSku, this.posActiveOutletId);
+                
+                return fisik - ditahan;
+            }
+            // MODE GLOBAL / DILUAR KASIR (Tampilkan stok total asli)
+            return this.getVariantTotalStock(v);
+        },
+        
             getBaseTotalStock(p) {
                 if(p.variants && p.variants.length > 0) {
                     return p.variants.reduce((sum, v) => sum + this.getVariantTotalStock(v), 0);
@@ -5036,11 +5202,13 @@ async fetchRolesFromDatabase() {
                 if(p.baseOutletStocks) Object.values(p.baseOutletStocks).forEach(v => s += (v||0));
                 return s;
             },
+            
             getVariantTotalStock(v) {
                 let s = 0;
                 if(v.outletStocks) Object.values(v.outletStocks).forEach(val => s += (val||0));
                 return s;
             },
+            
             getProductStockAtOutlet(p, outletId) {
                 if(p.variants && p.variants.length > 0) {
                     return p.variants.reduce((sum, v) => sum + (v.outletStocks && v.outletStocks[outletId] ? v.outletStocks[outletId] : 0), 0);
