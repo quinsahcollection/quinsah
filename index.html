@@ -1397,6 +1397,7 @@
                 </div>
 
                 <div v-if="invTab==='logs'" class="dashboard-card">
+                    
                     <div class="row g-2 mb-3 bg-light p-3 rounded border">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Mulai Tanggal</label>
@@ -1410,25 +1411,57 @@
                             <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="logStartDate=''; logEndDate=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter</button>
                         </div>
                     </div>
+                    
                     <div class="table-responsive">
                         <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Waktu</th><th>Ref. Transaksi</th><th>Nama Item (SKU)</th><th>Qty</th><th>Status</th><th>User / PIC</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Ref. Transaksi</th>
+                                    <th>Cabang (Outlet)</th> <th>Nama Item (SKU)</th>
+                                    <th>Qty</th>
+                                    <th>Status</th>
+                                    <th>User / PIC</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <tr v-for="log in filteredStockLogs" :key="log.id">
                                     <td class="text-muted" style="font-size: 0.7rem;">{{ log.dateStr }}</td>
                                     <td class="fw-bold small">{{ log.refId }}</td>
+                                    
                                     <td>
-                                        <div class="fw-bold small">{{ log.productName }} <span class="sku-badge ms-1" v-if="!log.variantName || log.variantName === '-'">{{ log.sku }}</span></div>
+                                        <span class="badge bg-secondary bg-opacity-10 text-dark border" style="font-size:0.65rem;">
+                                            <i class="bi bi-shop me-1"></i>{{ log.outletName || 'Gudang Pusat' }}
+                                        </span>
+                                    </td>
+                                    
+                                    <td>
+                                        <div class="fw-bold small">
+                                            {{ log.productName }} 
+                                            <span class="sku-badge ms-1" v-if="!log.variantName || log.variantName === '-'">{{ log.sku }}</span>
+                                        </div>
                                         <div style="font-size:0.65rem;" class="text-muted mt-1" v-if="log.variantName && log.variantName !== '-'">
                                             <i class="bi bi-tag-fill me-1"></i>{{ log.variantName }} 
                                             <span class="sku-badge bg-dark text-white ms-1">{{ log.sku }}</span>
                                         </div>
                                     </td>
-                                    <td class="fw-bold" :class="log.qtyChange > 0 ? 'text-success' : 'text-danger'">{{ log.qtyChange > 0 ? '+'+log.qtyChange : log.qtyChange }}</td>
-                                    <td><span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : 'badge-in'">{{ log.type === 'OUT' ? 'KELUAR' : 'MASUK' }}</span></td>
-                                    <td><span class="badge bg-light text-dark border" style="font-size:0.65rem;"><i class="bi bi-person me-1"></i>{{ log.userName || log.cashierName || 'Sistem' }}</span></td>
+                                    <td class="fw-bold" :class="log.qtyChange > 0 ? 'text-success' : 'text-danger'">
+                                        {{ log.qtyChange > 0 ? '+'+log.qtyChange : log.qtyChange }}
+                                    </td>
+                                    <td>
+                                        <span class="badge px-2 py-1" style="font-size:0.6rem;" :class="log.type === 'OUT' ? 'badge-out' : (log.type === 'ADJUST' ? 'bg-warning text-dark' : 'badge-in')">
+                                            {{ log.type === 'OUT' ? 'KELUAR' : (log.type === 'ADJUST' ? 'SESUAI' : 'MASUK') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border" style="font-size:0.65rem;">
+                                            <i class="bi bi-person me-1"></i>{{ log.userName || log.cashierName || 'Sistem' }}
+                                        </span>
+                                    </td>
                                 </tr>
-                                <tr v-if="filteredStockLogs.length === 0"><td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat mutasi / Sesuai filter.</td></tr>
+                                <tr v-if="filteredStockLogs.length === 0">
+                                    <td colspan="7" class="text-center py-4 text-muted small">Belum ada riwayat mutasi / Sesuai filter.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -4506,8 +4539,6 @@ async fetchRolesFromDatabase() {
             this.askConfirm('Proses Pengiriman?', `Barang akan dikirim dan stok di cabang Asal akan terpotong secara permanen. Lanjutkan?`, async () => {
                 this.isProcessing = true;
                 try {
-                    let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
                     let toOutletName = this.getOutletName(tf.toOutlet);
 
                     for (let item of tf.items) {
@@ -4528,11 +4559,10 @@ async fetchRolesFromDatabase() {
                         }
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                        // Log mutasi KELUAR
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id, type: 'OUT',
-                            productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qtyChange: -item.qty, outletId: tf.fromOutlet, userName: currentUser, note: `Transfer Dikirim ke ${toOutletName}`
+                        // Log mutasi KELUAR via Fungsi Pusat
+                        await this.logStock('OUT', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: -item.qty, outletId: tf.fromOutlet, refId: id, note: `Transfer Dikirim ke ${toOutletName}`
                         });
                     }
 
@@ -4574,11 +4604,10 @@ async fetchRolesFromDatabase() {
                         }
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                        // Log mutasi MASUK
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id, type: 'IN',
-                            productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qtyChange: item.qty, outletId: tf.toOutlet, userName: currentUser, note: `Terima Transfer dari ${fromName}`
+                        // Log mutasi MASUK via Fungsi Pusat
+                        await this.logStock('IN', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: item.qty, outletId: tf.toOutlet, refId: id, note: `Terima Transfer dari ${fromName}`
                         });
                     }
 
@@ -4616,10 +4645,9 @@ async fetchRolesFromDatabase() {
                                 if (isVariant && vIdx !== -1) prodCopy.variants[vIdx].outletStocks[tf.toOutlet] -= item.qty;
                                 else if (!isVariant) prodCopy.baseOutletStocks[tf.toOutlet] -= item.qty;
                                 
-                                await addDoc(collection(db, "stockLogs"), {
-                                    createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-VOID', type: 'OUT',
-                                    productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                                    qtyChange: -item.qty, outletId: tf.toOutlet, userName: currentUser, note: `Pembatalan (VOID) Penerimaan`
+                                await this.logStock('OUT', {
+                                    productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                    qty: -item.qty, outletId: tf.toOutlet, refId: id + '-VOID', note: `Pembatalan (VOID) Penerimaan`
                                 });
                             }
 
@@ -4629,10 +4657,9 @@ async fetchRolesFromDatabase() {
 
                             await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                            await addDoc(collection(db, "stockLogs"), {
-                                createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-VOID', type: 'IN',
-                                productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                                qtyChange: item.qty, outletId: tf.fromOutlet, userName: currentUser, note: `Pengembalian VOID dari Transfer`
+                            await this.logStock('IN', {
+                                productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                qty: item.qty, outletId: tf.fromOutlet, refId: id + '-VOID', note: `Pengembalian VOID dari Transfer`
                             });
                         }
                     }
@@ -4709,6 +4736,38 @@ async fetchRolesFromDatabase() {
             triggerPrintBarcode() {
             // Membuka jendela dialog print bawaan komputer/device secara instan
             window.print();
+        },
+
+        // ========================================================
+        // FUNGSI PUSAT PENCATATAN LOG MUTASI STOK
+        // ========================================================
+        async logStock(type, { productId, sku, name, variantSku, variantName, qty, outletId, refId, note }) {
+            try {
+                const nowStr = new Date().toLocaleString('id-ID');
+                
+                // OTOMATIS: Mengubah ID menjadi Nama Cabang di dalam fungsi ini
+                const namaCabang = this.getOutletName(outletId) || 'Gudang Pusat';
+                
+                // Simpan langsung ke Firebase stockLogs
+                await addDoc(collection(db, "stockLogs"), {
+                    createdAt: serverTimestamp(),
+                    dateStr: nowStr,
+                    type: type,          // Isinya nanti: 'IN' (Masuk), 'OUT' (Keluar), atau 'ADJUST' (Opname)
+                    productId: productId,
+                    sku: sku || '-',
+                    productName: name,
+                    variantSku: variantSku || null,
+                    variantName: variantName || '-',
+                    qtyChange: qty,      // Jumlah perubahan stok (bisa positif/negatif)
+                    outletId: outletId,
+                    outletName: namaCabang, // Diisi otomatis di sini!
+                    refId: refId || '-',    // ID Nota / ID PO / ID Transfer / ID Opname
+                    userName: this.userProfile?.name || 'Admin',
+                    note: note || ''
+                });
+            } catch (err) {
+                console.error("Gagal mencatat log stok:", err);
+            }
         },
 
             startNewOpname() {
@@ -4845,21 +4904,10 @@ async fetchRolesFromDatabase() {
                         
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                        // Tulis riwayat pembalikan di Log Mutasi agar jejaknya jelas
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(),
-                            dateStr: nowStr,
-                            refId: id + '-VOID', // Tandai bahwa ini log dari proses void
-                            type: reverseDiff > 0 ? 'IN' : 'OUT',
-                            productId: prod.id,
-                            sku: item.sku,
-                            productName: item.name,
-                            variantSku: item.variantSku,
-                            variantName: item.variantName,
-                            qtyChange: reverseDiff,
-                            outletId: opname.outletId,
-                            userName: currentUser,
-                            note: `VOID REF: ${id}`
+                        // Tulis riwayat pembalikan via Fungsi Pusat
+                        await this.logStock(reverseDiff > 0 ? 'IN' : 'OUT', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: reverseDiff, outletId: opname.outletId, refId: id + '-VOID', note: `VOID REF: ${id}`
                         });
                     }
 
@@ -5190,17 +5238,13 @@ async fetchRolesFromDatabase() {
                         let newQty = newP.baseOutletStocks[outlet.id] || 0;
                         let diff = newQty - oldQty;
                         if (diff !== 0) {
-                            await addDoc(collection(db, "stockLogs"), {
-                                createdAt: serverTimestamp(), dateStr: nowStr,
-                                refId: 'EDIT MASTER', type: diff > 0 ? 'IN' : 'OUT',
-                                productId: productId, sku: newP.sku || '-', productName: newP.name || '-',
-                                variantSku: null, variantName: '-',
-                                qtyChange: diff, outletId: outlet.id,
-                                userName: currentUser
-                            });
-                        }
+                            await this.logStock(diff > 0 ? 'IN' : 'OUT', {
+                            productId: productId, sku: newP.sku || '-', name: newP.name || '-', variantSku: null, variantName: '-',
+                            qty: diff, outletId: outlet.id, refId: 'EDIT MASTER', note: 'Perubahan Manual via Master Data'
+                        });
                     }
                 }
+            }
                                 if (newP.variants && newP.variants.length > 0) {
                     for (let nVar of newP.variants) {
                         
@@ -5226,20 +5270,15 @@ async fetchRolesFromDatabase() {
                             let diff = newQty - oldQty;
                             
                             if (diff !== 0) {
-                                await addDoc(collection(db, "stockLogs"), {
-                                    createdAt: serverTimestamp(), dateStr: nowStr, // Pastikan nowStr sudah didefinisikan sebelumnya di fungsi Anda
-                                    refId: 'EDIT MASTER', type: diff > 0 ? 'IN' : 'OUT',
-                                    productId: productId, sku: newP.sku || '-', productName: newP.name || '-',
-                                    variantSku: nVar.variantSku, variantName: nVar.name || nVar.attributes || '-',
-                                    qtyChange: diff, outletId: outlet.id,
-                                    userName: currentUser
-                                });
-                            }
+                                await this.logStock(diff > 0 ? 'IN' : 'OUT', {
+                                productId: productId, sku: newP.sku || '-', name: newP.name || '-', variantSku: nVar.variantSku, variantName: nVar.name || nVar.attributes || '-',
+                                qty: diff, outletId: outlet.id, refId: 'EDIT MASTER', note: 'Perubahan Manual via Master Data'
+                            });
                         }
                     }
                 }
-
-            },
+            }
+        },
 
             async saveCategory() { await this.saveData('categories', this.formCategory, 'addCategoryModal'); },
 
@@ -5742,22 +5781,13 @@ async fetchRolesFromDatabase() {
                             }
                             await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                            await addDoc(collection(db, "stockLogs"), {
-                                createdAt: serverTimestamp(),
-                                dateStr: new Date().toLocaleString('id-ID'),
-                                refId: trxData.id,
-                                type: 'OUT',
-                                productId: prod.id,
-                                sku: prod.sku || '-',
-                                productName: prod.name || '-',
-                                variantSku: item.variantSku || null,
-                                variantName: item.variantName || '-',
-                                qtyChange: -item.qty,
-                                outletId: trxData.outletId,
-                                userName: this.userProfile.name || 'Admin' 
-                            });
-                        }
-                    }
+                            // Log mutasi KELUAR via Fungsi Pusat
+                    await this.logStock('OUT', {
+                        productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                        qty: -item.qty, outletId: trxData.outletId, refId: trxData.id, note: 'Penjualan Kasir POS'
+                    });
+                }
+            }
 
                     this.activePrintData = trxData;
                     this.printMode = 'receipt';
@@ -5929,22 +5959,13 @@ async fetchRolesFromDatabase() {
                             }
                             await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, hppPrice: prodCopy.hppPrice });
 
-                            await addDoc(collection(db, "stockLogs"), {
-                                createdAt: serverTimestamp(),
-                                dateStr: new Date().toLocaleString('id-ID'),
-                                refId: dataToSave.id,
-                                type: 'IN',
-                                productId: prod.id,
-                                sku: prod.sku || '-',
-                                productName: prod.name || '-',
-                                variantSku: item.variantSku || null,
-                                variantName: item.variantName || '-',
-                                qtyChange: item.qty,
-                                outletId: dataToSave.outletId,
-                                userName: this.userProfile.name || 'Admin' 
-                            });
-                        }
+                            // Log mutasi MASUK via Fungsi Pusat
+                        await this.logStock('IN', {
+                            productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
+                        });
                     }
+                }
 
                     this.hideModal('addPurchaseModal');
                     this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: '', items:[], note:'', total:0, isEdit: false };
@@ -5977,25 +5998,14 @@ async fetchRolesFromDatabase() {
                         // Update stok produk
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
                         
-                        // TAMBAHAN: Catat log mutasi KELUAR karena PO dibatalkan
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(),
-                            dateStr: new Date().toLocaleString('id-ID'),
-                            refId: po.id + ' (BATAL)', 
-                            type: 'OUT', 
-                            productId: prod.id,
-                            sku: prod.sku || '-',
-                            productName: prod.name || '-',
-                            variantSku: item.variantSku || null,
-                            variantName: item.variantName || '-',
-                            qtyChange: -item.qty, 
-                            outletId: po.outletId,
-                            userName: this.userProfile ? this.userProfile.name : 'Admin' 
-                        });
-                    }
+                        // Log mutasi KELUAR via Fungsi Pusat
+                    await this.logStock('OUT', {
+                        productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                        qty: -item.qty, outletId: po.outletId, refId: po.id + ' (BATAL)', note: 'Revisi/Batal Dokumen PO'
+                    });
                 }
-                // Baris deleteDoc dihapus agar riwayat mutasi awal tetap aman
-            },
+            }
+        },
 
             async revertPosStock(trx) {
                 if (!trx || !trx.items) return;
@@ -6018,25 +6028,14 @@ async fetchRolesFromDatabase() {
                         // Update stok produk
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
                         
-                        // TAMBAHAN: Catat log mutasi MASUK karena Invoice Kasir dibatalkan/diedit
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(),
-                            dateStr: new Date().toLocaleString('id-ID'),
-                            refId: trx.id + ' (BATAL)',
-                            type: 'IN',
-                            productId: prod.id,
-                            sku: prod.sku || '-',
-                            productName: prod.name || '-',
-                            variantSku: item.variantSku || null,
-                            variantName: item.variantName || '-',
-                            qtyChange: item.qty,
-                            outletId: trx.outletId,
-                            userName: this.userProfile ? this.userProfile.name : 'Admin' 
-                        });
-                    }
+                        // Log mutasi MASUK via Fungsi Pusat
+                    await this.logStock('IN', {
+                        productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                        qty: item.qty, outletId: trx.outletId, refId: trx.id + ' (BATAL)', note: 'Revisi/Batal Invoice Kasir'
+                    });
                 }
-                // Baris deleteDoc dihapus agar riwayat mutasi awal tetap aman
-            },
+            }
+        },
 
             editPurchase(po) {
                 this.askConfirm('Revisi Data Pembelian?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, stok lama akan otomatis ditarik & diganti dengan stok yang baru.', () => {
@@ -6370,21 +6369,11 @@ async fetchRolesFromDatabase() {
                     // 2. Tulis laporan audit trail ke koleksi stockLogs
                     let targetVariant = this.formOpname.variantSku ? prod.variants.find(v => v.variantSku === this.formOpname.variantSku) : null;
                     
-                    await addDoc(collection(db, "stockLogs"), {
-                        createdAt: serverTimestamp(),
-                        dateStr: new Date().toLocaleString('id-ID'),
-                        refId: 'STOCK OPNAME',
-                        type: diff > 0 ? 'IN' : 'OUT', // IN jika stok fisik bertambah, OUT jika menyusut
-                        productId: prod.id,
-                        sku: this.formOpname.variantSku || prod.sku || '-',
-                        productName: prod.name || '-',
-                        variantSku: this.formOpname.variantSku || null,
-                        variantName: targetVariant ? (targetVariant.name || targetVariant.attributes) : '-',
-                        qtyChange: diff, // Menyimpan nilai selisihnya (+5 atau -3)
-                        outletId: oId,
-                        userName: this.userProfile.name || 'Admin',
-                        notes: this.formOpname.notes ? `Opname: ${this.formOpname.notes}` : 'Penyesuaian Fisik Berkala'
-                    });
+                    // Log Mutasi ADJUST via Fungsi Pusat
+                await this.logStock(diff > 0 ? 'IN' : 'OUT', {
+                    productId: prod.id, sku: this.formOpname.variantSku || prod.sku || '-', name: prod.name || '-', variantSku: this.formOpname.variantSku || null, variantName: targetVariant ? (targetVariant.name || targetVariant.attributes) : '-',
+                    qty: diff, outletId: oId, refId: 'STOCK OPNAME', note: this.formOpname.notes ? `Opname: ${this.formOpname.notes}` : 'Penyesuaian Fisik Berkala'
+                });
 
                     Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok berhasil disesuaikan dan terekam di Kartu Stok!', timer: 2000, showConfirmButton: false });
                     this.hideModal('stockOpnameModal');
@@ -6567,11 +6556,10 @@ async fetchRolesFromDatabase() {
                         
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id,
-                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku,
-                            productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qtyChange: item.diff, outletId: opname.outletId, userName: currentUser, note: item.note
+                        // Log mutasi ADJUST via Fungsi Pusat
+                        await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: item.diff, outletId: opname.outletId, refId: id, note: item.note || 'Approve Dokumen Opname'
                         });
                     }
 
@@ -6617,11 +6605,10 @@ async fetchRolesFromDatabase() {
                         
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
 
-                        await addDoc(collection(db, "stockLogs"), {
-                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-UNVOID',
-                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku,
-                            productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qtyChange: item.diff, outletId: opname.outletId, userName: currentUser, note: `UN-VOID REF: ${id}`
+                        // Log mutasi UN-VOID via Fungsi Pusat
+                        await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: item.diff, outletId: opname.outletId, refId: id + '-UNVOID', note: `UN-VOID REF: ${id}`
                         });
                     }
 
