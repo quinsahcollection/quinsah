@@ -265,7 +265,18 @@
             <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
                 <i class="bi bi-box-seam"></i> Inventori
             </div>
-            
+
+            <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('inventory', 'read')">
+                <i class="bi bi-clipboard2-check"></i> Opname
+            </div>
+
+            <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('inventory', 'read')">
+                <i class="bi bi-arrow-left-right"></i> Transfer
+            </div>
+
+            <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('inventory', 'read')">
+                <i class="bi bi-qr-code-scan"></i> Barcode
+            </div>
             <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
                 <i class="bi bi-people"></i> CRM
             </div>
@@ -819,6 +830,523 @@
                 </div>
             </div>
 
+            <div v-if="currentView === 'barcode'" class="dashboard-card mb-4 no-print-area">
+                    <div class="row g-4">
+                        
+                        <div class="col-lg-5 border-end">
+                            <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-gear-fill me-2"></i>Konfigurasi Label Barcode</h6>
+                            </div>
+
+                            <div class="bg-light p-3 rounded border mb-4 shadow-sm">
+                                <label class="form-label small fw-bold mb-2 d-block">Komponen Label</label>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showBusinessName" id="showBiz">
+                                    <label class="form-check-label small" for="showBiz">Tampilkan Nama Usaha</label>
+                                </div>
+                                <input v-if="barcodeSettings.showBusinessName" type="text" class="form-control form-control-sm mb-3" v-model="barcodeSettings.businessName" placeholder="Ketik nama usaha...">
+
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showProductName" id="showProd">
+                                    <label class="form-check-label small" for="showProd">Tampilkan Nama Produk / Varian</label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showPrice" id="showPrice">
+                                    <label class="form-check-label small" for="showPrice">Tampilkan Harga Jual</label>
+                                </div>
+
+                                <label class="form-label small fw-bold mb-1">Ukuran Kertas Kertas / Label</label>
+                                <select class="form-select form-select-sm" v-model="barcodeSettings.labelSize">
+                                    <option value="small">Kecil (38mm x 20mm)</option>
+                                    <option value="medium">Sedang (50mm x 30mm)</option>
+                                    <option value="large">Besar (70mm x 40mm)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark"><i class="bi bi-box-seam me-1"></i>Pilih Produk / Varian</label>
+                                <input type="text" class="form-control form-control-sm mb-2" v-model="barcodeSearchQuery" placeholder="Ketik Nama Produk atau SKU untuk memfilter...">
+                                
+                                <div class="list-group rounded overflow-auto shadow-sm border" style="max-height: 250px;">
+                                    <template v-for="p in products" :key="'bc-p-'+p.id">
+                                        <button v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
+                                                class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2"
+                                                @click="addBarcodeItem(p.id, p.sku, p.name, '-', p.price)">
+                                            <div>
+                                                <b class="text-dark">{{ p.name }}</b> <br>
+                                                <small class="text-muted">SKU: {{ p.sku || '-' }}</small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill"><i class="bi bi-plus"></i></span>
+                                        </button>
+
+                                        <template v-for="(v, vIdx) in p.variants" :key="'bc-v-'+vIdx">
+                                            <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
+                                                    class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2 bg-white"
+                                                    @click="addBarcodeItem(p.id, v.variantSku, p.name, (v.name || v.attributes), (v.price || p.price))">
+                                                <div>
+                                                    <span class="text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }}</span><br>
+                                                    <b class="text-dark-custom ps-3">Varian: {{ v.name || v.attributes }}</b><br>
+                                                    <small class="text-muted ps-3">SKU: {{ v.variantSku || '-' }}</small>
+                                                </div>
+                                                <span class="badge bg-primary rounded-pill"><i class="bi bi-plus"></i></span>
+                                            </button>
+                                        </template>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <label class="form-label small fw-bold mb-1">Daftar Item yang Akan Dicetak</label>
+                            <div class="table-responsive border rounded bg-white shadow-sm" style="max-height: 200px;">
+                                <table class="table table-sm align-middle mb-0" style="font-size: 0.75rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Produk</th>
+                                            <th style="width: 80px;" class="text-center">Jumlah</th>
+                                            <th style="width: 40px;" class="text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(item, idx) in barcodeSelectedItems" :key="'sel-bc-'+idx">
+                                            <td>
+                                                <span class="fw-bold">{{ item.name }}</span>
+                                                <div class="text-muted" v-if="item.variantName !== '-'">{{ item.variantName }}</div>
+                                                <code class="text-danger">{{ item.sku }}</code>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm p-1 text-center fw-bold" v-model.number="item.printQty" min="1">
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-link text-danger p-0" @click="barcodeSelectedItems.splice(idx, 1)"><i class="bi bi-trash fs-6"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="barcodeSelectedItems.length === 0">
+                                            <td colspan="3" class="text-center py-3 text-muted">Belum ada produk dipilih. Klik produk di atas untuk menambahkan antrean.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-7 bg-white">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                <h6 class="fw-bold mb-0 text-success"><i class="bi bi-eye-fill me-2"></i>Live Preview Hasil Cetak</h6>
+                                <button class="btn btn-sm btn-success fw-bold shadow-sm px-3" :disabled="barcodeSelectedItems.length === 0" @click="triggerPrintBarcode()">
+                                    <i class="bi bi-printer me-1"></i> Mulai Cetak Label
+                                </button>
+                            </div>
+
+                            <div class="border rounded p-4 bg-dark bg-opacity-10 d-flex justify-content-center overflow-auto" style="min-height: 480px; max-height: 550px;">
+                                <div class="barcode-print-sheet shadow-lg bg-white" :class="'size-' + barcodeSettings.labelSize">
+                                    
+                                    <template v-for="item in barcodeSelectedItems">
+                                        <div v-for="n in item.printQty" class="barcode-label-box" :class="'size-' + barcodeSettings.labelSize">
+                                            <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">{{ barcodeSettings.businessName }}</div>
+                                            <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
+                                                {{ item.name }} <span v-if="item.variantName !== '-'">({{ item.variantName }})</span>
+                                            </div>
+                                            
+                                            <div class="bc-barcode-lines">
+                                                <div class="barcode-mock-bars"></div>
+                                                <div class="bc-sku-code">{{ item.sku }}</div>
+                                            </div>
+                                            
+                                            <div class="bc-price" v-if="barcodeSettings.showPrice">Rp {{ Number(item.price).toLocaleString('id-ID') }}</div>
+                                        </div>
+                                    </template>
+
+                                    <div v-if="barcodeSelectedItems.length === 0" class="text-center w-100 py-5 my-5 text-muted small">
+                                        <i class="bi bi-printer fs-1 d-block opacity-20 mb-2"></i>
+                                        Sisi preview lembar cetak label barcode Anda akan muncul di area ini.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <style>
+                    /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
+                    .barcode-print-sheet {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                        padding: 15px;
+                        width: 100%;
+                        background: #fff;
+                        align-content: flex-start;
+                    }
+                    .barcode-label-box {
+                        border: 1px dashed #ccc;
+                        background: #fff;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 6px;
+                        text-align: center;
+                        box-sizing: border-box;
+                        font-family: 'Courier New', Courier, monospace;
+                        overflow: hidden;
+                    }
+                    
+                    /* Penyetelan Ukuran Kotak Label */
+                    .barcode-label-box.size-small { width: 140px; height: 80px; font-size: 9px; }
+                    .barcode-label-box.size-medium { width: 180px; height: 110px; font-size: 11px; }
+                    .barcode-label-box.size-large { width: 240px; height: 140px; font-size: 13px; }
+
+                    .bc-biz-name { font-weight: bold; text-transform: uppercase; color: #555; font-size: 0.85em; white-space: nowrap; }
+                    .bc-prod-name { font-weight: bold; color: #000; margin: 2px 0; line-height: 1.1; max-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+                    
+                    /* Efek Batang Barcode Palsu (Bisa di-scan jika pakai library JsBarcode nanti) */
+                    .barcode-mock-bars {
+                        height: 25px;
+                        width: 100%;
+                        background: linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 7px, transparent 7px, transparent 8px, #000 8px, #000 9px, transparent 9px, transparent 12px, #000 12px, #000 13px, transparent 13px, transparent 14px, #000 14px, #000 17px);
+                        background-size: 22px 100%;
+                        margin: 2px auto;
+                    }
+                    .barcode-label-box.size-large .barcode-mock-bars { height: 45px; }
+                    .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
+                    .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
+
+                    /* ======================================================== */
+                    /* 2. SIHIR UTAMA: CSS BERAKSI SAAT TOMBOL PRINT DIKLIK     */
+                    /* ======================================================== */
+                    @media print {
+                        /* Sembunyikan semua elemen dashboard, sidebar, navbar, panel pengaturan */
+                        body *, .no-print-area, #sidebar, .dashboard-card, .btn, .navbar {
+                            display: none !important;
+                        }
+                        /* Hanya munculkan kanvas kertas barcode dan paksa posisinya di paling atas kiri kertas */
+                        body, .barcode-print-sheet {
+                            display: flex !important;
+                            visibility: visible !important;
+                            position: absolute !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            background: #fff !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            gap: 0 !important; /* Hilangkan jarak antar label saat dicetak ke printer thermal stiker */
+                        }
+                        .barcode-label-box {
+                            border: none !important; /* Hilangkan garis putus-putus saat dicetak riil */
+                            page-break-inside: avoid;
+                        }
+                    }
+                </style>
+
+            <div v-if="currentView === 'transfer'" class="dashboard-card mb-4">
+                    
+                    <div v-if="transferView === 'list'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0">Riwayat Transfer Barang</h6>
+                                <p class="text-muted small mb-0">Pantau pergerakan stok antar cabang/gudang.</p>
+                            </div>
+                            <button class="btn btn-sm btn-primary-custom" @click="transferView = 'form'"><i class="bi bi-truck me-1"></i>Buat Pengiriman Baru</button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>No. Dokumen</th>
+                                        <th>Tanggal Kirim</th>
+                                        <th>Cabang Asal</th>
+                                        <th>Cabang Tujuan</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="tf in transferHistory" :key="tf.id">
+                                        <td class="fw-bold text-primary">{{ tf.id }}</td>
+                                        <td class="text-muted">{{ tf.dateStr }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">{{ getOutletName(tf.fromOutlet) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <i class="bi bi-arrow-right text-muted mx-1"></i>
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">{{ getOutletName(tf.toOutlet) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge" :class="{'bg-warning text-dark': tf.status === 'DIKIRIM', 'bg-success': tf.status === 'DITERIMA', 'bg-danger': tf.status === 'VOID'}">
+                                                {{ tf.status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewTransfer(tf.id)"><i class="bi bi-eye"></i></button>
+                                            
+                                            <button v-if="tf.status === 'DIKIRIM'" class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Konfirmasi Terima Barang" @click="receiveTransfer(tf.id)"><i class="bi bi-box-arrow-in-down"></i></button>
+                                            
+                                            <button v-if="tf.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Batalkan Transfer" @click="voidTransfer(tf.id)"><i class="bi bi-x-octagon"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="transferHistory.length === 0">
+                                        <td colspan="6" class="text-center py-5 text-muted">
+                                            <i class="bi bi-box-seam fs-2 d-block mb-2 opacity-50"></i>
+                                            Belum ada riwayat transfer barang antar cabang.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div v-if="transferView === 'form'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-truck me-2"></i>Draft Pengiriman Barang</h6>
+                            <button class="btn btn-sm btn-light border fw-bold" @click="transferView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
+                        </div>
+
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-danger">Kirim Dari (Asal) *</label>
+                                <select class="form-select form-select-sm border-danger" v-model="transferForm.fromOutlet">
+                                    <option value="">-- Pilih Cabang Asal --</option>
+                                    <option v-for="o in outlets" :key="'from-'+o.id" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 text-center">
+                                <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-success">Kirim Ke (Tujuan) *</label>
+                                <select class="form-select form-select-sm border-success" v-model="transferForm.toOutlet">
+                                    <option value="">-- Pilih Cabang Tujuan --</option>
+                                    <option v-for="o in outlets" :key="'to-'+o.id" :value="o.id" :disabled="o.id === transferForm.fromOutlet">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Catatan Pengiriman</label>
+                                <input type="text" class="form-control form-control-sm" v-model="transferForm.note" placeholder="Nama supir / plat mobil / alasan...">
+                            </div>
+                        </div>
+
+                        <div v-if="!transferForm.fromOutlet || !transferForm.toOutlet" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang Asal dan Tujuan</b> di atas terlebih dahulu untuk memunculkan daftar barang.
+                        </div>
+
+                        <div v-show="transferForm.fromOutlet && transferForm.toOutlet">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="transferSearchQuery" placeholder="Ketik nama produk atau SKU yang ingin dikirim...">
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            <th class="text-start">Produk / Nama Varian</th>
+                                            <th>SKU</th>
+                                            <th class="bg-danger bg-opacity-10 text-danger">Stok Asal (Tersedia)</th>
+                                            <th style="width: 150px;" class="bg-primary bg-opacity-10 text-primary">Qty Dikirim</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="p in products" :key="'tf-'+p.id">
+                                            <tr v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(transferSearchQuery.toLowerCase())))">
+                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
+                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
+                                                    {{ getRealAvailableStock(p, null, transferForm.fromOutlet) }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[p.id]" min="0" :max="getRealAvailableStock(p, null, transferForm.fromOutlet)">
+                                                </td>
+                                            </tr>
+                                            <tr v-for="(v, index) in p.variants" :key="'tf-v-'+index" v-show="p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(transferSearchQuery.toLowerCase()))">
+                                                <td class="ps-3 text-muted">
+                                                    <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
+                                                </td>
+                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
+                                                    {{ getRealAvailableStock(p, v, transferForm.fromOutlet) }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[v.variantSku]" min="0" :max="getRealAvailableStock(p, v, transferForm.fromOutlet)">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <button class="btn btn-light border fw-bold" @click="transferView = 'list'">Batalkan</button>
+                            <button class="btn btn-primary fw-bold" :disabled="!transferForm.fromOutlet || !transferForm.toOutlet || isProcessing" @click="saveTransfer">
+                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-send me-1"></i> Proses Pengiriman
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
+                    
+                    <div v-if="opnameView === 'list'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">Riwayat Stok Opname</h6>
+                            <button class="btn btn-sm btn-primary-custom" @click="startNewOpname()"><i class="bi bi-plus-lg me-1"></i>Buat Opname Baru</button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>ID Dokumen</th>
+                                        <th>Waktu Eksekusi</th>
+                                        <th>Lokasi Cabang</th>
+                                        <th>PIC (Petugas)</th>
+                                        <th>Catatan Khusus</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="op in opnameHistory" :key="op.id">
+                                        <td class="fw-bold text-primary">{{ op.id }}</td>
+                                        <td class="text-muted">{{ op.dateStr }}</td>
+                                        <td class="text-center">{{ getOutletName(op.outletId) || '-' }}</td>
+                                        <td>{{ op.pic }}</td>
+                                        <td><span class="text-muted" style="white-space: normal; min-width: 150px; display: inline-block;">{{ op.note || '-' }}</span></td>
+                                        <td class="text-center">
+                                            <span class="badge" :class="{'bg-danger': op.status === 'VOID', 'bg-success': op.status === 'SELESAI', 'bg-warning text-dark': op.status === 'PENDING'}">
+                                                {{ op.status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewOpname(op.id)"><i class="bi bi-eye"></i></button>
+                                            <template v-if="op.status === 'PENDING'">
+                                                <button class="btn btn-sm btn-light border text-warning me-1 py-1 px-2" title="Edit Draft" @click="editOpname(op.id)"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Setujui & Sesuaikan Stok" @click="approveOpname(op.id)"><i class="bi bi-check-circle"></i></button>
+                                            </template>
+                                            <button v-if="op.status === 'SELESAI'" class="btn btn-sm btn-light border text-danger py-1 px-2 me-1" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
+                                            <button v-if="op.status === 'VOID'" class="btn btn-sm btn-light border text-secondary py-1 px-2" title="Batalkan Void (Un-Void)" @click="unvoidOpname(op.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="opnameHistory.length === 0">
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-clipboard2-x fs-2 d-block mb-2 opacity-50"></i>
+                                            Belum ada riwayat stok opname. Silakan buat dokumen opname baru.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div v-if="opnameView === 'form'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-clipboard2-plus me-2"></i>Form Penyesuaian Stok (Opname)</h6>
+                                <p class="text-muted small mb-0 mt-1">Samakan stok di sistem dengan fisik di gudang/toko.</p>
+                            </div>
+                            <button class="btn btn-sm btn-light border fw-bold" @click="opnameView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
+                        </div>
+
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Cabang / Outlet <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm border-danger" v-model="invOutletFilter">
+                                    <option value="">-- Pilih Cabang --</option>
+                                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">PIC (Petugas) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm bg-secondary bg-opacity-10 fw-bold" :value="userProfile ? userProfile.name : 'Admin'" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Catatan Jurnal Opname</label>
+                                <input type="text" class="form-control form-control-sm" v-model="opnameForm.note" placeholder="Contoh: Penyesuaian stok gudang karena banjir...">
+                            </div>
+                        </div>
+
+                        <div v-if="!invOutletFilter" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang / Outlet</b> di atas terlebih dahulu untuk memunculkan dan mengisi Stok Fisik.
+                        </div>
+
+                        <div v-show="invOutletFilter">
+                            <div class="row g-2 mb-3 align-items-center">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Ketik pencarian...">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Kategori Produk</label>
+                                    <select class="form-select form-select-sm" v-model="invCategoryFilter">
+                                        <option value="">-- Semua Kategori --</option>
+                                        <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            <th class="text-start">Produk / Nama Varian</th>
+                                            <th>SKU</th>
+                                            <th class="bg-secondary bg-opacity-10">Stok Sistem</th>
+                                            <th style="width: 150px;" class="bg-warning bg-opacity-10 text-dark">Stok Fisik Aktual</th>
+                                            <th>Catatan / Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="p in filteredInventoryProducts" :key="'op-'+p.id">
+                                            <tr v-if="!p.variants || p.variants.length === 0">
+                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
+                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
+                                                    {{ getProductStockAtOutlet(p, invOutletFilter) }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]">
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]">
+                                                </td>
+                                            </tr>
+                                            <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
+                                                <td class="ps-3 text-muted">
+                                                    <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
+                                                </td>
+                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
+                                                    {{ (v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0 }}
+                                                </td>
+                                                <td class="bg-warning bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]">
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <tr v-if="filteredInventoryProducts.length === 0">
+                                            <td colspan="5" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <button class="btn btn-light border fw-bold" @click="opnameView = 'list'">Batalkan</button>
+                            <button class="btn btn-success fw-bold" :disabled="!invOutletFilter || isProcessing" @click="saveStokOpname">
+                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-save me-1"></i> Simpan Penyesuaian
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             <!-- INVENTORY VIEW -->
             <div v-if="currentView === 'inventory' && userRole === 'Admin'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
@@ -826,7 +1354,6 @@
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='allocation', 'bg-primary-custom': invTab==='allocation'}" href="#" @click.prevent="invTab='allocation'"><i class="bi bi-diagram-3 me-1"></i>Alokasi Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='logs', 'bg-primary-custom': invTab==='logs'}" href="#" @click.prevent="invTab='logs'">Log Mutasi Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='opname', 'bg-primary-custom': invTab==='opname'}" href="#" @click.prevent="invTab='opname'"><i class="bi bi-clipboard2-check me-1"></i>Stok Opname</a></li>
                 </ul>
 
                 <div v-if="invTab==='stocks'">
@@ -1136,168 +1663,6 @@
                     </div>
                 </div>
             </div>
-
-            <div v-if="currentView === 'inventory' && invTab === 'opname'" class="dashboard-card">
-                    
-                    <div v-if="opnameView === 'list'">
-                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0">Riwayat Stok Opname</h6>
-                            <button class="btn btn-sm btn-primary-custom" @click="startNewOpname()"><i class="bi bi-plus-lg me-1"></i>Buat Opname Baru</button>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th>ID Dokumen</th>
-                                        <th>Waktu Eksekusi</th>
-                                        <th>Lokasi Cabang</th>
-                                        <th>PIC (Petugas)</th>
-                                        <th>Catatan Khusus</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="op in opnameHistory" :key="op.id">
-                                        <td class="fw-bold text-primary">{{ op.id }}</td>
-                                        <td class="text-muted">{{ op.dateStr }}</td>
-                                        <td class="text-center">{{ getOutletName(op.outletId) || '-' }}</td>
-                                        <td>{{ op.pic }}</td>
-                                        <td><span class="text-muted" style="white-space: normal; min-width: 150px; display: inline-block;">{{ op.note || '-' }}</span></td>
-                                        <td class="text-center">
-                                            <span class="badge" :class="{'bg-danger': op.status === 'VOID', 'bg-success': op.status === 'SELESAI', 'bg-warning text-dark': op.status === 'PENDING'}">
-                                                {{ op.status }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewOpname(op.id)"><i class="bi bi-eye"></i></button>
-                                            <template v-if="op.status === 'PENDING'">
-                                                <button class="btn btn-sm btn-light border text-warning me-1 py-1 px-2" title="Edit Draft" @click="editOpname(op.id)"><i class="bi bi-pencil"></i></button>
-                                                <button class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Setujui & Sesuaikan Stok" @click="approveOpname(op.id)"><i class="bi bi-check-circle"></i></button>
-                                            </template>
-
-                                            <button v-if="op.status === 'SELESAI'" class="btn btn-sm btn-light border text-danger py-1 px-2 me-1" title="Void Dokumen" @click="voidOpname(op.id)"><i class="bi bi-x-octagon"></i></button>
-
-                                            <button v-if="op.status === 'VOID'" class="btn btn-sm btn-light border text-secondary py-1 px-2" title="Batalkan Void (Un-Void)" @click="unvoidOpname(op.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="opnameHistory.length === 0">
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="bi bi-clipboard2-x fs-2 d-block mb-2 opacity-50"></i>
-                                            Belum ada riwayat stok opname. Silakan buat dokumen opname baru.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div v-if="opnameView === 'form'">
-                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                            <div>
-                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-clipboard2-plus me-2"></i>Form Penyesuaian Stok (Opname)</h6>
-                                <p class="text-muted small mb-0 mt-1">Samakan stok di sistem dengan fisik di gudang/toko.</p>
-                            </div>
-                            <button class="btn btn-sm btn-light border fw-bold" @click="opnameView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali ke Riwayat</button>
-                        </div>
-
-                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">Cabang / Outlet <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm border-danger" v-model="invOutletFilter">
-                                    <option value="">-- Pilih Cabang Untuk Opname --</option>
-                                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">PIC (Petugas) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm bg-secondary bg-opacity-10 fw-bold" :value="userProfile ? userProfile.name : 'Admin'" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Catatan Jurnal Opname</label>
-                                <input type="text" class="form-control form-control-sm" v-model="opnameForm.note" placeholder="Contoh: Penyesuaian stok gudang karena banjir...">
-                            </div>
-                        </div>
-
-                        <div v-if="!invOutletFilter" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
-                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang / Outlet</b> di atas terlebih dahulu untuk memunculkan dan mengisi Stok Fisik.
-                        </div>
-
-                        <div v-show="invOutletFilter">
-                            <div class="row g-2 mb-3 align-items-center">
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
-                                    <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Ketik pencarian...">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">Kategori Produk</label>
-                                    <select class="form-select form-select-sm" v-model="invCategoryFilter">
-                                        <option value="">-- Semua Kategori --</option>
-                                        <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive mb-4">
-                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
-                                    <thead class="table-light text-center">
-                                        <tr>
-                                            <th class="text-start">Produk / Nama Varian</th>
-                                            <th>SKU</th>
-                                            <th class="bg-secondary bg-opacity-10">Stok Sistem</th>
-                                            <th style="width: 150px;" class="bg-warning bg-opacity-10 text-dark">Stok Fisik Aktual</th>
-                                            <th>Catatan / Keterangan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template v-for="p in filteredInventoryProducts" :key="'op-'+p.id">
-                                            <tr v-if="!p.variants || p.variants.length === 0">
-                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
-                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
-                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
-                                                    {{ getProductStockAtOutlet(p, invOutletFilter) }}
-                                                </td>
-                                                <td class="bg-warning bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]">
-                                                </td>
-                                                <td>
-                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]">
-                                                </td>
-                                            </tr>
-                                            <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
-                                                <td class="ps-3 text-muted">
-                                                    <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
-                                                </td>
-                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
-                                                <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
-                                                    {{ (v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0 }}
-                                                </td>
-                                                <td class="bg-warning bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]">
-                                                </td>
-                                                <td>
-                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]">
-                                                </td>
-                                            </tr>
-                                        </template>
-                                        <tr v-if="filteredInventoryProducts.length === 0">
-                                            <td colspan="5" class="text-center py-4 text-muted">Tidak ada data produk yang sesuai filter.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
-                            <button class="btn btn-light border fw-bold" @click="opnameView = 'list'">Batalkan</button>
-                            <button class="btn btn-success fw-bold" :disabled="!invOutletFilter || isProcessing" @click="saveStokOpname">
-                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-save me-1"></i> Simpan Penyesuaian
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
             <!-- CRM VIEW -->
             <div v-if="currentView === 'crm'">
@@ -2910,12 +3275,15 @@
                 d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
                 return d.toISOString().slice(0, 10);
             };
+            
             return {
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
 
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
-                viewTitles: { pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem' },
+                
+                // viewTitles diperbarui agar sinkron dengan menu baru
+                viewTitles: { pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem', opname: 'Stok Opname Fisik', transfer: 'Transfer Antar Cabang', barcode: 'Cetak Barcode' },
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
@@ -2924,6 +3292,7 @@
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
                 activeCustomerDetail: null, activeSupplierDetail: null,
+                
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
                 customerPromoFilter: '',
@@ -2938,62 +3307,88 @@
                 originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
                 purchaseStartDate: '',
                 purchaseEndDate: '',
-                purchaseSearchQuery: '',
                 transactionStartDate: '',
                 transactionEndDate: '',
-                transactionSearchQuery: '', 
-                // State untuk Stok Opname
+                
+                // ==========================================
+                // STATE STOK OPNAME
+                // ==========================================
                 opnameView: 'list', // Mengatur tampilan: 'list' (Riwayat) atau 'form' (Form Baru)
-                opnameHistory: [], // Menyimpan data riwayat opname
+                opnameHistory: [], // Menyimpan data riwayat opname dari Firebase
                 opnameFisik: {},
                 opnameNote: {},
                 opnameForm: {
-                id: '',
-                dateStr: '',
-                pic: '',
-                note: '',
-                outletId: '',
-                items: [] // Nanti diisi barang yang di-opname
-            },
-            
-appModules: [
-    { id: 'pos', name: 'Kasir (POS)' },
-    { id: 'purchase', name: 'Pembelian (Purchase)' },
-    { id: 'catalog', name: 'Data Master Produk' },
-    { id: 'inventory', name: 'Inventori & Stok' },
-    { id: 'crm', name: 'Pelanggan (CRM)' },
-    { id: 'outlets', name: 'Manajemen Cabang / Outlet' },
-    { id: 'reports', name: 'Laporan Penjualan' },
-    { id: 'settings', name: 'Setelan Sistem & Hak Akses' }
-],
-roles: [
-    { 
-        id: 1, 
-        name: 'Super Admin', 
-        permissions: {} // Super Admin otomatis bypass semua hak akses (bisa semua)
-    },
-    { 
-        id: 2, 
-        name: 'Kasir', 
-        permissions: {
-            'dashboard': { read: true, write: false },
-            'pos': { read: true, write: true },
-            'produk': { read: true, write: false },
-            'laporan': { read: false, write: false },
-            'pengaturan': { read: false, write: false }
-        }
-    }
-],
-usersList: [
-    { id: 1, username: 'admin', password: '123', roleId: 1, namaLengkap: 'Budi Owner' },
-    { id: 2, username: 'kasir1', password: '123', roleId: 2, namaLengkap: 'Siti Aminah' }
-],
-loggedInUser: { id: 1, username: 'admin', roleId: 1, namaLengkap: 'Budi Owner' }, // Contoh user default yang sedang login
-currentSettingTab: 'hak_akses', // Tab default di menu setting
-formRole: { id: null, name: '', permissions: {} },
-formUser: { id: null, username: '', password: '', roleId: null, namaLengkap: '' },
-isEditingRole: false,
-isEditingUser: false,
+                    id: '',
+                    dateStr: '',
+                    pic: '',
+                    note: '',
+                    outletId: '',
+                    items: [] // Nanti diisi barang yang di-opname
+                },
+                
+                // ==========================================
+                // STATE TRANSFER STOK ANTAR TOKO
+                // ==========================================
+                transferView: 'list', 
+                transferHistory: [],
+                transferSearchQuery: '',
+                transferQtyInput: {}, 
+                transferForm: {
+                    id: '',
+                    dateStr: '',
+                    pic: '',
+                    fromOutlet: '', 
+                    toOutlet: '',   
+                    note: '',
+                    items: []
+                },
+
+                // ==========================================
+                // STATE CETAK BARCODE LABEL
+                // ==========================================
+                barcodeSettings: {
+                    showBusinessName: true,
+                    showProductName: true,
+                    showPrice: true,
+                    labelSize: 'medium', // opsi: 'small', 'medium', 'large'
+                    businessName: 'Toko Plastik & Cetak' 
+                },
+                barcodeSelectedItems: [], 
+                barcodeSearchQuery: '',
+
+                // ==========================================
+                // MANAJEMEN HAK AKSES (ERP ROLES)
+                // ==========================================
+                appModules: [
+                    { id: 'pos', name: 'Kasir (POS)' },
+                    { id: 'purchase', name: 'Pembelian (Purchase)' },
+                    { id: 'catalog', name: 'Data Master Produk' },
+                    { id: 'inventory', name: 'Inventori & Cek Stok' },
+                    { id: 'opname', name: 'Eksekusi Stok Opname' },      // MODUL BARU
+                    { id: 'transfer', name: 'Transfer Antar Cabang' },   // MODUL BARU
+                    { id: 'barcode', name: 'Cetak Label Barcode' },      // MODUL BARU
+                    { id: 'crm', name: 'Pelanggan (CRM)' },
+                    { id: 'outlets', name: 'Manajemen Cabang / Outlet' },
+                    { id: 'reports', name: 'Laporan Penjualan' },
+                    { id: 'settings', name: 'Setelan Sistem & Hak Akses' }
+                ],
+                
+                roles: [
+                    { 
+                        id: 1, 
+                        name: 'Super Admin', 
+                        permissions: {} // Super Admin otomatis bypass semua hak akses
+                    }
+                    // Role Kasir (dummy) dihapus, sistem akan mengambil murni dari Firebase
+                ],
+                usersList: [], // Array dikosongkan karena data riil ditarik dari Firebase
+                
+                loggedInUser: null, // Diubah menjadi null agar tidak ada akun dummy yang nyangkut
+                currentSettingTab: 'hak_akses',
+                formRole: { id: null, name: '', permissions: {} },
+                formUser: { id: null, username: '', password: '', roleId: null, namaLengkap: '' },
+                isEditingRole: false,
+                isEditingUser: false,
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -4058,6 +4453,29 @@ async fetchRolesFromDatabase() {
             });
         },
 
+            addBarcodeItem(productId, sku, name, variantName, price) {
+            // Cek apakah produk dengan SKU tersebut sudah ada dalam daftar antrean
+            let existing = this.barcodeSelectedItems.find(item => item.sku === sku);
+            if (existing) {
+                existing.printQty += 1; // Jika ada, cukup naikkan kuantitas cetak
+            } else {
+                // Jika belum ada, masukkan data bersih ke antrean
+                this.barcodeSelectedItems.push({
+                    productId: productId,
+                    sku: sku || 'NO-SKU',
+                    name: name,
+                    variantName: variantName,
+                    price: price || 0,
+                    printQty: 1
+                });
+            }
+        },
+
+            triggerPrintBarcode() {
+            // Membuka jendela dialog print bawaan komputer/device secara instan
+            window.print();
+        },
+
             startNewOpname() {
             this.opnameForm = {
                 id: 'OPN-' + Math.floor(Math.random() * 90000 + 10000),
@@ -4071,6 +4489,33 @@ async fetchRolesFromDatabase() {
             this.opnameFisik = {};
             this.opnameNote = {};
             this.opnameView = 'form';
+        },
+        
+        getRealAvailableStock(p, v, outletId) {
+            let stockDb = 0;
+            
+            // 1. Ambil stok asli dari database
+            if (v) {
+                stockDb = (v.outletStocks && v.outletStocks[outletId]) ? v.outletStocks[outletId] : 0;
+            } else {
+                stockDb = (p.baseOutletStocks && p.baseOutletStocks[outletId]) ? p.baseOutletStocks[outletId] : 0;
+            }
+
+            // 2. Cari apakah barang ini sedang 'di-keep' / masuk keranjang POS
+            let heldQty = 0;
+            if (this.cart && this.cart.length > 0) {
+                this.cart.forEach(cartItem => {
+                    // Pencocokan barang di keranjang berdasarkan varian atau produk tunggal
+                    if (v && cartItem.variantSku === v.variantSku) {
+                        heldQty += cartItem.qty;
+                    } else if (!v && cartItem.id === p.id && !cartItem.variantSku) {
+                        heldQty += cartItem.qty;
+                    }
+                });
+            }
+
+            // 3. Kembalikan sisa stok yang benar-benar bisa ditransfer
+            return stockDb - heldQty;
         },
         
         // 1. FUNGSI LIHAT DETAIL OPNAME (Menggunakan Popup SweetAlert agar rapi)
