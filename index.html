@@ -1037,156 +1037,6 @@
                     }
                 </style>
 
-            <div v-if="currentView === 'transfer'" class="dashboard-card mb-4">
-                    
-                    <div v-if="transferView === 'list'">
-                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                            <div>
-                                <h6 class="fw-bold mb-0">Riwayat Transfer Barang</h6>
-                                <p class="text-muted small mb-0">Pantau pergerakan stok antar cabang/gudang.</p>
-                            </div>
-                            <button class="btn btn-sm btn-primary-custom" @click="transferView = 'form'"><i class="bi bi-truck me-1"></i>Buat Pengiriman Baru</button>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th>No. Dokumen</th>
-                                        <th>Tanggal Kirim</th>
-                                        <th>Cabang Asal</th>
-                                        <th>Cabang Tujuan</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="tf in transferHistory" :key="tf.id">
-                                        <td class="fw-bold text-primary">{{ tf.id }}</td>
-                                        <td class="text-muted">{{ tf.dateStr }}</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">{{ getOutletName(tf.fromOutlet) }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <i class="bi bi-arrow-right text-muted mx-1"></i>
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">{{ getOutletName(tf.toOutlet) }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge" :class="{'bg-warning text-dark': tf.status === 'DIKIRIM', 'bg-success': tf.status === 'DITERIMA', 'bg-danger': tf.status === 'VOID'}">
-                                                {{ tf.status }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewTransfer(tf.id)"><i class="bi bi-eye"></i></button>
-                                            
-                                            <button v-if="tf.status === 'DIKIRIM'" class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Konfirmasi Terima Barang" @click="receiveTransfer(tf.id)"><i class="bi bi-box-arrow-in-down"></i></button>
-                                            
-                                            <button v-if="tf.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Batalkan Transfer" @click="voidTransfer(tf.id)"><i class="bi bi-x-octagon"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="transferHistory.length === 0">
-                                        <td colspan="6" class="text-center py-5 text-muted">
-                                            <i class="bi bi-box-seam fs-2 d-block mb-2 opacity-50"></i>
-                                            Belum ada riwayat transfer barang antar cabang.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div v-if="transferView === 'form'">
-                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                            <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-truck me-2"></i>Draft Pengiriman Barang</h6>
-                            <button class="btn btn-sm btn-light border fw-bold" @click="transferView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
-                        </div>
-
-                        <div class="row g-3 mb-4 bg-light p-3 rounded border align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-danger">Kirim Dari (Asal) *</label>
-                                <select class="form-select form-select-sm border-danger" v-model="transferForm.fromOutlet">
-                                    <option value="">-- Pilih Cabang Asal --</option>
-                                    <option v-for="o in outlets" :key="'from-'+o.id" :value="o.id">{{ o.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-1 text-center">
-                                <i class="bi bi-arrow-right-circle fs-4 text-secondary"></i>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold text-success">Kirim Ke (Tujuan) *</label>
-                                <select class="form-select form-select-sm border-success" v-model="transferForm.toOutlet">
-                                    <option value="">-- Pilih Cabang Tujuan --</option>
-                                    <option v-for="o in outlets" :key="'to-'+o.id" :value="o.id" :disabled="o.id === transferForm.fromOutlet">{{ o.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label small fw-bold">Catatan Pengiriman</label>
-                                <input type="text" class="form-control form-control-sm" v-model="transferForm.note" placeholder="Nama supir / plat mobil / alasan...">
-                            </div>
-                        </div>
-
-                        <div v-if="!transferForm.fromOutlet || !transferForm.toOutlet" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
-                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang Asal dan Tujuan</b> di atas terlebih dahulu untuk memunculkan daftar barang.
-                        </div>
-
-                        <div v-show="transferForm.fromOutlet && transferForm.toOutlet">
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-12">
-                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
-                                    <input type="text" class="form-control form-control-sm" v-model="transferSearchQuery" placeholder="Ketik nama produk atau SKU yang ingin dikirim...">
-                                </div>
-                            </div>
-
-                            <div class="table-responsive mb-4">
-                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
-                                    <thead class="table-light text-center">
-                                        <tr>
-                                            <th class="text-start">Produk / Nama Varian</th>
-                                            <th>SKU</th>
-                                            <th class="bg-danger bg-opacity-10 text-danger">Stok Asal (Tersedia)</th>
-                                            <th style="width: 150px;" class="bg-primary bg-opacity-10 text-primary">Qty Dikirim</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template v-for="p in products" :key="'tf-'+p.id">
-                                            <tr v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(transferSearchQuery.toLowerCase())))">
-                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
-                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
-                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
-                                                    {{ getRealAvailableStock(p, null, transferForm.fromOutlet) }}
-                                                </td>
-                                                <td class="bg-primary bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[p.id]" min="0" :max="getRealAvailableStock(p, null, transferForm.fromOutlet)">
-                                                </td>
-                                            </tr>
-                                            <tr v-for="(v, index) in p.variants" :key="'tf-v-'+index" v-show="p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(transferSearchQuery.toLowerCase()))">
-                                                <td class="ps-3 text-muted">
-                                                    <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
-                                                </td>
-                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
-                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
-                                                    {{ getRealAvailableStock(p, v, transferForm.fromOutlet) }}
-                                                </td>
-                                                <td class="bg-primary bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[v.variantSku]" min="0" :max="getRealAvailableStock(p, v, transferForm.fromOutlet)">
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
-                            <button class="btn btn-light border fw-bold" @click="transferView = 'list'">Batalkan</button>
-                            <button class="btn btn-primary fw-bold" :disabled="!transferForm.fromOutlet || !transferForm.toOutlet || isProcessing" @click="saveTransfer">
-                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
-                                <i v-else class="bi bi-send me-1"></i> Proses Pengiriman
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
             <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
                     
                     <div v-if="opnameView === 'list'">
@@ -1798,6 +1648,146 @@
                     </table>
                 </div>
             </div>
+
+            <div v-if="currentView === 'transfer'" class="dashboard-card mb-4">
+                    <div v-if="transferView === 'list'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0">Riwayat Transfer Barang</h6>
+                                <p class="text-muted small mb-0">Pantau pergerakan stok antar cabang/gudang.</p>
+                            </div>
+                            <button class="btn btn-sm btn-primary-custom" @click="transferView = 'form'"><i class="bi bi-plus-lg me-1"></i>Buat Pengajuan Baru</button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.8rem;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>No. Dokumen</th>
+                                        <th>Tanggal Buat</th>
+                                        <th>Rute Pengiriman</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="tf in transferHistory" :key="tf.id">
+                                        <td class="fw-bold text-primary">{{ tf.id }}</td>
+                                        <td class="text-muted">{{ tf.dateStr }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">{{ getOutletName(tf.fromOutlet) }}</span>
+                                            <i class="bi bi-arrow-right text-muted mx-2"></i>
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success">{{ getOutletName(tf.toOutlet) }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge" :class="{'bg-secondary': tf.status === 'PENDING', 'bg-warning text-dark': tf.status === 'DIKIRIM', 'bg-success': tf.status === 'DITERIMA', 'bg-danger': tf.status === 'VOID'}">
+                                                {{ tf.status }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewTransfer(tf.id)"><i class="bi bi-eye"></i></button>
+                                            
+                                            <button v-if="tf.status === 'PENDING'" class="btn btn-sm btn-primary text-white me-1 py-1 px-2" title="Proses Pengiriman (Potong Stok Asal)" @click="sendTransfer(tf.id)"><i class="bi bi-truck"></i></button>
+                                            
+                                            <button v-if="tf.status === 'DIKIRIM'" class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Konfirmasi Terima Barang" @click="receiveTransfer(tf.id)"><i class="bi bi-box-arrow-in-down"></i></button>
+                                            
+                                            <button v-if="tf.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Batalkan Transfer" @click="voidTransfer(tf.id)"><i class="bi bi-x-octagon"></i></button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="transferHistory.length === 0">
+                                        <td colspan="5" class="text-center py-5 text-muted">Belum ada riwayat transfer barang antar cabang.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div v-if="transferView === 'form'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-file-earmark-plus me-2"></i>Draft Pengajuan Transfer</h6>
+                            <button class="btn btn-sm btn-light border fw-bold" @click="transferView = 'list'"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
+                        </div>
+
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-danger">Kirim Dari (Asal) *</label>
+                                <select class="form-select form-select-sm border-danger" v-model="transferForm.fromOutlet">
+                                    <option value="">-- Pilih Cabang Asal --</option>
+                                    <option v-for="o in outlets" :key="'from-'+o.id" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1 text-center"><i class="bi bi-arrow-right-circle fs-4 text-secondary"></i></div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-success">Kirim Ke (Tujuan) *</label>
+                                <select class="form-select form-select-sm border-success" v-model="transferForm.toOutlet">
+                                    <option value="">-- Pilih Cabang Tujuan --</option>
+                                    <option v-for="o in outlets" :key="'to-'+o.id" :value="o.id" :disabled="o.id === transferForm.fromOutlet">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Catatan Pengajuan</label>
+                                <input type="text" class="form-control form-control-sm" v-model="transferForm.note" placeholder="Alasan butuh stok...">
+                            </div>
+                        </div>
+
+                        <div v-if="!transferForm.fromOutlet || !transferForm.toOutlet" class="alert alert-warning py-2 text-center small mb-4 shadow-sm border-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i> Silakan <b>Pilih Cabang Asal dan Tujuan</b> terlebih dahulu.
+                        </div>
+
+                        <div v-show="transferForm.fromOutlet && transferForm.toOutlet">
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold">Cari Produk / SKU</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="transferSearchQuery" placeholder="Ketik nama produk atau SKU...">
+                                </div>
+                            </div>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered align-middle text-nowrap table-hover" style="font-size: 0.75rem;">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            <th class="text-start">Produk / Nama Varian</th>
+                                            <th>SKU</th>
+                                            <th class="bg-danger bg-opacity-10 text-danger">Stok Tersedia</th>
+                                            <th style="width: 150px;" class="bg-primary bg-opacity-10 text-primary">Qty Diajukan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="p in products" :key="'tf-'+p.id">
+                                            <tr v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(transferSearchQuery.toLowerCase())))">
+                                                <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
+                                                <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
+                                                    {{ getRealAvailableStock(p, null, transferForm.fromOutlet) }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[p.id]" min="0" :max="getRealAvailableStock(p, null, transferForm.fromOutlet)">
+                                                </td>
+                                            </tr>
+                                            <tr v-for="(v, index) in p.variants" :key="'tf-v-'+index" v-show="p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(transferSearchQuery.toLowerCase()))">
+                                                <td class="ps-3 text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span></td>
+                                                <td class="text-center"><span class="sku-badge bg-dark text-white">{{ v.variantSku || '-' }}</span></td>
+                                                <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
+                                                    {{ getRealAvailableStock(p, v, transferForm.fromOutlet) }}
+                                                </td>
+                                                <td class="bg-primary bg-opacity-10">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold text-primary" placeholder="0" v-model.number="transferQtyInput[v.variantSku]" min="0" :max="getRealAvailableStock(p, v, transferForm.fromOutlet)">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <button class="btn btn-light border fw-bold" @click="transferView = 'list'">Batalkan</button>
+                            <button class="btn btn-warning text-dark border-warning fw-bold" :disabled="!transferForm.fromOutlet || !transferForm.toOutlet || isProcessing" @click="saveTransfer">
+                                <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-file-earmark-plus me-1"></i> Ajukan Draft (Pending)
+                            </button>
+                        </div>
+                    </div>
+                    </div>
 
             <!-- REPORTS VIEW -->
             <div v-if="currentView === 'reports'" class="dashboard-card">
@@ -3434,7 +3424,11 @@
             // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
             if (typeof this.fetchOpnameHistory === 'function') {
                 await this.fetchOpnameHistory();
-            }    
+            }
+            // TAMBAHKAN BARIS INI: Tarik riwayat Transfer
+            if (typeof this.fetchTransferHistory === 'function') {
+                await this.fetchTransferHistory();
+            }
 
             // =======================================================
             // PENGAMAN PRINT MOBILE: Reset tampilan setelah print batal/selesai
@@ -4409,6 +4403,247 @@ async fetchRolesFromDatabase() {
             // Kembalikan sisa yang bisa dijual
             return fisik - ditahan;
         },
+        
+        async fetchTransferHistory() {
+            try {
+                const q = query(collection(db, "stockTransfers"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                let list = [];
+                querySnapshot.forEach((doc) => {
+                    let data = doc.data();
+                    list.push({ firestoreId: doc.id, ...data });
+                });
+                this.transferHistory = list;
+            } catch (err) {
+                console.error("Gagal memuat riwayat transfer:", err);
+            }
+        },
+        
+        viewTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf) return;
+
+            let tableRows = tf.items.map(item => `
+                <tr>
+                    <td class="text-start">${item.name} <br><small class="text-muted">${item.variantName !== '-' ? item.variantName : ''}</small></td>
+                    <td class="text-center"><span class="badge bg-light text-dark border">${item.sku}</span></td>
+                    <td class="text-center fw-bold text-primary">${item.qty}</td>
+                </tr>
+            `).join('');
+
+            let htmlContent = `
+                <div class="text-start mb-3 p-3 bg-light rounded border" style="font-size: 0.85rem;">
+                    <b>ID Dokumen:</b> ${tf.id} <br>
+                    <b>Tanggal:</b> ${tf.dateStr} <br>
+                    <b>Rute:</b> <span class="text-danger">${this.getOutletName(tf.fromOutlet)}</span> <i class="bi bi-arrow-right"></i> <span class="text-success">${this.getOutletName(tf.toOutlet)}</span><br>
+                    <b>Pengirim:</b> ${tf.pic} <br>
+                    <b>Catatan:</b> ${tf.note}
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle" style="font-size: 0.8rem;">
+                        <thead class="table-secondary"><tr><th>Produk / Varian</th><th>SKU</th><th>Qty Dikirim</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`;
+
+            Swal.fire({ title: 'Detail Dokumen Transfer', html: htmlContent, width: '700px', confirmButtonText: 'Tutup', confirmButtonColor: '#6c757d' });
+        },
+        // 1. FUNGSI SIMPAN DRAFT (HANYA MENCATAT, BELUM POTONG STOK)
+        async saveTransfer() {
+            if (!this.transferForm.fromOutlet || !this.transferForm.toOutlet) return;
+            
+            let transferItems = [];
+            this.products.forEach(p => {
+                if (!p.variants || p.variants.length === 0) {
+                    let qty = parseInt(this.transferQtyInput[p.id]) || 0;
+                    if (qty > 0) transferItems.push({ isVariant: false, productId: p.id, variantSku: null, sku: p.sku || '-', name: p.name, variantName: '-', qty: qty });
+                } else {
+                    p.variants.forEach(v => {
+                        let qty = parseInt(this.transferQtyInput[v.variantSku]) || 0;
+                        if (qty > 0) transferItems.push({ isVariant: true, productId: p.id, variantSku: v.variantSku, sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes, qty: qty });
+                    });
+                }
+            });
+
+            if (transferItems.length === 0) {
+                Swal.fire('Peringatan', 'Anda belum mengisi jumlah qty barang satupun.', 'warning');
+                return;
+            }
+
+            this.askConfirm('Ajukan Draft Pengiriman?', `Dokumen akan disimpan dengan status PENDING. Stok Asal belum akan dipotong sampai Anda mengklik 'Proses Pengiriman'.`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+                    let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
+
+                    // Hanya menyimpan rekaman ke Firebase, TANPA mengupdate Stok!
+                    await addDoc(collection(db, "stockTransfers"), {
+                        id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
+                        fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
+                        pic: currentUser, note: this.transferForm.note || 'Pengajuan Transfer',
+                        status: 'PENDING', items: transferItems
+                    });
+
+                    Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
+                    
+                    this.transferQtyInput = {};
+                    this.transferForm.note = '';
+                    this.transferForm.fromOutlet = '';
+                    this.transferForm.toOutlet = '';
+                    await this.fetchTransferHistory();
+                    this.transferView = 'list';
+                } catch (err) { Swal.fire('Error', 'Gagal memproses pengajuan.', 'error'); }
+                this.isProcessing = false;
+            });
+        },
+
+        // 2. FUNGSI BARU: PROSES KIRIM (UBAH PENDING -> DIKIRIM & POTONG STOK ASAL)
+        async sendTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf || tf.status !== 'PENDING') return;
+
+            this.askConfirm('Proses Pengiriman?', `Barang akan dikirim dan stok di cabang Asal akan terpotong secara permanen. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+                    let toOutletName = this.getOutletName(tf.toOutlet);
+
+                    for (let item of tf.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        // Kurangi stok di cabang asal
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] || 0) - item.qty;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[tf.fromOutlet] = (prodCopy.baseOutletStocks[tf.fromOutlet] || 0) - item.qty;
+                        }
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        // Log mutasi KELUAR
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id, type: 'OUT',
+                            productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qtyChange: -item.qty, outletId: tf.fromOutlet, userName: currentUser, note: `Transfer Dikirim ke ${toOutletName}`
+                        });
+                    }
+
+                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DIKIRIM' });
+                    await this.fetchTransferHistory();
+                    Swal.fire({ icon: 'success', title: 'Barang Dikirim', text: 'Stok asal telah terpotong.', timer: 2000, showConfirmButton: false});
+                } catch (err) { Swal.fire('Error', 'Gagal memproses pengiriman.', 'error'); }
+                this.isProcessing = false;
+            });
+        },
+
+        // 3. FUNGSI TERIMA (UBAH DIKIRIM -> DITERIMA & TAMBAH STOK TUJUAN)
+        async receiveTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf || tf.status !== 'DIKIRIM') return;
+            
+            this.askConfirm('Konfirmasi Terima?', `Barang telah sampai? Stok cabang tujuan akan ditambahkan.`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+                    let fromName = this.getOutletName(tf.fromOutlet);
+
+                    for (let item of tf.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        // Tambah stok di cabang Tujuan
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[tf.toOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.toOutlet] || 0) + item.qty;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[tf.toOutlet] = (prodCopy.baseOutletStocks[tf.toOutlet] || 0) + item.qty;
+                        }
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        // Log mutasi MASUK
+                        await addDoc(collection(db, "stockLogs"), {
+                            createdAt: serverTimestamp(), dateStr: nowStr, refId: id, type: 'IN',
+                            productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qtyChange: item.qty, outletId: tf.toOutlet, userName: currentUser, note: `Terima Transfer dari ${fromName}`
+                        });
+                    }
+
+                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DITERIMA' });
+                    await this.fetchTransferHistory();
+                    Swal.fire({ icon: 'success', title: 'Barang Diterima', text: 'Stok tujuan berhasil masuk.', timer: 2000, showConfirmButton: false});
+                } catch (err) { Swal.fire('Error', 'Gagal memproses penerimaan.', 'error'); }
+                this.isProcessing = false;
+            });
+        },
+
+        // 4. FUNGSI VOID DENGAN LOGIKA MULTI-KONDISI
+        async voidTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf || tf.status === 'VOID') return;
+
+            this.askConfirm('Batalkan (VOID) Transfer?', `Dokumen akan dibatalkan secara permanen. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+
+                    // Jika status sudah diproses (Dikirim/Diterima), kita harus mengembalikan stok
+                    if (tf.status === 'DIKIRIM' || tf.status === 'DITERIMA') {
+                        for (let item of tf.items) {
+                            let prod = this.products.find(x => x.id === item.productId);
+                            if (!prod) continue;
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            
+                            let isVariant = item.isVariant;
+                            let vIdx = isVariant ? prodCopy.variants.findIndex(x => x.variantSku === item.variantSku) : -1;
+
+                            // Jika sudah Diterima, kurangi dulu dari cabang Tujuan (Tarik barangnya)
+                            if (tf.status === 'DITERIMA') {
+                                if (isVariant && vIdx !== -1) prodCopy.variants[vIdx].outletStocks[tf.toOutlet] -= item.qty;
+                                else if (!isVariant) prodCopy.baseOutletStocks[tf.toOutlet] -= item.qty;
+                                
+                                await addDoc(collection(db, "stockLogs"), {
+                                    createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-VOID', type: 'OUT',
+                                    productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                    qtyChange: -item.qty, outletId: tf.toOutlet, userName: currentUser, note: `Pembatalan (VOID) Penerimaan`
+                                });
+                            }
+
+                            // Kembalikan barang ke cabang Asal
+                            if (isVariant && vIdx !== -1) prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] += item.qty;
+                            else if (!isVariant) prodCopy.baseOutletStocks[tf.fromOutlet] += item.qty;
+
+                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                            await addDoc(collection(db, "stockLogs"), {
+                                createdAt: serverTimestamp(), dateStr: nowStr, refId: id + '-VOID', type: 'IN',
+                                productId: prod.id, sku: item.sku, productName: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                qtyChange: item.qty, outletId: tf.fromOutlet, userName: currentUser, note: `Pengembalian VOID dari Transfer`
+                            });
+                        }
+                    }
+
+                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'VOID' });
+                    await this.fetchTransferHistory();
+                    Swal.fire({ icon: 'success', title: 'Dibatalkan', text: 'Transfer dibatalkan dan stok disesuaikan.', timer: 2000, showConfirmButton: false});
+                } catch (err) { Swal.fire('Error', 'Gagal melakukan VOID.', 'error'); }
+                this.isProcessing = false;
+            });
+        },
 
             async saveSettings() {
                 this.isSaving = true;
@@ -4491,30 +4726,22 @@ async fetchRolesFromDatabase() {
             this.opnameView = 'form';
         },
         
+        // Pastikan fungsi ini ada di dalam blok methods: { ... }
         getRealAvailableStock(p, v, outletId) {
+            if (!outletId) return 0;
             let stockDb = 0;
-            
-            // 1. Ambil stok asli dari database
             if (v) {
                 stockDb = (v.outletStocks && v.outletStocks[outletId]) ? v.outletStocks[outletId] : 0;
             } else {
                 stockDb = (p.baseOutletStocks && p.baseOutletStocks[outletId]) ? p.baseOutletStocks[outletId] : 0;
             }
-
-            // 2. Cari apakah barang ini sedang 'di-keep' / masuk keranjang POS
             let heldQty = 0;
             if (this.cart && this.cart.length > 0) {
                 this.cart.forEach(cartItem => {
-                    // Pencocokan barang di keranjang berdasarkan varian atau produk tunggal
-                    if (v && cartItem.variantSku === v.variantSku) {
-                        heldQty += cartItem.qty;
-                    } else if (!v && cartItem.id === p.id && !cartItem.variantSku) {
-                        heldQty += cartItem.qty;
-                    }
+                    if (v && cartItem.variantSku === v.variantSku) heldQty += cartItem.qty;
+                    else if (!v && cartItem.id === p.id && !cartItem.variantSku) heldQty += cartItem.qty;
                 });
             }
-
-            // 3. Kembalikan sisa stok yang benar-benar bisa ditransfer
             return stockDb - heldQty;
         },
         
