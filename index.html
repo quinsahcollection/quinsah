@@ -1035,7 +1035,49 @@
                             page-break-inside: avoid;
                         }
                     }
-                </style>
+                    
+                        /* ======================================================== */
+    /* 3. PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET)    */
+    /* ======================================================== */
+    @media (min-width: 768px) {
+        .sidebar-left { 
+            height: 100vh; 
+            overflow-y: auto; /* Scroll atas-bawah kita pindah ke sini */
+            padding-bottom: 20px; /* Jarak bawah (pengganti pb-3) kita taruh sini */
+            scrollbar-width: none; 
+            -ms-overflow-style: none; 
+        }
+        .sidebar-left::-webkit-scrollbar { width: 0px; background: transparent; }
+    }
+
+    /* ======================================================== */
+    /* 4. PERBAIKAN MENU BAWAH MOBILE (HORIZONTAL SCROLL)       */
+    /* ======================================================== */
+    @media (max-width: 767px) {
+        .sidebar-left {
+            display: flex !important; 
+            flex-direction: row !important; 
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important; /* Scroll kanan-kiri murni untuk HP */
+            overflow-y: hidden !important; /* Matikan paksa scroll atas-bawah di HP */
+            justify-content: flex-start !important;
+            width: 100vw !important; 
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
+        }
+        .sidebar-left::-webkit-scrollbar { display: none !important; }
+        .sidebar-left .nav-icon {
+            flex: 0 0 auto !important; 
+            min-width: 80px !important; 
+            white-space: nowrap !important; 
+            font-size: 0.75rem !important;
+            padding: 10px 5px !important; /* Rapikan jarak dalam tombol */
+        }
+        /* Memberi napas pada konten agar tidak tertutup menu bawah */
+        .app-container { padding-bottom: 85px !important; }
+    }
+
+        </style>
 
             <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
                     
