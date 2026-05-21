@@ -4573,32 +4573,34 @@ async fetchRolesFromDatabase() {
             let tf = this.transferHistory.find(t => t.id === id);
             if (!tf || tf.status !== 'PENDING') return;
 
-            this.askConfirm('Proses Pengiriman?', `Barang akan dikirim dan stok di cabang Asal akan terpotong secara permanen. Lanjutkan?`, async () => {
+            this.askConfirm('Proses Pengiriman?', `Barang akan dikirim dan stok di cabang Asal terpotong. Lanjutkan?`, async () => {
                 this.isProcessing = true;
                 try {
                     let toOutletName = this.getOutletName(tf.toOutlet);
 
                     for (let item of tf.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        // FIX: Ambil data stok PALING BARU langsung dari server Firebase
+                        let prodRef = doc(db, "products", item.productId);
+                        let prodSnap = await getDoc(prodRef);
+                        if (!prodSnap.exists()) continue;
+                        let prodData = prodSnap.data();
 
-                        // Kurangi stok di cabang asal
+                        // Kurangi stok di cabang asal menggunakan data fresh
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] || 0) - item.qty;
+                                if (!prodData.variants[vIdx].outletStocks) prodData.variants[vIdx].outletStocks = {};
+                                prodData.variants[vIdx].outletStocks[tf.fromOutlet] = (prodData.variants[vIdx].outletStocks[tf.fromOutlet] || 0) - item.qty;
                             }
                         } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[tf.fromOutlet] = (prodCopy.baseOutletStocks[tf.fromOutlet] || 0) - item.qty;
+                            if (!prodData.baseOutletStocks) prodData.baseOutletStocks = {};
+                            prodData.baseOutletStocks[tf.fromOutlet] = (prodData.baseOutletStocks[tf.fromOutlet] || 0) - item.qty;
                         }
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        
+                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
 
-                        // Log mutasi KELUAR via Fungsi Pusat
                         await this.logStock('OUT', {
-                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                             qty: -item.qty, outletId: tf.fromOutlet, refId: id, note: `Transfer Dikirim ke ${toOutletName}`
                         });
                     }
@@ -4619,31 +4621,31 @@ async fetchRolesFromDatabase() {
             this.askConfirm('Konfirmasi Terima?', `Barang telah sampai? Stok cabang tujuan akan ditambahkan.`, async () => {
                 this.isProcessing = true;
                 try {
-                    let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
                     let fromName = this.getOutletName(tf.fromOutlet);
 
                     for (let item of tf.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        // FIX: Ambil data stok PALING BARU langsung dari server Firebase
+                        let prodRef = doc(db, "products", item.productId);
+                        let prodSnap = await getDoc(prodRef);
+                        if (!prodSnap.exists()) continue;
+                        let prodData = prodSnap.data();
 
-                        // Tambah stok di cabang Tujuan
+                        // Tambah stok di cabang Tujuan menggunakan data fresh
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[tf.toOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.toOutlet] || 0) + item.qty;
+                                if (!prodData.variants[vIdx].outletStocks) prodData.variants[vIdx].outletStocks = {};
+                                prodData.variants[vIdx].outletStocks[tf.toOutlet] = (prodData.variants[vIdx].outletStocks[tf.toOutlet] || 0) + item.qty;
                             }
                         } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[tf.toOutlet] = (prodCopy.baseOutletStocks[tf.toOutlet] || 0) + item.qty;
+                            if (!prodData.baseOutletStocks) prodData.baseOutletStocks = {};
+                            prodData.baseOutletStocks[tf.toOutlet] = (prodData.baseOutletStocks[tf.toOutlet] || 0) + item.qty;
                         }
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        
+                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
 
-                        // Log mutasi MASUK via Fungsi Pusat
                         await this.logStock('IN', {
-                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                             qty: item.qty, outletId: tf.toOutlet, refId: id, note: `Terima Transfer dari ${fromName}`
                         });
                     }
@@ -4664,38 +4666,33 @@ async fetchRolesFromDatabase() {
             this.askConfirm('Batalkan (VOID) Transfer?', `Dokumen akan dibatalkan secara permanen. Lanjutkan?`, async () => {
                 this.isProcessing = true;
                 try {
-                    let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
-
-                    // Jika status sudah diproses (Dikirim/Diterima), kita harus mengembalikan stok
                     if (tf.status === 'DIKIRIM' || tf.status === 'DITERIMA') {
                         for (let item of tf.items) {
-                            let prod = this.products.find(x => x.id === item.productId);
-                            if (!prod) continue;
-                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            let prodRef = doc(db, "products", item.productId);
+                            let prodSnap = await getDoc(prodRef);
+                            if (!prodSnap.exists()) continue;
+                            let prodData = prodSnap.data();
                             
                             let isVariant = item.isVariant;
-                            let vIdx = isVariant ? prodCopy.variants.findIndex(x => x.variantSku === item.variantSku) : -1;
+                            let vIdx = isVariant ? prodData.variants.findIndex(x => x.variantSku === item.variantSku) : -1;
 
-                            // Jika sudah Diterima, kurangi dulu dari cabang Tujuan (Tarik barangnya)
                             if (tf.status === 'DITERIMA') {
-                                if (isVariant && vIdx !== -1) prodCopy.variants[vIdx].outletStocks[tf.toOutlet] -= item.qty;
-                                else if (!isVariant) prodCopy.baseOutletStocks[tf.toOutlet] -= item.qty;
+                                if (isVariant && vIdx !== -1) prodData.variants[vIdx].outletStocks[tf.toOutlet] -= item.qty;
+                                else if (!isVariant) prodData.baseOutletStocks[tf.toOutlet] -= item.qty;
                                 
                                 await this.logStock('OUT', {
-                                    productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                    productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                                     qty: -item.qty, outletId: tf.toOutlet, refId: id + '-VOID', note: `Pembatalan (VOID) Penerimaan`
                                 });
                             }
 
-                            // Kembalikan barang ke cabang Asal
-                            if (isVariant && vIdx !== -1) prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] += item.qty;
-                            else if (!isVariant) prodCopy.baseOutletStocks[tf.fromOutlet] += item.qty;
+                            if (isVariant && vIdx !== -1) prodData.variants[vIdx].outletStocks[tf.fromOutlet] += item.qty;
+                            else if (!isVariant) prodData.baseOutletStocks[tf.fromOutlet] += item.qty;
 
-                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                            await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
 
                             await this.logStock('IN', {
-                                productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                                productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                                 qty: item.qty, outletId: tf.fromOutlet, refId: id + '-VOID', note: `Pengembalian VOID dari Transfer`
                             });
                         }
@@ -4751,40 +4748,37 @@ async fetchRolesFromDatabase() {
             let tf = this.transferHistory.find(t => t.id === id);
             if (!tf || tf.status !== 'DIKIRIM') return;
 
-            this.askConfirm('Batal Kirim Barang?', `Struk truk akan dibatalkan. Stok barang akan dikembalikan ke cabang Asal dan status kembali menjadi PENDING. Lanjutkan?`, async () => {
+            this.askConfirm('Batal Kirim Barang?', `Struk truk akan dibatalkan. Stok barang akan dikembalikan ke cabang Asal.`, async () => {
                 this.isProcessing = true;
                 try {
-                    // 1. Kembalikan stok ke cabang asal
                     for (let item of tf.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        let prodRef = doc(db, "products", item.productId);
+                        let prodSnap = await getDoc(prodRef);
+                        if (!prodSnap.exists()) continue;
+                        let prodData = prodSnap.data();
 
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] || 0) + item.qty;
+                                if (!prodData.variants[vIdx].outletStocks) prodData.variants[vIdx].outletStocks = {};
+                                prodData.variants[vIdx].outletStocks[tf.fromOutlet] = (prodData.variants[vIdx].outletStocks[tf.fromOutlet] || 0) + item.qty;
                             }
                         } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[tf.fromOutlet] = (prodCopy.baseOutletStocks[tf.fromOutlet] || 0) + item.qty;
+                            if (!prodData.baseOutletStocks) prodData.baseOutletStocks = {};
+                            prodData.baseOutletStocks[tf.fromOutlet] = (prodData.baseOutletStocks[tf.fromOutlet] || 0) + item.qty;
                         }
                         
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
 
-                        // 2. Log Mutasi PENGEMBALIAN (IN) via Fungsi Pusat
                         await this.logStock('IN', {
-                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                             qty: item.qty, outletId: tf.fromOutlet, refId: id + '-BATAL', note: `Batal Kirim Transfer`
                         });
                     }
 
-                    // 3. Ubah status Master kembali ke PENDING
                     if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'PENDING' });
-                    
                     await this.fetchTransferHistory();
-                    Swal.fire({ icon: 'success', title: 'Batal Kirim Berhasil', text: 'Stok asal telah dikembalikan. Anda bisa mengedit dokumen ini lagi.', timer: 2500, showConfirmButton: false});
+                    Swal.fire({ icon: 'success', title: 'Batal Kirim Berhasil', text: 'Stok asal telah dikembalikan.', timer: 2500, showConfirmButton: false});
                 } catch (err) { Swal.fire('Error', 'Gagal membatalkan pengiriman.', 'error'); }
                 this.isProcessing = false;
             });
