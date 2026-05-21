@@ -1720,11 +1720,15 @@
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-light border text-primary me-1 py-1 px-2" title="Lihat Detail" @click="viewTransfer(tf.id)"><i class="bi bi-eye"></i></button>
                                             
+                                            <button v-if="tf.status === 'PENDING'" class="btn btn-sm btn-light border text-warning me-1 py-1 px-2" title="Edit Pengajuan" @click="editTransfer(tf.id)"><i class="bi bi-pencil"></i></button>
+
                                             <button v-if="tf.status === 'PENDING'" class="btn btn-sm btn-primary text-white me-1 py-1 px-2" title="Proses Pengiriman (Potong Stok Asal)" @click="sendTransfer(tf.id)"><i class="bi bi-truck"></i></button>
                                             
                                             <button v-if="tf.status === 'DIKIRIM'" class="btn btn-sm btn-success text-white me-1 py-1 px-2" title="Konfirmasi Terima Barang" @click="receiveTransfer(tf.id)"><i class="bi bi-box-arrow-in-down"></i></button>
                                             
-                                            <button v-if="tf.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Batalkan Transfer" @click="voidTransfer(tf.id)"><i class="bi bi-x-octagon"></i></button>
+                                            <button v-if="tf.status === 'DIKIRIM'" class="btn btn-sm btn-light border text-secondary me-1 py-1 px-2" title="Batalkan Pengiriman (Stok Kembali)" @click="unsendTransfer(tf.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                            
+                                            <button v-if="tf.status !== 'VOID'" class="btn btn-sm btn-light border text-danger py-1 px-2" title="Batalkan Keseluruhan Dokumen" @click="voidTransfer(tf.id)"><i class="bi bi-x-octagon"></i></button>
                                         </td>
                                     </tr>
                                     <tr v-if="transferHistory.length === 0">
@@ -1744,7 +1748,7 @@
                         <div class="row g-3 mb-4 bg-light p-3 rounded border align-items-end">
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold text-danger">Kirim Dari (Asal) *</label>
-                                <select class="form-select form-select-sm border-danger" v-model="transferForm.fromOutlet">
+                                <select class="form-select form-select-sm border-danger" v-model="transferForm.fromOutlet" @change="handleFromOutletChange">
                                     <option value="">-- Pilih Cabang Asal --</option>
                                     <option v-for="o in outlets" :key="'from-'+o.id" :value="o.id">{{ o.name }}</option>
                                 </select>
@@ -3352,6 +3356,8 @@
                 // ==========================================
                 // STATE TRANSFER STOK ANTAR TOKO
                 // ==========================================
+                isEditingTransfer: false,
+                editTransferId: null,
                 transferView: 'list', 
                 transferHistory: [],
                 transferSearchQuery: '',
@@ -4481,9 +4487,18 @@ async fetchRolesFromDatabase() {
 
             Swal.fire({ title: 'Detail Dokumen Transfer', html: htmlContent, width: '700px', confirmButtonText: 'Tutup', confirmButtonColor: '#6c757d' });
         },
-        // 1. FUNGSI SIMPAN DRAFT (HANYA MENCATAT, BELUM POTONG STOK)
+        
+        // ==========================================
+        // 1. FUNGSI SIMPAN TRANSFER (Bisa Buat Baru & Simpan Edit)
+        // ==========================================
         async saveTransfer() {
             if (!this.transferForm.fromOutlet || !this.transferForm.toOutlet) return;
+            
+            // 1. PENGAMAN GANDA: Cegah pengiriman ke cabang yang sama
+            if (this.transferForm.fromOutlet === this.transferForm.toOutlet) {
+                Swal.fire('Gagal', 'Cabang asal dan tujuan tidak boleh sama.', 'error');
+                return;
+            }
             
             let transferItems = [];
             this.products.forEach(p => {
@@ -4503,30 +4518,52 @@ async fetchRolesFromDatabase() {
                 return;
             }
 
-            this.askConfirm('Ajukan Draft Pengiriman?', `Dokumen akan disimpan dengan status PENDING. Stok Asal belum akan dipotong sampai Anda mengklik 'Proses Pengiriman'.`, async () => {
+            // 2. LOGIKA JUDUL PESAN: Menyesuaikan apakah sedang Edit atau Buat Baru
+            let title = this.isEditingTransfer ? 'Simpan Perubahan Draft?' : 'Ajukan Draft Baru?';
+            
+            this.askConfirm(title, `Dokumen akan disimpan dengan status PENDING. Stok belum dipotong.`, async () => {
                 this.isProcessing = true;
                 try {
                     let nowStr = new Date().toLocaleString('id-ID');
                     let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
-                    let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
 
-                    // Hanya menyimpan rekaman ke Firebase, TANPA mengupdate Stok!
-                    await addDoc(collection(db, "stockTransfers"), {
-                        id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
-                        fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
-                        pic: currentUser, note: this.transferForm.note || 'Pengajuan Transfer',
-                        status: 'PENDING', items: transferItems
-                    });
+                    // 3. LOGIKA BERCABANG: Update dokumen lama ATAU Buat dokumen baru
+                    if (this.isEditingTransfer && this.editTransferId) {
+                        // JIKA MODE EDIT: Perbarui data di Firebase tanpa mengubah ID dan Tanggal Buat
+                        await updateDoc(doc(db, "stockTransfers", this.editTransferId), {
+                            fromOutlet: this.transferForm.fromOutlet,
+                            toOutlet: this.transferForm.toOutlet,
+                            note: this.transferForm.note,
+                            items: transferItems,
+                            pic: currentUser // Update nama petugas terakhir yang mengedit
+                        });
+                        Swal.fire({ icon: 'success', title: 'Diperbarui', text: 'Draft transfer berhasil diubah.', timer: 2000, showConfirmButton: false});
+                    } else {
+                        // JIKA BUAT BARU: Buat dokumen baru di Firebase
+                        let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
+                        await addDoc(collection(db, "stockTransfers"), {
+                            id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
+                            fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
+                            pic: currentUser, note: this.transferForm.note || 'Pengajuan Transfer',
+                            status: 'PENDING', items: transferItems
+                        });
+                        Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
+                    }
 
-                    Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
-                    
+                    // 4. BERSIHKAN FORM & MATIKAN MODE EDIT
+                    this.isEditingTransfer = false;
+                    this.editTransferId = null;
                     this.transferQtyInput = {};
                     this.transferForm.note = '';
                     this.transferForm.fromOutlet = '';
                     this.transferForm.toOutlet = '';
+                    
                     await this.fetchTransferHistory();
                     this.transferView = 'list';
-                } catch (err) { Swal.fire('Error', 'Gagal memproses pengajuan.', 'error'); }
+                } catch (err) { 
+                    Swal.fire('Error', 'Gagal memproses pengajuan.', 'error'); 
+                    console.error(err);
+                }
                 this.isProcessing = false;
             });
         },
@@ -4668,6 +4705,87 @@ async fetchRolesFromDatabase() {
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Dibatalkan', text: 'Transfer dibatalkan dan stok disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) { Swal.fire('Error', 'Gagal melakukan VOID.', 'error'); }
+                this.isProcessing = false;
+            });
+        },
+        
+        // ==========================================
+        // 5. FUNGSI PENANGKAL BUG CABANG SAMA
+        // ==========================================
+        handleFromOutletChange() {
+            // Jika cabang asal diubah dan ternyata sama dengan cabang tujuan, reset cabang tujuan!
+            if (this.transferForm.fromOutlet && this.transferForm.fromOutlet === this.transferForm.toOutlet) {
+                this.transferForm.toOutlet = '';
+                Swal.fire('Info', 'Cabang tujuan di-reset karena tidak boleh sama dengan cabang asal.', 'info');
+            }
+        },
+        
+        // ==========================================
+        // 6. FUNGSI MEMBUKA MODE EDIT DRAFT (PENDING)
+        // ==========================================
+        editTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf || tf.status !== 'PENDING') return;
+
+            this.isEditingTransfer = true;
+            this.editTransferId = tf.firestoreId; // Butuh ID asli firebase untuk update
+
+            // Isi kembali form dengan data lama
+            this.transferForm.fromOutlet = tf.fromOutlet;
+            this.transferForm.toOutlet = tf.toOutlet;
+            this.transferForm.note = tf.note;
+
+            this.transferQtyInput = {};
+            tf.items.forEach(item => {
+                let key = item.isVariant ? item.variantSku : item.productId;
+                this.transferQtyInput[key] = item.qty;
+            });
+
+            this.transferView = 'form';
+        },
+        
+        // ==========================================
+        // 7. FUNGSI BATAL KIRIM (DIKIRIM -> PENDING)
+        // ==========================================
+        async unsendTransfer(id) {
+            let tf = this.transferHistory.find(t => t.id === id);
+            if (!tf || tf.status !== 'DIKIRIM') return;
+
+            this.askConfirm('Batal Kirim Barang?', `Struk truk akan dibatalkan. Stok barang akan dikembalikan ke cabang Asal dan status kembali menjadi PENDING. Lanjutkan?`, async () => {
+                this.isProcessing = true;
+                try {
+                    // 1. Kembalikan stok ke cabang asal
+                    for (let item of tf.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        if (item.isVariant) {
+                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] = (prodCopy.variants[vIdx].outletStocks[tf.fromOutlet] || 0) + item.qty;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[tf.fromOutlet] = (prodCopy.baseOutletStocks[tf.fromOutlet] || 0) + item.qty;
+                        }
+                        
+                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+
+                        // 2. Log Mutasi PENGEMBALIAN (IN) via Fungsi Pusat
+                        await this.logStock('IN', {
+                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                            qty: item.qty, outletId: tf.fromOutlet, refId: id + '-BATAL', note: `Batal Kirim Transfer`
+                        });
+                    }
+
+                    // 3. Ubah status Master kembali ke PENDING
+                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'PENDING' });
+                    
+                    await this.fetchTransferHistory();
+                    Swal.fire({ icon: 'success', title: 'Batal Kirim Berhasil', text: 'Stok asal telah dikembalikan. Anda bisa mengedit dokumen ini lagi.', timer: 2500, showConfirmButton: false});
+                } catch (err) { Swal.fire('Error', 'Gagal membatalkan pengiriman.', 'error'); }
                 this.isProcessing = false;
             });
         },
