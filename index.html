@@ -470,8 +470,10 @@
 
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings' && userRole === 'Admin'">
+    
     <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='hpp', 'bg-primary-custom': settingTab==='hpp'}" href="#" @click.prevent="settingTab='hpp'">Metode HPP</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='hak_akses', 'bg-primary-custom': settingTab==='hak_akses'}" href="#" @click.prevent="settingTab='hak_akses'">Hak Akses (Role)</a></li>
@@ -523,6 +525,64 @@
         </div>
         <button class="btn btn-primary-custom mt-4 fw-bold px-4 w-100 w-md-auto" @click="saveSettings" :disabled="isSaving">
             <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Format Invoice
+        </button>
+    </div>
+
+    <div v-if="settingTab==='hpp'" class="dashboard-card">
+        <div class="mb-3">
+            <h6 class="fw-bold mb-1">Pengaturan Metode HPP (Modal)</h6>
+            <p class="text-muted small">Pilih bagaimana sistem menghitung Harga Pokok Penjualan (HPP) saat terjadi transaksi. Metode ini menentukan besaran margin laba pada laporan penjualan Anda.</p>
+        </div>
+        
+        <div class="list-group mb-4">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'FIFO'}">
+                <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FIFO" v-model="appSettings.hppMethod">
+                    <span>
+                        <span class="d-block fw-bold text-dark">FIFO <span class="text-muted fw-normal">(First-In, First-Out)</span></span>
+                        <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
+                            Barang yang dibeli lebih dulu (stok lama) akan dijual lebih dulu. HPP dihitung dari harga modal paling awal.
+                        </span>
+                    </span>
+                </label>
+                <button class="btn btn-link text-info p-1 ms-3" @click.stop="showHppExample('FIFO')" title="Lihat Contoh Perhitungan">
+                    <i class="bi bi-info-circle fs-5"></i>
+                </button>
+            </div>
+            
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'LIFO'}">
+                <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="LIFO" v-model="appSettings.hppMethod">
+                    <span>
+                        <span class="d-block fw-bold text-dark">LIFO <span class="text-muted fw-normal">(Last-In, First-Out)</span></span>
+                        <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
+                            Barang yang terakhir dibeli (stok baru) akan dijual lebih dulu. HPP dihitung dari harga modal stok paling baru.
+                        </span>
+                    </span>
+                </label>
+                <button class="btn btn-link text-info p-1 ms-3" @click.stop="showHppExample('LIFO')" title="Lihat Contoh Perhitungan">
+                    <i class="bi bi-info-circle fs-5"></i>
+                </button>
+            </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'AVERAGE'}">
+                <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="AVERAGE" v-model="appSettings.hppMethod">
+                    <span>
+                        <span class="d-block fw-bold text-dark">Average <span class="text-muted fw-normal">(Rata-rata Bergerak)</span></span>
+                        <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
+                            Sistem akan menghitung ulang rata-rata harga modal otomatis setiap kali ada pembelian ke supplier.
+                        </span>
+                    </span>
+                </label>
+                <button class="btn btn-link text-info p-1 ms-3" @click.stop="showHppExample('AVERAGE')" title="Lihat Contoh Perhitungan">
+                    <i class="bi bi-info-circle fs-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <button class="btn btn-primary-custom fw-bold px-4 w-100 w-md-auto" @click="saveSettings" :disabled="isSaving">
+            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Metode HPP
         </button>
     </div>
 
@@ -686,6 +746,63 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="hppExampleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-bottom p-3">
+                <h6 class="modal-title fw-bold text-dark mb-0"><i class="bi bi-calculator me-2 text-primary"></i>Simulasi Perhitungan {{ activeHppExample }}</h6>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-dark" style="font-size: 0.9rem;">
+                
+                <div class="alert alert-secondary border-0 small mb-4">
+                    <strong class="d-block mb-1">📦 Kasus Gudang:</strong>
+                    Total stok saat ini <strong>150 pcs</strong>, yang masuk dari 2x pembelian (Batch):<br>
+                    • <strong>Batch 1 (Lama):</strong> 50 pcs @ Rp 5.000<br>
+                    • <strong>Batch 2 (Baru):</strong> 100 pcs @ Rp 5.500<br>
+                    <br>
+                    🛒 <strong>Transaksi Kasir:</strong> Pelanggan membeli <strong>70 pcs</strong>.
+                </div>
+
+                <div v-if="activeHppExample === 'FIFO'">
+                    <p class="fw-bold text-primary mb-2">Logika FIFO (Keluar Stok Lama Dulu):</p>
+                    <ul class="mb-3 text-muted">
+                        <li>Ambil habis <strong>50 pcs</strong> dari Batch 1 (x Rp 5.000) = Rp 250.000</li>
+                        <li>Kekurangannya ambil <strong>20 pcs</strong> dari Batch 2 (x Rp 5.500) = Rp 110.000</li>
+                    </ul>
+                    <div class="p-2 bg-light rounded border border-primary text-center fw-bold">
+                        Total HPP Modal: Rp 360.000
+                    </div>
+                </div>
+
+                <div v-else-if="activeHppExample === 'LIFO'">
+                    <p class="fw-bold text-warning text-darken mb-2">Logika LIFO (Keluar Stok Baru Dulu):</p>
+                    <ul class="mb-3 text-muted">
+                        <li>Langsung potong <strong>70 pcs</strong> dari Batch 2 (x Rp 5.500) = Rp 385.000</li>
+                        <li><em>Stok lama (Batch 1) utuh tidak disentuh.</em></li>
+                    </ul>
+                    <div class="p-2 bg-light rounded border border-warning text-center fw-bold text-dark">
+                        Total HPP Modal: Rp 385.000
+                    </div>
+                </div>
+
+                <div v-else-if="activeHppExample === 'AVERAGE'">
+                    <p class="fw-bold text-success mb-2">Logika AVERAGE (Rata-rata):</p>
+                    <p class="text-muted mb-2">Saat barang masuk, sistem otomatis mencari rata-ratanya:</p>
+                    <ul class="mb-3 text-muted">
+                        <li>Total Nilai Gudang: (50 x 5k) + (100 x 5.5k) = Rp 800.000</li>
+                        <li>Harga Modal Rata-rata = 800.000 / 150 pcs = <strong>Rp 5.333/pcs</strong></li>
+                    </ul>
+                    <div class="p-2 bg-light rounded border border-success text-center fw-bold text-success">
+                        Total HPP Modal: 70 pcs x 5.333 = Rp 373.310
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
@@ -1035,7 +1152,7 @@
                         }
                     }
                     
-                        /* ======================================================== */
+     /* ======================================================== */
     /* 3. PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET)    */
     /* ======================================================== */
     @media (min-width: 768px) {
@@ -1074,9 +1191,8 @@
         }
         /* Memberi napas pada konten agar tidak tertutup menu bawah */
         .app-container { padding-bottom: 85px !important; }
-    }
-
-        </style>
+    }  
+    </style>
 
             <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
                     
@@ -3392,8 +3508,9 @@
                 supplierSearchQuery: '',
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
-                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD' },
-
+                // SETELAN APLIKASI UTAMA (DITAMBAH hppMethod)
+                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'LIFO' },
+                activeHppExample: 'FIFO',
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
                 isEditingInvoice: false,  // Status penanda apakah sedang mengedit invoice
@@ -4150,6 +4267,11 @@
                 this.hideModal('confirmModal');
                 if (this.confirmCallback) { await this.confirmCallback(); this.confirmCallback = null; }
             },
+            
+            showHppExample(methodType) {
+            this.activeHppExample = methodType;
+            this.openModal('hppExampleModal');
+        },
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
