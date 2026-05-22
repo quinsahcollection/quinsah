@@ -1462,7 +1462,7 @@
                                         <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
                                     </tr>
                                     <tr>
-                                        <th class="bg-secondary bg-opacity-10 text-center" title="Harga Pokok Penjualan (Standard & Average)">HPP <br><span style="font-size:0.6rem;" class="fw-normal text-muted">(Std & Avg)</span></th>
+                                        <th class="bg-secondary bg-opacity-10 text-center" title="Harga Pokok Penjualan (Standard & Average)">HPP <br><span style="font-size:0.6rem;" class="fw-normal text-muted">(Otomatis/Manual)</span></th>
                                         <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
                                         <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
                                         <th v-if="displayOutlets.length === 0">-</th>
@@ -1473,16 +1473,23 @@
                                         <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
                                             <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
                                             
-                                            <td class="text-center align-middle" style="width: 120px;">
-                                                <div class="d-flex flex-column gap-1 align-items-center">
-                                                    <span class="badge bg-light text-secondary border w-100 text-start fw-normal" title="Harga Standar (Manual)">
+                                            <td class="text-center align-middle" style="width: 140px;">
+                                                <div class="d-flex flex-column gap-1 align-items-start w-100">
+                                                    <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
                                                         Std: {{ formatNumber(p.hppPrice || 0) }}
-                                                    </span>
-                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary w-100 text-start" title="Harga Rata-Rata (Otomatis)">
+                                                        <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                    </div>
+                                                    
+                                                    <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
                                                         Avg: {{ formatNumber(p.averageCost || p.hppPrice || 0) }}
-                                                    </span>
-                                                    <button class="btn btn-sm btn-outline-info py-0 px-2 mt-1 shadow-sm w-100" style="font-size: 0.65rem; font-weight: 600;" @click="openBatchDetail(p, null)">
-                                                        <i class="bi bi-boxes me-1"></i>Batch
+                                                        <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                    </div>
+                                                    
+                                                    <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
+                                                            :class="appSettings && ['FIFO', 'LIFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
+                                                            style="font-size: 0.65rem;" @click="openBatchDetail(p, null)">
+                                                        <i class="bi bi-boxes me-1"></i> Rincian Batch
+                                                        <i v-if="appSettings && ['FIFO', 'LIFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -1505,16 +1512,23 @@
                                                 <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
                                             </td>
                                             
-                                            <td class="text-center align-middle" style="width: 120px;">
-                                                <div class="d-flex flex-column gap-1 align-items-center">
-                                                    <span class="badge bg-light text-secondary border w-100 text-start fw-normal" title="Harga Standar (Manual)">
+                                            <td class="text-center align-middle" style="width: 140px;">
+                                                <div class="d-flex flex-column gap-1 align-items-start w-100">
+                                                    <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
                                                         Std: {{ formatNumber(v.hppPrice || 0) }}
-                                                    </span>
-                                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary w-100 text-start" title="Harga Rata-Rata (Otomatis)">
+                                                        <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                    </div>
+                                                    
+                                                    <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
                                                         Avg: {{ formatNumber(v.averageCost || v.hppPrice || 0) }}
-                                                    </span>
-                                                    <button class="btn btn-sm btn-outline-info py-0 px-2 mt-1 shadow-sm w-100" style="font-size: 0.65rem; font-weight: 600;" @click="openBatchDetail(p, v)">
-                                                        <i class="bi bi-boxes me-1"></i>Batch
+                                                        <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                    </div>
+                                                    
+                                                    <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
+                                                            :class="appSettings && ['FIFO', 'LIFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
+                                                            style="font-size: 0.65rem;" @click="openBatchDetail(p, v)">
+                                                        <i class="bi bi-boxes me-1"></i> Rincian Batch
+                                                        <i v-if="appSettings && ['FIFO', 'LIFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
                                                     </button>
                                                 </div>
                                             </td>
