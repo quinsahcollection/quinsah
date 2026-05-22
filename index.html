@@ -163,6 +163,35 @@
                 overflow-y: auto !important; /* INI KUNCI UTAMANYA AGAR BISA SCROLL DI PC */
                 padding-bottom: 50px !important;
             }
+            
+            /* --- TAMBAHKAN INI AGAR SIDEBAR BISA DI-SCROLL DI PC/TABLET --- */
+            .sidebar-left {
+                height: 100vh !important;
+                max-height: 100vh !important;
+                overflow-y: auto !important; /* Paksa hidupkan scroll atas-bawah */
+                overflow-x: hidden !important;
+                display: block !important; /* Matikan flexbox agar scroll tidak terkunci bug mt-auto */
+                padding-bottom: 40px !important; 
+            }
+            
+            .sidebar-left .logo-icon {
+                text-align: center;
+                margin-top: 20px;
+                display: block;
+            }
+            .sidebar-left .nav-icon {
+                margin-left: auto !important;
+                margin-right: auto !important;
+                margin-bottom: 10px !important;
+            }
+            
+            .sidebar-left .mt-auto {
+                margin-top: 10px !important;
+            }
+
+            .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
+            .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+            .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         }
         
         /* ======================================================= */
@@ -1185,34 +1214,50 @@
                         }
                     }
                     
-     /* ======================================================== */
+    /* ======================================================== */
     /* 3. PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET)    */
     /* ======================================================== */
     @media (min-width: 768px) {
         .sidebar-left { 
+            position: sticky; /* Menahan posisi sidebar agar diam saat tabel ditarik */
+            top: 0;
             height: 100vh; 
-            overflow-y: auto; /* Scroll atas-bawah kita pindah ke sini */
-            padding-bottom: 20px; /* Jarak bawah (pengganti pb-3) kita taruh sini */
-            scrollbar-width: none; 
-            -ms-overflow-style: none; 
+            overflow-y: auto; /* Mengaktifkan scroll atas-bawah di dalam sidebar */
+            padding-bottom: 40px; /* Jarak bawah agar menu paling ujung tidak terpotong */
+            
+            /* Munculkan scrollbar tipis agar bisa diklik dan di-drag oleh pengguna Mouse */
+            scrollbar-width: thin; 
+            scrollbar-color: #cbd5e1 transparent;
         }
-        .sidebar-left::-webkit-scrollbar { width: 0px; background: transparent; }
+        
+        /* Desain scrollbar tipis untuk Chrome/Safari/Edge */
+        .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
+        .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
     }
 
     /* ======================================================== */
-    /* 4. PERBAIKAN MENU BAWAH MOBILE (HORIZONTAL SCROLL)       */
+    /* 4. PERBAIKAN MENU BAWAH MOBILE (KIRI-KANAN / HORIZONTAL) */
     /* ======================================================== */
     @media (max-width: 767px) {
         .sidebar-left {
+            position: fixed !important; /* Paksa agar selalu menempel di bawah layar HP */
+            bottom: 0 !important;
+            left: 0 !important;
             display: flex !important; 
             flex-direction: row !important; 
             flex-wrap: nowrap !important;
-            overflow-x: auto !important; /* Scroll kanan-kiri murni untuk HP */
-            overflow-y: hidden !important; /* Matikan paksa scroll atas-bawah di HP */
+            
+            overflow-x: auto !important; /* Di HP, scrollnya ditarik ke KIRI-KANAN */
+            overflow-y: hidden !important; /* Matikan atas-bawah agar layout rapi */
+            
             justify-content: flex-start !important;
             width: 100vw !important; 
-            -webkit-overflow-scrolling: touch !important;
+            -webkit-overflow-scrolling: touch !important; /* Scroll halus untuk layar sentuh */
             scrollbar-width: none !important;
+            background: #fff; /* Pastikan menu tidak tembus pandang */
+            border-top: 1px solid #dee2e6;
+            z-index: 1050; /* Pastikan berada di atas elemen lain */
         }
         .sidebar-left::-webkit-scrollbar { display: none !important; }
         .sidebar-left .nav-icon {
@@ -1220,11 +1265,11 @@
             min-width: 80px !important; 
             white-space: nowrap !important; 
             font-size: 0.75rem !important;
-            padding: 10px 5px !important; /* Rapikan jarak dalam tombol */
+            padding: 10px 5px !important; 
         }
-        /* Memberi napas pada konten agar tidak tertutup menu bawah */
+        /* Memberi ruang di bagian bawah area utama agar tertutup menu */
         .app-container { padding-bottom: 85px !important; }
-    }  
+    } 
     </style>
 
             <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
