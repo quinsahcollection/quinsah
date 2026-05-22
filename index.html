@@ -1077,67 +1077,7 @@
                             </div>
                         </div>
 
-                        <div class="modal fade" id="batchDetailModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-light border-bottom p-3">
-                        <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-boxes me-2"></i>Rincian Batch Pembelian & Valuasi HPP</h6>
-                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-0 bg-white" v-if="activeBatchProduct">
-                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-bold text-dark fs-6">{{ activeBatchProduct.name }}</div>
-                                <div class="text-muted small" v-if="activeBatchVariant">Varian: <span class="fw-bold text-dark">{{ activeBatchVariant.name || activeBatchVariant.attributes }}</span></div>
-                                <div class="badge bg-dark mt-1 font-monospace">{{ activeBatchVariant ? activeBatchVariant.variantSku : activeBatchProduct.sku }}</div>
-                            </div>
-                            <div class="text-end border-start ps-3 border-2">
-                                <div class="small text-muted mb-1">HPP Standard: <b>Rp {{ formatNumber(activeBatchVariant ? activeBatchVariant.hppPrice : activeBatchProduct.hppPrice) }}</b></div>
-                                <div class="small text-primary-custom fw-bold">HPP Average: <b class="fs-6">Rp {{ formatNumber(activeBatchVariant ? (activeBatchVariant.averageCost || activeBatchVariant.hppPrice) : (activeBatchProduct.averageCost || activeBatchProduct.hppPrice)) }}</b></div>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
-                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
-                                <thead class="table-light sticky-top text-center border-bottom">
-                                    <tr>
-                                        <th>Urutan (FIFO)</th>
-                                        <th>Ref. PO / Invoice</th>
-                                        <th>Lokasi Tumpukan</th>
-                                        <th>Harga Beli (Modal)</th>
-                                        <th class="bg-warning bg-opacity-10">Sisa Qty Batch</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template v-if="(activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches) && (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches).length > 0">
-                                        <tr v-for="(batch, idx) in (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches)" :key="idx" class="text-center">
-                                            <td>
-                                                <span class="badge" :class="idx === 0 ? 'bg-success' : 'bg-secondary'">
-                                                    {{ idx === 0 ? 'Antrian #1 (Terjual Duluan)' : 'Antrian #' + (idx + 1) }}
-                                                </span>
-                                            </td>
-                                            <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
-                                            <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(batch.outletId) || 'Global/Pusat' }}</span></td>
-                                            <td class="text-danger fw-semibold">Rp {{ formatNumber(batch.cost) }}</td>
-                                            <td class="fw-bold fs-6 bg-warning bg-opacity-10">{{ batch.qty }}</td>
-                                        </tr>
-                                    </template>
-                                    <tr v-else>
-                                        <td colspan="5" class="text-center py-5 text-muted">
-                                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
-                                            <b class="d-block mb-1">Belum ada tumpukan Batch tercatat.</b>
-                                            Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FIFO/LIFO.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-                        <div class="col-lg-7 bg-white">
+                            <div class="col-lg-7 bg-white">
                             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
                                 <h6 class="fw-bold mb-0 text-success"><i class="bi bi-eye-fill me-2"></i>Live Preview Hasil Cetak</h6>
                                 <button class="btn btn-sm btn-success fw-bold shadow-sm px-3" :disabled="barcodeSelectedItems.length === 0" @click="triggerPrintBarcode()">
@@ -2160,6 +2100,66 @@
         </div>
         </main>
 
+        <div class="modal fade" id="batchDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-boxes me-2"></i>Rincian Batch Pembelian & Valuasi HPP</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0 bg-white" v-if="activeBatchProduct">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark fs-6">{{ activeBatchProduct.name }}</div>
+                                <div class="text-muted small" v-if="activeBatchVariant">Varian: <span class="fw-bold text-dark">{{ activeBatchVariant.name || activeBatchVariant.attributes }}</span></div>
+                                <div class="badge bg-dark mt-1 font-monospace">{{ activeBatchVariant ? activeBatchVariant.variantSku : activeBatchProduct.sku }}</div>
+                            </div>
+                            <div class="text-end border-start ps-3 border-2">
+                                <div class="small text-muted mb-1">HPP Standard: <b>Rp {{ formatNumber(activeBatchVariant ? activeBatchVariant.hppPrice : activeBatchProduct.hppPrice) }}</b></div>
+                                <div class="small text-primary-custom fw-bold">HPP Average: <b class="fs-6">Rp {{ formatNumber(activeBatchVariant ? (activeBatchVariant.averageCost || activeBatchVariant.hppPrice) : (activeBatchProduct.averageCost || activeBatchProduct.hppPrice)) }}</b></div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-light sticky-top text-center border-bottom">
+                                    <tr>
+                                        <th>Urutan (FIFO)</th>
+                                        <th>Ref. PO / Invoice</th>
+                                        <th>Lokasi Tumpukan</th>
+                                        <th>Harga Beli (Modal)</th>
+                                        <th class="bg-warning bg-opacity-10">Sisa Qty Batch</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template v-if="(activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches) && (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches).length > 0">
+                                        <tr v-for="(batch, idx) in (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches)" :key="idx" class="text-center">
+                                            <td>
+                                                <span class="badge" :class="idx === 0 ? 'bg-success' : 'bg-secondary'">
+                                                    {{ idx === 0 ? 'Antrian #1 (Terjual Duluan)' : 'Antrian #' + (idx + 1) }}
+                                                </span>
+                                            </td>
+                                            <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
+                                            <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(batch.outletId) || 'Global/Pusat' }}</span></td>
+                                            <td class="text-danger fw-semibold">Rp {{ formatNumber(batch.cost) }}</td>
+                                            <td class="fw-bold fs-6 bg-warning bg-opacity-10">{{ batch.qty }}</td>
+                                        </tr>
+                                    </template>
+                                    <tr v-else>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                                            <b class="d-block mb-1">Belum ada tumpukan Batch tercatat.</b>
+                                            Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FIFO/LIFO.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- POS SIDEBAR RIGHT -->
                       
             <aside class="sidebar-right" :class="{'show-mobile': isMobileCartOpen}" v-show="currentView === 'pos'">
@@ -2171,7 +2171,7 @@
                 </select>
             </div>
 
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 border-bottom pb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 border-bottom pb-2">
                 <h6 class="fw-bold mb-0">Keranjang</h6>
                 
                 <div class="d-flex flex-nowrap align-items-center gap-1 ms-auto">
@@ -2196,13 +2196,10 @@
                     
                     <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false">
                         <i class="bi bi-x-lg text-dark"></i>
-                    </button>
-                    
+                    </button>         
                 </div>
             </div>
-
-                                
-            
+           
             <div class="mb-2 pb-2 border-bottom">
                 <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
                     <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
