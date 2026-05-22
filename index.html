@@ -1077,6 +1077,66 @@
                             </div>
                         </div>
 
+                        <div class="modal fade" id="batchDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-boxes me-2"></i>Rincian Batch Pembelian & Valuasi HPP</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0 bg-white" v-if="activeBatchProduct">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark fs-6">{{ activeBatchProduct.name }}</div>
+                                <div class="text-muted small" v-if="activeBatchVariant">Varian: <span class="fw-bold text-dark">{{ activeBatchVariant.name || activeBatchVariant.attributes }}</span></div>
+                                <div class="badge bg-dark mt-1 font-monospace">{{ activeBatchVariant ? activeBatchVariant.variantSku : activeBatchProduct.sku }}</div>
+                            </div>
+                            <div class="text-end border-start ps-3 border-2">
+                                <div class="small text-muted mb-1">HPP Standard: <b>Rp {{ formatNumber(activeBatchVariant ? activeBatchVariant.hppPrice : activeBatchProduct.hppPrice) }}</b></div>
+                                <div class="small text-primary-custom fw-bold">HPP Average: <b class="fs-6">Rp {{ formatNumber(activeBatchVariant ? (activeBatchVariant.averageCost || activeBatchVariant.hppPrice) : (activeBatchProduct.averageCost || activeBatchProduct.hppPrice)) }}</b></div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
+                                <thead class="table-light sticky-top text-center border-bottom">
+                                    <tr>
+                                        <th>Urutan (FIFO)</th>
+                                        <th>Ref. PO / Invoice</th>
+                                        <th>Lokasi Tumpukan</th>
+                                        <th>Harga Beli (Modal)</th>
+                                        <th class="bg-warning bg-opacity-10">Sisa Qty Batch</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template v-if="(activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches) && (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches).length > 0">
+                                        <tr v-for="(batch, idx) in (activeBatchVariant ? activeBatchVariant.batches : activeBatchProduct.batches)" :key="idx" class="text-center">
+                                            <td>
+                                                <span class="badge" :class="idx === 0 ? 'bg-success' : 'bg-secondary'">
+                                                    {{ idx === 0 ? 'Antrian #1 (Terjual Duluan)' : 'Antrian #' + (idx + 1) }}
+                                                </span>
+                                            </td>
+                                            <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
+                                            <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(batch.outletId) || 'Global/Pusat' }}</span></td>
+                                            <td class="text-danger fw-semibold">Rp {{ formatNumber(batch.cost) }}</td>
+                                            <td class="fw-bold fs-6 bg-warning bg-opacity-10">{{ batch.qty }}</td>
+                                        </tr>
+                                    </template>
+                                    <tr v-else>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                                            <b class="d-block mb-1">Belum ada tumpukan Batch tercatat.</b>
+                                            Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FIFO/LIFO.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
                         <div class="col-lg-7 bg-white">
                             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
                                 <h6 class="fw-bold mb-0 text-success"><i class="bi bi-eye-fill me-2"></i>Live Preview Hasil Cetak</h6>
@@ -1114,8 +1174,7 @@
 
                     </div>
                 </div>
-
-                <style>
+          <style>
                     /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
                     .barcode-print-sheet {
                         display: flex;
@@ -1463,7 +1522,7 @@
                                         <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
                                     </tr>
                                     <tr>
-                                        <th class="bg-secondary bg-opacity-10 text-center">HPP</th>
+                                        <th class="bg-secondary bg-opacity-10 text-center" title="Harga Pokok Penjualan (Standard & Average)">HPP <br><span style="font-size:0.6rem;" class="fw-normal text-muted">(Std & Avg)</span></th>
                                         <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
                                         <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
                                         <th v-if="displayOutlets.length === 0">-</th>
@@ -1473,7 +1532,11 @@
                                     <template v-for="p in filteredInventoryProducts" :key="p.id">
                                         <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
                                             <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
-                                            <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(p.hppPrice) }}</td>
+                                            <td class="text-center">
+                                            <div class="text-muted" style="font-size:0.65rem; text-decoration:line-through;" title="HPP Master (Standard)">Rp {{ formatNumber(p.hppPrice || 0) }}</div>
+                                            <div class="fw-bold text-dark" style="font-size:0.75rem;" title="HPP Average (Rata-rata Pembelian)">Rp {{ formatNumber(p.averageCost || p.hppPrice || 0) }}</div>
+                                            <button class="btn btn-sm btn-outline-info py-0 px-2 mt-1 fw-bold shadow-sm" style="font-size: 0.6rem;" @click="openBatchDetail(p, null)"><i class="bi bi-boxes"></i> Batch</button>
+                                            </td>
                                             <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
                                             
                                             <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
@@ -1491,7 +1554,11 @@
                                                 <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes || 'Varian '+(index+1) }}</span>
                                                 <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
                                             </td>
-                                            <td class="text-center text-muted" style="font-size:0.7rem;">{{ formatNumber(v.hppPrice) }}</td>
+                                            <td class="text-center">
+                                            <div class="text-muted" style="font-size:0.65rem; text-decoration:line-through;" title="HPP Master (Standard)">Rp {{ formatNumber(v.hppPrice || 0) }}</div>
+                                            <div class="fw-bold text-dark" style="font-size:0.75rem;" title="HPP Average (Rata-rata Pembelian)">Rp {{ formatNumber(v.averageCost || v.hppPrice || 0) }}</div>
+                                            <button class="btn btn-sm btn-outline-info py-0 px-2 mt-1 fw-bold shadow-sm" style="font-size: 0.6rem;" @click="openBatchDetail(p, v)"><i class="bi bi-boxes"></i> Batch</button>
+                                            </td>
                                             <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
                                             
                                             <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
@@ -3530,7 +3597,8 @@
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
-                
+                activeBatchProduct: null,
+                activeBatchVariant: null,
                 // PENCARIAN & FILTER BARU
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
@@ -4306,6 +4374,13 @@
             this.activeHppExample = methodType;
             this.openModal('hppExampleModal');
         },
+        
+        openBatchDetail(product, variant = null) {
+        this.activeBatchProduct = product;
+        this.activeBatchVariant = variant;
+        const modal = new bootstrap.Modal(document.getElementById('batchDetailModal'));
+        modal.show();
+},
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
@@ -6275,34 +6350,95 @@ async fetchRolesFromDatabase() {
 
                     await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
 
+                    // PROSES SINKRONISASI STOK KE MASTER PRODUK
                     for (let item of dataToSave.items) {
                         let prod = this.products.find(p => p.id === item.productId);
                         if (prod) {
                             let prodCopy = JSON.parse(JSON.stringify(prod));
+                            let updatePayload = {}; // Variabel penampung data yang akan diupdate ke Firebase
+
                             if(item.variantSku) {
+                                // ----- LOGIKA JIKA PRODUK MEMILIKI VARIAN -----
                                 let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
                                 if(vIdx !== -1) {
+                                    // 1. Inisialisasi properti jika belum ada
                                     if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                    if(!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                                    if(!prodCopy.variants[vIdx].batches[dataToSave.outletId]) prodCopy.variants[vIdx].batches[dataToSave.outletId] = [];
+                                    
+                                    // Hitung total stok lama untuk Rumus Average
+                                    let oldStock = Object.values(prodCopy.variants[vIdx].outletStocks).reduce((a,b)=>a+b, 0) || 0;
+                                    let oldAvg = prodCopy.variants[vIdx].averageCost || prodCopy.variants[vIdx].hppPrice || 0;
+
+                                    // 2. Tambah Stok Kuantitas (Cara Lama)
                                     prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] = (prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] || 0) + item.qty;
+                                    
+                                    // 3. Update HPP STANDARD (Harga Beli Terakhir)
                                     prodCopy.variants[vIdx].hppPrice = item.price;
+
+                                    // 4. Update HPP AVERAGE (Rata-rata Bergerak)
+                                    let newTotalStock = oldStock + item.qty;
+                                    prodCopy.variants[vIdx].averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
+
+                                    // 5. Update BATCH (Untuk FIFO & LIFO)
+                                    prodCopy.variants[vIdx].batches[dataToSave.outletId].push({
+                                        batchId: dataToSave.id,
+                                        tanggalMasuk: new Date().toISOString(),
+                                        qtySisa: item.qty, // Angka ini nanti yang akan dikurangi saat Kasir Jualan
+                                        hargaModal: item.price
+                                    });
                                 }
+                                updatePayload.variants = prodCopy.variants;
+
                             } else {
+                                // ----- LOGIKA JIKA PRODUK INDUK (TANPA VARIAN) -----
+                                // 1. Inisialisasi properti jika belum ada
                                 if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                if(!prodCopy.batches) prodCopy.batches = {};
+                                if(!prodCopy.batches[dataToSave.outletId]) prodCopy.batches[dataToSave.outletId] = [];
+
+                                // Hitung total stok lama untuk Rumus Average
+                                let oldStock = Object.values(prodCopy.baseOutletStocks).reduce((a,b)=>a+b, 0) || 0;
+                                let oldAvg = prodCopy.averageCost || prodCopy.hppPrice || 0;
+
+                                // 2. Tambah Stok Kuantitas (Cara Lama)
                                 prodCopy.baseOutletStocks[dataToSave.outletId] = (prodCopy.baseOutletStocks[dataToSave.outletId] || 0) + item.qty;
+                                
+                                // 3. Update HPP STANDARD (Harga Beli Terakhir)
                                 prodCopy.hppPrice = item.price;
+
+                                // 4. Update HPP AVERAGE (Rata-rata Bergerak)
+                                let newTotalStock = oldStock + item.qty;
+                                prodCopy.averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
+
+                                // 5. Update BATCH (Untuk FIFO & LIFO)
+                                prodCopy.batches[dataToSave.outletId].push({
+                                    batchId: dataToSave.id,
+                                    tanggalMasuk: new Date().toISOString(),
+                                    qtySisa: item.qty, // Angka ini nanti yang akan dikurangi saat Kasir Jualan
+                                    hargaModal: item.price
+                                });
+
+                                // Siapkan payload untuk Firebase
+                                updatePayload.baseOutletStocks = prodCopy.baseOutletStocks;
+                                updatePayload.hppPrice = prodCopy.hppPrice;
+                                updatePayload.averageCost = prodCopy.averageCost;
+                                updatePayload.batches = prodCopy.batches;
                             }
-                            await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, hppPrice: prodCopy.hppPrice });
+                            
+                            // Eksekusi Update ke Database Firebase
+                            await updateDoc(doc(db, "products", prod.id), updatePayload);
 
                             // Log mutasi MASUK via Fungsi Pusat
-                        await this.logStock('IN', {
-                            productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                            qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
-                        });
+                            await this.logStock('IN', {
+                                productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                                qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
+                            });
+                        }
                     }
-                }
 
                     this.hideModal('addPurchaseModal');
-                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: '', items:[], note:'', total:0, isEdit: false };
+                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
 
                 } catch(e) {
                     console.error("Gagal PO:", e);
@@ -6318,28 +6454,76 @@ async fetchRolesFromDatabase() {
                     let prod = this.products.find(p => p.id === item.productId);
                     if (prod) {
                         let prodCopy = JSON.parse(JSON.stringify(prod));
+                        let updatePayload = {};
+
                         if (item.variantSku) {
+                            // ----- REVERT JIKA PRODUK VARIAN -----
                             let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                
+                                // 1. Hitung Mundur Average Cost
+                                let currentTotal = Object.values(prodCopy.variants[vIdx].outletStocks).reduce((a,b)=>a+b, 0) || 0;
+                                let currentAvg = prodCopy.variants[vIdx].averageCost || 0;
+                                let newTotalAfterRevert = currentTotal - item.qty;
+                                
+                                if (newTotalAfterRevert > 0 && currentTotal > 0) {
+                                    let calculatedAvg = ((currentTotal * currentAvg) - (item.qty * item.price)) / newTotalAfterRevert;
+                                    prodCopy.variants[vIdx].averageCost = calculatedAvg > 0 ? calculatedAvg : 0;
+                                } else {
+                                    prodCopy.variants[vIdx].averageCost = 0;
+                                }
+
+                                // 2. Kurangi Stok Kuantitas
                                 prodCopy.variants[vIdx].outletStocks[po.outletId] = Math.max(0, (prodCopy.variants[vIdx].outletStocks[po.outletId] || 0) - item.qty);
+                                
+                                // 3. Hapus BATCH yang berasal dari PO ini
+                                if(prodCopy.variants[vIdx].batches && prodCopy.variants[vIdx].batches[po.outletId]) {
+                                    prodCopy.variants[vIdx].batches[po.outletId] = prodCopy.variants[vIdx].batches[po.outletId].filter(b => b.batchId !== po.id);
+                                }
                             }
+                            updatePayload.variants = prodCopy.variants;
+
                         } else {
+                            // ----- REVERT JIKA PRODUK INDUK -----
                             if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            
+                            // 1. Hitung Mundur Average Cost
+                            let currentTotal = Object.values(prodCopy.baseOutletStocks).reduce((a,b)=>a+b, 0) || 0;
+                            let currentAvg = prodCopy.averageCost || 0;
+                            let newTotalAfterRevert = currentTotal - item.qty;
+
+                            if (newTotalAfterRevert > 0 && currentTotal > 0) {
+                                let calculatedAvg = ((currentTotal * currentAvg) - (item.qty * item.price)) / newTotalAfterRevert;
+                                prodCopy.averageCost = calculatedAvg > 0 ? calculatedAvg : 0;
+                            } else {
+                                prodCopy.averageCost = 0;
+                            }
+
+                            // 2. Kurangi Stok Kuantitas
                             prodCopy.baseOutletStocks[po.outletId] = Math.max(0, (prodCopy.baseOutletStocks[po.outletId] || 0) - item.qty);
+                            
+                            // 3. Hapus BATCH yang berasal dari PO ini
+                            if(prodCopy.batches && prodCopy.batches[po.outletId]) {
+                                prodCopy.batches[po.outletId] = prodCopy.batches[po.outletId].filter(b => b.batchId !== po.id);
+                            }
+
+                            updatePayload.baseOutletStocks = prodCopy.baseOutletStocks;
+                            updatePayload.averageCost = prodCopy.averageCost;
+                            updatePayload.batches = prodCopy.batches;
                         }
                         
-                        // Update stok produk
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        // Eksekusi Update ke Database Firebase
+                        await updateDoc(doc(db, "products", prod.id), updatePayload);
                         
                         // Log mutasi KELUAR via Fungsi Pusat
-                    await this.logStock('OUT', {
-                        productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                        qty: -item.qty, outletId: po.outletId, refId: po.id + ' (BATAL)', note: 'Revisi/Batal Dokumen PO'
-                    });
+                        await this.logStock('OUT', {
+                            productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qty: -item.qty, outletId: po.outletId, refId: po.id + ' (BATAL)', note: 'Revisi/Batal Dokumen PO'
+                        });
+                    }
                 }
-            }
-        },
+            },
 
             async revertPosStock(trx) {
                 if (!trx || !trx.items) return;
