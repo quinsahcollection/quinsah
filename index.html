@@ -535,6 +535,21 @@
         </div>
         
         <div class="list-group mb-4">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'STANDARD'}">
+                <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="STANDARD" v-model="appSettings.hppMethod">
+                    <span>
+                        <span class="d-block fw-bold text-dark">Standard <span class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span></span>
+                        <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
+                            Sistem tidak membedakan stok lama atau baru. HPP dihitung murni berdasarkan 1 harga modal yang tertera di Master Produk.
+                        </span>
+                    </span>
+                </label>
+                <button class="btn btn-link text-info p-1 ms-3" @click.stop="showHppExample('STANDARD')" title="Lihat Contoh Perhitungan">
+                    <i class="bi bi-info-circle fs-5"></i>
+                </button>
+            </div>
+
             <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'FIFO'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FIFO" v-model="appSettings.hppMethod">
@@ -764,11 +779,24 @@
                     Total stok saat ini <strong>150 pcs</strong>, yang masuk dari 2x pembelian (Batch):<br>
                     • <strong>Batch 1 (Lama):</strong> 50 pcs @ Rp 5.000<br>
                     • <strong>Batch 2 (Baru):</strong> 100 pcs @ Rp 5.500<br>
+                    <em>*Harga modal di Master Produk saat ini: Rp 5.200</em><br>
                     <br>
                     🛒 <strong>Transaksi Kasir:</strong> Pelanggan membeli <strong>70 pcs</strong>.
                 </div>
 
-                <div v-if="activeHppExample === 'FIFO'">
+                <div v-if="activeHppExample === 'STANDARD'">
+                    <p class="fw-bold text-primary mb-2">Logika STANDARD (Sistem Bawaan Saat Ini):</p>
+                    <ul class="mb-3 text-muted">
+                        <li>Sistem mengabaikan riwayat Batch 1 dan Batch 2.</li>
+                        <li>Sistem hanya melihat 1 harga modal yang tersimpan di Master Data Produk (Rp 5.200).</li>
+                        <li>Langsung potong <strong>70 pcs</strong> dikali Rp 5.200.</li>
+                    </ul>
+                    <div class="p-2 bg-light rounded border border-primary text-center fw-bold">
+                        Total HPP Modal: 70 x 5.200 = Rp 364.000
+                    </div>
+                </div>
+
+                <div v-else-if="activeHppExample === 'FIFO'">
                     <p class="fw-bold text-primary mb-2">Logika FIFO (Keluar Stok Lama Dulu):</p>
                     <ul class="mb-3 text-muted">
                         <li>Ambil habis <strong>50 pcs</strong> dari Batch 1 (x Rp 5.000) = Rp 250.000</li>
@@ -3509,7 +3537,7 @@
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
                 // SETELAN APLIKASI UTAMA (DITAMBAH hppMethod)
-                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'LIFO' },
+                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'STANDARD' },
                 activeHppExample: 'FIFO',
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 
