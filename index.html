@@ -160,38 +160,48 @@
             .main-content {
                 flex-grow: 1 !important;
                 height: 100vh !important;
-                overflow-y: auto !important; /* INI KUNCI UTAMANYA AGAR BISA SCROLL DI PC */
+                overflow-y: auto !important; 
                 padding-bottom: 50px !important;
             }
             
-            /* --- TAMBAHKAN INI AGAR SIDEBAR BISA DI-SCROLL DI PC/TABLET --- */
+            /* --- STRUKTUR BARU SIDEBAR --- */
             .sidebar-left {
+                width: 80px; /* Sesuaikan lebar sidebar Anda */
                 height: 100vh !important;
-                max-height: 100vh !important;
-                overflow-y: auto !important; /* Paksa hidupkan scroll atas-bawah */
-                overflow-x: hidden !important;
-                display: block !important; /* Matikan flexbox agar scroll tidak terkunci bug mt-auto */
-                padding-bottom: 40px !important; 
-            }
-            
-            .sidebar-left .logo-icon {
-                text-align: center;
-                margin-top: 20px;
-                display: block;
-            }
-            .sidebar-left .nav-icon {
-                margin-left: auto !important;
-                margin-right: auto !important;
-                margin-bottom: 10px !important;
-            }
-            
-            .sidebar-left .mt-auto {
-                margin-top: 10px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                background: #ffffff; /* Sesuaikan warna latar */
+                border-right: 1px solid #dee2e6;
             }
 
-            .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
-            .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-            .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+            /* 1. Logo tetap di atas (tidak ikut scroll) */
+            .sidebar-left .logo-icon {
+                height: 64px; /* Tinggi area logo */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0; /* Penting agar logo tidak mengecil */
+                border-bottom: 1px solid #eee;
+            }
+
+            /* 2. Container Menu Icon yang bisa di-scroll */
+            .sidebar-left .menu-scroll-area {
+                flex-grow: 1;
+                display: flex; /* Kunci agar mt-auto (Setelan) bisa turun ke bawah */
+                flex-direction: column;
+                overflow-y: auto !important; /* Di sinilah scroll terjadi */
+                overflow-x: hidden;
+                padding: 10px 0;
+            }
+
+            /* 3. Posisi Setelan (mt-auto) tetap di bawah */
+            .sidebar-left .mt-auto {
+                margin-top: auto !important;
+            }
+
+            /* Desain scrollbar */
+            .menu-scroll-area::-webkit-scrollbar { width: 4px; }
+            .menu-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         }
         
         /* ======================================================= */
@@ -279,47 +289,50 @@
         <aside class="sidebar-left">
             <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
             
-            <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
-                <i class="bi bi-display"></i> POS
-            </div>
-            
-            <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
-                <i class="bi bi-cart-plus"></i> Pembelian
-            </div>
-            
-            <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="hasAccess('catalog', 'read')">
-                <i class="bi bi-tags"></i> Master
-            </div>
-            
-            <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
-                <i class="bi bi-box-seam"></i> Inventori
-            </div>
+            <div class="menu-scroll-area">
+                <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
+                    <i class="bi bi-display"></i> POS
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
+                    <i class="bi bi-cart-plus"></i> Pembelian
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="hasAccess('catalog', 'read')">
+                    <i class="bi bi-tags"></i> Master
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
+                    <i class="bi bi-box-seam"></i> Inventori
+                </div>
 
-            <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('inventory', 'read')">
-                <i class="bi bi-clipboard2-check"></i> Opname
-            </div>
+                <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('inventory', 'read')">
+                    <i class="bi bi-clipboard2-check"></i> Opname
+                </div>
 
-            <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('inventory', 'read')">
-                <i class="bi bi-arrow-left-right"></i> Transfer
-            </div>
+                <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('inventory', 'read')">
+                    <i class="bi bi-arrow-left-right"></i> Transfer
+                </div>
 
-            <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('inventory', 'read')">
-                <i class="bi bi-qr-code-scan"></i> Barcode
-            </div>
-            <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
-                <i class="bi bi-people"></i> CRM
-            </div>
-            
-            <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="hasAccess('outlets', 'read')">
-                <i class="bi bi-shop"></i> Outlets
-            </div>
-            
-            <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
-                <i class="bi bi-receipt-cutoff"></i> Laporan
-            </div>
-            
-            <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
-                <i class="bi bi-gear"></i> Setelan
+                <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('inventory', 'read')">
+                    <i class="bi bi-qr-code-scan"></i> Barcode
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
+                    <i class="bi bi-people"></i> CRM
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="hasAccess('outlets', 'read')">
+                    <i class="bi bi-shop"></i> Outlets
+                </div>
+                
+                <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
+                    <i class="bi bi-receipt-cutoff"></i> Laporan
+                </div>
+                
+                <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
+                    <i class="bi bi-gear"></i> Setelan
+                </div>
             </div>
         </aside>
 
