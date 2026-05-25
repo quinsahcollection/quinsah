@@ -5022,25 +5022,92 @@ async fetchRolesFromDatabase() {
                     let toOutletName = this.getOutletName(tf.toOutlet);
 
                     for (let item of tf.items) {
-                        // FIX: Ambil data stok PALING BARU langsung dari server Firebase
                         let prodRef = doc(db, "products", item.productId);
                         let prodSnap = await getDoc(prodRef);
                         if (!prodSnap.exists()) continue;
                         let prodData = prodSnap.data();
+                        
+                        let requiredQty = Number(item.qty);
+                        let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-                        // Kurangi stok di cabang asal menggunakan data fresh
                         if (item.isVariant) {
                             let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
+                                // A) Kurangi fisik outlet asal
                                 if (!prodData.variants[vIdx].outletStocks) prodData.variants[vIdx].outletStocks = {};
-                                prodData.variants[vIdx].outletStocks[tf.fromOutlet] = (prodData.variants[vIdx].outletStocks[tf.fromOutlet] || 0) - item.qty;
+                                prodData.variants[vIdx].outletStocks[tf.fromOutlet] = (prodData.variants[vIdx].outletStocks[tf.fromOutlet] || 0) - requiredQty;
+
+                                // B) Kurangi antrian Batch outlet asal (FIFO/LIFO)
+                                if (!prodData.variants[vIdx].batches) prodData.variants[vIdx].batches = {};
+                                if (!prodData.variants[vIdx].batches[tf.fromOutlet]) prodData.variants[vIdx].batches[tf.fromOutlet] = [];
+                                
+                                let sourceBatches = prodData.variants[vIdx].batches[tf.fromOutlet];
+                                
+                                if (hppMethod === 'LIFO') {
+                                    sourceBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
+                                } else {
+                                    sourceBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                }
+
+                                // CATATAN: Kita simpan data HPP yang berhasil dipotong ke dalam item transfer, 
+                                // agar nanti cabang penerima tau harga modal aslinya berapa.
+                                item.hppTransferHistory = []; 
+
+                                let qtyToMove = requiredQty;
+                                for (let i = 0; i < sourceBatches.length; i++) {
+                                    if (qtyToMove <= 0) break;
+                                    let b = sourceBatches[i];
+                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+
+                                    if (available > 0) {
+                                        let taken = Math.min(available, qtyToMove);
+                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                        
+                                        // Rekam harga modal yang dipotong
+                                        item.hppTransferHistory.push({ qty: taken, hargaModal: b.hargaModal || b.cost || 0 });
+                                        qtyToMove -= taken;
+                                    }
+                                }
+                                prodData.variants[vIdx].batches[tf.fromOutlet] = sourceBatches;
                             }
                         } else {
+                            // A) Kurangi fisik outlet asal
                             if (!prodData.baseOutletStocks) prodData.baseOutletStocks = {};
-                            prodData.baseOutletStocks[tf.fromOutlet] = (prodData.baseOutletStocks[tf.fromOutlet] || 0) - item.qty;
+                            prodData.baseOutletStocks[tf.fromOutlet] = (prodData.baseOutletStocks[tf.fromOutlet] || 0) - requiredQty;
+                            
+                            // B) Kurangi antrian Batch outlet asal (FIFO/LIFO)
+                            if (!prodData.batches) prodData.batches = {};
+                            if (!prodData.batches[tf.fromOutlet]) prodData.batches[tf.fromOutlet] = [];
+                            
+                            let sourceBatches = prodData.batches[tf.fromOutlet];
+                            
+                            if (hppMethod === 'LIFO') {
+                                sourceBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
+                            } else {
+                                sourceBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                            }
+
+                            item.hppTransferHistory = [];
+                            let qtyToMove = requiredQty;
+                            for (let i = 0; i < sourceBatches.length; i++) {
+                                if (qtyToMove <= 0) break;
+                                let b = sourceBatches[i];
+                                let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+
+                                if (available > 0) {
+                                    let taken = Math.min(available, qtyToMove);
+                                    if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                    if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                    
+                                    item.hppTransferHistory.push({ qty: taken, hargaModal: b.hargaModal || b.cost || 0 });
+                                    qtyToMove -= taken;
+                                }
+                            }
+                            prodData.batches[tf.fromOutlet] = sourceBatches;
                         }
                         
-                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
+                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks, batches: prodData.batches || {} });
 
                         await this.logStock('OUT', {
                             productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
@@ -5048,10 +5115,11 @@ async fetchRolesFromDatabase() {
                         });
                     }
 
-                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DIKIRIM' });
+                    // Update status dan simpan array hppTransferHistory ke dokumen transfer
+                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DIKIRIM', items: tf.items });
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Barang Dikirim', text: 'Stok asal telah terpotong.', timer: 2000, showConfirmButton: false});
-                } catch (err) { Swal.fire('Error', 'Gagal memproses pengiriman.', 'error'); }
+                } catch (err) { console.error(err); Swal.fire('Error', 'Gagal memproses pengiriman.', 'error'); }
                 this.isProcessing = false;
             });
         },
@@ -5067,25 +5135,59 @@ async fetchRolesFromDatabase() {
                     let fromName = this.getOutletName(tf.fromOutlet);
 
                     for (let item of tf.items) {
-                        // FIX: Ambil data stok PALING BARU langsung dari server Firebase
                         let prodRef = doc(db, "products", item.productId);
                         let prodSnap = await getDoc(prodRef);
                         if (!prodSnap.exists()) continue;
                         let prodData = prodSnap.data();
 
-                        // Tambah stok di cabang Tujuan menggunakan data fresh
                         if (item.isVariant) {
                             let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
+                                // A) Tambah fisik outlet tujuan
                                 if (!prodData.variants[vIdx].outletStocks) prodData.variants[vIdx].outletStocks = {};
-                                prodData.variants[vIdx].outletStocks[tf.toOutlet] = (prodData.variants[vIdx].outletStocks[tf.toOutlet] || 0) + item.qty;
+                                prodData.variants[vIdx].outletStocks[tf.toOutlet] = (prodData.variants[vIdx].outletStocks[tf.toOutlet] || 0) + Number(item.qty);
+
+                                // B) Suntikkan Batch Baru yang membawa harga modal asli dari pengirim
+                                if (!prodData.variants[vIdx].batches) prodData.variants[vIdx].batches = {};
+                                if (!prodData.variants[vIdx].batches[tf.toOutlet]) prodData.variants[vIdx].batches[tf.toOutlet] = [];
+                                
+                                let destBatches = prodData.variants[vIdx].batches[tf.toOutlet];
+                                let hppHistories = item.hppTransferHistory || [{ qty: item.qty, hargaModal: 0 }]; // Fallback aman
+                                
+                                hppHistories.forEach(hist => {
+                                    destBatches.push({
+                                        batchId: 'TRF-' + tf.id,
+                                        tanggalMasuk: new Date().toISOString(),
+                                        qtySisa: Number(hist.qty),
+                                        hargaModal: Number(hist.hargaModal)
+                                    });
+                                });
+                                prodData.variants[vIdx].batches[tf.toOutlet] = destBatches;
                             }
                         } else {
+                            // A) Tambah fisik outlet tujuan
                             if (!prodData.baseOutletStocks) prodData.baseOutletStocks = {};
-                            prodData.baseOutletStocks[tf.toOutlet] = (prodData.baseOutletStocks[tf.toOutlet] || 0) + item.qty;
+                            prodData.baseOutletStocks[tf.toOutlet] = (prodData.baseOutletStocks[tf.toOutlet] || 0) + Number(item.qty);
+                            
+                            // B) Suntikkan Batch Baru yang membawa harga modal asli dari pengirim
+                            if (!prodData.batches) prodData.batches = {};
+                            if (!prodData.batches[tf.toOutlet]) prodData.batches[tf.toOutlet] = [];
+                            
+                            let destBatches = prodData.batches[tf.toOutlet];
+                            let hppHistories = item.hppTransferHistory || [{ qty: item.qty, hargaModal: 0 }];
+                            
+                            hppHistories.forEach(hist => {
+                                destBatches.push({
+                                    batchId: 'TRF-' + tf.id,
+                                    tanggalMasuk: new Date().toISOString(),
+                                    qtySisa: Number(hist.qty),
+                                    hargaModal: Number(hist.hargaModal)
+                                });
+                            });
+                            prodData.batches[tf.toOutlet] = destBatches;
                         }
                         
-                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
+                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks, batches: prodData.batches || {} });
 
                         await this.logStock('IN', {
                             productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
@@ -5096,7 +5198,7 @@ async fetchRolesFromDatabase() {
                     if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DITERIMA' });
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Barang Diterima', text: 'Stok tujuan berhasil masuk.', timer: 2000, showConfirmButton: false});
-                } catch (err) { Swal.fire('Error', 'Gagal memproses penerimaan.', 'error'); }
+                } catch (err) { console.error(err); Swal.fire('Error', 'Gagal memproses penerimaan.', 'error'); }
                 this.isProcessing = false;
             });
         },
