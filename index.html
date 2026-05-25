@@ -2326,15 +2326,15 @@
                             <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-warning me-2"></i>Frekuensi Transaksi per Jam (00:00 - 23:59)</h6>
                         </div>
                         <div class="card-body p-4 overflow-auto">
-                            <div class="d-flex align-items-end justify-content-between w-100" style="height: 280px; gap: 4px; min-width: 600px;">
+                            <div class="d-flex align-items-end justify-content-between w-100" style="height: 340px; padding: 90px 15px 0 15px; gap: 4px; min-width: 600px;">
                                 
                                 <div v-for="h in analyticsData.peakHours" :key="h.jam" 
                                      class="d-flex flex-column align-items-center flex-fill h-100 position-relative" style="cursor: pointer;"
-                                     onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -8px)'; } this.querySelector('.grafik-bar').classList.replace('opacity-75', 'opacity-100');"
+                                     onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -10px)'; } this.querySelector('.grafik-bar').classList.replace('opacity-75', 'opacity-100');"
                                      onmouseout="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='0'; t.style.visibility='hidden'; t.style.transform='translate(-50%, 0)'; } this.querySelector('.grafik-bar').classList.replace('opacity-100', 'opacity-75');">
                                     
                                     <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
-                                         style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;">
+                                         style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 8px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease-in-out; pointer-events: none;">
                                         <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
                                         <div class="small fw-semibold">{{ h.count }} Transaksi</div>
                                         <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
@@ -2344,7 +2344,7 @@
                                     <div class="flex-grow-1 w-100"></div>
                                     
                                     <div class="grafik-bar bg-warning w-100 rounded-top opacity-75" 
-                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 75) + '%' : '0%', transition: 'height 1s cubic-bezier(0.2, 0.8, 0.2, 1)' }">
+                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 100) + '%' : '0%', transition: 'height 1s cubic-bezier(0.2, 0.8, 0.2, 1)' }">
                                     </div>
                                     
                                     <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
