@@ -336,8 +336,12 @@
                     <i class="bi bi-shop"></i> Outlets
                 </div>
                 
+                <div class="nav-icon" :class="{'active': currentView === 'sales'}" @click="currentView = 'sales'" v-if="hasAccess('sales', 'read')">
+                    <i class="bi bi-receipt"></i> Penjualan
+                </div>
+                
                 <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
-                    <i class="bi bi-receipt-cutoff"></i> Laporan
+                    <i class="bi bi-graph-up-arrow"></i> Laporan
                 </div>
                 
                 <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
@@ -2126,8 +2130,25 @@
                     </div>
                     </div>
 
-            <!-- REPORTS VIEW -->
-            <div v-if="currentView === 'reports'" class="dashboard-card">
+            <div v-if="currentView === 'reports'" class="main-content fade-in">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold mb-1"><i class="bi bi-bar-chart-fill text-success me-2"></i>Dashboard Laba / Rugi</h4>
+                    <span class="text-muted small">Analitik Keuangan, Margin Produk, dan Performa Bisnis</span>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-tools fs-1 text-muted opacity-25 d-block mb-3"></i>
+                    <h5 class="fw-bold text-dark">Ruang Laporan Sedang Dipersiapkan</h5>
+                    <p class="text-muted mb-0">Halaman ini telah dipisah khusus untuk menampilkan Total Omset, Nilai HPP (Modal), Laba Bersih, dan laporan terperinci lainnya.</p>
+                </div>
+            </div>
+        </div>
+
+            <!-- SALES VIEW -->
+            <div v-if="currentView === 'sales'" class="dashboard-card">
             
             <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Transaksi Penjualan (POS)</h6>
             
@@ -3779,6 +3800,7 @@
                 // ==========================================
                 appModules: [
                     { id: 'pos', name: 'Kasir (POS)' },
+                    { id: 'sales', name: 'Riwayat Penjualan' },
                     { id: 'purchase', name: 'Pembelian (Purchase)' },
                     { id: 'catalog', name: 'Data Master Produk' },
                     { id: 'inventory', name: 'Inventori & Cek Stok' },
@@ -3787,7 +3809,7 @@
                     { id: 'barcode', name: 'Cetak Label Barcode' },      // MODUL BARU
                     { id: 'crm', name: 'Pelanggan (CRM)' },
                     { id: 'outlets', name: 'Manajemen Cabang / Outlet' },
-                    { id: 'reports', name: 'Laporan Penjualan' },
+                    { id: 'reports', name: 'Laporan Laba/Rugi & Analitik' },
                     { id: 'settings', name: 'Setelan Sistem & Hak Akses' }
                 ],
                 
