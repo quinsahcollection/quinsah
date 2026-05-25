@@ -2130,127 +2130,120 @@
                     </div>
                     </div>
 
-            <div v-if="currentView === 'reports'" class="main-content fade-in">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 class="fw-bold mb-1"><i class="bi bi-graph-up-arrow text-success me-2"></i>Laporan Laba / Rugi & Keuangan</h4>
-                    <span class="text-muted small">Pantau omset bersih, akumulasi modal HPP, margin keuntungan, dan performa keuangan cabang.</span>
+            <div v-if="currentView === 'reports'" class="main-content fade-in pb-5">
+            <div class="mb-3">
+                <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-graph-up-arrow text-success me-2"></i>Laporan Keuangan</h5>
+                <div class="text-muted small">Analitik Omset, HPP, Laba Rugi, dan Performa Cabang</div>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="card border border-success border-opacity-50 bg-success bg-opacity-10 rounded-3 h-100 shadow-none">
+                        <div class="card-body p-3">
+                            <div class="text-success small fw-bold mb-1 d-flex align-items-center"><i class="bi bi-cash-coin me-1"></i> Omset Bersih</div>
+                            <h5 class="fw-bold text-success mb-0 text-truncate">Rp {{ formatNumber(reportFinancialSummary.totalOmset) }}</h5>
+                            <div class="small mt-1 text-muted" style="font-size: 0.7rem;">{{ reportFinancialSummary.totalTrx }} Transaksi</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border border-primary border-opacity-50 bg-primary bg-opacity-10 rounded-3 h-100 shadow-none">
+                        <div class="card-body p-3">
+                            <div class="text-primary small fw-bold mb-1 d-flex align-items-center"><i class="bi bi-box-seam me-1"></i> Modal (HPP)</div>
+                            <h5 class="fw-bold text-primary mb-0 text-truncate">Rp {{ formatNumber(reportFinancialSummary.totalHpp) }}</h5>
+                            <div class="small mt-1 text-muted" style="font-size: 0.7rem;">Nilai stok keluar</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border border-opacity-50 rounded-3 h-100 shadow-none" :class="reportFinancialSummary.labaBersih >= 0 ? 'border-info bg-info bg-opacity-10' : 'border-danger bg-danger bg-opacity-10'">
+                        <div class="card-body p-3">
+                            <div class="small fw-bold mb-1 d-flex align-items-center" :class="reportFinancialSummary.labaBersih >= 0 ? 'text-info-emphasis' : 'text-danger'"><i class="bi bi-piggy-bank me-1"></i> Laba Kotor</div>
+                            <h5 class="fw-bold mb-0 text-truncate" :class="reportFinancialSummary.labaBersih >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(reportFinancialSummary.labaBersih) }}</h5>
+                            <div class="small mt-1 text-muted" style="font-size: 0.7rem;">Omset dikurangi HPP</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border border-warning border-opacity-50 bg-warning bg-opacity-10 rounded-3 h-100 shadow-none">
+                        <div class="card-body p-3">
+                            <div class="text-warning-emphasis small fw-bold mb-1 d-flex align-items-center"><i class="bi bi-pie-chart me-1"></i> Rata Rata Margin</div>
+                            <h5 class="fw-bold text-warning-emphasis mb-0 text-truncate">{{ reportFinancialSummary.marginRataRata.toFixed(1) }}%</h5>
+                            <div class="small mt-1 text-muted" style="font-size: 0.7rem;">Persentase untung</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card border rounded-3 mb-3 shadow-none">
                 <div class="card-body p-3">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-3 col-sm-6">
-                            <label class="form-label small text-muted mb-1"><i class="bi bi-shop me-1"></i>Filter Cabang / Outlet</label>
-                            <select class="form-select text-dark shadow-none" v-model="reportOutletFilter">
-                                <option value="">-- Semua Cabang / Global --</option>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-dark mb-1">Filter Cabang / Outlet</label>
+                            <select class="form-select form-select-sm text-dark shadow-none border-secondary-subtle" v-model="reportOutletFilter">
+                                <option value="">-- Semua Cabang (Global) --</option>
                                 <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
                             </select>
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <label class="form-label small text-muted mb-1"><i class="bi bi-calendar-event me-1"></i>Dari Tanggal</label>
-                            <input type="date" class="form-control text-dark shadow-none" v-model="reportStartDate">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-bold text-dark mb-1">Dari Tanggal</label>
+                            <input type="date" class="form-control form-control-sm text-dark shadow-none border-secondary-subtle" v-model="reportStartDate">
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <label class="form-label small text-muted mb-1"><i class="bi bi-calendar-event me-1"></i>Sampai Tanggal</label>
-                            <input type="date" class="form-control text-dark shadow-none" v-model="reportEndDate">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-bold text-dark mb-1">Sampai Tanggal</label>
+                            <input type="date" class="form-control form-control-sm text-dark shadow-none border-secondary-subtle" v-model="reportEndDate">
                         </div>
-                        <div class="col-md-3 col-sm-6">
-                            <button class="btn btn-light w-100 border shadow-none" @click="reportStartDate=''; reportEndDate=''; reportOutletFilter='';">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Filter
+                        <div class="col-12 col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-light border border-secondary-subtle w-100 shadow-none" @click="reportStartDate=''; reportEndDate=''; reportOutletFilter='';">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mb-4">
-                <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 bg-primary bg-gradient text-white">
-                        <div class="card-body position-relative overflow-hidden p-3">
-                            <div class="text-white-50 small fw-bold mb-1">TOTAL OMSET BERSIH</div>
-                            <h3 class="fw-bold mb-0">Rp {{ formatNumber(reportFinancialSummary.totalOmset) }}</h3>
-                            <div class="small mt-2 opacity-75"><i class="bi bi-receipt me-1"></i>Dari {{ reportFinancialSummary.totalTrx }} Penjualan</div>
-                            <i class="bi bi-cash-coin position-absolute opacity-10" style="font-size: 4.5rem; right: 5px; bottom: -15px;"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 bg-secondary bg-gradient text-white">
-                        <div class="card-body position-relative overflow-hidden p-3">
-                            <div class="text-white-50 small fw-bold mb-1">TOTAL MODAL HPP TERBAKAR</div>
-                            <h3 class="fw-bold mb-0">Rp {{ formatNumber(reportFinancialSummary.totalHpp) }}</h3>
-                            <div class="small mt-2 opacity-75"><i class="bi bi-box-seam me-1"></i>Nilai modal fisik barang keluar</div>
-                            <i class="bi bi-tags position-absolute opacity-10" style="font-size: 4.5rem; right: 5px; bottom: -15px;"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100" :class="reportFinancialSummary.labaBersih >= 0 ? 'bg-success bg-gradient text-white' : 'bg-danger bg-gradient text-white'">
-                        <div class="card-body position-relative overflow-hidden p-3">
-                            <div class="text-white-50 small fw-bold mb-1">ESTIMASI LABA KOTOR</div>
-                            <h3 class="fw-bold mb-0">Rp {{ formatNumber(reportFinancialSummary.labaBersih) }}</h3>
-                            <div class="small mt-2 opacity-75"><i class="bi bi-piggy-bank me-1"></i>Omset dikurangi modal barang</div>
-                            <i class="bi bi-graph-up position-absolute opacity-10" style="font-size: 4.5rem; right: 5px; bottom: -15px;"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 bg-dark bg-gradient text-white">
-                        <div class="card-body position-relative overflow-hidden p-3">
-                            <div class="text-white-50 small fw-bold mb-1">RATA-RATA MARGIN UNTUNG</div>
-                            <h3 class="fw-bold mb-0">{{ reportFinancialSummary.marginRataRata.toFixed(1) }}%</h3>
-                            <div class="small mt-2 opacity-75"><i class="bi bi-percent me-1"></i>Tingkat profitabilitas bisnis</div>
-                            <i class="bi bi-pie-chart position-absolute opacity-10" style="font-size: 4.5rem; right: 5px; bottom: -15px;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-5">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Pembedah Finansial per Nota Transaksi</h6>
-                    <span class="badge bg-light text-dark border">Data sinkron sesuai filter</span>
+            <div class="card border rounded-3 shadow-none mb-5">
+                <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Rincian per Transaksi</h6>
+                    <span class="badge bg-light text-dark border fw-normal">Sesuai Filter</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: 0.8rem;">
+                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
                             <thead class="table-light text-secondary border-bottom">
-                                <tr class="text-center">
-                                    <th class="text-start ps-3">INVOICE & WAKTU</th>
-                                    <th>CABANG</th>
-                                    <th class="text-end">OMSET BERSIH</th>
-                                    <th class="text-end">MODAL HPP</th>
-                                    <th class="text-end">PROFIT (LABA)</th>
-                                    <th>MARGIN (%)</th>
+                                <tr>
+                                    <th class="ps-3 py-2 fw-semibold">INVOICE & WAKTU</th>
+                                    <th class="fw-semibold">CABANG</th>
+                                    <th class="text-end fw-semibold">OMSET BERSIH</th>
+                                    <th class="text-end fw-semibold">MODAL HPP</th>
+                                    <th class="text-end fw-semibold">LABA (PROFIT)</th>
+                                    <th class="text-center pe-3 fw-semibold">MARGIN</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="trx in processedReportData" :key="trx.id" class="text-center border-bottom-0">
-                                    <td class="text-start ps-3 py-3">
-                                        <div class="fw-bold text-dark">{{ trx.id }}</div>
-                                        <div class="small text-muted" style="font-size: 0.725rem;">{{ trx.dateStr }}</div>
+                                <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
+                                    <td class="ps-3 py-2">
+                                        <div class="fw-bold text-primary">{{ trx.id }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(trx.outletId) || 'Global' }}</span>
+                                        <span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span>
                                     </td>
-                                    <td class="text-end fw-semibold text-dark">Rp {{ formatNumber(trx.total) }}</td>
-                                    <td class="text-end text-muted">Rp {{ formatNumber(trx.totalHppNota) }}</td>
-                                    <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-success' : 'text-danger'">
+                                    <td class="text-end fw-semibold text-success">Rp {{ formatNumber(trx.total) }}</td>
+                                    <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
+                                    <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">
                                         Rp {{ formatNumber(trx.profit) }}
                                     </td>
-                                    <td>
-                                        <span class="badge rounded-pill px-2 py-1" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">
+                                    <td class="text-center pe-3">
+                                        <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">
                                             {{ trx.margin.toFixed(1) }}%
                                         </span>
                                     </td>
                                 </tr>
                                 <tr v-if="processedReportData.length === 0">
                                     <td colspan="6" class="text-center py-5 text-muted">
-                                        <i class="bi bi-calendar-x fs-1 d-block mb-3 opacity-25"></i>
-                                        <b class="d-block text-dark">Tidak ditemukan riwayat keuangan.</b>
-                                        Silakan ubah rute tanggal atau pilih cabang lain pada filter di atas.
+                                        <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                                        <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
                                     </td>
                                 </tr>
                             </tbody>
