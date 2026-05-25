@@ -2227,7 +2227,7 @@
                                 <thead class="table-light sticky-top text-center border-bottom">
                                     <tr>
                                         <th>Urutan (FIFO)</th>
-                                        <th>Ref. PO / Invoice</th>
+                                        <th>Tanggal Masuk</th> <th>Ref. PO / Invoice</th>
                                         <th>Lokasi Tumpukan</th>
                                         <th>Harga Beli (Modal)</th>
                                         <th class="bg-warning bg-opacity-10">Sisa Qty Batch</th>
@@ -2241,15 +2241,14 @@
                                                     {{ idx === 0 ? 'Antrian #1 (Terjual Duluan)' : 'Antrian #' + (idx + 1) }}
                                                 </span>
                                             </td>
-                                            <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
+                                            <td class="text-muted">{{ batch.tanggalDisplay || '-' }}</td> <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
                                             <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(batch.outletId) || 'Global/Pusat' }}</span></td>
                                             <td class="text-danger fw-semibold">Rp {{ formatNumber(batch.cost) }}</td>
                                             <td class="fw-bold fs-6 bg-warning bg-opacity-10">{{ batch.qty }}</td>
                                         </tr>
                                     </template>
                                     <tr v-else>
-                                        <td colspan="5" class="text-center py-5 text-muted">
-                                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                                        <td colspan="6" class="text-center py-5 text-muted"> <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
                                             <b class="d-block mb-1">Belum ada tumpukan Batch tercatat.</b>
                                             Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FIFO/LIFO.
                                         </td>
@@ -4480,7 +4479,7 @@
             this.openModal('hppExampleModal');
         },
         
-        // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET & SORTING FIFO)
+        // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
         openBatchDetail(product, variant = null) {
             // 1. Copy data produk/varian ke state yang diminta HTML Anda
             this.activeBatchProduct = JSON.parse(JSON.stringify(product));
@@ -4493,6 +4492,22 @@
             // Ambil filter cabang yang sedang aktif di layar
             let activeOutlet = this.invOutletFilter; 
 
+            // Fungsi pembantu lokal untuk merubah tanggal menjadi format Indonesia (DD/MM/YYYY HH:mm)
+            const formatTanggalIndo = (rawDate) => {
+                if (!rawDate) return '-';
+                try {
+                    return new Date(rawDate).toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }).replace(/\./g, ':'); // Mengubah titik jam menjadi titik dua (contoh 10.30 jadi 10:30)
+                } catch (e) {
+                    return rawDate;
+                }
+            };
+
             // 3. Tarik data berdasarkan Filter Cabang
             if (sourceDb && sourceDb.batches) {
                 if (activeOutlet) {
@@ -4501,13 +4516,15 @@
                     
                     if (Array.isArray(batchesInOutlet)) {
                         for (let b of batchesInOutlet) {
+                            let rawDate = b.tanggalMasuk || b.date;
                             flatBatches.push({
                                 outletId: activeOutlet,
-                                outletName: typeof this.getOutletName === 'function' ? this.getOutletName(activeOutlet) : activeOutlet, // Tambahan pengaman visual
-                                poInvoice: b.batchId || b.poInvoice || '-', // Terjemahkan batchId -> poInvoice
-                                cost: b.hargaModal || b.cost || 0,          // Terjemahkan hargaModal -> cost
-                                qty: b.qtySisa || b.qty_remain || b.qty || 0, // Terjemahkan qtySisa -> qty
-                                tanggalMasuk: b.tanggalMasuk || b.date      // Bawa tanggal asli untuk mesin pengurut
+                                outletName: typeof this.getOutletName === 'function' ? this.getOutletName(activeOutlet) : activeOutlet, 
+                                poInvoice: b.batchId || b.poInvoice || '-', 
+                                cost: b.hargaModal || b.cost || 0,          
+                                qty: b.qtySisa || b.qty_remain || b.qty || 0, 
+                                tanggalMasuk: rawDate,
+                                tanggalDisplay: formatTanggalIndo(rawDate) // <-- KOLOM BARU UNTUK HTML
                             });
                         }
                     }
@@ -4518,13 +4535,15 @@
                         
                         if (Array.isArray(batchesInOutlet)) {
                             for (let b of batchesInOutlet) {
+                                let rawDate = b.tanggalMasuk || b.date;
                                 flatBatches.push({
-                                    outletId: oId, // Diambil dari nama kunci object
+                                    outletId: oId, 
                                     outletName: typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId,
                                     poInvoice: b.batchId || b.poInvoice || '-', 
                                     cost: b.hargaModal || b.cost || 0,          
                                     qty: b.qtySisa || b.qty_remain || b.qty || 0,
-                                    tanggalMasuk: b.tanggalMasuk || b.date 
+                                    tanggalMasuk: rawDate,
+                                    tanggalDisplay: formatTanggalIndo(rawDate) // <-- KOLOM BARU UNTUK HTML
                                 });
                             }
                         }
@@ -4536,10 +4555,8 @@
             let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
             if (hppMethod === 'LIFO') {
-                // JIKA LIFO: Barang paling BARU ditaruh di Antrian #1 (Paling atas)
                 flatBatches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
             } else {
-                // JIKA FIFO/AVERAGE/STANDARD: Barang paling LAMA ditaruh di Antrian #1 (Paling atas)
                 flatBatches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
             }
 
