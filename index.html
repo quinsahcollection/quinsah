@@ -2222,6 +2222,11 @@
                         </button>
                     </li>
                     <li class="nav-item me-2">
+                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'pembayaran' ? 'active shadow-sm bg-info text-white border-info' : 'bg-white text-secondary'" @click="reportTab = 'pembayaran'">
+                            <i class="bi bi-credit-card me-1"></i> Pembayaran
+                        </button>
+                    </li>
+                    <li class="nav-item me-2">
                         <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'peakhour' ? 'active shadow-sm bg-warning text-dark border-warning' : 'bg-white text-secondary'" @click="reportTab = 'peakhour'">
                             <i class="bi bi-clock-history me-1"></i> Jam Sibuk
                         </button>
@@ -2316,6 +2321,27 @@
                                 <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Total Terjual: {{ c.qty }} Item</div>
                             </div>
                             <div v-if="analyticsData.topCategories.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan kategori.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="reportTab === 'pembayaran'">
+                    <div class="card border rounded-3 shadow-none">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-credit-card-2-front-fill text-info me-2"></i>Rekap Metode Pembayaran (Kasir)</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div v-for="(p, index) in analyticsData.paymentMethods" :key="index" class="mb-4">
+                                <div class="d-flex justify-content-between align-items-end mb-1">
+                                    <div class="fw-semibold text-dark">{{ p.name }}</div>
+                                    <div class="fw-bold text-info">Rp {{ formatNumber(p.total) }}</div>
+                                </div>
+                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                                    <div class="progress-bar bg-info rounded-pill" :style="{ width: ((p.total / analyticsData.maxPayment) * 100) + '%', transition: 'width 1s ease-out' }"></div>
+                                </div>
+                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Digunakan pada {{ p.count }} Transaksi</div>
+                            </div>
+                            <div v-if="!analyticsData.paymentMethods || analyticsData.paymentMethods.length === 0" class="text-center py-5 text-muted">Belum ada riwayat metode pembayaran tercatat.</div>
                         </div>
                     </div>
                 </div>
@@ -4606,6 +4632,9 @@
                 let categories = {};
                 // Siapkan array kosong untuk 24 jam (00:00 - 23:59)
                 let hours = Array(24).fill(0).map((_, i) => ({ jam: i, qty: 0, omset: 0, count: 0 }));
+                
+                // 🟢 TAMBAHAN 1: Wadah penampung untuk metode pembayaran
+                let payments = {}; 
 
                 this.processedReportData.forEach(trx => {
                     // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
@@ -4663,18 +4692,42 @@
                             categories[catName].omset += itemSubtotal;
                         });
                     }
+
+                    // 🟢 TAMBAHAN 2: Menghitung Omset berdasarkan Metode Pembayaran
+                    let payMethod = trx.paymentMethod || 'Tunai / Cash'; 
+                    if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
+                    
+                    payments[payMethod].total += (trx.total || 0);
+                    payments[payMethod].count += 1;
+
                 });
 
                 // Urutkan Data (Sorting) dari yang Terlaris
                 let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10);
                 let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
                 
+                // 🟢 TAMBAHAN 3: Sorting Metode Pembayaran
+                let topPayments = Object.values(payments).sort((a, b) => b.total - a.total);
+                
                 // Cari nilai skala maksimum untuk tinggi tiang animasi
                 let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
                 let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
                 let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
+                
+                // 🟢 TAMBAHAN 4: Mencari nilai omset pembayaran tertinggi untuk skala grafik
+                let maxPayment = topPayments.length > 0 ? topPayments[0].total : 1;
 
-                return { topProducts, topCategories, peakHours: hours, maxHourCount, maxProdQty, maxCatOmset };
+                // 🟢 TAMBAHAN 5: Memasukkan paymentMethods & maxPayment ke dalam Return
+                return { 
+                    topProducts, 
+                    topCategories, 
+                    peakHours: hours, 
+                    maxHourCount, 
+                    maxProdQty, 
+                    maxCatOmset,
+                    paymentMethods: topPayments, 
+                    maxPayment: maxPayment 
+                };
             },
 
             filteredStockLogs() {
