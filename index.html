@@ -3686,8 +3686,14 @@
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
-                activeBatchProduct: null,
+                activeBatchProduct: {},
                 activeBatchVariant: null,
+                
+                // STATE UNTUK MODAL BATCH HPP
+                batchModalItem: null,
+                batchModalVariant: null,
+                batchList: [], 
+            
                 // PENCARIAN & FILTER BARU
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
@@ -4464,12 +4470,53 @@
             this.openModal('hppExampleModal');
         },
         
+        // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH
         openBatchDetail(product, variant = null) {
-        this.activeBatchProduct = product;
-        this.activeBatchVariant = variant;
-        const modal = new bootstrap.Modal(document.getElementById('batchDetailModal'));
-        modal.show();
-},
+            // 1. Copy data produk/varian ke state yang diminta HTML Anda
+            this.activeBatchProduct = JSON.parse(JSON.stringify(product));
+            this.activeBatchVariant = variant ? JSON.parse(JSON.stringify(variant)) : null;
+
+            // 2. Siapkan wadah Array datar (karena HTML Anda butuh Array, bukan Object)
+            let flatBatches = [];
+            let sourceDb = variant ? variant : product;
+
+            // 3. Tarik data dari struktur { outletId: [...] } milik fungsi savePurchase Anda
+            if (sourceDb && sourceDb.batches) {
+                // Looping semua outlet yang ada di dalam produk tersebut
+                for (let oId in sourceDb.batches) {
+                    let batchesInOutlet = sourceDb.batches[oId];
+                    
+                    if (Array.isArray(batchesInOutlet)) {
+                        for (let b of batchesInOutlet) {
+                            // TERJEMAHKAN NAMA VARIABEL DB KE NAMA VARIABEL HTML
+                            flatBatches.push({
+                                outletId: oId, // Diambil dari nama kunci object
+                                poInvoice: b.batchId || b.poInvoice || '-', // Terjemahkan batchId -> poInvoice
+                                cost: b.hargaModal || b.cost || 0,          // Terjemahkan hargaModal -> cost
+                                qty: b.qtySisa || b.qty || 0                // Terjemahkan qtySisa -> qty
+                            });
+                        }
+                    }
+                }
+            }
+
+            // 4. Urutkan. Sesuai HTML Anda ("Antrian #1 Terjual Duluan"), 
+            // Kita biarkan urutan masuk awal (FIFO) berada di paling atas.
+            
+            // 5. Suntikkan Array yang sudah diterjemahkan ke dalam state
+            if (this.activeBatchVariant) {
+                this.activeBatchVariant.batches = flatBatches;
+            } else {
+                this.activeBatchProduct.batches = flatBatches;
+            }
+
+            // 6. Tampilkan Modal Bootstrap
+            const modalEl = document.getElementById('batchDetailModal');
+            if (modalEl) {
+                const batchModal = new bootstrap.Modal(modalEl);
+                batchModal.show();
+            }
+        },
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
