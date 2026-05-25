@@ -2205,58 +2205,148 @@
                     </div>
                 </div>
 
-                <div class="card border rounded-3 shadow-none mb-4">
-                    <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
-                        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Rincian per Transaksi</h6>
-                        <span class="badge bg-white text-dark border fw-normal shadow-sm">Sesuai Filter</span>
-                    </div>
-                    <div class="card-body p-0 bg-white rounded-bottom-3">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
-                                <thead class="table-light text-secondary border-bottom">
-                                    <tr>
-                                        <th class="ps-3 py-2 fw-semibold">INVOICE & WAKTU</th>
-                                        <th class="fw-semibold">CABANG</th>
-                                        <th class="text-end fw-semibold">OMSET BERSIH</th>
-                                        <th class="text-end fw-semibold">MODAL HPP</th>
-                                        <th class="text-end fw-semibold">LABA (PROFIT)</th>
-                                        <th class="text-center pe-3 fw-semibold">MARGIN</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
-                                        <td class="ps-3 py-2">
-                                            <div class="fw-bold text-primary">{{ trx.id }}</div>
-                                            <div class="text-muted" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span>
-                                        </td>
-                                        <td class="text-end fw-semibold text-success">Rp {{ formatNumber(trx.total) }}</td>
-                                        <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
-                                        <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">
-                                            Rp {{ formatNumber(trx.profit) }}
-                                        </td>
-                                        <td class="text-center pe-3">
-                                            <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">
-                                                {{ trx.margin.toFixed(1) }}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="processedReportData.length === 0">
-                                        <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
-                                            <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
-                                            <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                <ul class="nav nav-pills mb-4 pb-2 border-bottom overflow-auto flex-nowrap" style="scrollbar-width: none;">
+                    <li class="nav-item me-2">
+                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'keuangan' ? 'active shadow-sm' : 'bg-white text-secondary'" @click="reportTab = 'keuangan'">
+                            <i class="bi bi-wallet2 me-1"></i> Transaksi & Laba
+                        </button>
+                    </li>
+                    <li class="nav-item me-2">
+                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'produk' ? 'active shadow-sm bg-success border-success' : 'bg-white text-secondary'" @click="reportTab = 'produk'">
+                            <i class="bi bi-trophy me-1"></i> Produk Terlaris
+                        </button>
+                    </li>
+                    <li class="nav-item me-2">
+                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'kategori' ? 'active shadow-sm bg-primary border-primary' : 'bg-white text-secondary'" @click="reportTab = 'kategori'">
+                            <i class="bi bi-tags me-1"></i> Per Kategori
+                        </button>
+                    </li>
+                    <li class="nav-item me-2">
+                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'peakhour' ? 'active shadow-sm bg-warning text-dark border-warning' : 'bg-white text-secondary'" @click="reportTab = 'peakhour'">
+                            <i class="bi bi-clock-history me-1"></i> Jam Sibuk
+                        </button>
+                    </li>
+                </ul>
+
+                <div v-if="reportTab === 'keuangan'">
+                    <div class="card border rounded-3 shadow-none mb-4">
+                        <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Rincian per Transaksi</h6>
+                            <span class="badge bg-white text-dark border fw-normal shadow-sm">Berdasarkan Filter</span>
+                        </div>
+                        <div class="card-body p-0 bg-white rounded-bottom-3">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
+                                    <thead class="table-light text-secondary border-bottom">
+                                        <tr>
+                                            <th class="ps-3 py-2 fw-semibold">INVOICE & WAKTU</th>
+                                            <th class="fw-semibold">CABANG</th>
+                                            <th class="text-end fw-semibold">OMSET BERSIH</th>
+                                            <th class="text-end fw-semibold">MODAL HPP</th>
+                                            <th class="text-end fw-semibold">LABA (PROFIT)</th>
+                                            <th class="text-center pe-3 fw-semibold">MARGIN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
+                                            <td class="ps-3 py-2">
+                                                <div class="fw-bold text-primary">{{ trx.id }}</div>
+                                                <div class="text-muted" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span></td>
+                                            <td class="text-end fw-semibold text-success">Rp {{ formatNumber(trx.total) }}</td>
+                                            <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
+                                            <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(trx.profit) }}</td>
+                                            <td class="text-center pe-3">
+                                                <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">{{ trx.margin.toFixed(1) }}%</span>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="processedReportData.length === 0">
+                                            <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
+                                                <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                                                <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-            </div>
-        </div>
+                <div v-if="reportTab === 'produk'">
+                    <div class="card border rounded-3 shadow-none">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 10 Produk Paling Cepat Laku (Berdasarkan Qty)</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div v-for="(p, index) in analyticsData.topProducts" :key="index" class="mb-4">
+                                <div class="d-flex justify-content-between align-items-end mb-1">
+                                    <div class="fw-semibold text-dark text-truncate pe-2">
+                                        <span class="text-muted me-1">#{{ index + 1 }}</span> {{ p.name }}
+                                    </div>
+                                    <div class="fw-bold text-success">{{ p.qty }} Terjual</div>
+                                </div>
+                                <div class="progress" style="height: 12px;">
+                                    <div class="progress-bar bg-success rounded-pill" :style="{ width: ((p.qty / analyticsData.maxProdQty) * 100) + '%' }"></div>
+                                </div>
+                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Omset: Rp {{ formatNumber(p.omset) }}</div>
+                            </div>
+                            <div v-if="analyticsData.topProducts.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan produk.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="reportTab === 'kategori'">
+                    <div class="card border rounded-3 shadow-none">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Distribusi Pendapatan per Kategori Produk</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <div v-for="(c, index) in analyticsData.topCategories" :key="index" class="mb-4">
+                                <div class="d-flex justify-content-between align-items-end mb-1">
+                                    <div class="fw-semibold text-dark">{{ c.name }}</div>
+                                    <div class="fw-bold text-primary">Rp {{ formatNumber(c.omset) }}</div>
+                                </div>
+                                <div class="progress" style="height: 12px;">
+                                    <div class="progress-bar bg-primary rounded-pill" :style="{ width: ((c.omset / analyticsData.maxCatOmset) * 100) + '%' }"></div>
+                                </div>
+                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Total Terjual: {{ c.qty }} Item</div>
+                            </div>
+                            <div v-if="analyticsData.topCategories.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan kategori.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="reportTab === 'peakhour'">
+                    <div class="card border rounded-3 shadow-none">
+                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-warning me-2"></i>Frekuensi Transaksi per Jam (00:00 - 23:59)</h6>
+                        </div>
+                        <div class="card-body p-4 overflow-auto">
+                            <div class="d-flex align-items-end justify-content-between w-100" style="height: 250px; gap: 4px; min-width: 600px;">
+                                <div v-for="h in analyticsData.peakHours" :key="h.jam" class="d-flex flex-column align-items-center flex-fill h-100 position-relative group-hover-trigger">
+                                    
+                                    <div class="position-absolute bottom-100 mb-2 bg-dark text-white rounded p-2 text-center shadow d-none d-lg-block opacity-0 transition-opacity" style="z-index: 10; min-width: 120px; font-size: 0.75rem;">
+                                        <div class="fw-bold text-warning mb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
+                                        <div>{{ h.count }} Transaksi</div>
+                                        <div>Rp {{ formatNumber(h.omset) }}</div>
+                                    </div>
+                                    
+                                    <div class="flex-grow-1 w-100"></div>
+                                    <div class="bg-warning w-100 rounded-top opacity-75 hover-opacity-100" 
+                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 100) + '%' : '0%', transition: 'height 0.5s ease' }">
+                                    </div>
+                                    
+                                    <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4 small text-muted">Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.</div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                </div>
 
             <!-- SALES VIEW -->
             <div v-if="currentView === 'sales'" class="dashboard-card">
@@ -3874,6 +3964,9 @@
                     items: [] // Nanti diisi barang yang di-opname
                 },
                 
+                // STATE TAB NAVIGASI LAPORAN
+                reportTab: 'keuangan', // Default tab yang terbuka
+                
                 // STATE FILTER DASHBOARD LAPORAN
                 reportStartDate: '',
                 reportEndDate: '',
@@ -4491,6 +4584,67 @@
                     }
                 });
                 return total;
+            },
+
+            // 3. MESIN ANALITIK UNTUK GRAFIK (PRODUK, KATEGORI, JAM SIBUK)
+            analyticsData() {
+                let products = {};
+                let categories = {};
+                // Siapkan array kosong untuk 24 jam (00:00 - 23:59)
+                let hours = Array(24).fill(0).map((_, i) => ({ jam: i, qty: 0, omset: 0, count: 0 }));
+
+                this.processedReportData.forEach(trx => {
+                    // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
+                    // Ambil jam dari timestamp transaksi
+                    let dateObj = null;
+                    if (trx.createdAt && typeof trx.createdAt.toMillis === 'function') {
+                        dateObj = new Date(trx.createdAt.toMillis());
+                    } else if (trx.createdAt) {
+                        dateObj = new Date(trx.createdAt);
+                    }
+                    
+                    if (dateObj && !isNaN(dateObj.getTime())) {
+                        let h = dateObj.getHours();
+                        hours[h].count += 1; // Hitung jumlah nota
+                        hours[h].omset += (trx.total || 0); // Hitung omset di jam tersebut
+                    }
+
+                    // --- B. ANALITIK PRODUK & KATEGORI ---
+                    if (trx.items && Array.isArray(trx.items)) {
+                        trx.items.forEach(item => {
+                            // 1. Rekap Produk Terlaris
+                            let key = item.variantSku || item.productId;
+                            let name = item.name + (item.variantName && item.variantName !== '-' ? ' - ' + item.variantName : '');
+                            
+                            if (!products[key]) products[key] = { name: name, qty: 0, omset: 0 };
+                            products[key].qty += item.qty;
+                            products[key].omset += ((item.price || 0) * item.qty);
+
+                            // 2. Rekap Penjualan per Kategori
+                            let catName = 'Tanpa Kategori';
+                            let prodMaster = this.products.find(p => p.id === item.productId);
+                            if (prodMaster && prodMaster.categoryId && this.categories) {
+                                let cat = this.categories.find(c => c.id === prodMaster.categoryId);
+                                if (cat) catName = cat.name;
+                            }
+                            
+                            if (!categories[catName]) categories[catName] = { name: catName, omset: 0, qty: 0 };
+                            categories[catName].qty += item.qty;
+                            categories[catName].omset += ((item.price || 0) * item.qty);
+                        });
+                    }
+                });
+
+                // Urutkan (Sorting) Data agar menjadi Ranking dari yang Tertinggi
+                let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10); // Ambil Top 10 saja
+                let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
+                
+                // Cari nilai tertinggi untuk merender tinggi tiang grafik (skala persentase)
+                let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
+                let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
+                let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
+
+                return { topProducts, topCategories, peakHours: hours, maxHourCount, maxProdQty, maxCatOmset };
             },
 
             filteredStockLogs() {
