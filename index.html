@@ -2228,6 +2228,35 @@
                     </li>
                 </ul>
 
+                <style>
+                    .chart-anim-grow {
+                        animation: growUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                        transform-origin: bottom;
+                    }
+                    .chart-anim-slide-right {
+                        animation: slideRight 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                        transform-origin: left;
+                    }
+                    @keyframes growUp { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+                    @keyframes slideRight { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+                    
+                    .chart-bar-wrapper:hover .chart-tooltip {
+                        visibility: visible;
+                        opacity: 1;
+                        transform: translateY(-10px) translateX(-50%);
+                    }
+                    .chart-tooltip {
+                        visibility: hidden;
+                        opacity: 0;
+                        transform: translateY(0) translateX(-50%);
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        bottom: 100%;
+                        left: 50%;
+                        white-space: nowrap;
+                        z-index: 1050;
+                    }
+                </style>
+
                 <div v-if="reportTab === 'keuangan'">
                     <div class="card border rounded-3 shadow-none mb-4">
                         <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
@@ -2287,8 +2316,8 @@
                                     </div>
                                     <div class="fw-bold text-success">{{ p.qty }} Terjual</div>
                                 </div>
-                                <div class="progress" style="height: 12px;">
-                                    <div class="progress-bar bg-success rounded-pill" :style="{ width: ((p.qty / analyticsData.maxProdQty) * 100) + '%' }"></div>
+                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                                    <div class="progress-bar bg-success rounded-pill chart-anim-slide-right" :style="{ width: ((p.qty / analyticsData.maxProdQty) * 100) + '%' }"></div>
                                 </div>
                                 <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Omset: Rp {{ formatNumber(p.omset) }}</div>
                             </div>
@@ -2308,8 +2337,8 @@
                                     <div class="fw-semibold text-dark">{{ c.name }}</div>
                                     <div class="fw-bold text-primary">Rp {{ formatNumber(c.omset) }}</div>
                                 </div>
-                                <div class="progress" style="height: 12px;">
-                                    <div class="progress-bar bg-primary rounded-pill" :style="{ width: ((c.omset / analyticsData.maxCatOmset) * 100) + '%' }"></div>
+                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                                    <div class="progress-bar bg-primary rounded-pill chart-anim-slide-right" :style="{ width: ((c.omset / analyticsData.maxCatOmset) * 100) + '%' }"></div>
                                 </div>
                                 <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Total Terjual: {{ c.qty }} Item</div>
                             </div>
@@ -2325,28 +2354,40 @@
                         </div>
                         <div class="card-body p-4 overflow-auto">
                             <div class="d-flex align-items-end justify-content-between w-100" style="height: 250px; gap: 4px; min-width: 600px;">
-                                <div v-for="h in analyticsData.peakHours" :key="h.jam" class="d-flex flex-column align-items-center flex-fill h-100 position-relative group-hover-trigger">
+                                
+                                <div v-for="h in analyticsData.peakHours" :key="h.jam" 
+                                     class="d-flex flex-column align-items-center flex-fill h-100 position-relative" style="cursor: pointer;"
+                                     onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -10px)'; } this.querySelector('.grafik-bar').classList.replace('opacity-75', 'opacity-100');"
+                                     onmouseout="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='0'; t.style.visibility='hidden'; t.style.transform='translate(-50%, 0)'; } this.querySelector('.grafik-bar').classList.replace('opacity-100', 'opacity-75');">
                                     
-                                    <div class="position-absolute bottom-100 mb-2 bg-dark text-white rounded p-2 text-center shadow d-none d-lg-block opacity-0 transition-opacity" style="z-index: 10; min-width: 120px; font-size: 0.75rem;">
-                                        <div class="fw-bold text-warning mb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
-                                        <div>{{ h.count }} Transaksi</div>
-                                        <div>Rp {{ formatNumber(h.omset) }}</div>
+                                    <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
+                                         style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 8px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease-in-out; pointer-events: none;">
+                                        <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
+                                        <div class="small fw-semibold">{{ h.count }} Transaksi</div>
+                                        <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
+                                        <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
                                     </div>
                                     
                                     <div class="flex-grow-1 w-100"></div>
-                                    <div class="bg-warning w-100 rounded-top opacity-75 hover-opacity-100" 
-                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 100) + '%' : '0%', transition: 'height 0.5s ease' }">
+                                    
+                                    <div class="grafik-bar bg-warning w-100 rounded-top opacity-75" 
+                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 100) + '%' : '0%', transition: 'height 1s cubic-bezier(0.2, 0.8, 0.2, 1)' }">
                                     </div>
                                     
                                     <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
                                 </div>
+                                
                             </div>
-                            <div class="text-center mt-4 small text-muted">Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.</div>
+                            <div class="text-center mt-4 small text-muted border-top pt-3">
+                                Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.<br>
+                                <span class="d-none d-md-inline">(Arahkan kursor Anda ke tiang grafik untuk melihat detailnya)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                </div>
-                </div>
+
+            </div>
+        </div>
 
             <!-- SALES VIEW -->
             <div v-if="currentView === 'sales'" class="dashboard-card">
@@ -4595,7 +4636,6 @@
 
                 this.processedReportData.forEach(trx => {
                     // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
-                    // Ambil jam dari timestamp transaksi
                     let dateObj = null;
                     if (trx.createdAt && typeof trx.createdAt.toMillis === 'function') {
                         dateObj = new Date(trx.createdAt.toMillis());
@@ -4605,41 +4645,58 @@
                     
                     if (dateObj && !isNaN(dateObj.getTime())) {
                         let h = dateObj.getHours();
-                        hours[h].count += 1; // Hitung jumlah nota
-                        hours[h].omset += (trx.total || 0); // Hitung omset di jam tersebut
+                        hours[h].count += 1; 
+                        hours[h].omset += (trx.total || 0); 
                     }
 
                     // --- B. ANALITIK PRODUK & KATEGORI ---
                     if (trx.items && Array.isArray(trx.items)) {
                         trx.items.forEach(item => {
-                            // 1. Rekap Produk Terlaris
-                            let key = item.variantSku || item.productId;
-                            let name = item.name + (item.variantName && item.variantName !== '-' ? ' - ' + item.variantName : '');
+                            // 1. Deteksi Harga & Omset (Pencegah Kosong/Blank)
+                            let itemPrice = Number(item.price) || Number(item.sellPrice) || Number(item.basePrice) || 0;
+                            let itemQty = Number(item.qty) || 0;
+                            let itemSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : (itemPrice * itemQty);
+                            
+                            // Jika harga 0 tapi nota punya total (Kasus Diskon/Manual)
+                            if (itemSubtotal === 0 && trx.total > 0 && trx.items.length === 1) {
+                                itemSubtotal = trx.total;
+                            }
+
+                            // 2. Rekap Produk Terlaris
+                            let key = item.variantSku || item.productId || 'Item_Umum';
+                            let name = item.name || 'Produk Kustom';
+                            if (item.variantName && item.variantName !== '-') name += ' - ' + item.variantName;
                             
                             if (!products[key]) products[key] = { name: name, qty: 0, omset: 0 };
-                            products[key].qty += item.qty;
-                            products[key].omset += ((item.price || 0) * item.qty);
+                            products[key].qty += itemQty;
+                            products[key].omset += itemSubtotal;
 
-                            // 2. Rekap Penjualan per Kategori
-                            let catName = 'Tanpa Kategori';
-                            let prodMaster = this.products.find(p => p.id === item.productId);
-                            if (prodMaster && prodMaster.categoryId && this.categories) {
-                                let cat = this.categories.find(c => c.id === prodMaster.categoryId);
-                                if (cat) catName = cat.name;
+                            // 3. Rekap Penjualan per Kategori (Mencocokkan dengan Master Produk)
+                            let catName = 'Kategori Umum / Lainnya';
+                            if (this.products && this.products.length > 0) {
+                                let prodMaster = this.products.find(p => p.id === item.productId);
+                                if (prodMaster) {
+                                    if (prodMaster.categoryId && this.categories && this.categories.length > 0) {
+                                        let cat = this.categories.find(c => c.id === prodMaster.categoryId);
+                                        if (cat && cat.name) catName = cat.name;
+                                    } else if (prodMaster.categoryName) {
+                                        catName = prodMaster.categoryName;
+                                    }
+                                }
                             }
                             
                             if (!categories[catName]) categories[catName] = { name: catName, omset: 0, qty: 0 };
-                            categories[catName].qty += item.qty;
-                            categories[catName].omset += ((item.price || 0) * item.qty);
+                            categories[catName].qty += itemQty;
+                            categories[catName].omset += itemSubtotal;
                         });
                     }
                 });
 
-                // Urutkan (Sorting) Data agar menjadi Ranking dari yang Tertinggi
-                let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10); // Ambil Top 10 saja
+                // Urutkan Data (Sorting) dari yang Terlaris
+                let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10);
                 let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
                 
-                // Cari nilai tertinggi untuk merender tinggi tiang grafik (skala persentase)
+                // Cari nilai skala maksimum untuk tinggi tiang animasi
                 let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
                 let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
                 let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
