@@ -1224,8 +1224,8 @@
                                                 (p.sku || '000'), 
                                                 p.name, 
                                                 '-', 
-                                                (p.base || p.basePrice || p.price || p.hpp || 0), 
-                                                (p.sell || p.sellPrice || p.finalPrice || p.price || 0)
+                                                (p.sellPrice || p.basePrice || 0),  /* Harga Asli */
+                                                getEffectiveBasePrice(p)            /* 🟢 Menggunakan Fungsi Buatan Anda! */
                                             ); showBarcodeModal = false;">
                                             
                                         <div>
@@ -1236,22 +1236,22 @@
                                     </button>
 
                                     <template v-for="(v, vIdx) in p.variants" :key="'bc-v-'+vIdx">
-                                        <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (((v.sku || v.variantSku || '')).toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
+                                        <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (((v.variantSku || '').toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
                                                 class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2 bg-light bg-opacity-50"
                                                 
                                                 @click="addBarcodeItem(
                                                     p.id, 
-                                                    (v.sku || v.variantSku || p.sku || '000'), 
+                                                    (v.variantSku || p.sku || '000'),   /* 🟢 Menggunakan variantSku Sesuai Database */
                                                     p.name, 
                                                     (v.name || v.attributes || '-'), 
-                                                    (v.base || v.basePrice || v.price || p.base || p.basePrice || p.price || 0), 
-                                                    (v.sell || v.sellPrice || v.finalPrice || v.price || p.sell || p.sellPrice || p.finalPrice || p.price || 0)
+                                                    (v.sellPrice || p.sellPrice || 0),  /* Harga Asli Varian */
+                                                    getEffectiveVariantPrice(p, v)      /* 🟢 Menggunakan Fungsi Buatan Anda! */
                                                 ); showBarcodeModal = false;">
                                                 
                                             <div>
                                                 <span class="text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }}</span><br>
                                                 <b class="text-dark ps-3">Varian: {{ v.name || v.attributes || '-' }}</b><br>
-                                                <small class="text-muted ps-3">SKU: {{ v.sku || v.variantSku || '-' }}</small>
+                                                <small class="text-muted ps-3">SKU: {{ v.variantSku || '-' }}</small>
                                             </div>
                                             <span class="badge bg-primary rounded-pill shadow-sm"><i class="bi bi-plus fs-6"></i></span>
                                         </button>
