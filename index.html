@@ -2586,8 +2586,22 @@
                                     {{ trx.paymentStatus || 'LUNAS' }}
                                 </span>
                             </td>
-                            <td>
-                                <span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
+                                                        <td>
+                                <div class="fw-semibold text-dark mb-1" style="font-size: 0.75rem;">
+                                    <i class="bi bi-wallet2 me-1 text-secondary"></i>
+                                    {{ trx.paymentMethod }}: <span class="text-success">Rp {{ formatNumber(trx.firstPayment !== undefined ? trx.firstPayment : trx.amountReceived) }}</span>
+                                </div>
+                                
+                                <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1" style="font-size: 0.65rem; line-height: 1.2;">
+                                    <i class="bi bi-arrow-return-right me-1"></i>
+                                    {{ pay.method }}: Rp {{ formatNumber(pay.amount) }}
+                                </div>
+                                
+                                <div v-if="trx.paymentStatus && trx.paymentStatus !== 'LUNAS'" class="text-danger fw-bold mt-1" style="font-size: 0.65rem;">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    Sisa: Rp {{ formatNumber(trx.sisaTagihan || 0) }}
+                                </div>
+                            </td>
                             <td class="fw-bold text-success small">Rp {{ formatNumber(trx.total) }}</td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm mb-1 me-1">
@@ -3049,19 +3063,51 @@
                             <h6 class="fw-bold small mb-2"><i class="bi bi-receipt me-1"></i>Histori Transaksi (POS)</h6>
                             <div class="table-responsive" style="max-height: 40vh; overflow-y: auto;">
                                 <table class="table table-sm table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
-                                    <thead class="table-light sticky-top">
-                                        <tr><th>Tgl Transaksi</th><th>No. Invoice</th><th>Metode</th><th>Total Belanja</th><th>Kasir</th></tr>
+                                                                        <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Tgl Transaksi</th>
+                                            <th>No. Invoice</th>
+                                            <th>Status</th> <th>Pembayaran</th>
+                                            <th>Total Belanja</th>
+                                            <th>Kasir</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="trx in activeCustomerTransactions" :key="trx.id">
                                             <td>{{ trx.dateStr }}</td>
                                             <td><a href="#" class="fw-bold text-primary text-decoration-underline" @click.prevent="goToTransaction(trx.id)" title="Klik untuk melompat ke invoice ini">{{ trx.id }}</a></td>
-                                            <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod }}</span></td>
+                                            
+                                            <td>
+                                                <span class="badge border" :class="getPaymentStatusColor(trx.paymentStatus)" style="font-size: 0.65rem;">
+                                                    {{ trx.paymentStatus || 'LUNAS' }}
+                                                </span>
+                                            </td>
+
+                                            <td>
+                                                <div class="fw-semibold text-dark mb-1" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-wallet2 me-1 text-secondary"></i>
+                                                    {{ trx.paymentMethod }}: <span class="text-success">Rp {{ formatNumber(trx.firstPayment !== undefined ? trx.firstPayment : trx.amountReceived) }}</span>
+                                                </div>
+                                                
+                                                <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1" style="font-size: 0.65rem; line-height: 1.2;">
+                                                    <i class="bi bi-arrow-return-right me-1"></i>
+                                                    {{ pay.method }}: Rp {{ formatNumber(pay.amount) }}
+                                                </div>
+                                                
+                                                <div v-if="trx.paymentStatus && trx.paymentStatus !== 'LUNAS'" class="text-danger fw-bold mt-1" style="font-size: 0.65rem;">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                    Sisa: Rp {{ formatNumber(trx.sisaTagihan || 0) }}
+                                                </div>
+                                            </td>
+
                                             <td class="text-success fw-bold">Rp {{ formatNumber(trx.total) }}</td>
                                             <td>{{ trx.cashierName }}</td>
                                         </tr>
-                                        <tr v-if="activeCustomerTransactions.length === 0"><td colspan="5" class="text-center py-3 text-muted">Belum ada histori transaksi untuk pelanggan ini.</td></tr>
+                                        <tr v-if="activeCustomerTransactions.length === 0">
+                                            <td colspan="6" class="text-center py-3 text-muted">Belum ada histori transaksi untuk pelanggan ini.</td>
+                                        </tr>
                                     </tbody>
+
                                 </table>
                             </div>
                         </div>
