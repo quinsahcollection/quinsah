@@ -222,40 +222,50 @@
         }
 
         /* ======================================================= */
-        /* FIX PRINT UNTUK IPAD / IOS / SAFARI                     */
-        /* ======================================================= */
-        @media print {
-            /* 1. Sembunyikan SELURUH aplikasi utama saat nge-print */
-            body.safe-print-mode > * {
-                display: none !important;
-            }
-            
-            /* 2. Tampilkan HANYA area cetak hasil kloningan kita */
-            body.safe-print-mode > #temp-print-section {
-                display: block !important;
-                width: 100% !important;
-                position: relative !important;
-                left: 0 !important;
-                top: 0 !important;
-                margin: 0 auto !important;
-            }
-            
-            /* 3. Bebaskan kuncian Bootstrap (Pencegah Layar Blank/Putih) */
-            html, body.safe-print-mode {
-                overflow: visible !important;
-                height: auto !important;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            @page {
-                margin: 0; 
-                size: auto;
-            }
+    /* FIX PRINT KASIR FINAL: JAMINAN ANTI BLANK/KOSONG        */
+    /* ======================================================= */
+    @media print {
+        /* 1. Sembunyikan seluruh kerangka aplikasi dan popup */
+        .app-container,
+        .modal,
+        .modal-backdrop,
+        .swal2-container {
+            display: none !important;
         }
+
+        /* 2. Bebaskan kuncian layar bawaan aplikasimu */
+        html, body, #app {
+            display: block !important;
+            position: static !important;
+            overflow: visible !important;
+            height: auto !important;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* 3. MUNCULKAN KOTAK STRUK (Ini yang paling penting!) */
+        #print-section {
+            display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Pastikan isi struk/invoice juga ikut terlihat */
+        .mode-receipt, .mode-a4, .mode-label {
+            display: block !important;
+            width: 100% !important;
+        }
+
+        /* 4. Buang margin (jarak) putih bawaan browser Chrome/Safari */
+        @page {
+            margin: 0mm;
+        }
+    }
     </style>
 </head>
 <body>
