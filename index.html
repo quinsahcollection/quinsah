@@ -2557,29 +2557,37 @@
                         <i class="bi bi-arrow-clockwise me-1"></i> Reset
                     </button>
                 </div>
-                
+             
             </div>
 
             <div class="table-responsive">
                 <table class="table table-custom align-middle text-nowrap">
-                    <thead>
+                     <thead>
                         <tr>
                             <th>No. Inv</th>
                             <th>Waktu</th>
                             <th>Pelanggan</th>
-                            <th>Pembayaran</th>
+                            <th>Status</th> <th>Pembayaran</th>
                             <th>Total</th>
                             <th class="text-center">Aksi Lanjutan</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="trx in filteredTransactions" :key="trx.id">
-                            <td class="fw-bold text-primary-custom small">{{ trx.id }}</td>
+                            <td class="fw-bold text-primary-custom small cursor-pointer text-decoration-underline" @click="openInvoiceDetail(trx)" title="Klik untuk lihat detail & bayar cicilan">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>{{ trx.id }}
+                            </td>
                             <td style="font-size: 0.7rem;">{{ trx.dateStr }}</td>
                             <td class="small cursor-pointer text-primary text-decoration-underline" @click="openCustomerDetail({id: trx.customerId, name: trx.customer})">
                                 {{ trx.customer }}
                             </td>
-                            <td><span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
+                            <td>
+                                <span class="badge border" :class="getPaymentStatusColor(trx.paymentStatus)">
+                                    {{ trx.paymentStatus || 'LUNAS' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge border bg-light text-dark">{{ trx.paymentMethod || 'CASH' }}</span></td>
                             <td class="fw-bold text-success small">Rp {{ formatNumber(trx.total) }}</td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm mb-1 me-1">
@@ -2594,15 +2602,208 @@
                             </td>
                         </tr>
                         <tr v-if="filteredTransactions.length === 0">
-                            <td colspan="6" class="text-center py-4 text-muted small">
+                            <td colspan="7" class="text-center py-4 text-muted small">
                                 Belum ada transaksi / Data tidak ditemukan sesuai filter.
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+         </div>
+         
+                 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light pb-2">
+                        <div>
+                            <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
+                            <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body bg-light pt-3" v-if="activeInvoiceDetail">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="p-2 bg-white border rounded text-center">
+                                    <div class="small text-muted fw-bold">Total Belanja</div>
+                                    <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-white border rounded text-center">
+                                    <div class="small text-muted fw-bold">Sudah Dibayar</div>
+                                    <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
+                                    <div class="small fw-bold text-white-50">Sisa Tagihan</div>
+                                    <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                                    <thead class="table-light">
+                                        <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ activeInvoiceDetail.dateStr }}</td>
+                                            <td>{{ activeInvoiceDetail.paymentMethod }}</td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
+                                            <td class="text-muted">Pembayaran Awal (Kasir)</td>
+                                        </tr>
+                                        <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
+                                            <td>{{ pay.date }}</td>
+                                            <td>{{ pay.method }}</td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
+                                            <td class="text-muted">{{ pay.note || '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
+                            <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Metode Bayar</label>
+                                        <select class="form-select form-select-sm" v-model="installmentForm.method">
+                                            <option value="CASH">Uang Tunai (CASH)</option>
+                                            <option value="TRANSFER">Transfer Bank</option>
+                                            <option value="QRIS">QRIS / E-Wallet</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-bold">Nominal (Rp)</label>
+                                        <input type="number" class="form-control form-control-sm fw-bold" v-model.number="installmentForm.amount" :max="activeInvoiceDetail.sisaTagihan">
+                                        <div class="text-danger mt-1" style="font-size:0.65rem;" v-if="installmentForm.amount > activeInvoiceDetail.sisaTagihan">Nominal melebihi sisa tagihan!</div>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button class="btn btn-sm btn-success w-100 fw-bold py-1" @click="processInstallment" :disabled="isProcessing || !installmentForm.amount || installmentForm.amount <= 0 || installmentForm.amount > activeInvoiceDetail.sisaTagihan">
+                                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                                            <span v-else><i class="bi bi-check-circle me-1"></i> Simpan</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <input type="text" class="form-control form-control-sm" v-model="installmentForm.note" placeholder="Catatan opsional (misal: Transfer dari Bpk Budi)...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light p-2">
+                        <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
         </div>
+
+
         </main>
+
+                <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-light pb-2">
+                        <div>
+                            <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
+                            <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body bg-light pt-3" v-if="activeInvoiceDetail">
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="p-2 bg-white border rounded text-center">
+                                    <div class="small text-muted fw-bold">Total Belanja</div>
+                                    <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-white border rounded text-center">
+                                    <div class="small text-muted fw-bold">Sudah Dibayar</div>
+                                    <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
+                                    <div class="small fw-bold text-white-50">Sisa Tagihan</div>
+                                    <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                                    <thead class="table-light">
+                                        <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ activeInvoiceDetail.dateStr }}</td>
+                                            <td>{{ activeInvoiceDetail.paymentMethod }}</td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
+                                            <td class="text-muted">Pembayaran Awal (Kasir)</td>
+                                        </tr>
+                                        <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
+                                            <td>{{ pay.date }}</td>
+                                            <td>{{ pay.method }}</td>
+                                            <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
+                                            <td class="text-muted">{{ pay.note || '-' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
+                            <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">Metode Bayar</label>
+                                        <select class="form-select form-select-sm" v-model="installmentForm.method">
+                                            <option value="CASH">Uang Tunai (CASH)</option>
+                                            <option value="TRANSFER">Transfer Bank</option>
+                                            <option value="QRIS">QRIS / E-Wallet</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-bold">Nominal (Rp)</label>
+                                        <input type="number" class="form-control form-control-sm fw-bold" v-model.number="installmentForm.amount" :max="activeInvoiceDetail.sisaTagihan">
+                                        <div class="text-danger mt-1" style="font-size:0.65rem;" v-if="installmentForm.amount > activeInvoiceDetail.sisaTagihan">Nominal melebihi sisa tagihan!</div>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button class="btn btn-sm btn-success w-100 fw-bold py-1" @click="processInstallment" :disabled="isProcessing || !installmentForm.amount || installmentForm.amount <= 0 || installmentForm.amount > activeInvoiceDetail.sisaTagihan">
+                                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                                            <span v-else><i class="bi bi-check-circle me-1"></i> Simpan</span>
+                                        </button>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <input type="text" class="form-control form-control-sm" v-model="installmentForm.note" placeholder="Catatan opsional (misal: Transfer dari Bpk Budi)...">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light p-2">
+                        <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <div class="modal fade" id="batchDetailModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -4122,7 +4323,10 @@
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
                 activeCustomerDetail: null, activeSupplierDetail: null,
-                
+
+                activeInvoiceDetail: null,
+                installmentForm: { amount: 0, method: 'CASH', note: '' },
+    
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
                 customerPromoFilter: '',
@@ -4140,6 +4344,11 @@
                 purchaseEndDate: '',
                 transactionStartDate: '',
                 transactionEndDate: '',
+                
+                // Tambahkan di dalam data()
+                activeInvoiceDetail: null,
+                installmentForm: { amount: 0, method: 'CASH', note: '' },
+
                 
                 // ==========================================
                 // STATE STOK OPNAME
@@ -5186,6 +5395,81 @@
                 batchModal.show();
             }
         },
+        
+                    // 1. Warna Status Pembayaran
+            getPaymentStatusColor(status) {
+                if (status === 'LUNAS') return 'bg-success text-white';
+                if (status === 'SEBAGIAN') return 'bg-warning text-dark';
+                if (status === 'BELUM LUNAS') return 'bg-danger text-white';
+                return 'bg-success text-white'; // default bawaan lama
+            },
+
+            // 2. Buka Detail Invoice
+            openInvoiceDetail(trx) {
+                this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx)); // Clone data
+                
+                // Pastikan variabel histori dan sisa tagihan ada nilainya (utk transaksi lama yg belum ada sistem AR)
+                if (this.activeInvoiceDetail.sisaTagihan === undefined) {
+                    this.activeInvoiceDetail.sisaTagihan = (this.activeInvoiceDetail.total - this.activeInvoiceDetail.amountReceived) > 0 ? (this.activeInvoiceDetail.total - this.activeInvoiceDetail.amountReceived) : 0;
+                }
+                
+                this.installmentForm = { amount: this.activeInvoiceDetail.sisaTagihan, method: 'CASH', note: '' }; // Auto set ke sisa tagihan
+                this.showModal('invoiceDetailModal');
+            },
+
+            // 3. Proses Cicilan / Pelunasan ke Firebase
+            async processInstallment() {
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+
+                try {
+                    let trx = this.activeInvoiceDetail;
+                    let bayarSekarang = Number(this.installmentForm.amount);
+                    
+                    // Kalkulasi nominal baru
+                    let uangTerkumpulBerdasarkanSistem = Number(trx.amountReceived) + bayarSekarang;
+                    let sisaTagihanBaru = Number(trx.total) - uangTerkumpulBerdasarkanSistem;
+                    if (sisaTagihanBaru < 0) sisaTagihanBaru = 0; // Cegah minus
+
+                    // Tentukan Status Baru
+                    let statusBaru = 'SEBAGIAN';
+                    if (sisaTagihanBaru <= 0) statusBaru = 'LUNAS';
+
+                    // Siapkan Histori Pembayaran Baru
+                    let riwayatBaru = trx.paymentHistory ? [...trx.paymentHistory] : [];
+                    riwayatBaru.push({
+                        date: new Date().toLocaleString('id-ID'),
+                        amount: bayarSekarang,
+                        method: this.installmentForm.method,
+                        note: this.installmentForm.note || ''
+                    });
+
+                    // Update data ke Firebase
+                    await updateDoc(doc(db, "transactions", trx.id), {
+                        amountReceived: uangTerkumpulBerdasarkanSistem,
+                        sisaTagihan: sisaTagihanBaru,
+                        paymentStatus: statusBaru,
+                        paymentHistory: riwayatBaru
+                    });
+
+                    // Update tampilan UI Modal secara instan
+                    this.activeInvoiceDetail.amountReceived = uangTerkumpulBerdasarkanSistem;
+                    this.activeInvoiceDetail.sisaTagihan = sisaTagihanBaru;
+                    this.activeInvoiceDetail.paymentStatus = statusBaru;
+                    this.activeInvoiceDetail.paymentHistory = riwayatBaru;
+                    
+                    // Reset Form
+                    this.installmentForm.amount = sisaTagihanBaru;
+                    this.installmentForm.note = '';
+
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pembayaran cicilan berhasil disimpan!', timer: 1500, showConfirmButton: false });
+                } catch (error) {
+                    console.error("Gagal simpan cicilan:", error);
+                    Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan data', 'error');
+                }
+                this.isProcessing = false;
+            },
+
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
