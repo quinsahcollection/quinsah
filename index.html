@@ -3687,13 +3687,22 @@
                         </div>
 
                         <div class="mb-4 text-start" v-if="paymentData.method === 'CASH'">
-                            <label class="form-label small fw-bold">Jumlah Uang Diterima</label>
-                            <input type="number" class="form-control form-control-sm text-center fw-bold fs-6" v-model.number="paymentData.amountReceived" placeholder="0">
-                            <div class="mt-2 d-flex justify-content-between align-items-center" v-if="paymentData.amountReceived > 0">
-                                <span class="small fw-bold">Kembalian:</span>
-                                <span class="fw-bold text-danger fs-6">Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}</span>
-                            </div>
-                        </div>
+                        <label class="form-label small fw-bold">Jumlah Uang Diterima</label>
+    
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-success" style="font-size: 0.75rem;" @click="paymentData.amountReceived = total">Uang Pas</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 20000">20.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 50000">50.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 100000">100.000</button>
+                   </div>
+
+                        <input type="number" class="form-control form-control-sm text-center fw-bold fs-6" v-model.number="paymentData.amountReceived" placeholder="0">
+    
+                        <div class="mt-2 d-flex justify-content-between align-items-center" v-if="paymentData.amountReceived > 0">
+                        <span class="small fw-bold">Kembalian:</span>
+                        <span class="fw-bold text-danger fs-6">Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}</span>
+                    </div>
+               </div>
 
                         <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (paymentData.method==='CASH' && paymentData.amountReceived < total)">
                             <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
@@ -3955,9 +3964,13 @@
                         <td style="padding:10px; font-weight:bold; font-size:16px;">TOTAL TAGIHAN</td>
                         <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark);">Rp {{ formatNumber(activePrintData.total) }}</td>
                     </tr>
-                    <tr>
-                        <td style="padding:6px 10px; border-top:1px solid #000; border-bottom:1px solid #eee;">Metode Pembayaran</td>
-                        <td style="padding:6px 10px; border-top:1px solid #000; border-bottom:1px solid #eee; text-align:right; font-weight:bold;">{{ activePrintData.paymentMethod }}</td>
+                    <tr v-if="activePrintData.paymentMethod === 'CASH'">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee;">Uang Tunai (Diterima)</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.amountReceived) }}</td>
+                    </tr>
+                    <tr v-if="activePrintData.paymentMethod === 'CASH'">
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; font-weight:bold; color:var(--primary-dark);">Kembalian</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:var(--primary-dark);">Rp {{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
                     </tr>
                 </table>
             </div>
