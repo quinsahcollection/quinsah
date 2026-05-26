@@ -1216,10 +1216,17 @@
                             <div class="list-group list-group-flush border-top" style="max-height: 350px; overflow-y: auto;">
                                 <template v-for="p in products" :key="'bc-p-'+p.id">
                                     
-                                    <button v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
+                                    <button v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || ((p.sku || '').toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
                                             class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2"
                                             
-                                            @click="addBarcodeItem(p.id, p.sku, p.name, '-', (p.basePrice || p.price || p.sellPrice || 0), (p.finalPrice || p.sellPrice || p.price || 0)); showBarcodeModal = false;">
+                                            @click="addBarcodeItem(
+                                                p.id, 
+                                                (p.sku || '000'), 
+                                                p.name, 
+                                                '-', 
+                                                (p.base || p.basePrice || p.price || p.hpp || 0), 
+                                                (p.sell || p.sellPrice || p.finalPrice || p.price || 0)
+                                            ); showBarcodeModal = false;">
                                             
                                         <div>
                                             <b class="text-dark">{{ p.name }}</b> <br>
@@ -1229,15 +1236,22 @@
                                     </button>
 
                                     <template v-for="(v, vIdx) in p.variants" :key="'bc-v-'+vIdx">
-                                        <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
+                                        <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (((v.sku || v.variantSku || '')).toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
                                                 class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2 bg-light bg-opacity-50"
                                                 
-                                                @click="addBarcodeItem(p.id, v.variantSku, p.name, (v.name || v.attributes), (v.basePrice || v.price || p.basePrice || p.price || v.sellPrice || p.sellPrice || 0), (v.finalPrice || v.sellPrice || p.sellPrice || v.price || p.price || 0)); showBarcodeModal = false;">
+                                                @click="addBarcodeItem(
+                                                    p.id, 
+                                                    (v.sku || v.variantSku || p.sku || '000'), 
+                                                    p.name, 
+                                                    (v.name || v.attributes || '-'), 
+                                                    (v.base || v.basePrice || v.price || p.base || p.basePrice || p.price || 0), 
+                                                    (v.sell || v.sellPrice || v.finalPrice || v.price || p.sell || p.sellPrice || p.finalPrice || p.price || 0)
+                                                ); showBarcodeModal = false;">
                                                 
                                             <div>
                                                 <span class="text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }}</span><br>
-                                                <b class="text-dark ps-3">Varian: {{ v.name || v.attributes }}</b><br>
-                                                <small class="text-muted ps-3">SKU: {{ v.variantSku || '-' }}</small>
+                                                <b class="text-dark ps-3">Varian: {{ v.name || v.attributes || '-' }}</b><br>
+                                                <small class="text-muted ps-3">SKU: {{ v.sku || v.variantSku || '-' }}</small>
                                             </div>
                                             <span class="badge bg-primary rounded-pill shadow-sm"><i class="bi bi-plus fs-6"></i></span>
                                         </button>
@@ -1251,7 +1265,7 @@
             </div>
 
         </div>
-            
+    
     <style>
                     /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
                     .barcode-print-sheet {
