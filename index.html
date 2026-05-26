@@ -1038,18 +1038,15 @@
 
             <div v-if="currentView === 'barcode'" class="fade-in w-100">
             
-            <div v-html="'<style>@import url(\'https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap\'); .size-small { width: 38mm !important; height: 20mm !important; } .size-medium { width: 50mm !important; height: 30mm !important; } .size-large { width: 70mm !important; height: 40mm !important; } .barcode-label-box { background: #fff; margin: 1.5mm; padding: 2mm 3mm; display: flex; flex-direction: column; justify-content: space-evenly; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; color: #000; } .border-dashed { border: 1px dashed #6c757d; } .border-none { border: 1px solid transparent; } .bc-biz-name { font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .bc-prod-name { font-size: 0.75rem; font-weight: 600; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; } .bc-price { font-size: 1rem; font-weight: 900; line-height: 1; margin-top: 2px; } .bc-date { font-size: 0.55rem; color: #555; } .bc-sku-code { font-family: monospace; font-size: 0.65rem; letter-spacing: 1px; } .bc-barcode-lines { width: 100%; display: flex; flex-direction: column; overflow: hidden; margin: 2px 0; } .real-barcode-font { font-family: \'Libre Barcode 39\', cursive; color: #000; white-space: nowrap; line-height: 0.85; margin-bottom: 2px; } .size-small .real-barcode-font { font-size: 26px; } .size-medium .real-barcode-font { font-size: 38px; } .size-large .real-barcode-font { font-size: 54px; } .size-small .bc-biz-name { font-size: 0.55rem; } .size-small .bc-prod-name { font-size: 0.6rem; -webkit-line-clamp: 1; } .size-small .bc-price { font-size: 0.85rem; } .size-small .bc-sku-code { font-size: 0.55rem; } .size-large .bc-biz-name { font-size: 0.8rem; } .size-large .bc-prod-name { font-size: 0.95rem; } .size-large .bc-price { font-size: 1.3rem; margin-top: 4px; } .size-large .bc-date { font-size: 0.65rem; } @media print { body * { visibility: hidden !important; } .barcode-print-sheet, .barcode-print-sheet * { visibility: visible !important; color: #000 !important; } .barcode-print-sheet { position: absolute; left: 0; top: 0; width: 100%; background: #fff; margin:0; padding:0; display: flex !important; flex-wrap: wrap; align-content: flex-start; justify-content: flex-start; } @page { margin: 0; } }</style>'"></div>
+            <div id="barcodeStyles" v-html="'<style>@import url(\'https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap\'); .size-small { width: 38mm !important; height: 20mm !important; } .size-medium { width: 50mm !important; height: 30mm !important; } .size-large { width: 70mm !important; height: 40mm !important; } .barcode-label-box { background: #fff; margin: 1.5mm; padding: 2mm 3mm; display: flex; flex-direction: column; justify-content: space-evenly; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; color: #000; border-radius: 4px; } .border-dashed { border: 1px dashed #6c757d !important; } .border-none { border: 1px solid #e9ecef !important; } .bc-biz-name { font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .bc-prod-name { font-size: 0.75rem; font-weight: 600; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; } .bc-price { font-size: 1rem; font-weight: 900; line-height: 1; margin-top: 2px; } .bc-date { font-size: 0.55rem; color: #555; } .bc-sku-code { font-family: monospace; font-size: 0.65rem; letter-spacing: 1px; } .bc-barcode-lines { width: 100%; display: flex; flex-direction: column; overflow: hidden; margin: 2px 0; } .real-barcode-font { font-family: \'Libre Barcode 39\', cursive; color: #000; white-space: nowrap; line-height: 0.85; margin-bottom: 2px; } .size-small .real-barcode-font { font-size: 26px; } .size-medium .real-barcode-font { font-size: 38px; } .size-large .real-barcode-font { font-size: 54px; } .size-small .bc-biz-name { font-size: 0.55rem; } .size-small .bc-prod-name { font-size: 0.6rem; -webkit-line-clamp: 1; } .size-small .bc-price { font-size: 0.85rem; } .size-small .bc-sku-code { font-size: 0.55rem; } .size-large .bc-biz-name { font-size: 0.8rem; } .size-large .bc-prod-name { font-size: 0.95rem; } .size-large .bc-price { font-size: 1.3rem; margin-top: 4px; } .size-large .bc-date { font-size: 0.65rem; }</style>'"></div>
 
-            <div class="row g-4 d-print-none dashboard-card border-0 shadow-none mb-4 mx-0">
-                
+            <div class="row g-4 mb-4 mx-0">
                 <div class="col-lg-5 border-end px-0 pe-lg-3">
-                    
                     <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
                         <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-gear-fill me-2"></i>Konfigurasi Label Barcode</h6>
                     </div>
 
                     <div class="bg-light p-3 rounded border mb-4 shadow-sm">
-                        
                         <div class="form-check form-switch mb-2">
                             <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showBusinessName" id="showBiz">
                             <label class="form-check-label small fw-semibold" for="showBiz">Tampilkan Nama Usaha</label>
@@ -1142,7 +1139,6 @@
                             </tbody>
                         </table>
                     </div>
-
                 </div>
 
                 <div class="col-lg-7 bg-white px-0 ps-lg-3">
@@ -1153,76 +1149,45 @@
                         </button>
                     </div>
 
-                    <div class="border rounded p-3 bg-secondary bg-opacity-10 d-flex flex-wrap align-content-start overflow-auto" style="min-height: 480px; max-height: 550px;">
-                        
-                        <template v-for="item in barcodeSelectedItems">
-                            <div v-for="n in item.printQty" class="barcode-label-box shadow-sm" :class="['size-' + barcodeSettings.labelSize, barcodeSettings.showBorder ? 'border-dashed' : 'border-none', barcodeAlign]">
-                                
-                                <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">
-                                    {{ barcodeSettings.businessName || 'Nama Toko' }}
-                                </div>
-                                
-                                <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
-                                    {{ item.name }} <span v-if="item.variantName && item.variantName !== '-'">({{ item.variantName }})</span>
-                                </div>
-                                
-                                <div class="bc-barcode-lines" :class="barcodeAlign === 'text-start' ? 'align-items-start' : (barcodeAlign === 'text-end' ? 'align-items-end' : 'align-items-center')" v-if="barcodeSettings.showBarcode">
-                                    <div class="real-barcode-font">
-                                        *{{ (item.sku || '000').toUpperCase() }}*
+                    <div class="border rounded p-3 bg-secondary bg-opacity-10 overflow-auto" style="min-height: 480px; max-height: 550px;">
+                        <div id="printCanvas" class="d-flex flex-wrap align-content-start" :class="barcodeAlign" style="gap: 1mm;">
+                            
+                            <template v-for="item in barcodeSelectedItems">
+                                <div v-for="n in item.printQty" class="barcode-label-box shadow-sm" :class="['size-' + barcodeSettings.labelSize, barcodeSettings.showBorder ? 'border-dashed' : 'border-none']">
+                                    
+                                    <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">
+                                        {{ barcodeSettings.businessName || 'Nama Toko' }}
                                     </div>
-                                    <div class="bc-sku-code">{{ item.sku || '000' }}</div>
-                                </div>
-                                
-                                <div class="bc-price" v-if="barcodeSettings.showPrice">
-                                    Rp {{ Number(item.price || 0).toLocaleString('id-ID') }}
-                                </div>
+                                    
+                                    <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
+                                        {{ item.name }} <span v-if="item.variantName && item.variantName !== '-'">({{ item.variantName }})</span>
+                                    </div>
+                                    
+                                    <div class="bc-barcode-lines" :class="barcodeAlign === 'text-start' ? 'align-items-start' : (barcodeAlign === 'text-end' ? 'align-items-end' : 'align-items-center')" v-if="barcodeSettings.showBarcode">
+                                        <div class="real-barcode-font">*{{ (item.sku || '000').toUpperCase() }}*</div>
+                                        <div class="bc-sku-code">{{ item.sku || '000' }}</div>
+                                    </div>
+                                    
+                                    <div class="bc-price" v-if="barcodeSettings.showPrice">
+                                        Rp {{ Number(item.price || item.sellPrice || item.basePrice || 0).toLocaleString('id-ID') }}
+                                    </div>
 
-                                <div class="bc-date" v-if="barcodeSettings.showDate">
-                                    Dicetak: {{ new Date().toLocaleDateString('id-ID') }}
-                                </div>
+                                    <div class="bc-date" v-if="barcodeSettings.showDate">
+                                        Dicetak: {{ new Date().toLocaleDateString('id-ID') }}
+                                    </div>
 
+                                </div>
+                            </template>
+
+                            <div v-if="barcodeSelectedItems.length === 0" class="text-center w-100 py-5 my-5 text-muted small">
+                                <i class="bi bi-upc-scan fs-1 d-block opacity-25 mb-2"></i>
+                                Tampilan pratinjau (sesuai ukuran asli) akan muncul di sini.
                             </div>
-                        </template>
 
-                        <div v-if="barcodeSelectedItems.length === 0" class="text-center w-100 py-5 my-5 text-muted small">
-                            <i class="bi bi-upc-scan fs-1 d-block opacity-25 mb-2"></i>
-                            Tampilan pratinjau (sesuai ukuran asli) akan muncul di sini.
                         </div>
-
                     </div>
                 </div>
 
-            </div>
-            
-            <div class="barcode-print-sheet d-none d-print-flex w-100" :class="barcodeAlign">
-                <template v-for="item in barcodeSelectedItems">
-                    <div v-for="n in item.printQty" class="barcode-label-box" :class="['size-' + barcodeSettings.labelSize, barcodeSettings.showBorder ? 'border-dashed' : 'border-none', barcodeAlign]">
-                        
-                        <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">
-                            {{ barcodeSettings.businessName || 'Nama Toko' }}
-                        </div>
-                        
-                        <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
-                            {{ item.name }} <span v-if="item.variantName && item.variantName !== '-'">({{ item.variantName }})</span>
-                        </div>
-                        
-                        <div class="bc-barcode-lines" :class="barcodeAlign === 'text-start' ? 'align-items-start' : (barcodeAlign === 'text-end' ? 'align-items-end' : 'align-items-center')" v-if="barcodeSettings.showBarcode">
-                            <div class="real-barcode-font">
-                                *{{ (item.sku || '000').toUpperCase() }}*
-                            </div>
-                            <div class="bc-sku-code">{{ item.sku || '000' }}</div>
-                        </div>
-                        
-                        <div class="bc-price" v-if="barcodeSettings.showPrice">
-                            Rp {{ Number(item.price || 0).toLocaleString('id-ID') }}
-                        </div>
-
-                        <div class="bc-date" v-if="barcodeSettings.showDate">
-                            Dicetak: {{ new Date().toLocaleDateString('id-ID') }}
-                        </div>
-
-                    </div>
-                </template>
             </div>
 
             <div v-if="showBarcodeModal" class="modal-backdrop fade show" style="z-index: 1040;"></div>
@@ -1268,7 +1233,6 @@
             </div>
 
         </div>
-
           <style>
                     /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
                     .barcode-print-sheet {
@@ -6001,10 +5965,119 @@ async fetchRolesFromDatabase() {
             }
         },
 
-            triggerPrintBarcode() {
-            // Membuka jendela dialog print bawaan komputer/device secara instan
-            window.print();
-        },
+        addBarcodeItem(id, sku, name, variantName, price) {
+        // 1. Pastikan array penampung sudah siap
+        if (!this.barcodeSelectedItems) {
+            this.barcodeSelectedItems = [];
+        }
+        
+        // 2. Cek apakah produk dengan SKU/Varian ini sudah ada di daftar antrean cetak
+        const existingItem = this.barcodeSelectedItems.find(item => item.id === id && item.sku === sku);
+        
+        if (existingItem) {
+            // Jika SUDAH ADA: Cukup tambahkan jumlah cetaknya (Qty) + 1
+            existingItem.printQty += 1;
+        } else {
+            // Jika BELUM ADA: Masukkan sebagai produk baru ke dalam antrean
+            this.barcodeSelectedItems.push({
+                id: id,
+                sku: sku || '000', // Fallback jika SKU kosong agar tidak error
+                name: name,
+                variantName: variantName || '-',
+                price: price || 0,
+                printQty: 1
+            });
+        }
+        
+        // (Opsional) Tutup modal pencarian otomatis setelah klik produk
+        this.showBarcodeModal = false;
+    },
+    
+    triggerPrintBarcode() {
+        const printContent = document.getElementById('printCanvas');
+        if (!printContent) {
+            alert("Area stiker tidak ditemukan untuk dicetak!");
+            return;
+        }
+
+        // 1. Buat Iframe Tersembunyi (Teknik Anti Pop-up Block & Anti CORS Error)
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+
+        // 2. Suntikkan HTML & CSS ke dalam iframe
+        const iframeDoc = iframe.contentWindow.document;
+        iframeDoc.open();
+        
+        // PERHATIAN: Tidak ada lagi tag script di dalam sini agar tidak bentrok (Error Unexpected end of input hilang!)
+        iframeDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Cetak Label Barcode</title>
+                <style>
+                    /* Import Font Barcode Langsung ke Kertas */
+                    @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
+                    
+                    /* Reset Margin Mesin Printer */
+                    body { background: #fff; margin: 0; padding: 0; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    #print-wrapper { display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: flex-start; gap: 1mm; width: 100%; }
+                    
+                    /* RUMUS UKURAN */
+                    .size-small { width: 38mm !important; height: 20mm !important; } 
+                    .size-medium { width: 50mm !important; height: 30mm !important; } 
+                    .size-large { width: 70mm !important; height: 40mm !important; } 
+                    .barcode-label-box { background: #fff !important; margin: 1.5mm !important; padding: 2mm 3mm !important; display: flex !important; flex-direction: column !important; justify-content: space-evenly !important; box-sizing: border-box !important; overflow: hidden !important; page-break-inside: avoid !important; color: #000 !important; border-radius: 4px; } 
+                    .border-dashed { border: 1px dashed #6c757d !important; } 
+                    .border-none { border: 1px solid transparent !important; } 
+                    
+                    /* DESAIN TEKS */
+                    .bc-biz-name { font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } 
+                    .bc-prod-name { font-size: 0.75rem; font-weight: 600; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; } 
+                    .bc-price { font-size: 1rem; font-weight: 900; line-height: 1; margin-top: 2px; } 
+                    .bc-date { font-size: 0.55rem; color: #555; } 
+                    .bc-sku-code { font-family: monospace; font-size: 0.65rem; letter-spacing: 1px; } 
+                    .bc-barcode-lines { width: 100%; display: flex; flex-direction: column; overflow: hidden; margin: 2px 0; } 
+                    
+                    /* TATA LETAK */
+                    .text-start { text-align: left; } .text-start .bc-barcode-lines { align-items: flex-start; }
+                    .text-center { text-align: center; } .text-center .bc-barcode-lines { align-items: center; }
+                    .text-end { text-align: right; } .text-end .bc-barcode-lines { align-items: flex-end; }
+                    
+                    /* FONT BARCODE CODE 39 */
+                    .real-barcode-font { font-family: 'Libre Barcode 39', cursive; color: #000; white-space: nowrap; line-height: 0.85; margin-bottom: 2px; } 
+                    .size-small .real-barcode-font { font-size: 26px; } .size-medium .real-barcode-font { font-size: 38px; } .size-large .real-barcode-font { font-size: 54px; } 
+                    .size-small .bc-biz-name { font-size: 0.55rem; } .size-small .bc-prod-name { font-size: 0.6rem; -webkit-line-clamp: 1; } .size-small .bc-price { font-size: 0.85rem; } .size-small .bc-sku-code { font-size: 0.55rem; } 
+                    .size-large .bc-biz-name { font-size: 0.8rem; } .size-large .bc-prod-name { font-size: 0.95rem; } .size-large .bc-price { font-size: 1.3rem; margin-top: 4px; } .size-large .bc-date { font-size: 0.65rem; }
+                    
+                    @page { margin: 0; }
+                </style>
+            </head>
+            <body>
+                <div id="print-wrapper" class="${this.barcodeAlign}">
+                    ${printContent.innerHTML}
+                </div>
+            </body>
+            </html>
+        `);
+        iframeDoc.close();
+
+        // 3. Jeda 0.8 detik agar font Google siap, lalu Print!
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            
+            // 4. Hapus iframe dari sistem setelah menu print muncul
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 2000);
+        }, 800);
+    },
 
         // ========================================================
         // FUNGSI PUSAT PENCATATAN LOG MUTASI STOK
