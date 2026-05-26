@@ -1315,27 +1315,54 @@
                     /* 2. SIHIR UTAMA: CSS BERAKSI SAAT TOMBOL PRINT DIKLIK     */
                     /* ======================================================== */
                     @media print {
-                        /* Sembunyikan semua elemen dashboard, sidebar, navbar, panel pengaturan */
-                        body *, .no-print-area, #sidebar, .dashboard-card, .btn, .navbar {
-                            display: none !important;
-                        }
-                        /* Hanya munculkan kanvas kertas barcode dan paksa posisinya di paling atas kiri kertas */
-                        body, .barcode-print-sheet {
-                            display: flex !important;
-                            visibility: visible !important;
-                            position: absolute !important;
-                            left: 0 !important;
-                            top: 0 !important;
-                            background: #fff !important;
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            gap: 0 !important; /* Hilangkan jarak antar label saat dicetak ke printer thermal stiker */
-                        }
-                        .barcode-label-box {
-                            border: none !important; /* Hilangkan garis putus-putus saat dicetak riil */
-                            page-break-inside: avoid;
-                        }
-                    }
+    /* 1. Atur ukuran halaman dan hilangkan margin bawaan browser HP */
+    @page {
+        margin: 0mm; 
+        /* size: 50mm 30mm; Opsional: Jika selalu pakai printer thermal stiker ukuran tertentu, aktifkan dan sesuaikan ukurannya */
+    }
+
+    /* 2. Sembunyikan elemen UI secara lebih spesifik, JANGAN gunakan 'body *' */
+    /* Karena 'body *' akan menyembunyikan isi dalam barcode-label-box juga di beberapa browser mobile */
+    .no-print-area, #sidebar, .dashboard-card, .btn, .navbar {
+        display: none !important;
+    }
+
+    /* 3. Reset Body agar bersahabat dengan layout cetak multi-halaman */
+    body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important; /* Jangan jadikan body sebagai flex saat print */
+    }
+
+    /* 4. Tampilkan Lembar Cetak */
+    .barcode-print-sheet {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        visibility: visible !important;
+        
+        /* GANTI position: absolute; menjadi relative atau static. 
+           Absolute sering membuat halaman kedua terpotong/hilang di HP */
+        position: relative !important; 
+        left: 0 !important;
+        top: 0 !important;
+        
+        background: #fff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important; 
+        width: 100% !important;
+    }
+
+    /* 5. Penyesuaian Kotak Label di Kertas */
+    .barcode-label-box {
+        border: none !important; 
+        page-break-inside: avoid;
+        margin: 0 !important; /* Pastikan tidak ada margin tak terduga */
+        /* Jika cetak 1 baris 1 stiker di printer thermal, paksa width 100% */
+        /* width: 100% !important; */ 
+    }
+}
                     
     /* ======================================================== */
     /* 3. PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET)    */
