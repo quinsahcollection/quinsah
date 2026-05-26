@@ -2132,7 +2132,7 @@
 
             <div v-if="currentView === 'reports'" class="main-content fade-in">
             
-            <div class="container-fluid px-2 px-md-4 pt-3 pb-5">
+            <div class="pt-3 pb-5">
                 
                 <div class="mb-3 border-bottom pb-2">
                     <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-graph-up-arrow text-success me-2"></i>Laporan Keuangan</h5>
@@ -2233,7 +2233,7 @@
                     </li>
                 </ul>
 
-                <div v-html="'<style>@keyframes sR { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } } .anim-slide-right { animation: sR 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: left; }</style>'"></div>
+                <div v-html="'<style>@keyframes sR { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } } .anim-slide-right { animation: sR 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: left; } @keyframes sU { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } } .anim-scale-up { animation: sU 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: bottom; }</style>'"></div>
 
                 <div v-if="reportTab === 'keuangan'">
                     <div class="card border rounded-3 shadow-none mb-4">
@@ -2350,47 +2350,50 @@
                     </div>
                 </div>
 
-                <div v-if="reportTab === 'peakhour'">
+                <div v-if="reportTab === 'peakhour'" class="px-1">
                     <div class="card border rounded-3 shadow-none">
                         <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
                             <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-warning me-2"></i>Frekuensi Transaksi per Jam (00:00 - 23:59)</h6>
                         </div>
-                        <div class="card-body p-4 overflow-auto">
-                            <div class="d-flex align-items-end justify-content-between w-100" style="height: 340px; padding: 90px 15px 0 15px; gap: 4px; min-width: 600px;">
+                        <div class="card-body p-2 p-md-4">
+                            <div class="overflow-auto pb-3" style="scrollbar-width: thin;">
                                 
-                                <div v-for="h in analyticsData.peakHours" :key="h.jam" 
-                                     class="d-flex flex-column align-items-center flex-fill h-100 position-relative" style="cursor: pointer;"
-                                     onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -10px)'; } this.querySelector('.grafik-bar').classList.replace('opacity-75', 'opacity-100');"
-                                     onmouseout="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='0'; t.style.visibility='hidden'; t.style.transform='translate(-50%, 0)'; } this.querySelector('.grafik-bar').classList.replace('opacity-100', 'opacity-75');">
+                                <div class="d-flex align-items-end justify-content-between pt-4" style="height: 380px; gap: 8px; min-width: 900px; padding: 0 10px;">
                                     
-                                    <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
-                                         style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 8px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease-in-out; pointer-events: none;">
-                                        <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
-                                        <div class="small fw-semibold">{{ h.count }} Transaksi</div>
-                                        <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
-                                        <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
+                                    <div v-for="h in analyticsData.peakHours" :key="h.jam" 
+                                         class="d-flex flex-column align-items-center justify-content-end flex-fill h-100" style="cursor: pointer;"
+                                         onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -10px)'; } let b = this.querySelector('.grafik-bar'); if(b) b.classList.replace('opacity-75', 'opacity-100');"
+                                         onmouseout="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='0'; t.style.visibility='hidden'; t.style.transform='translate(-50%, 0)'; } let b = this.querySelector('.grafik-bar'); if(b) b.classList.replace('opacity-100', 'opacity-75');">
+                                        
+                                        <div class="w-100 position-relative d-flex align-items-end justify-content-center" 
+                                             :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 60) + '%' : '0%' }">
+                                             
+                                             <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
+                                                  style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease-in-out; pointer-events: none;">
+                                                 <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
+                                                 <div class="small fw-semibold">{{ h.count }} Transaksi</div>
+                                                 <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
+                                                 <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
+                                             </div>
+
+                                             <div class="grafik-bar bg-warning w-100 h-100 rounded-top opacity-75 anim-scale-up" style="transform-origin: bottom;"></div>
+                                        </div>
+                                        
+                                        <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
                                     </div>
                                     
-                                    <div class="flex-grow-1 w-100"></div>
-                                    
-                                    <div class="grafik-bar bg-warning w-100 rounded-top opacity-75" 
-                                         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 100) + '%' : '0%', transition: 'height 1s cubic-bezier(0.2, 0.8, 0.2, 1)' }">
-                                    </div>
-                                    
-                                    <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
                                 </div>
-                                
                             </div>
-                            <div class="text-center mt-4 small text-muted border-top pt-3">
+                            <div class="text-center mt-3 small text-muted border-top pt-3 px-2">
                                 Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.<br>
+                                <span class="d-inline d-md-none">(Geser grafik ke kanan/kiri untuk melihat jam lainnya)</span>
                                 <span class="d-none d-md-inline">(Arahkan kursor Anda ke tiang grafik untuk melihat detailnya)</span>
                             </div>
                         </div>
                     </div>
                 </div>
-
-            </div>
-        </div>
+             </div>
+          </div>
 
             <!-- SALES VIEW -->
             <div v-if="currentView === 'sales'" class="dashboard-card">
