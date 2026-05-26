@@ -1036,140 +1036,239 @@
                 </div>
             </div>
 
-            <div v-if="currentView === 'barcode'" class="dashboard-card mb-4 no-print-area">
-                    <div class="row g-4">
+            <div v-if="currentView === 'barcode'" class="fade-in w-100">
+            
+            <div v-html="'<style>@import url(\'https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap\'); .size-small { width: 38mm !important; height: 20mm !important; } .size-medium { width: 50mm !important; height: 30mm !important; } .size-large { width: 70mm !important; height: 40mm !important; } .barcode-label-box { background: #fff; margin: 1.5mm; padding: 2mm 3mm; display: flex; flex-direction: column; justify-content: space-evenly; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; color: #000; } .border-dashed { border: 1px dashed #6c757d; } .border-none { border: 1px solid transparent; } .bc-biz-name { font-size: 0.65rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .bc-prod-name { font-size: 0.75rem; font-weight: 600; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; opacity: 0.9; } .bc-price { font-size: 1rem; font-weight: 900; line-height: 1; margin-top: 2px; } .bc-date { font-size: 0.55rem; color: #555; } .bc-sku-code { font-family: monospace; font-size: 0.65rem; letter-spacing: 1px; } .bc-barcode-lines { width: 100%; display: flex; flex-direction: column; overflow: hidden; margin: 2px 0; } .real-barcode-font { font-family: \'Libre Barcode 39\', cursive; color: #000; white-space: nowrap; line-height: 0.85; margin-bottom: 2px; } .size-small .real-barcode-font { font-size: 26px; } .size-medium .real-barcode-font { font-size: 38px; } .size-large .real-barcode-font { font-size: 54px; } .size-small .bc-biz-name { font-size: 0.55rem; } .size-small .bc-prod-name { font-size: 0.6rem; -webkit-line-clamp: 1; } .size-small .bc-price { font-size: 0.85rem; } .size-small .bc-sku-code { font-size: 0.55rem; } .size-large .bc-biz-name { font-size: 0.8rem; } .size-large .bc-prod-name { font-size: 0.95rem; } .size-large .bc-price { font-size: 1.3rem; margin-top: 4px; } .size-large .bc-date { font-size: 0.65rem; } @media print { body * { visibility: hidden !important; } .barcode-print-sheet, .barcode-print-sheet * { visibility: visible !important; color: #000 !important; } .barcode-print-sheet { position: absolute; left: 0; top: 0; width: 100%; background: #fff; margin:0; padding:0; display: flex !important; flex-wrap: wrap; align-content: flex-start; justify-content: flex-start; } @page { margin: 0; } }</style>'"></div>
+
+            <div class="row g-4 d-print-none dashboard-card border-0 shadow-none mb-4 mx-0">
+                
+                <div class="col-lg-5 border-end px-0 pe-lg-3">
+                    
+                    <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-gear-fill me-2"></i>Konfigurasi Label Barcode</h6>
+                    </div>
+
+                    <div class="bg-light p-3 rounded border mb-4 shadow-sm">
                         
-                        <div class="col-lg-5 border-end">
-                            <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
-                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-gear-fill me-2"></i>Konfigurasi Label Barcode</h6>
-                            </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showBusinessName" id="showBiz">
+                            <label class="form-check-label small fw-semibold" for="showBiz">Tampilkan Nama Usaha</label>
+                        </div>
+                        <input v-if="barcodeSettings.showBusinessName" type="text" class="form-control form-control-sm mb-3 shadow-none border-secondary-subtle" v-model="barcodeSettings.businessName" placeholder="Ketik nama usaha...">
 
-                            <div class="bg-light p-3 rounded border mb-4 shadow-sm">
-                                <label class="form-label small fw-bold mb-2 d-block">Komponen Label</label>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showBusinessName" id="showBiz">
-                                    <label class="form-check-label small" for="showBiz">Tampilkan Nama Usaha</label>
-                                </div>
-                                <input v-if="barcodeSettings.showBusinessName" type="text" class="form-control form-control-sm mb-3" v-model="barcodeSettings.businessName" placeholder="Ketik nama usaha...">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showProductName" id="showProd">
+                            <label class="form-check-label small fw-semibold" for="showProd">Tampilkan Nama Produk / Varian</label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showPrice" id="showPrice">
+                            <label class="form-check-label small fw-semibold" for="showPrice">Tampilkan Harga Jual</label>
+                        </div>
 
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showProductName" id="showProd">
-                                    <label class="form-check-label small" for="showProd">Tampilkan Nama Produk / Varian</label>
-                                </div>
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" v-model="barcodeSettings.showPrice" id="showPrice">
-                                    <label class="form-check-label small" for="showPrice">Tampilkan Harga Jual</label>
-                                </div>
+                        <div class="form-check form-switch mb-2 pt-2 border-top">
+                            <input class="form-check-input shadow-none cursor-pointer border-dark bg-dark" type="checkbox" v-model="barcodeSettings.showBarcode" id="showBc">
+                            <label class="form-check-label small fw-bold text-dark" for="showBc"><i class="bi bi-upc-scan me-1"></i>Tampilkan Barcode Batang</label>
+                        </div>
 
-                                <label class="form-label small fw-bold mb-1">Ukuran Kertas Kertas / Label</label>
-                                <select class="form-select form-select-sm" v-model="barcodeSettings.labelSize">
-                                    <option value="small">Kecil (38mm x 20mm)</option>
-                                    <option value="medium">Sedang (50mm x 30mm)</option>
-                                    <option value="large">Besar (70mm x 40mm)</option>
-                                </select>
-                            </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showDate" id="showDate">
+                            <label class="form-check-label small fw-semibold" for="showDate">Tampilkan Tanggal Cetak</label>
+                        </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-dark"><i class="bi bi-box-seam me-1"></i>Pilih Produk / Varian</label>
-                                <input type="text" class="form-control form-control-sm mb-2" v-model="barcodeSearchQuery" placeholder="Ketik Nama Produk atau SKU untuk memfilter...">
-                                
-                                <div class="list-group rounded overflow-auto shadow-sm border" style="max-height: 250px;">
-                                    <template v-for="p in products" :key="'bc-p-'+p.id">
-                                        <button v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
-                                                class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2"
-                                                @click="addBarcodeItem(p.id, p.sku, p.name, '-', p.price)">
-                                            <div>
-                                                <b class="text-dark">{{ p.name }}</b> <br>
-                                                <small class="text-muted">SKU: {{ p.sku || '-' }}</small>
-                                            </div>
-                                            <span class="badge bg-primary rounded-pill"><i class="bi bi-plus"></i></span>
-                                        </button>
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" v-model="barcodeSettings.showBorder" id="showBorder">
+                            <label class="form-check-label small fw-semibold" for="showBorder">Tampilkan Garis Bantu Potong</label>
+                        </div>
 
-                                        <template v-for="(v, vIdx) in p.variants" :key="'bc-v-'+vIdx">
-                                            <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
-                                                    class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2 bg-white"
-                                                    @click="addBarcodeItem(p.id, v.variantSku, p.name, (v.name || v.attributes), (v.price || p.price))">
-                                                <div>
-                                                    <span class="text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }}</span><br>
-                                                    <b class="text-dark-custom ps-3">Varian: {{ v.name || v.attributes }}</b><br>
-                                                    <small class="text-muted ps-3">SKU: {{ v.variantSku || '-' }}</small>
-                                                </div>
-                                                <span class="badge bg-primary rounded-pill"><i class="bi bi-plus"></i></span>
-                                            </button>
-                                        </template>
-                                    </template>
-                                </div>
-                            </div>
-
-                            <label class="form-label small fw-bold mb-1">Daftar Item yang Akan Dicetak</label>
-                            <div class="table-responsive border rounded bg-white shadow-sm" style="max-height: 200px;">
-                                <table class="table table-sm align-middle mb-0" style="font-size: 0.75rem;">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Produk</th>
-                                            <th style="width: 80px;" class="text-center">Jumlah</th>
-                                            <th style="width: 40px;" class="text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="(item, idx) in barcodeSelectedItems" :key="'sel-bc-'+idx">
-                                            <td>
-                                                <span class="fw-bold">{{ item.name }}</span>
-                                                <div class="text-muted" v-if="item.variantName !== '-'">{{ item.variantName }}</div>
-                                                <code class="text-danger">{{ item.sku }}</code>
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm p-1 text-center fw-bold" v-model.number="item.printQty" min="1">
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-sm btn-link text-danger p-0" @click="barcodeSelectedItems.splice(idx, 1)"><i class="bi bi-trash fs-6"></i></button>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="barcodeSelectedItems.length === 0">
-                                            <td colspan="3" class="text-center py-3 text-muted">Belum ada produk dipilih. Klik produk di atas untuk menambahkan antrean.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold mb-1">Tata Letak Teks</label>
+                            <div class="btn-group w-100 shadow-sm" role="group">
+                                <input type="radio" class="btn-check" name="alignBtn" id="alignLeft" value="text-start" v-model="barcodeAlign">
+                                <label class="btn btn-outline-secondary btn-sm" for="alignLeft"><i class="bi bi-text-left"></i> Kiri</label>
+                              
+                                <input type="radio" class="btn-check" name="alignBtn" id="alignCenter" value="text-center" v-model="barcodeAlign">
+                                <label class="btn btn-outline-secondary btn-sm" for="alignCenter"><i class="bi bi-text-center"></i> Tengah</label>
+                              
+                                <input type="radio" class="btn-check" name="alignBtn" id="alignRight" value="text-end" v-model="barcodeAlign">
+                                <label class="btn btn-outline-secondary btn-sm" for="alignRight"><i class="bi bi-text-right"></i> Kanan</label>
                             </div>
                         </div>
 
-                            <div class="col-lg-7 bg-white">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                <h6 class="fw-bold mb-0 text-success"><i class="bi bi-eye-fill me-2"></i>Live Preview Hasil Cetak</h6>
-                                <button class="btn btn-sm btn-success fw-bold shadow-sm px-3" :disabled="barcodeSelectedItems.length === 0" @click="triggerPrintBarcode()">
-                                    <i class="bi bi-printer me-1"></i> Mulai Cetak Label
-                                </button>
-                            </div>
+                        <label class="form-label small fw-bold mb-1">Ukuran Kertas / Label</label>
+                        <select class="form-select form-select-sm shadow-none border-secondary-subtle fw-semibold" v-model="barcodeSettings.labelSize">
+                            <option value="small">Kecil (38mm x 20mm)</option>
+                            <option value="medium">Sedang (50mm x 30mm)</option>
+                            <option value="large">Besar (70mm x 40mm)</option>
+                        </select>
+                    </div>
 
-                            <div class="border rounded p-4 bg-dark bg-opacity-10 d-flex justify-content-center overflow-auto" style="min-height: 480px; max-height: 550px;">
-                                <div class="barcode-print-sheet shadow-lg bg-white" :class="'size-' + barcodeSettings.labelSize">
-                                    
-                                    <template v-for="item in barcodeSelectedItems">
-                                        <div v-for="n in item.printQty" class="barcode-label-box" :class="'size-' + barcodeSettings.labelSize">
-                                            <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">{{ barcodeSettings.businessName }}</div>
-                                            <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
-                                                {{ item.name }} <span v-if="item.variantName !== '-'">({{ item.variantName }})</span>
-                                            </div>
-                                            
-                                            <div class="bc-barcode-lines">
-                                                <div class="barcode-mock-bars"></div>
-                                                <div class="bc-sku-code">{{ item.sku }}</div>
-                                            </div>
-                                            
-                                            <div class="bc-price" v-if="barcodeSettings.showPrice">Rp {{ Number(item.price).toLocaleString('id-ID') }}</div>
-                                        </div>
-                                    </template>
+                    <div class="d-flex justify-content-between align-items-end mb-2">
+                        <label class="form-label small fw-bold mb-0 text-dark">Antrean Label Cetak</label>
+                        <button class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" @click="showBarcodeModal = true">
+                            <i class="bi bi-plus-lg me-1"></i>Pilih Produk
+                        </button>
+                    </div>
+                    
+                    <div class="table-responsive border rounded bg-white shadow-sm mb-3" style="max-height: 220px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.75rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-2">Produk</th>
+                                    <th style="width: 80px;" class="text-center">Jumlah</th>
+                                    <th style="width: 40px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, idx) in barcodeSelectedItems" :key="'sel-bc-'+idx">
+                                    <td class="ps-2">
+                                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">{{ item.name }}</div>
+                                        <div class="text-muted" v-if="item.variantName && item.variantName !== '-'">{{ item.variantName }}</div>
+                                        <code class="text-danger">{{ item.sku }}</code>
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm p-1 text-center fw-bold shadow-none" v-model.number="item.printQty" min="1">
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-link text-danger p-0 shadow-none" @click="barcodeSelectedItems.splice(idx, 1)"><i class="bi bi-trash fs-6"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="barcodeSelectedItems.length === 0">
+                                    <td colspan="3" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox mb-1 d-block fs-4 opacity-50"></i>
+                                        Belum ada antrean produk.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                                    <div v-if="barcodeSelectedItems.length === 0" class="text-center w-100 py-5 my-5 text-muted small">
-                                        <i class="bi bi-printer fs-1 d-block opacity-20 mb-2"></i>
-                                        Sisi preview lembar cetak label barcode Anda akan muncul di area ini.
-                                    </div>
+                </div>
+
+                <div class="col-lg-7 bg-white px-0 ps-lg-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0 text-success"><i class="bi bi-eye-fill me-2"></i>Live Preview Hasil Cetak</h6>
+                        <button class="btn btn-sm btn-success fw-bold shadow-sm px-3" :disabled="barcodeSelectedItems.length === 0" @click="triggerPrintBarcode()">
+                            <i class="bi bi-printer me-1"></i> Mulai Cetak Label
+                        </button>
+                    </div>
+
+                    <div class="border rounded p-3 bg-secondary bg-opacity-10 d-flex flex-wrap align-content-start overflow-auto" style="min-height: 480px; max-height: 550px;">
+                        
+                        <template v-for="item in barcodeSelectedItems">
+                            <div v-for="n in item.printQty" class="barcode-label-box shadow-sm" :class="['size-' + barcodeSettings.labelSize, barcodeSettings.showBorder ? 'border-dashed' : 'border-none', barcodeAlign]">
+                                
+                                <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">
+                                    {{ barcodeSettings.businessName || 'Nama Toko' }}
                                 </div>
+                                
+                                <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
+                                    {{ item.name }} <span v-if="item.variantName && item.variantName !== '-'">({{ item.variantName }})</span>
+                                </div>
+                                
+                                <div class="bc-barcode-lines" :class="barcodeAlign === 'text-start' ? 'align-items-start' : (barcodeAlign === 'text-end' ? 'align-items-end' : 'align-items-center')" v-if="barcodeSettings.showBarcode">
+                                    <div class="real-barcode-font">
+                                        *{{ (item.sku || '000').toUpperCase() }}*
+                                    </div>
+                                    <div class="bc-sku-code">{{ item.sku || '000' }}</div>
+                                </div>
+                                
+                                <div class="bc-price" v-if="barcodeSettings.showPrice">
+                                    Rp {{ Number(item.price || 0).toLocaleString('id-ID') }}
+                                </div>
+
+                                <div class="bc-date" v-if="barcodeSettings.showDate">
+                                    Dicetak: {{ new Date().toLocaleDateString('id-ID') }}
+                                </div>
+
                             </div>
+                        </template>
+
+                        <div v-if="barcodeSelectedItems.length === 0" class="text-center w-100 py-5 my-5 text-muted small">
+                            <i class="bi bi-upc-scan fs-1 d-block opacity-25 mb-2"></i>
+                            Tampilan pratinjau (sesuai ukuran asli) akan muncul di sini.
                         </div>
 
                     </div>
                 </div>
+
+            </div>
+            
+            <div class="barcode-print-sheet d-none d-print-flex w-100" :class="barcodeAlign">
+                <template v-for="item in barcodeSelectedItems">
+                    <div v-for="n in item.printQty" class="barcode-label-box" :class="['size-' + barcodeSettings.labelSize, barcodeSettings.showBorder ? 'border-dashed' : 'border-none', barcodeAlign]">
+                        
+                        <div class="bc-biz-name" v-if="barcodeSettings.showBusinessName">
+                            {{ barcodeSettings.businessName || 'Nama Toko' }}
+                        </div>
+                        
+                        <div class="bc-prod-name" v-if="barcodeSettings.showProductName">
+                            {{ item.name }} <span v-if="item.variantName && item.variantName !== '-'">({{ item.variantName }})</span>
+                        </div>
+                        
+                        <div class="bc-barcode-lines" :class="barcodeAlign === 'text-start' ? 'align-items-start' : (barcodeAlign === 'text-end' ? 'align-items-end' : 'align-items-center')" v-if="barcodeSettings.showBarcode">
+                            <div class="real-barcode-font">
+                                *{{ (item.sku || '000').toUpperCase() }}*
+                            </div>
+                            <div class="bc-sku-code">{{ item.sku || '000' }}</div>
+                        </div>
+                        
+                        <div class="bc-price" v-if="barcodeSettings.showPrice">
+                            Rp {{ Number(item.price || 0).toLocaleString('id-ID') }}
+                        </div>
+
+                        <div class="bc-date" v-if="barcodeSettings.showDate">
+                            Dicetak: {{ new Date().toLocaleDateString('id-ID') }}
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+
+            <div v-if="showBarcodeModal" class="modal-backdrop fade show" style="z-index: 1040;"></div>
+            <div v-if="showBarcodeModal" class="modal fade show d-block" tabindex="-1" style="z-index: 1050; background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header bg-light border-bottom-0 pb-2">
+                            <h6 class="modal-title fw-bold text-dark"><i class="bi bi-box-seam me-2"></i>Pilih Produk untuk Dicetak</h6>
+                            <button type="button" class="btn-close shadow-none" @click="showBarcodeModal = false"></button>
+                        </div>
+                        <div class="modal-body p-3">
+                            <input type="text" class="form-control form-control-sm mb-3 shadow-none border-secondary-subtle" v-model="barcodeSearchQuery" placeholder="Ketik Nama Produk atau SKU..." autofocus>
+                            
+                            <div class="list-group list-group-flush border-top" style="max-height: 350px; overflow-y: auto;">
+                                <template v-for="p in products" :key="'bc-p-'+p.id">
+                                    <button v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(barcodeSearchQuery.toLowerCase())))" 
+                                            class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2"
+                                            @click="addBarcodeItem(p.id, p.sku, p.name, '-', (p.sellPrice || p.basePrice || p.price || 0)); showBarcodeModal = false;">
+                                        <div>
+                                            <b class="text-dark">{{ p.name }}</b> <br>
+                                            <small class="text-muted">SKU: {{ p.sku || '-' }}</small>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill shadow-sm"><i class="bi bi-plus fs-6"></i></span>
+                                    </button>
+
+                                    <template v-for="(v, vIdx) in p.variants" :key="'bc-v-'+vIdx">
+                                        <button v-if="p.name.toLowerCase().includes(barcodeSearchQuery.toLowerCase()) || (v.variantSku && v.variantSku.toLowerCase().includes(barcodeSearchQuery.toLowerCase()))" 
+                                                class="list-group-item list-group-item-action small d-flex justify-content-between align-items-center py-2 bg-light bg-opacity-50"
+                                                @click="addBarcodeItem(p.id, v.variantSku, p.name, (v.name || v.attributes), (v.price || v.sellPrice || p.sellPrice || p.basePrice || p.price || 0)); showBarcodeModal = false;">
+                                            <div>
+                                                <span class="text-muted"><i class="bi bi-arrow-return-right me-1"></i>{{ p.name }}</span><br>
+                                                <b class="text-dark ps-3">Varian: {{ v.name || v.attributes }}</b><br>
+                                                <small class="text-muted ps-3">SKU: {{ v.variantSku || '-' }}</small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill shadow-sm"><i class="bi bi-plus fs-6"></i></span>
+                                        </button>
+                                    </template>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
           <style>
                     /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
                     .barcode-print-sheet {
@@ -4043,13 +4142,20 @@
                 // ==========================================
                 barcodeSettings: {
                     showBusinessName: true,
+                    businessName: '',
                     showProductName: true,
                     showPrice: true,
-                    labelSize: 'medium', // opsi: 'small', 'medium', 'large'
-                    businessName: 'Toko Plastik & Cetak' 
+                    showBarcode: true,
+                    showDate: true,    // 🟢 BARU: Tanggal Cetak
+                    showBorder: true,  // 🟢 BARU: Garis Potong
+                    labelSize: 'medium'
                 },
                 barcodeSelectedItems: [], 
                 barcodeSearchQuery: '',
+                
+                // ... variabel data Anda yang lain ...
+                barcodeAlign: 'text-center', // Untuk rata kiri/tengah/kanan
+                showBarcodeModal: false,     // Untuk menampilkan pop-up cari produk
 
                 // ==========================================
                 // MANAJEMEN HAK AKSES (ERP ROLES)
