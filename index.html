@@ -3915,8 +3915,8 @@
                     </div>
                </div>
 
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (paymentData.method==='CASH' && paymentData.amountReceived < total)">
-                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total)">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
                         </button>
                         <button class="btn btn-white border w-100 fw-bold py-2 small" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
                     </div>
@@ -7435,6 +7435,15 @@ async fetchRolesFromDatabase() {
                         finalPrice: this.getFinalItemPrice(c)
                     })));
 
+                    // =========================================================
+                    // TAMBAHAN LOGIKA UNTUK FITUR AR (HUTANG / BAYAR SEBAGIAN)
+                    // =========================================================
+                    // Bantuan logika: Jika kasir mengetik 0, hargai sebagai 0.
+                    // Jika benar-benar kosong, baru anggap bayar full (currentTotal).
+                    let uangDiterima = (this.paymentData.amountReceived !== undefined && this.paymentData.amountReceived !== null && this.paymentData.amountReceived !== '') 
+                                        ? Number(this.paymentData.amountReceived) 
+                                        : currentTotal;
+
                     let trxRaw = {
                         id: currentInvoiceId, // Gunakan ID yang sudah divalidasi di atas
                         dateStr: new Date().toLocaleString('id-ID'),
@@ -7445,7 +7454,14 @@ async fetchRolesFromDatabase() {
                         outletId: this.posActiveOutletId || '',
                         cashierName: this.userProfile.name || 'Admin',
                         paymentMethod: this.paymentData.method || 'CASH',
-                        amountReceived: this.paymentData.amountReceived || currentTotal,
+                        
+                        // --- Variabel Baru Pembayaran & Status ---
+                        amountReceived: uangDiterima,
+                        sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
+                        paymentStatus: (uangDiterima >= currentTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
+                        firstPayment: uangDiterima, // Merekam riwayat pembayaran pertama kali
+                        paymentHistory: [],
+                        // ------------------------------------------
                         
                         subtotal: currentSubtotalBase,
                         discountAmt: currentDiscountAmt,
@@ -7459,6 +7475,7 @@ async fetchRolesFromDatabase() {
                         total: currentTotal,
                         items: cleanItems
                     };
+
 
                     let trxData = JSON.parse(JSON.stringify(trxRaw));
                     trxData.createdAt = serverTimestamp();
