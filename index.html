@@ -367,72 +367,120 @@
             </header>
         
         <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
+                          <div class="row g-2 mb-3 align-items-center">
                 
-    <div class="row g-2 mb-3 align-items-center">
-        
-        <div class="col-xl-5 col-lg-5 col-md-5 col-12">
-            <div class="input-group input-group-sm shadow-sm">
-                <button class="btn btn-outline-secondary dropdown-toggle bg-white" type="button" data-bs-toggle="dropdown" :title="posSearchMode === 'text' ? 'Mode Pencarian Teks' : 'Mode Scanner Barcode Aktif'">
-                    <i class="bi" :class="posSearchMode === 'text' ? 'bi-search text-primary' : 'bi-upc-scan text-danger'"></i>
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'text'; $refs.posSearchInput.focus()"><i class="bi bi-search me-2 text-primary"></i>Ketik Pencarian Biasa</a></li>
-                    <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'scan'; $refs.posSearchInput.focus()"><i class="bi bi-upc-scan me-2 text-danger"></i>Gunakan Barcode Scanner (PC)</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item fw-semibold text-success" href="#" @click.prevent="startCameraScanner"><i class="bi bi-camera me-2"></i>Buka Kamera Scan (HP/Tablet)</a></li>
-                </ul>
-                <input type="text" class="form-control py-2 shadow-none border-start-0 ps-1" 
-                       :class="{'border-danger bg-danger bg-opacity-10': posSearchMode === 'scan'}"
-                       :placeholder="posSearchMode === 'text' ? 'Cari Nama / SKU / Varian...' : 'Arahkan Scanner & Scan Barcode...'" 
-                       v-model="searchQuery"
-                       ref="posSearchInput"
-                       @keyup.enter="handlePosSearchEnter">
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-lg-3 col-md-3 col-6">
-            <select class="form-select form-select-sm shadow-sm py-2 fw-semibold" v-model="posCategoryFilter">
-                <option value="">Semua Kategori</option>
-                <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-            </select>
-        </div>
-
-        <div class="col-xl-4 col-lg-4 col-md-4 col-6">
-            <div class="input-group input-group-sm shadow-sm" :title="userRole === 'Admin' ? 'Admin: Ubah untuk Backdate Transaksi' : 'Tanggal Transaksi Otomatis'">
-                <span class="input-group-text bg-white"><i class="bi bi-calendar-date"></i></span>
-                <input type="datetime-local" class="form-control py-2" style="font-size:0.75rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
-            </div>
-        </div>
-
+                <div class="col-12 col-md-5 position-relative">
+                    <div class="input-group input-group-sm shadow-sm rounded">
+                        <button class="btn btn-outline-secondary dropdown-toggle bg-white border-end-0" type="button" data-bs-toggle="dropdown" :title="posSearchMode === 'text' ? 'Ketik' : 'Scan'">
+                            <i class="bi" :class="posSearchMode === 'text' ? 'bi-search text-primary' : 'bi-upc-scan text-danger'"></i>
+                        </button>
+                        <ul class="dropdown-menu shadow-sm">
+                            <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'text'; $refs.posSearchInput.focus()"><i class="bi bi-search me-2 text-primary"></i>Ketik Pencarian</a></li>
+                            <li class="d-none d-lg-block"><a class="dropdown-item fw-semibold" href="#" @click.prevent="posSearchMode = 'scan'; $refs.posSearchInput.focus()"><i class="bi bi-upc-scan me-2 text-danger"></i>Scanner Barcode (PC)</a></li>
+                            <li class="d-none d-lg-block"><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item fw-semibold text-success" href="#" @click.prevent="startCameraScanner"><i class="bi bi-camera me-2"></i>Buka Kamera HP</a></li>
+                        </ul>
+                        <input type="text" class="form-control py-2 shadow-none border-start-0 ps-0" 
+                               :class="{'border-danger bg-danger bg-opacity-10': posSearchMode === 'scan'}"
+                               :placeholder="posSearchMode === 'text' ? 'Cari Produk (Otomatis)...' : 'Scan Barcode...'" 
+                               v-model="searchQuery"
+                               ref="posSearchInput"
+                               @input="isSearchFocused = true"
+                               @focus="isSearchFocused = true"
+                               @blur="setTimeout(() => isSearchFocused = false, 250)">
+                    </div>
+                    
+                    <div class="position-absolute bg-white shadow-lg rounded border w-100 mt-1" style="z-index: 1050; top: 100%; left: 0; max-height: 250px; overflow-y: auto;" v-if="searchQuery && posSearchMode === 'text' && isSearchFocused">
+                        <div class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" v-for="prod in filteredProducts.slice(0,5)" :key="'search-'+prod.id" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
+                            <img :src="prod.imageBase64 || 'https://via.placeholder.com/50'" style="width: 35px; height: 35px; object-fit: cover; border-radius: 4px;" class="me-2 border">
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-bold text-truncate text-dark" style="font-size: 0.75rem;">{{ prod.name }}</div>
+                                <div class="text-muted" style="font-size: 0.65rem;">{{ prod.sku || 'N/A' }}</div>
+                            </div>
+                            <div class="fw-bold text-primary-custom" style="font-size: 0.75rem;">Rp {{ formatNumber(getEffectiveBasePrice(prod)) }}</div>
+                        </div>
+                        <div class="p-2 text-center text-muted small" v-if="filteredProducts.length === 0">Tidak ada hasil.</div>
+                    </div>
                 </div>
 
-                <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
+                <div class="col-7 col-md-4 d-flex gap-2">
+                    <div class="dropdown flex-grow-1 shadow-sm">
+                        <button class="btn btn-sm btn-white border w-100 d-flex justify-content-between align-items-center py-2" type="button" data-bs-toggle="dropdown">
+                            <span class="text-truncate fw-semibold text-dark" style="font-size: 0.75rem;">
+                                <i class="bi bi-funnel-fill text-primary me-1"></i>
+                                {{ posCategoryFilter === '' ? 'Semua Kategori' : 'Filter Aktif' }}
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu shadow w-100" style="max-height: 250px; overflow-y: auto; font-size: 0.8rem;">
+                            <li><a class="dropdown-item fw-bold" :class="{'bg-light text-primary': posCategoryFilter === ''}" href="#" @click.prevent="posCategoryFilter = ''">Semua Kategori</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li v-for="cat in structuredCategories" :key="cat.id"><a class="dropdown-item" :class="{'bg-light text-primary fw-bold': posCategoryFilter === cat.id}" href="#" @click.prevent="posCategoryFilter = cat.id">{{ getCategoryLabel(cat) }}</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="btn-group shadow-sm">
+                        <button class="btn btn-sm btn-white border px-2" :class="{'bg-primary-custom text-white border-primary': posViewMode === 'grid'}" @click="posViewMode = 'grid'"><i class="bi bi-grid-fill"></i></button>
+                        <button class="btn btn-sm btn-white border px-2" :class="{'bg-primary-custom text-white border-primary': posViewMode === 'list'}" @click="posViewMode = 'list'"><i class="bi bi-list-ul"></i></button>
+                    </div>
+                </div>
+
+                <div class="col-5 col-md-3">
+                    <div class="input-group input-group-sm shadow-sm">
+                        <span class="input-group-text bg-white p-1 px-2"><i class="bi bi-calendar-event"></i></span>
+                        <input type="datetime-local" class="form-control py-2 px-1" style="font-size:0.7rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
+                
+                <template v-if="posViewMode === 'grid'">
                     <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
-                        <div class="product-card" @click="openPosModifier(product)">
+                        <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
                             <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" class="product-img">
-                            <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">
-                                {{ product.name || 'Tanpa Nama' }}
-                            </h6>
+                            <h6 class="mb-1 fw-bold text-truncate" style="font-size: 0.8rem;">{{ product.name || 'Tanpa Nama' }}</h6>
                             <div class="mb-1"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
-                            <div class="mb-2" v-if="product.productTags && product.productTags.length > 0">
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
-                            </div>
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <div class="d-flex flex-column">
                                     <span class="text-muted text-decoration-line-through lh-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</span>
                                     <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                                 </div>
                                 <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
-                                    {{ product.variants && product.variants.length > 0 ? product.variants.length+' Pilihan' : getProductDisplayStock(product)+' '+ (product.uom || 'Pcs') }}
+                                    {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : getProductDisplayStock(product) }}
                                 </span>
                             </div>
                         </div>
                     </div>
-                    <div v-if="filteredProducts.length === 0" class="col-12 text-center text-muted mt-5 py-5">
-                        <i class="bi bi-search fs-1 mb-2 d-block"></i>
-                        Tidak ada produk yang sesuai kriteria pencarian/kategori.
+                </template>
+
+                <template v-else>
+                    <div class="col-12 col-md-6" v-for="product in filteredProducts" :key="'list-'+product.id">
+                        <div class="card border-0 shadow-sm cursor-pointer mb-1" @click="openPosModifier(product)">
+                            <div class="card-body p-2 d-flex align-items-center bg-white rounded border border-light">
+                                <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border">
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <h6 class="mb-0 fw-bold text-truncate text-dark" style="font-size: 0.8rem;">{{ product.name || 'Tanpa Nama' }}</h6>
+                                    <div class="d-flex align-items-center mt-1 gap-1 flex-wrap">
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.6rem;">{{ product.sku || 'N/A' }}</span>
+                                        <span class="badge bg-info bg-opacity-10 text-info border fw-normal" style="font-size: 0.6rem;" v-if="product.variants && product.variants.length > 0">{{ product.variants.length }} Varian</span>
+                                        <span class="badge bg-light text-dark border fw-normal" style="font-size: 0.6rem;" v-else>Stok: {{ getProductDisplayStock(product) }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
+                                    <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</div>
+                                    <div class="text-primary-custom fw-bold lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </template>
+
+                <div v-if="filteredProducts.length === 0" class="col-12 text-center text-muted mt-5 py-5">
+                    <i class="bi bi-search fs-1 mb-2 d-block"></i>
+                    Tidak ada produk yang sesuai.
                 </div>
+            </div>
+
 
                 <div class="fab-cart d-lg-none" @click="isMobileCartOpen = true" v-if="!isMobileCartOpen">
                     <i class="bi bi-cart3 fs-3"></i>
@@ -3960,8 +4008,8 @@
                 </div>
             </div>
         </div>
-
-        <div class="modal fade" id="posModifierModal" tabindex="-1">
+            
+                   <div class="modal fade" id="posModifierModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content border-0 shadow">
                     <template v-if="activeProduct">
@@ -3969,6 +4017,7 @@
                             <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
                             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
                         </div>
+                        
                         <div class="modal-body bg-white text-center p-4" v-if="!hasVariants">
                             <img :src="activeProduct.imageBase64 || 'https://via.placeholder.com/150'" width="120" height="120" class="rounded mb-3 shadow-sm object-fit-cover">
                             
@@ -3978,31 +4027,62 @@
                             <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getProductDisplayStock(activeProduct) }} {{ activeProduct.uom || 'Pcs' }} <span v-if="posActiveOutletId" class="text-primary-custom">(Outlet)</span></p>
                             <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
                         </div>
-                        <div class="modal-body bg-white p-4" v-else>
-                            <p class="text-muted fw-bold mb-3"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
-                            <div class="row g-3">
-                                <div class="col-md-3 col-sm-4 col-6" v-for="(v, idx) in activeProduct.variants" :key="idx">
-                                    <div class="variant-grid-card h-100 d-flex flex-column" :class="{'disabled': getVariantDisplayStock(v) <= 0}" @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
-                                        <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" class="rounded mb-2 object-fit-cover shadow-sm w-100" style="height: 120px;">
+
+                        <div class="modal-body bg-white p-3 border-top" v-else>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
+                                <span class="badge bg-primary bg-opacity-10 text-primary">{{ activeProduct.variants.length }} Opsi Tersedia</span>
+                            </div>
+                            
+                            <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
+                                <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
+                                    <div class="card border shadow-sm cursor-pointer hover-shadow" 
+                                         :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0}" 
+                                         @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
                                         
-                                        <div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap lh-base" style="font-size: 0.75rem;">{{ v.name || v.attributes || 'Varian '+(idx+1) }}</div>
-                                        <div class="text-muted mb-2 fw-semibold" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</div>
-                                        
-                                        <div class="mt-auto">
-                                            <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}</div>
-                                            <div class="fw-bold mb-1 lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}</div>
+                                        <div class="card-body p-2 d-flex align-items-center">
+                                            <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
                                             
-                                            <span class="badge w-100 mt-1" style="font-size: 0.7rem;" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-secondary'">Sisa Stok: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}</span>
+                                            <div class="flex-grow-1 overflow-hidden">
+                                                <h6 class="mb-1 fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                                    {{ v.name || v.attributes || 'Varian '+(idx+1) }}
+                                                </h6>
+                                                <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</span>
+                                                    <span class="badge fw-normal" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-danger'" style="font-size: 0.65rem;">
+                                                        Sisa: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
+                                                <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">
+                                                    Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}
+                                                </div>
+                                                <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
+                                                    Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
+                                                </div>
+                                                <div class="mt-1" v-if="getVariantDisplayStock(v) > 0">
+                                                    <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
+                                                </div>
+                                                <div class="mt-1" v-else>
+                                                    <span class="text-danger small fw-bold">Habis</span>
+                                                </div>
+                                            </div>
+                                            
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
                         </div>
                     </template>
                 </div>
             </div>
         </div>
+ 
     </div> 
+    
     <div id="print-section">
         
         <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt">
@@ -4420,6 +4500,9 @@
                 // Tambahkan di dalam data()
                 activeInvoiceDetail: null,
                 installmentForm: { amount: 0, method: 'CASH', note: '' },
+
+                posViewMode: 'grid',       // Untuk kontrol tombol Grid/List
+                isSearchFocused: false,    // Untuk kontrol popup search otomatis
 
                 
                 // ==========================================
