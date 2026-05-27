@@ -4229,22 +4229,36 @@
                         <td style="padding:6px 10px; border-bottom:1px solid #eee;">Service Charge</td>
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.serviceAmt || activePrintData.serviceAmount) }}</td>
                     </tr>
-                    <tr>
+                                        <tr>
                         <td style="padding:10px; font-weight:bold; font-size:16px;">TOTAL TAGIHAN</td>
                         <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark);">Rp {{ formatNumber(activePrintData.total) }}</td>
                     </tr>
-                    <tr v-if="activePrintData.paymentMethod === 'CASH'">
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee;">Uang Tunai (Diterima)</td>
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.amountReceived) }}</td>
+                    
+                    <tr>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-transform:uppercase;">Dibayar ({{ activePrintData.paymentMethod }})</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">Rp {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td>
                     </tr>
-                    <tr v-if="activePrintData.paymentMethod === 'CASH'">
+                    
+                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total">
                         <td style="padding:6px 10px; border-bottom:1px solid #eee; font-weight:bold; color:var(--primary-dark);">Kembalian</td>
-                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:var(--primary-dark);">Rp {{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:var(--primary-dark);">Rp {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td>
                     </tr>
-                </table>
-            </div>
+                    
+                    <tr v-else>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; font-weight:bold; color:#b91c1c;">Sisa Tagihan</td>
+                        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#b91c1c;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td>
+                    </tr>
 
-            <div style="margin-top:50px; display:flex; justify-content:space-between; text-align:center; font-size:12px;">
+                    <tr v-if="activePrintData.paymentStatus && activePrintData.paymentStatus !== 'LUNAS'">
+                        <td colspan="2" style="padding:15px 10px 0; text-align:right;">
+                            <span style="display:inline-block; border: 2px solid #b91c1c; color: #b91c1c; padding: 5px 15px; font-weight: bold; font-size: 13px; letter-spacing: 1px; border-radius: 4px;">
+                                STATUS: {{ activePrintData.paymentStatus }}
+                            </span>
+                        </td>
+                    </tr>
+                    </table>
+            </div>
+                <div style="margin-top:50px; display:flex; justify-content:space-between; text-align:center; font-size:12px;">
                 <div style="width:30%;">
                     <p style="margin-bottom:60px;">Penerima / Pelanggan,</p>
                     <p style="border-top:1px solid #000; padding-top:5px; margin:0 auto; width:80%;">{{ activePrintData.customer }}</p>
