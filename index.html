@@ -4034,7 +4034,7 @@
                 </div>
             </div>
             
-            <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+                    <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
             
             <table style="width:100%; font-size:11px; font-weight:bold;">
                 <tr v-if="activePrintData.subtotal > 0">
@@ -4056,18 +4056,39 @@
                     <td style="font-size:14px; padding-top:5px;">TOTAL BAYAR</td>
                     <td style="text-align:right; font-size:14px; padding-top:5px;">Rp {{ formatNumber(activePrintData.total) }}</td>
                 </tr>
+                
                 <tr>
                     <td style="padding-top:5px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td>
-                    <td style="text-align:right; padding-top:5px;">{{ formatNumber(activePrintData.amountReceived) }}</td>
+                    <td style="text-align:right; padding-top:5px;">
+                        {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}
+                    </td>
                 </tr>
-                <tr v-if="activePrintData.paymentMethod === 'CASH'">
+                
+                <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total">
                     <td>KEMBALIAN</td>
-                    <td style="text-align:right;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+                    <td style="text-align:right;">
+                        {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}
+                    </td>
                 </tr>
-            </table>
+
+                <tr v-else>
+                    <td>SISA HUTANG</td>
+                    <td style="text-align:right;">
+                        {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}
+                    </td>
+                </tr>
+
+                <tr v-if="activePrintData.paymentStatus && activePrintData.paymentStatus !== 'LUNAS'">
+                    <td colspan="2" style="text-align:center; padding-top:10px;">
+                        <span style="border: 1px solid #000; padding: 3px 5px; font-size:12px;">STATUS: {{ activePrintData.paymentStatus }}</span>
+                    </td>
+                </tr>
+                </table>
+
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             <div style="text-align:center; font-size:10px;">Terima Kasih Atas Kunjungan Anda<br>Barang yang sudah dibeli tidak dapat ditukar</div>
         </div>
+
 
         <div v-if="printMode === 'label' && activePrintData" class="mode-label">
             <div class="label-border-box">
