@@ -367,6 +367,7 @@
             </header>
             
             <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
+    
     <div class="row g-2 mb-3 align-items-center">
         
         <div class="col-12 col-md-5 position-relative">
@@ -380,7 +381,6 @@
                     <li class="d-none d-lg-block"><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item fw-semibold text-success" href="#" @click.prevent="startCameraScanner"><i class="bi bi-camera me-2"></i>Buka Kamera HP</a></li>
                 </ul>
-                
                 <input type="text" class="form-control shadow-none border-start-0 ps-0 py-1" 
                        style="font-size: 0.85rem;"
                        :class="{'border-danger bg-danger bg-opacity-10': posSearchMode === 'scan'}"
@@ -393,9 +393,7 @@
             </div>
             
             <div class="position-absolute bg-white shadow-lg rounded border w-100 mt-1" style="z-index: 1050; top: 100%; left: 0; max-height: 65vh; overflow-y: auto;" v-show="searchQuery && posSearchMode === 'text' && isSearchFocused">
-                
                 <template v-for="prod in filteredProducts.slice(0, 15)">
-                    
                     <div v-if="!prod.variants || prod.variants.length === 0" :key="'sp-'+prod.id" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
                         <img :src="prod.imageBase64 || 'https://via.placeholder.com/50'" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
                         <div class="flex-grow-1 overflow-hidden pe-2">
@@ -404,7 +402,6 @@
                         </div>
                         <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(prod)) }}</div>
                     </div>
-
                     <template v-else>
                         <div v-for="(v, vIdx) in prod.variants" :key="'sv-'+prod.id+'-'+vIdx" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
                             <img :src="v.imageBase64 || prod.imageBase64 || 'https://via.placeholder.com/50'" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
@@ -415,9 +412,7 @@
                             <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveVariantPrice(prod, v) || v.sellPrice || prod.sellPrice) }}</div>
                         </div>
                     </template>
-                    
                 </template>
-
                 <div class="p-3 text-center bg-white text-primary cursor-pointer fw-bold border-top sticky-bottom shadow-sm" style="font-size:0.8rem;" v-if="filteredProducts.length > 15" @click="isSearchFocused = false">
                     <i class="bi bi-search me-1"></i>Tampilkan Hasil Lainnya ({{ filteredProducts.length }} Produk)
                 </div>
@@ -425,37 +420,37 @@
             </div>
         </div>
 
-        <div class="col-7 col-md-4 d-flex gap-2">
-            
-            <div class="dropdown flex-grow-1 shadow-sm d-flex">
-                <button class="btn btn-sm btn-white border w-100 d-flex justify-content-between align-items-center" style="padding-top: 0.35rem; padding-bottom: 0.35rem;" type="button" data-bs-toggle="dropdown">
-                    <span class="text-truncate fw-semibold text-dark" style="font-size: 0.75rem;">
-                        <i class="bi bi-funnel-fill text-primary me-2"></i>{{ posCategoryFilter === '' ? 'Semua Kategori' : 'Filter Aktif' }}
-                    </span>
-                </button>
+        <div class="col-4 col-md-3">
+            <div class="dropdown h-100 w-100">
+                <div class="input-group input-group-sm shadow-sm h-100" data-bs-toggle="dropdown" style="cursor: pointer;">
+                    <span class="input-group-text bg-white p-1 px-2 d-flex align-items-center"><i class="bi bi-funnel-fill text-primary"></i></span>
+                    <div class="form-control d-flex align-items-center px-1 bg-white fw-semibold text-dark text-truncate" style="font-size: 0.75rem; padding-top: 0.35rem; padding-bottom: 0.35rem;">
+                        {{ posCategoryFilter === '' ? 'Kategori' : 'Filter' }}
+                    </div>
+                </div>
                 <ul class="dropdown-menu shadow w-100" style="max-height: 250px; overflow-y: auto; font-size: 0.8rem;">
                     <li><a class="dropdown-item fw-bold" :class="{'bg-light text-primary': posCategoryFilter === ''}" href="#" @click.prevent="posCategoryFilter = ''">Semua Kategori</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li v-for="cat in structuredCategories" :key="cat.id"><a class="dropdown-item" :class="{'bg-light text-primary fw-bold': posCategoryFilter === cat.id}" href="#" @click.prevent="posCategoryFilter = cat.id">{{ getCategoryLabel(cat) }}</a></li>
                 </ul>
             </div>
-            
-            <div class="btn-group shadow-sm d-flex">
-                <button type="button" class="btn btn-sm border px-2 d-flex align-items-center justify-content-center" style="padding-top: 0.35rem; padding-bottom: 0.35rem;" :class="posViewMode === 'grid' ? 'btn-primary text-white border-primary' : 'btn-white text-secondary'" @click="posViewMode = 'grid'"><i class="bi bi-grid-fill"></i></button>
-                <button type="button" class="btn btn-sm border px-2 d-flex align-items-center justify-content-center" style="padding-top: 0.35rem; padding-bottom: 0.35rem;" :class="posViewMode === 'list' ? 'btn-primary text-white border-primary' : 'btn-white text-secondary'" @click="posViewMode = 'list'"><i class="bi bi-list-ul"></i></button>
-            </div>
-            
         </div>
 
-        <div class="col-5 col-md-3">
+        <div class="col-5 col-md-4">
             <div class="input-group input-group-sm shadow-sm h-100">
-                <span class="input-group-text bg-white p-1 px-2 d-flex align-items-center"><i class="bi bi-calendar-event"></i></span>
-                <input type="datetime-local" class="form-control px-1" style="font-size:0.7rem; padding-top: 0.35rem; padding-bottom: 0.35rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
+                <span class="input-group-text bg-white p-1 px-1 d-flex align-items-center"><i class="bi bi-calendar-event"></i></span>
+                <input type="datetime-local" class="form-control px-0 text-center" style="font-size:0.7rem; padding-top: 0.35rem; padding-bottom: 0.35rem;" v-model="posCustomDate" :readonly="userRole !== 'Admin'" :class="{'bg-light': userRole !== 'Admin'}">
             </div>
         </div>
-    </div>
 
-    <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
+        <div class="col-3 col-md-2">
+            <div class="btn-group shadow-sm h-100 w-100 d-flex">
+                <button type="button" class="btn btn-sm border px-1 d-flex align-items-center justify-content-center w-50" style="padding-top: 0.35rem; padding-bottom: 0.35rem;" :class="posViewMode === 'grid' ? 'btn-primary text-white border-primary' : 'btn-white text-secondary'" @click="posViewMode = 'grid'"><i class="bi bi-grid-fill"></i></button>
+                <button type="button" class="btn btn-sm border px-1 d-flex align-items-center justify-content-center w-50" style="padding-top: 0.35rem; padding-bottom: 0.35rem;" :class="posViewMode === 'list' ? 'btn-primary text-white border-primary' : 'btn-white text-secondary'" @click="posViewMode = 'list'"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+</div>
+                <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
         
         <template v-if="posViewMode === 'grid'">
             <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
