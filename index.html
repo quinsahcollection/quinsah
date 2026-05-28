@@ -790,7 +790,7 @@
                 <p class="text-muted small mb-0 mt-1">Buat grup opsi tambahan seperti Topping, Level Pedas, Packaging, dll.</p>
             </div>
             
-            <button class="btn btn-sm btn-primary-custom" @click="formIdentifier = {id: null, name: ''}; showIdentifierModal = true;">
+            <button class="btn btn-sm btn-primary-custom" @click="formIdentifier = {id: null, name: ''}; openModal('addIdentifierModal')">
                 <i class="bi bi-plus-lg me-1"></i> Tambah Grup
             </button>
         </div>
@@ -807,8 +807,8 @@
                     <tr v-for="ig in identifierGroups" :key="ig.id">
                         <td class="fw-bold">{{ ig.name }}</td>
                         <td class="text-center">
-                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="formIdentifier = { ...ig }; showIdentifierModal = true;" title="Edit"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-light border text-danger py-1" @click="deleteIdentifierGroup(ig.id)" title="Hapus"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('identifierGroups', ig, 'formIdentifier', 'addIdentifierModal')" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('identifierGroups', ig.id)" title="Hapus"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>
                     <tr v-if="!identifierGroups || identifierGroups.length === 0">
@@ -822,13 +822,12 @@
         </div>
     </div>
 
-    <div class="modal" tabindex="-1" :class="{'d-block show': showIdentifierModal}" :style="showIdentifierModal ? 'background-color: rgba(0,0,0,0.6);' : ''" v-if="showIdentifierModal">
+    <div class="modal fade" id="addIdentifierModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-light border-bottom p-3">
                     <h6 class="modal-title fw-bold text-dark mb-0"><i class="bi bi-tags me-2 text-primary"></i>{{ formIdentifier.id ? 'Edit' : 'Tambah' }} Grup Identifier</h6>
-                    
-                    <button type="button" class="btn-close shadow-none" @click="showIdentifierModal = false"></button>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
@@ -837,8 +836,10 @@
                     </div>
                 </div>
                 <div class="modal-footer border-top bg-light p-2">
-                    <button type="button" class="btn btn-secondary btn-sm" @click="showIdentifierModal = false">Batal</button>
-                    <button type="button" class="btn btn-primary-custom btn-sm fw-bold px-4" @click="saveIdentifierGroup()">Simpan Grup</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary-custom btn-sm fw-bold px-4" @click="saveData('identifierGroups', formIdentifier, 'addIdentifierModal')" :disabled="isSaving">
+                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Grup
+                    </button>
                 </div>
             </div>
         </div>
@@ -3822,264 +3823,316 @@
         </div>
 
         <div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-header bg-light border-bottom p-3">
-                        <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-box-seam me-2"></i>{{ formProduct.id ? 'Edit' : 'Tambah Baru' }} Katalog Produk Utama</h6>
-                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
-                        <div class="row g-3">
-                            <div class="col-12"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>1. Informasi Dasar Produk</h6></div>
-                            
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">SKU Induk (Barcode)</label>
-                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.sku" placeholder="Cth: QNS-SHIRT-01">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">Nama Produk</label>
-                                <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.name" placeholder="Cth: Kemeja Flanel Kotak Premium">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">Kategori Produk</label>
-                                <div class="input-group input-group-sm mb-2">
-                                    <select class="form-select fw-semibold" v-model="formProduct.categoryId">
-                                        <option value="">-- Pilih Kategori --</option>
-                                        <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                                    </select>
-                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Kategori Baru" @click="openModal('addCategoryModal')"><i class="bi bi-plus-lg"></i></button>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-bold">Satuan (UOM)</label>
-                                <div class="input-group input-group-sm mb-2">
-                                    <select class="form-select fw-semibold" v-model="formProduct.uom">
-                                        <option value="Pcs">Pcs (Default)</option>
-                                        <option v-for="u in uoms" :value="u.name">{{ u.name }}</option>
-                                    </select>
-                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master UOM Baru" @click="openModal('addUomModal')"><i class="bi bi-plus-lg"></i></button>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">Foto Produk (Utama)</label>
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
-                                    <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="70" height="70" class="rounded border object-fit-cover shadow-sm ms-2">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">HPP (Modal Dasar / Rp)</label>
-                                <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.hppPrice" placeholder="Harga kulakan/modal...">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold text-success">Harga Jual Normal (Rp)</label>
-                                <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
-                            </div>
-
-                            <div class="col-md-12">
-                                <label class="form-label small fw-bold">Tag / Label Produk Khusus (Opsional)</label>
-                                <div class="input-group input-group-sm mb-2">
-                                    <select class="form-select" v-model="formProduct.productTagInput">
-                                        <option value="">-- Pilih Master Tag Tersedia --</option>
-                                        <option v-for="t in tags" :value="t.name">{{ t.name }}</option>
-                                    </select>
-                                    <button class="btn btn-outline-secondary" type="button" @click="pushProductTag"><i class="bi bi-plus-lg"></i> Hubungkan Tag Ke Produk</button>
-                                    <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Tag Baru" @click="openModal('addTagModal')"><i class="bi bi-tag-fill"></i> + Baru</button>
-                                </div>
-                                <div v-if="formProduct.productTags && formProduct.productTags.length > 0">
-                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2 mb-1 fw-normal px-2 py-1 d-inline-block" style="font-size: 0.75rem;" v-for="(tag, idx) in formProduct.productTags" :key="idx">{{ tag }} <i class="bi bi-x-circle-fill ms-1 cursor-pointer" @click="formProduct.productTags.splice(idx, 1)"></i></span>
-                                </div>
-                            </div>
-
-                            <div class="col-12 mt-4"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>2. Pengaturan Promo & Grosir (Bisa ditimpa varian)</h6></div>
-                            
-                            <div class="col-md-6">
-                                <div class="p-3 bg-light rounded border h-100">
-                                    <label class="form-label small fw-bold"><i class="bi bi-percent me-1"></i>Diskon Produk Utama</label>
-                                    <div class="input-group input-group-sm mb-2">
-                                        <select class="form-select bg-white" style="max-width: 120px;" v-model="formProduct.discountType" @change="formProduct.discountValue = 0">
-                                            <option value="none">Tanpa Diskon</option>
-                                            <option value="percent">Persen (%)</option>
-                                            <option value="nominal">Nominal (Rp)</option>
-                                        </select>
-                                        <input type="number" class="form-control" v-model.number="formProduct.discountValue" :disabled="formProduct.discountType === 'none'" placeholder="Nilai Diskon">
-                                    </div>
-                                    <small class="text-muted d-block" style="font-size: 0.65rem;">Simulasi Harga Diskon: <b class="text-success">Rp {{ formatNumber(getEffectiveBasePrice(formProduct)) }}</b></small>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="p-3 bg-light rounded border h-100">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label small fw-bold mb-0"><i class="bi bi-boxes me-1"></i>Harga Grosir (Bertingkat)</label>
-                                        <button class="btn btn-sm btn-outline-primary-custom py-0" @click="formProduct.tiers.push({minQty: 2, price: formProduct.sellPrice})"><i class="bi bi-plus"></i> Tambah Tier</button>
-                                    </div>
-                                    <div class="tier-box d-flex flex-wrap gap-2 align-items-center p-2 bg-white" v-for="(tier, idx) in formProduct.tiers" :key="idx">
-                                        <span class="small fw-semibold">Min. Qty</span>
-                                        <input type="number" class="form-control form-control-sm text-center" style="width: 60px;" v-model.number="tier.minQty">
-                                        <span class="small fw-semibold">Harga Jadi</span>
-                                        <input type="number" class="form-control form-control-sm text-success fw-bold flex-fill" v-model.number="tier.price">
-                                        <button class="btn btn-sm text-danger p-0" @click="formProduct.tiers.splice(idx, 1)"><i class="bi bi-x-circle-fill"></i></button>
-                                    </div>
-                                    <small class="text-muted" style="font-size: 0.65rem;" v-if="!formProduct.tiers || formProduct.tiers.length === 0">Klik Tambah Tier untuk memberi harga khusus jika beli banyak.</small>
-                                </div>
-                            </div>
-
-                            <div class="col-12 mt-4" v-if="formProduct.variants.length === 0">
-                                <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-shop me-2"></i>3. Alokasi Stok Awal Outlet (Produk Tanpa Varian)</h6>
-                                <div class="row g-2">
-                                    <div class="col-md-3 col-sm-4 col-6" v-for="out in outlets" :key="out.id">
-                                        <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-white w-50 text-truncate small fw-semibold" style="font-size:0.75rem;">{{ out.name }}</span>
-                                            <input type="number" class="form-control text-center fw-bold text-primary-custom" v-model.number="formProduct.baseOutletStocks[out.id]" placeholder="0">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-12 mt-4">
-                                <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. Matriks Generate Varian (Opsional) & Tabel Varian Final</h6>
-                                
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-4" v-for="(vAttr, idx) in formProduct.dynamicVariantsData" :key="idx">
-                                        <div class="dynamic-variant-box p-3 bg-light border border-secondary rounded mb-2 shadow-sm">
-                                            <div class="mb-2">
-                                                <label class="form-label small fw-bold text-primary-custom mb-1"><i class="bi bi-pencil-square me-1"></i>Judul Atribut Varian</label>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran..." v-model="vAttr.name">
-                                                    <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="formProduct.dynamicVariantsData.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
-                                                </div>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="form-label small fw-bold mb-1">Pilihan Atribut</label>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah) lalu enter..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
-                                                    <button class="btn btn-outline-primary-custom" type="button" @click="pushDynamicVariantTag(idx)"><i class="bi bi-plus-lg"></i> Tambah</button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <span class="badge bg-dark me-1 mb-1 fw-normal px-2 py-1" style="font-size:0.7rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x-lg cursor-pointer ms-1 text-danger" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 d-flex flex-wrap gap-2">
-                                        <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
-                                        <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
-                                        <button class="btn btn-sm btn-outline-secondary py-2 px-3 fw-bold bg-white" @click="addManualVariant"><i class="bi bi-plus-circle me-1"></i> Tambah Varian Manual</button>
-                                    </div>
-                                </div>
-
-                                <div class="table-responsive mt-3" v-if="formProduct.variants.length > 0">
-                                    <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Geser ke samping untuk melihat & edit)</p>
-                                    <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.75rem; min-width: 800px;">
-                                        <thead class="table-light text-center">
-                                            <tr>
-                                                <th>Nama Varian</th>
-                                                <th>Foto Spesifik</th>
-                                                <th>SKU Varian</th>
-                                                <th>HPP (Modal)</th>
-                                                <th>Harga Jual Normal</th>
-                                                <th>Override Diskon</th>
-                                                <th v-for="out in outlets" :key="out.id">Stok: {{ out.code }}</th>
-                                                <th><i class="bi bi-trash"></i></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(v, index) in formProduct.variants" :key="index">
-                                                <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
-                                                <td>
-                                                    <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
-                                                        <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 100%; font-size:0.65rem;">
-                                                        <img v-if="v.imageBase64" :src="v.imageBase64" width="60" height="60" class="rounded border object-fit-cover shadow-sm">
-                                                    </div>
-                                                </td>
-                                                <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-2 text-center" v-model.number="v.hppPrice" style="min-width: 90px;"></td>
-                                                <td><input type="number" class="form-control form-control-sm px-2 text-success fw-bold text-center" v-model.number="v.sellPrice" style="min-width: 100px;"></td>
-                                                <td>
-                                                    <div class="input-group input-group-sm" style="min-width: 140px;">
-                                                        <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
-                                                            <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
-                                                        </select>
-                                                        <input type="number" class="form-control px-1 text-center" v-model.number="v.discountValue" :disabled="!v.discountType || v.discountType === 'none'" placeholder="0">
-                                                    </div>
-                                                </td>
-                                                <td v-for="out in outlets" :key="out.id">
-                                                    <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
-                                                </td>
-                                                <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-x-circle-fill fs-5"></i></button></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light border-top p-3">
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2 fs-6 shadow" @click="saveData('products', formProduct, 'addProductModal')" :disabled="isSaving"><span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI DATA KE SERVER</button>
-                    </div>
-                </div>
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-bottom p-3">
+                <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-box-seam me-2"></i>{{ formProduct.id ? 'Edit' : 'Tambah Baru' }} Katalog Produk Utama</h6>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-        </div>
-
-        <div class="modal fade" id="editCartItemModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-sm">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-body p-4 bg-white">
-                        <h6 class="fw-bold mb-1 text-primary-custom"><i class="bi bi-cart-check me-2"></i>{{ cartItemEdit.name }}</h6>
-                        <p class="text-muted small border-bottom pb-2 mb-3 fw-semibold" v-if="cartItemEdit.variantName"><i class="bi bi-tag-fill me-1"></i>{{ cartItemEdit.variantName }} <span class="sku-badge bg-dark text-white ms-1">{{ cartItemEdit.variantSku }}</span></p>
-                        
-                        <div class="p-2 bg-light border border-primary rounded mb-3 text-center">
-                            <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;" v-if="getFinalItemPrice(cartItemEdit) < getPriceBeforePosDiscount(cartItemEdit)">Hrg Sistem: Rp {{ formatNumber(getPriceBeforePosDiscount(cartItemEdit)) }}</div>
-                            <div class="fw-bold text-success fs-6">Harga Akhir: Rp {{ formatNumber(getFinalItemPrice(cartItemEdit)) }}</div>
+            <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
+                <div class="row g-3">
+                    <div class="col-12"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>1. Informasi Dasar Produk</h6></div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">SKU Induk (Barcode)</label>
+                        <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.sku" placeholder="Cth: QNS-SHIRT-01">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Nama Produk</label>
+                        <input type="text" class="form-control form-control-sm mb-2" v-model="formProduct.name" placeholder="Cth: Kemeja Flanel Kotak Premium">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Kategori Produk</label>
+                        <div class="input-group input-group-sm mb-2">
+                            <select class="form-select fw-semibold" v-model="formProduct.categoryId">
+                                <option value="">-- Pilih Kategori --</option>
+                                <option v-for="cat in structuredCategories" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                            </select>
+                            <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Kategori Baru" @click="openModal('addCategoryModal')"><i class="bi bi-plus-lg"></i></button>
                         </div>
-
-                        <div class="mb-3 bg-white border p-2 rounded" v-if="cartItemEdit.tiers && cartItemEdit.tiers.length > 0">
-                            <label class="form-label fw-bold text-info m-0" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Syarat Grosir Tersedia (Auto)</label>
-                            <div class="d-flex flex-column gap-1 mt-1">
-                                <span class="badge border border-info text-dark text-start bg-light" style="font-size:0.65rem;" v-for="t in cartItemEdit.tiers" :key="t.minQty">
-                                    Beli >= {{ t.minQty }} {{ cartItemEdit.uom || 'Pcs' }}: Harga mjd Rp {{ formatNumber(t.price) }}
-                                </span>
-                            </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold">Satuan (UOM)</label>
+                        <div class="input-group input-group-sm mb-2">
+                            <select class="form-select fw-semibold" v-model="formProduct.uom">
+                                <option value="Pcs">Pcs (Default)</option>
+                                <option v-for="u in uoms" :value="u.name">{{ u.name }}</option>
+                            </select>
+                            <button class="btn btn-outline-primary-custom" type="button" title="Buat Master UOM Baru" @click="openModal('addUomModal')"><i class="bi bi-plus-lg"></i></button>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Kuantitas (Qty)</label>
-                            <div class="input-group input-group-sm">
-                                <button class="btn btn-outline-secondary fw-bold px-3" @click="cartItemEdit.qty > 1 ? cartItemEdit.qty-- : null">-</button>
-                                <input type="number" class="form-control text-center fw-bold text-primary-custom fs-6" v-model.number="cartItemEdit.qty" @change="if(cartItemEdit.qty < 1) cartItemEdit.qty = 1;">
-                                <button class="btn btn-outline-secondary fw-bold px-3" @click="cartItemEdit.qty++">+</button>
-                            </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Foto Produk (Utama)</label>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <input type="file" class="form-control form-control-sm" accept="image/*" @change="handleImageUpload($event, formProduct)">
+                            <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="70" height="70" class="rounded border object-fit-cover shadow-sm ms-2">
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-danger"><i class="bi bi-tags-fill me-1"></i>Diskon Tambahan</label>
-                            <div class="input-group input-group-sm">
-                                <select class="form-select bg-white" style="max-width: 50%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = (cartItemEdit.posDiscountType === 'multi' ? '' : 0)">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">HPP (Modal Dasar / Rp)</label>
+                        <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.hppPrice" placeholder="Harga kulakan/modal...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-success">Harga Jual Normal (Rp)</label>
+                        <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold">Tag / Label Produk Khusus (Opsional)</label>
+                        <div class="input-group input-group-sm mb-2">
+                            <select class="form-select" v-model="formProduct.productTagInput">
+                                <option value="">-- Pilih Master Tag Tersedia --</option>
+                                <option v-for="t in tags" :value="t.name">{{ t.name }}</option>
+                            </select>
+                            <button class="btn btn-outline-secondary" type="button" @click="pushProductTag"><i class="bi bi-plus-lg"></i> Hubungkan Tag Ke Produk</button>
+                            <button class="btn btn-outline-primary-custom" type="button" title="Buat Master Tag Baru" @click="openModal('addTagModal')"><i class="bi bi-tag-fill"></i> + Baru</button>
+                        </div>
+                        <div v-if="formProduct.productTags && formProduct.productTags.length > 0">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-2 mb-1 fw-normal px-2 py-1 d-inline-block" style="font-size: 0.75rem;" v-for="(tag, idx) in formProduct.productTags" :key="idx">{{ tag }} <i class="bi bi-x-circle-fill ms-1 cursor-pointer" @click="formProduct.productTags.splice(idx, 1)"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-4"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-tags me-2"></i>2. Pengaturan Promo & Grosir (Bisa ditimpa varian)</h6></div>
+                    
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <label class="form-label small fw-bold"><i class="bi bi-percent me-1"></i>Diskon Produk Utama</label>
+                            <div class="input-group input-group-sm mb-2">
+                                <select class="form-select bg-white" style="max-width: 120px;" v-model="formProduct.discountType" @change="formProduct.discountValue = 0">
                                     <option value="none">Tanpa Diskon</option>
-                                    <option value="percent">% Tunggal</option>
-                                    <option value="multi">% Bertingkat</option>
-                                    <option value="nominal">Nominal / item</option>
+                                    <option value="percent">Persen (%)</option>
+                                    <option value="nominal">Nominal (Rp)</option>
                                 </select>
-                                <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
-                                <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
+                                <input type="number" class="form-control" v-model.number="formProduct.discountValue" :disabled="formProduct.discountType === 'none'" placeholder="Nilai Diskon">
+                            </div>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Simulasi Harga Diskon: <b class="text-success">Rp {{ formatNumber(getEffectiveBasePrice(formProduct)) }}</b></small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label small fw-bold mb-0"><i class="bi bi-boxes me-1"></i>Harga Grosir (Bertingkat)</label>
+                                <button class="btn btn-sm btn-outline-primary-custom py-0" @click="formProduct.tiers.push({minQty: 2, price: formProduct.sellPrice})"><i class="bi bi-plus"></i> Tambah Tier</button>
+                            </div>
+                            <div class="tier-box d-flex flex-wrap gap-2 align-items-center p-2 bg-white" v-for="(tier, idx) in formProduct.tiers" :key="idx">
+                                <span class="small fw-semibold">Min. Qty</span>
+                                <input type="number" class="form-control form-control-sm text-center" style="width: 60px;" v-model.number="tier.minQty">
+                                <span class="small fw-semibold">Harga Jadi</span>
+                                <input type="number" class="form-control form-control-sm text-success fw-bold flex-fill" v-model.number="tier.price">
+                                <button class="btn btn-sm text-danger p-0" @click="formProduct.tiers.splice(idx, 1)"><i class="bi bi-x-circle-fill"></i></button>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.65rem;" v-if="!formProduct.tiers || formProduct.tiers.length === 0">Klik Tambah Tier untuk memberi harga khusus jika beli banyak.</small>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-4" v-if="formProduct.variants.length === 0">
+                        <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-shop me-2"></i>3. Alokasi Stok Awal Outlet (Produk Tanpa Varian)</h6>
+                        <div class="row g-2">
+                            <div class="col-md-3 col-sm-4 col-6" v-for="out in outlets" :key="out.id">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white w-50 text-truncate small fw-semibold" style="font-size:0.75rem;">{{ out.name }}</span>
+                                    <input type="number" class="form-control text-center fw-bold text-primary-custom" v-model.number="formProduct.baseOutletStocks[out.id]" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <h6 class="fw-bold text-dark mb-2 border-bottom pb-2"><i class="bi bi-diagram-3 me-2"></i>3. Matriks Generate Varian (Opsional) & Tabel Varian Final</h6>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4" v-for="(vAttr, idx) in formProduct.dynamicVariantsData" :key="idx">
+                                <div class="dynamic-variant-box p-3 bg-light border border-secondary rounded mb-2 shadow-sm">
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold text-primary-custom mb-1"><i class="bi bi-pencil-square me-1"></i>Judul Atribut Varian</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control fw-bold border-primary" placeholder="Cth: Warna, Ukuran..." v-model="vAttr.name">
+                                            <button class="btn btn-outline-danger" @click="removeDynamicVariantLevel(idx)" v-if="formProduct.dynamicVariantsData.length > 1" title="Hapus Atribut"><i class="bi bi-trash"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold mb-1">Pilihan Atribut</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control shadow-none" placeholder="Ketik (Cth: Merah) lalu enter..." v-model="vAttr.input" @input="handleDynamicVariantInput(idx)" @keydown.enter.prevent="pushDynamicVariantTag(idx)">
+                                            <button class="btn btn-outline-primary-custom" type="button" @click="pushDynamicVariantTag(idx)"><i class="bi bi-plus-lg"></i> Tambah</button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-dark me-1 mb-1 fw-normal px-2 py-1" style="font-size:0.7rem;" v-for="(tag, tIdx) in vAttr.tags" :key="tIdx">{{ tag }} <i class="bi bi-x-lg cursor-pointer ms-1 text-danger" @click="vAttr.tags.splice(tIdx, 1)"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 d-flex flex-wrap gap-2">
+                                <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
+                                <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
+                                <button class="btn btn-sm btn-outline-secondary py-2 px-3 fw-bold bg-white" @click="addManualVariant"><i class="bi bi-plus-circle me-1"></i> Tambah Varian Manual</button>
                             </div>
                         </div>
 
-                                                <div class="mb-4 border-top pt-3">
-                            <label class="form-label small fw-bold"><i class="bi bi-pencil-square me-1"></i>Catatan Khusus</label>
-                            <textarea class="form-control form-control-sm" v-model="cartItemEdit.note" rows="2" placeholder="Tulis instruksi khusus (Cth: Jangan dibungkus plastik)..."></textarea>
+                        <div class="table-responsive mt-3" v-if="formProduct.variants.length > 0">
+                            <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Geser ke samping untuk melihat & edit)</p>
+                            <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.75rem; min-width: 800px;">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>Nama Varian</th>
+                                        <th>Foto Spesifik</th>
+                                        <th>SKU Varian</th>
+                                        <th>HPP (Modal)</th>
+                                        <th>Harga Jual Normal</th>
+                                        <th>Override Diskon</th>
+                                        <th v-for="out in outlets" :key="out.id">Stok: {{ out.code }}</th>
+                                        <th><i class="bi bi-trash"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(v, index) in formProduct.variants" :key="index">
+                                        <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
+                                        <td>
+                                            <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
+                                                <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 100%; font-size:0.65rem;">
+                                                <img v-if="v.imageBase64" :src="v.imageBase64" width="60" height="60" class="rounded border object-fit-cover shadow-sm">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
+                                        <td><input type="number" class="form-control form-control-sm px-2 text-center" v-model.number="v.hppPrice" style="min-width: 90px;"></td>
+                                        <td><input type="number" class="form-control form-control-sm px-2 text-success fw-bold text-center" v-model.number="v.sellPrice" style="min-width: 100px;"></td>
+                                        <td>
+                                            <div class="input-group input-group-sm" style="min-width: 140px;">
+                                                <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
+                                                    <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
+                                                </select>
+                                                <input type="number" class="form-control px-1 text-center" v-model.number="v.discountValue" :disabled="!v.discountType || v.discountType === 'none'" placeholder="0">
+                                            </div>
+                                        </td>
+                                        <td v-for="out in outlets" :key="out.id">
+                                            <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
+                                        </td>
+                                        <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-x-circle-fill fs-5"></i></button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="saveCartItemEdit"><i class="bi bi-check-circle me-1"></i> Terapkan Perubahan</button>
-                        
-                        <button class="btn btn-outline-success w-100 fw-bold py-2" @click="duplicateItemAsBonus"><i class="bi bi-plus-square me-1"></i> Tambah Produk di Baris Baru</button>
-
                     </div>
-                </div>
+
+                    <div class="col-12 mt-4">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-ui-checks-grid me-2"></i>4. Identifier / Modifier Khusus (Opsional)</h6>
+                            <button class="btn btn-sm btn-outline-primary-custom fw-bold" @click="addModifierGroupToProduct()">
+                                <i class="bi bi-plus-lg me-1"></i> Tambah Modifier
+                            </button>
+                        </div>
+
+                        <div v-if="!formProduct.modifiers || formProduct.modifiers.length === 0" class="text-muted small text-center bg-light p-3 rounded border" style="border-style: dashed !important;">
+                            Belum ada Modifier.<br>Klik "Tambah Modifier" jika produk ini punya pilihan seperti Topping, Level Pedas, Level Es, dll.
+                        </div>
+
+                        <div v-else class="row g-3">
+                            <div class="col-md-6 col-lg-4" v-for="(mod, mIdx) in formProduct.modifiers" :key="mIdx">
+                                <div class="p-3 bg-light border border-secondary rounded shadow-sm h-100 position-relative">
+                                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 py-0 px-1" @click="formProduct.modifiers.splice(mIdx, 1)" title="Hapus Grup Ini"><i class="bi bi-x"></i></button>
+                                    
+                                    <div class="mb-2 pe-4">
+                                        <label class="form-label small fw-bold text-primary-custom mb-1">Grup Modifier (Dari Settings)</label>
+                                        <select class="form-select form-select-sm border-primary fw-bold" v-model="mod.groupId">
+                                            <option value="">-- Pilih Grup --</option>
+                                            <option v-for="ig in identifierGroups" :value="ig.id" :key="ig.id">{{ ig.name }}</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="form-check form-switch mt-2">
+                                            <input class="form-check-input cursor-pointer" type="checkbox" v-model="mod.isRequired" :id="'reqSwitch'+mIdx">
+                                            <label class="form-check-label small fw-semibold cursor-pointer" :for="'reqSwitch'+mIdx" :class="mod.isRequired ? 'text-danger' : 'text-muted'">
+                                                {{ mod.isRequired ? 'Wajib Pilih 1 (Radio)' : 'Bebas Pilih Banyak (Checkbox)' }}
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
+                                        <span class="small fw-bold">Daftar Opsi & Harga</span>
+                                        <button class="btn btn-sm btn-primary-custom py-0" style="font-size: 0.7rem;" @click="mod.options.push({name: '', price: 0})"><i class="bi bi-plus"></i> Opsi Baru</button>
+                                    </div>
+
+                                    <div class="d-flex gap-2 mb-1" v-for="(opt, oIdx) in mod.options" :key="oIdx">
+                                        <input type="text" class="form-control form-control-sm" v-model="opt.name" placeholder="Nama Opsi (Cth: Boba)">
+                                        <div class="input-group input-group-sm" style="width: 140px;">
+                                            <span class="input-group-text p-1 px-2 fw-bold">+Rp</span>
+                                            <input type="number" class="form-control px-1 text-center text-success fw-bold" v-model.number="opt.price" placeholder="0">
+                                        </div>
+                                        <button class="btn btn-sm text-danger p-0 px-1" @click="mod.options.splice(oIdx, 1)"><i class="bi bi-x-circle-fill fs-6"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+            </div>
+            <div class="modal-footer bg-light border-top p-3">
+                <button class="btn btn-primary-custom w-100 fw-bold py-2 fs-6 shadow" @click="saveData('products', formProduct, 'addProductModal')" :disabled="isSaving"><span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI DATA KE SERVER</button>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editCartItemModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body p-4 bg-white">
+                <h6 class="fw-bold mb-1 text-primary-custom"><i class="bi bi-cart-check me-2"></i>{{ cartItemEdit.name }}</h6>
+                <p class="text-muted small border-bottom pb-2 mb-3 fw-semibold" v-if="cartItemEdit.variantName"><i class="bi bi-tag-fill me-1"></i>{{ cartItemEdit.variantName }} <span class="sku-badge bg-dark text-white ms-1">{{ cartItemEdit.variantSku }}</span></p>
+                
+                <div class="p-2 bg-light border border-primary rounded mb-3 text-center">
+                    <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;" v-if="getFinalItemPrice(cartItemEdit) < getPriceBeforePosDiscount(cartItemEdit)">Hrg Sistem: Rp {{ formatNumber(getPriceBeforePosDiscount(cartItemEdit)) }}</div>
+                    <div class="fw-bold text-success fs-6">Harga Akhir: Rp {{ formatNumber(getFinalItemPrice(cartItemEdit)) }}</div>
+                </div>
+
+                <div class="mb-3 bg-white border p-2 rounded" v-if="cartItemEdit.tiers && cartItemEdit.tiers.length > 0">
+                    <label class="form-label fw-bold text-info m-0" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>Syarat Grosir Tersedia (Auto)</label>
+                    <div class="d-flex flex-column gap-1 mt-1">
+                        <span class="badge border border-info text-dark text-start bg-light" style="font-size:0.65rem;" v-for="t in cartItemEdit.tiers" :key="t.minQty">
+                            Beli >= {{ t.minQty }} {{ cartItemEdit.uom || 'Pcs' }}: Harga mjd Rp {{ formatNumber(t.price) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Kuantitas (Qty)</label>
+                    <div class="input-group input-group-sm">
+                        <button class="btn btn-outline-secondary fw-bold px-3" @click="cartItemEdit.qty > 1 ? cartItemEdit.qty-- : null">-</button>
+                        <input type="number" class="form-control text-center fw-bold text-primary-custom fs-6" v-model.number="cartItemEdit.qty" @change="if(cartItemEdit.qty < 1) cartItemEdit.qty = 1;">
+                        <button class="btn btn-outline-secondary fw-bold px-3" @click="cartItemEdit.qty++">+</button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-danger"><i class="bi bi-tags-fill me-1"></i>Diskon Tambahan</label>
+                    <div class="input-group input-group-sm">
+                        <select class="form-select bg-white" style="max-width: 50%;" v-model="cartItemEdit.posDiscountType" @change="cartItemEdit.posDiscountValue = (cartItemEdit.posDiscountType === 'multi' ? '' : 0)">
+                            <option value="none">Tanpa Diskon</option>
+                            <option value="percent">% Tunggal</option>
+                            <option value="multi">% Bertingkat</option>
+                            <option value="nominal">Nominal / item</option>
+                        </select>
+                        <input v-if="cartItemEdit.posDiscountType === 'multi'" type="text" class="form-control text-center fw-bold" v-model="cartItemEdit.posDiscountValue" placeholder="Cth: 50+20+10">
+                        <input v-else type="number" class="form-control text-center fw-bold" v-model.number="cartItemEdit.posDiscountValue" :disabled="cartItemEdit.posDiscountType === 'none'">
+                    </div>
+                </div>
+
+                <div class="mb-4 border-top pt-3">
+                    <label class="form-label small fw-bold"><i class="bi bi-pencil-square me-1"></i>Catatan Khusus</label>
+                    <textarea class="form-control form-control-sm" v-model="cartItemEdit.note" rows="2" placeholder="Tulis instruksi khusus (Cth: Jangan dibungkus plastik)..."></textarea>
+                </div>
+                
+                <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="saveCartItemEdit"><i class="bi bi-check-circle me-1"></i> Terapkan Perubahan</button>
+                
+                <button class="btn btn-outline-success w-100 fw-bold py-2" @click="duplicateItemAsBonus"><i class="bi bi-plus-square me-1"></i> Tambah Produk di Baris Baru</button>
+
+            </div>
+        </div>
+    </div>
+</div>
 
         <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -4765,7 +4818,6 @@
                     document.body.classList.add('modal-open'); 
                 }
             });
-
             // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
             if (typeof this.fetchOpnameHistory === 'function') {
                 await this.fetchOpnameHistory();
@@ -4797,8 +4849,7 @@
                         // ===== LETAKKAN DI SINI =====
                         // Ambil daftar user dan role dari Firestore HANYA setelah dipastikan berhasil login
                         this.fetchUsersFromDatabase();
-                        this.fetchRolesFromDatabase(); // <--- TAMBAHKAN BARIS INI DI SINI
-                        // ============================
+                        this.fetchRolesFromDatabase(); 
                         
                     } else { 
                         this.isLoggedIn = false; 
@@ -5672,46 +5723,18 @@
             }
         },
         
-        saveIdentifierGroup() {
-            // 1. Cek isi
-            if (!this.formIdentifier.name) {
-                alert('Nama Grup Identifier tidak boleh kosong!');
-                return;
+        
+        addModifierGroupToProduct() {
+            // Pastikan array modifiers sudah siap
+            if (!this.formProduct.modifiers) {
+                this.formProduct.modifiers = [];
             }
-
-            // 2. Cegah error jika array belum ada
-            if (!this.identifierGroups) {
-                this.identifierGroups = [];
-            }
-
-            // 3. Simpan / Update
-            if (!this.formIdentifier.id) {
-                this.formIdentifier.id = Date.now(); 
-                this.identifierGroups.push({ ...this.formIdentifier });
-            } else {
-                const index = this.identifierGroups.findIndex(i => i.id === this.formIdentifier.id);
-                if (index !== -1) {
-                    this.identifierGroups[index].name = this.formIdentifier.name;
-                }
-            }
-
-            // 4. Tutup modal secara gaib (hilangkan layar gelap instan)
-            this.showIdentifierModal = false;
-            
-            // 5. Bersihkan form
-            this.formIdentifier = { id: null, name: '' };
-        },
-
-        editIdentifierGroup(group) {
-            this.formIdentifier = { ...group };
-            // Gunakan fungsi openModal bawaan aslimu yang terbukti aman
-            this.openModal('addIdentifierModal');
-        },
-
-        deleteIdentifierGroup(id) {
-            if (confirm('Yakin ingin menghapus Grup Identifier ini?')) {
-                this.identifierGroups = this.identifierGroups.filter(i => i.id !== id);
-            }
+            // Tambahkan 1 kotak grup baru yang kosong
+            this.formProduct.modifiers.push({
+                groupId: '',
+                isRequired: false, // false = Checkbox (Bebas), true = Radio (Wajib Pilih 1)
+                options: [{ name: '', price: 0 }]
+            });
         },
         
                     // 1. Warna Status Pembayaran
@@ -7017,7 +7040,9 @@ async fetchRolesFromDatabase() {
                     if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
                 });
                 
-                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'uoms', 'tags', 'suppliers', 'purchases', 'stockLogs'];
+                // PERHATIKAN BARIS INI: Saya sudah menambahkan 'identifierGroups' di bagian paling akhir
+                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'uoms', 'tags', 'suppliers', 'purchases', 'stockLogs', 'identifierGroups'];
+                
                 collections.forEach(col => { 
                     onSnapshot(collection(db, col), snap => { 
                         const r = []; 
