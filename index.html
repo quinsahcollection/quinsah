@@ -3829,6 +3829,7 @@
                 <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-box-seam me-2"></i>{{ formProduct.id ? 'Edit' : 'Tambah Baru' }} Katalog Produk Utama</h6>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
+            
             <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
                 <div class="row g-3">
                     <div class="col-12"><h6 class="fw-bold text-dark mb-1 border-bottom pb-2"><i class="bi bi-info-circle me-2"></i>1. Informasi Dasar Produk</h6></div>
@@ -4052,26 +4053,41 @@
 
                                     <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
                                         <span class="small fw-bold">Daftar Opsi & Harga</span>
-                                        <button class="btn btn-sm btn-primary-custom py-0" style="font-size: 0.7rem;" @click="mod.options.push({name: '', price: 0})"><i class="bi bi-plus"></i> Opsi Baru</button>
+                                        <button class="btn btn-sm btn-primary-custom py-0" style="font-size: 0.7rem;" @click="mod.options.push({name: '', price: 0, linkedProductId: ''})"><i class="bi bi-plus"></i> Opsi Baru</button>
                                     </div>
 
-                                    <div class="d-flex gap-2 mb-1" v-for="(opt, oIdx) in mod.options" :key="oIdx">
-                                        <input type="text" class="form-control form-control-sm" v-model="opt.name" placeholder="Nama Opsi (Cth: Boba)">
-                                        <div class="input-group input-group-sm" style="width: 140px;">
-                                            <span class="input-group-text p-1 px-2 fw-bold">+Rp</span>
-                                            <input type="number" class="form-control px-1 text-center text-success fw-bold" v-model.number="opt.price" placeholder="0">
+                                    <div class="bg-white border rounded p-2 mb-2 position-relative shadow-sm" v-for="(opt, oIdx) in mod.options" :key="oIdx">
+                                        <button class="btn btn-sm text-danger position-absolute top-0 end-0 p-1 bg-transparent border-0" style="z-index: 5;" @click="mod.options.splice(oIdx, 1)" title="Hapus Opsi"><i class="bi bi-x-circle-fill fs-6"></i></button>
+                                        
+                                        <div class="row g-2 pe-4">
+                                            <div class="col-12">
+                                                <input type="text" class="form-control form-control-sm fw-bold" v-model="opt.name" placeholder="Nama Opsi (Cth: Ekstra Boba)">
+                                            </div>
+                                            <div class="col-7">
+                                                <select class="form-select form-select-sm text-muted" style="font-size: 0.7rem;" v-model="opt.linkedProductId" @change="autoFillOptionPrice(opt)">
+                                                    <option value="">- Tanpa Link Stok -</option>
+                                                    <option v-for="item in modifierLinkableItems" :value="item.id" :key="item.id">Link: {{ item.name }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-5">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text p-1" style="font-size:0.75rem;">+Rp</span>
+                                                    <input type="number" class="form-control form-control-sm px-1 text-center text-success fw-bold" v-model.number="opt.price" placeholder="0">
+                                                </div>
+                                            </div>
                                         </div>
-                                        <button class="btn btn-sm text-danger p-0 px-1" @click="mod.options.splice(oIdx, 1)"><i class="bi bi-x-circle-fill fs-6"></i></button>
                                     </div>
-                                </div>
+                                    </div>
                             </div>
                         </div>
                     </div>
                     </div>
             </div>
+            
             <div class="modal-footer bg-light border-top p-3">
                 <button class="btn btn-primary-custom w-100 fw-bold py-2 fs-6 shadow" @click="saveData('products', formProduct, 'addProductModal')" :disabled="isSaving"><span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI DATA KE SERVER</button>
             </div>
+            
         </div>
     </div>
 </div>
@@ -4873,6 +4889,37 @@
                 });
                 const flatten = (nodes, level) => { nodes.forEach(n => { n.treeLevel = level; res.push(n); if (n.children.length > 0) flatten(n.children, level + 1); }); };
                 flatten(roots, 0); return res;
+            },
+
+            // DAFTAR PRODUK UNTUK MODIFIER (Memecah Varian)
+            modifierLinkableItems() {
+                let items = [];
+                if (!this.products) return items;
+                
+                this.products.forEach(p => {
+                    // Jika produk JANGAN discontinue
+                    if (p.isActive === false) return; 
+
+                    if (!p.variants || p.variants.length === 0) {
+                        // 1. Produk Biasa (Tanpa Varian)
+                        items.push({
+                            id: p.id,
+                            name: p.name,
+                            price: p.sellPrice || 0
+                        });
+                    } else {
+                        // 2. Produk Dengan Varian (Dipecah per varian)
+                        p.variants.forEach(v => {
+                            items.push({
+                                // ID unik = Gabungan ID Induk dan SKU Varian
+                                id: p.id + '||' + (v.variantSku || v.name), 
+                                name: p.name + ' - ' + (v.name || v.attributes),
+                                price: v.sellPrice || p.sellPrice || 0
+                            });
+                        });
+                    }
+                });
+                return items;
             },
 
             // MASTER PRODUCT & SKU VARIANT FILTERING
@@ -5725,16 +5772,31 @@
         
         
         addModifierGroupToProduct() {
-            // Pastikan array modifiers sudah siap
             if (!this.formProduct.modifiers) {
                 this.formProduct.modifiers = [];
             }
-            // Tambahkan 1 kotak grup baru yang kosong
             this.formProduct.modifiers.push({
                 groupId: '',
-                isRequired: false, // false = Checkbox (Bebas), true = Radio (Wajib Pilih 1)
-                options: [{ name: '', price: 0 }]
+                isRequired: false, 
+                // PERUBAHAN: Tambahkan linkedProductId agar tidak undefined
+                options: [{ name: '', price: 0, linkedProductId: '' }] 
             });
+        },
+        
+        autoFillOptionPrice(opt) {
+            if (opt.linkedProductId) {
+                // Cari item yang dipilih dari daftar cerdas tadi
+                const linkedItem = this.modifierLinkableItems.find(i => i.id === opt.linkedProductId);
+                if (linkedItem) {
+                    // 1. Otomatis isi harga
+                    opt.price = linkedItem.price || 0;
+                    
+                    // 2. BONUS: Jika nama opsi masih kosong, otomatis copas nama produknya juga!
+                    if (!opt.name) {
+                        opt.name = linkedItem.name;
+                    }
+                }
+            }
         },
         
                     // 1. Warna Status Pembayaran
