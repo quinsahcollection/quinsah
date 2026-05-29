@@ -7696,10 +7696,22 @@ async fetchRolesFromDatabase() {
         },
 
            // 1. MEMBUKA MODAL (Tampilan Awal)
+        // 1. MEMBUKA MODAL (Tampilan Awal)
         openPosModifier(product) {
-            this.activeProduct = product;
-            this.posModifierStep = 1; 
-            this.openModal('posModifierModal');
+            this.activeProduct = product; // Kunci produk yang diklik
+
+            // Cek dengan ketat apakah bungkus varian/topping BENAR-BENAR ADA ISINYA
+            let hasVariants = product.variants && product.variants.length > 0;
+            let hasModifiers = product.modifiers && product.modifiers.length > 0;
+
+            if (hasVariants || hasModifiers) {
+                // Jika isinya ada, buka modal seperti biasa
+                this.posModifierStep = 1; 
+                this.openModal('posModifierModal');
+            } else {
+                // JIKA KOSONG (Seperti Tisue), Bypass Modal dan Langsung Masuk Keranjang!
+                this.addToCart(null);
+            }
         },
 
         // 2. JEMBATAN PENGHUBUNG (Mencegah error pada tombol HTML Anda)
