@@ -2978,8 +2978,7 @@
 
 
         <div class="modal fade" id="batchDetailModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content border-0 shadow-lg">
+            <div class="modal-dialog modal-dialog-centered modal-xl"> <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-light border-bottom p-3">
                         <h6 class="modal-title fw-bold mb-0 text-primary-custom"><i class="bi bi-boxes me-2"></i>Rincian Batch Pembelian & Valuasi HPP</h6>
                         <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
@@ -3001,9 +3000,10 @@
                             <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.75rem;">
                                 <thead class="table-light sticky-top text-center border-bottom">
                                     <tr>
-                                        <th>Urutan (FIFO)</th>
-                                        <th>Tanggal Masuk</th> <th>Ref. PO / Invoice</th>
-                                        <th>Lokasi Tumpukan</th>
+                                        <th>Urutan (HPP)</th>
+                                        <th>Tanggal Masuk</th> 
+                                        <th>Ref. PO / Invoice</th>
+                                        <th class="bg-info bg-opacity-10">No. Batch</th>     <th class="bg-danger bg-opacity-10">Tgl Expired</th> <th>Lokasi Tumpukan</th>
                                         <th>Harga Beli (Modal)</th>
                                         <th class="bg-warning bg-opacity-10">Sisa Qty Batch</th>
                                     </tr>
@@ -3016,16 +3016,21 @@
                                                     {{ idx === 0 ? 'Antrian #1 (Terjual Duluan)' : 'Antrian #' + (idx + 1) }}
                                                 </span>
                                             </td>
-                                            <td class="text-muted">{{ batch.tanggalDisplay || '-' }}</td> <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
+                                            <td class="text-muted">{{ batch.tanggalDisplay || '-' }}</td> 
+                                            <td class="fw-bold text-primary-custom">{{ batch.poInvoice || 'Stok Awal' }}</td>
+                                            
+                                            <td class="fw-bold text-dark bg-info bg-opacity-10">{{ batch.batchNo }}</td>
+                                            <td class="fw-bold text-danger bg-danger bg-opacity-10">{{ batch.expiredDate }}</td>
+                                            
                                             <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(batch.outletId) || 'Global/Pusat' }}</span></td>
                                             <td class="text-danger fw-semibold">Rp {{ formatNumber(batch.cost) }}</td>
                                             <td class="fw-bold fs-6 bg-warning bg-opacity-10">{{ batch.qty }}</td>
                                         </tr>
                                     </template>
                                     <tr v-else>
-                                        <td colspan="6" class="text-center py-5 text-muted"> <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
+                                        <td colspan="8" class="text-center py-5 text-muted"> <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-25"></i>
                                             <b class="d-block mb-1">Belum ada tumpukan Batch tercatat.</b>
-                                            Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FIFO/LIFO.
+                                            Lakukan transaksi Pembelian (PO) baru untuk mulai memecah stok ke dalam sistem FEFO/FIFO/LIFO.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -5816,10 +5821,12 @@
                                 outletId: activeOutlet,
                                 outletName: typeof this.getOutletName === 'function' ? this.getOutletName(activeOutlet) : activeOutlet, 
                                 poInvoice: b.batchId || b.poInvoice || '-', 
+                                batchNo: b.batchNo || '-', // <-- TAMBAHAN BARU (Nomor Batch)
+                                expiredDate: b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-', // <-- TAMBAHAN BARU (Tgl Expired)
                                 cost: b.hargaModal || b.cost || 0,          
                                 qty: b.qtySisa || b.qty_remain || b.qty || 0, 
                                 tanggalMasuk: rawDate,
-                                tanggalDisplay: formatTanggalIndo(rawDate) // <-- KOLOM BARU UNTUK HTML
+                                tanggalDisplay: formatTanggalIndo(rawDate)
                             });
                         }
                     }
@@ -5835,10 +5842,12 @@
                                     outletId: oId, 
                                     outletName: typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId,
                                     poInvoice: b.batchId || b.poInvoice || '-', 
+                                    batchNo: b.batchNo || '-', // <-- TAMBAHAN BARU (Nomor Batch)
+                                    expiredDate: b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-', // <-- TAMBAHAN BARU (Tgl Expired)
                                     cost: b.hargaModal || b.cost || 0,          
                                     qty: b.qtySisa || b.qty_remain || b.qty || 0,
                                     tanggalMasuk: rawDate,
-                                    tanggalDisplay: formatTanggalIndo(rawDate) // <-- KOLOM BARU UNTUK HTML
+                                    tanggalDisplay: formatTanggalIndo(rawDate) 
                                 });
                             }
                         }
@@ -5849,11 +5858,21 @@
             // 4. Urutkan berdasarkan Setelan Metode HPP Aplikasi (FIFO / LIFO)
             let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-            if (hppMethod === 'LIFO') {
-                flatBatches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
-            } else {
-                flatBatches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
-            }
+            if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            flatBatches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            flatBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            flatBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
             // 5. Suntikkan Array yang sudah diterjemahkan & diurutkan ke dalam state
             if (this.activeBatchVariant) {
@@ -6528,11 +6547,21 @@ async fetchRolesFromDatabase() {
                             
                             let sourceBatches = prodData.batches[tf.fromOutlet];
                             
-                            if (hppMethod === 'LIFO') {
-                                sourceBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                            } else {
-                                sourceBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
-                            }
+                            if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            sourceBatches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            sourceBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            sourceBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                             item.hppTransferHistory = [];
                             let qtyToMove = requiredQty;
@@ -7073,8 +7102,21 @@ async fetchRolesFromDatabase() {
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
                                     batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                                 } else {
-                                    if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                    else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                    if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -7103,8 +7145,21 @@ async fetchRolesFromDatabase() {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
                                 batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                             } else {
-                                if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
@@ -8139,13 +8194,21 @@ async fetchRolesFromDatabase() {
                                 // DETEKSI METODE HPP (Default: FIFO)
                                 let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-                                if (hppMethod === 'LIFO') {
-                                    // LIFO: Tanggal Paling Baru di atas (Dipotong duluan)
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                } else {
-                                    // FIFO, AVERAGE, STANDARD: Tanggal Paling Lama di atas (Dipotong duluan)
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
-                                }
+                                if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                 for (let i = 0; i < batches.length; i++) {
                                     if (requiredQty <= 0) break; // Jika kebutuhan qty terjual sudah terpenuhi, hentikan loop
@@ -8183,13 +8246,21 @@ async fetchRolesFromDatabase() {
                             // DETEKSI METODE HPP (Default: FIFO)
                             let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-                            if (hppMethod === 'LIFO') {
-                                // LIFO: Tanggal Paling Baru di atas (Dipotong duluan)
-                                batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                            } else {
-                                // FIFO, AVERAGE, STANDARD: Tanggal Paling Lama di atas (Dipotong duluan)
-                                batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
-                            }
+                            if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                             for (let i = 0; i < batches.length; i++) {
                                 if (requiredQty <= 0) break;
@@ -9127,8 +9198,21 @@ async fetchRolesFromDatabase() {
                                     batches.push({ batchId: 'OPN-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                                 } else {
                                     // MINUS: Potong Batch (FIFO / LIFO)
-                                    if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                    else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                    if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -9160,8 +9244,21 @@ async fetchRolesFromDatabase() {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
                                 batches.push({ batchId: 'OPN-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                             } else {
-                                if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
@@ -9232,8 +9329,21 @@ async fetchRolesFromDatabase() {
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
                                     batches.push({ batchId: 'UNVOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                                 } else {
-                                    if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                    else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                    if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -9262,8 +9372,21 @@ async fetchRolesFromDatabase() {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
                                 batches.push({ batchId: 'UNVOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                             } else {
-                                if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                else batches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
+                                if (hppMethod === 'FEFO') {
+            // FEFO: Yang mau expired duluan, dikeluarkan duluan
+            batches.sort((a, b) => {
+                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                if (!a.expiredDate) return 1;
+                if (!b.expiredDate) return -1;
+                return new Date(a.expiredDate) - new Date(b.expiredDate);
+            });
+        } else if (hppMethod === 'LIFO') {
+            // LIFO: Tanggal masuk paling baru di atas
+            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+        } else {
+            // FIFO: Tanggal masuk paling lama di atas
+            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+        }
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
