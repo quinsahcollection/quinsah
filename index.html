@@ -3642,6 +3642,7 @@
                         <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Stok Masuk (Pembelian)</h6>
                         <button type="button" class="btn-close shadow-none" @click="cancelPurchaseEdit"></button>
                     </div>
+                    
                     <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
                         <div class="row g-3 mb-3 border-bottom pb-3">
                             <div class="col-md-4">
@@ -3668,43 +3669,67 @@
                         </div>
 
                         <h6 class="fw-bold mb-2"><i class="bi bi-boxes me-1"></i>Tambahkan Item Pembelian</h6>
-                        <div class="row g-2 mb-3 align-items-end p-3 bg-light border rounded shadow-sm">
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold mb-1">Produk Induk</label>
-                                <select class="form-select form-select-sm" v-model="formPurchaseItem.productId" @change="onPurchaseProductChange">
-                                    <option value="">-- Pilih Produk --</option>
-                                    <option v-for="p in products.filter(x => x.isActive !== false)" :key="p.id" :value="p.id">
-        {{ p.name }} {{ p.sku ? `(${p.sku})` : '' }}
-    </option>
-                                </select>
+                        
+                        <div class="bg-light p-3 border rounded shadow-sm mb-3">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">Produk Induk</label>
+                                    <select class="form-select form-select-sm" v-model="formPurchaseItem.productId" @change="onPurchaseProductChange">
+                                        <option value="">-- Pilih Produk --</option>
+                                        <option v-for="p in products.filter(x => x.isActive !== false)" :key="p.id" :value="p.id">
+                                            {{ p.name }} {{ p.sku ? `(${p.sku})` : '' }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">Pilih Varian (Jika Ada)</label>
+                                    <select class="form-select form-select-sm" v-model="formPurchaseItem.variantSku" :disabled="purchaseActiveVariants.length === 0">
+                                        <option value="">-- Pilih Varian --</option>
+                                        <option v-for="v in purchaseActiveVariants" :value="v.variantSku">{{ v.name || v.attributes }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">No. Batch (Opsional)</label>
+                                    <input type="text" class="form-control form-control-sm" v-model="formPurchaseItem.batchNo" placeholder="Auto / Ketik Manual">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1 text-danger">Tgl Expired *</label>
+                                    <input type="date" class="form-control form-control-sm border-danger" v-model="formPurchaseItem.expiredDate">
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold mb-1">Pilih Varian (Jika Ada)</label>
-                                <select class="form-select form-select-sm" v-model="formPurchaseItem.variantSku" :disabled="purchaseActiveVariants.length === 0">
-                                    <option value="">-- Pilih Varian --</option>
-                                    <option v-for="v in purchaseActiveVariants" :value="v.variantSku">{{ v.name || v.attributes }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 col-6">
-                                <label class="form-label small fw-bold mb-1">Qty Masuk</label>
-                                <input type="number" class="form-control form-control-sm" v-model.number="formPurchaseItem.qty" placeholder="0" min="1">
-                            </div>
-                            <div class="col-md-2 col-6">
-                                <label class="form-label small fw-bold mb-1">Hrg Beli Satuan (Rp)</label>
-                                <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="formPurchaseItem.price" placeholder="Harga Beli">
-                            </div>
-                            <div class="col-md-1 col-12 mt-2 mt-md-0">
-                                <button class="btn btn-primary-custom btn-sm w-100 fw-bold h-100" @click="addPurchaseItem"><i class="bi bi-plus-lg"></i> Add</button>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold mb-1">Qty Masuk</label>
+                                    <input type="number" class="form-control form-control-sm" v-model.number="formPurchaseItem.qty" placeholder="0" min="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">Hrg Beli Satuan (Rp)</label>
+                                    <input type="number" class="form-control form-control-sm text-success fw-bold" v-model.number="formPurchaseItem.price" placeholder="Harga Beli">
+                                </div>
+                                <div class="col-md-7 text-end">
+                                    <button class="btn btn-primary-custom btn-sm fw-bold px-4" @click="addPurchaseItem" :disabled="!formPurchaseItem.productId || !formPurchaseItem.qty || !formPurchaseItem.price">
+                                        <i class="bi bi-plus-lg me-1"></i> Add Item
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.8rem; min-width: 500px;">
-                                <thead class="table-light"><tr><th>Nama Barang</th><th>SKU</th><th class="text-center">Qty</th><th>Hrg Beli</th><th>Subtotal</th><th class="text-center">Aksi</th></tr></thead>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.8rem; min-width: 600px;">
+                                <thead class="table-light">
+                                    <tr><th>Nama Barang & SKU</th><th>Info Batch & Expired</th><th class="text-center">Qty</th><th>Hrg Beli</th><th>Subtotal</th><th class="text-center">Aksi</th></tr>
+                                </thead>
                                 <tbody>
                                     <tr v-for="(i, idx) in formPurchase.items" :key="idx">
-                                        <td class="fw-bold">{{ i.productName }} <div class="text-muted" style="font-size:0.7rem;" v-if="i.variantName">{{ i.variantName }}</div></td>
-                                        <td class="font-monospace text-muted">{{ i.variantSku || i.sku }}</td>
+                                        <td>
+                                            <div class="fw-bold">{{ i.productName }}</div>
+                                            <div class="text-muted" style="font-size:0.7rem;" v-if="i.variantName">{{ i.variantName }}</div>
+                                            <div class="font-monospace text-muted mt-1" style="font-size:0.7rem;">SKU: {{ i.variantSku || i.sku }}</div>
+                                        </td>
+                                        <td>
+                                            <div style="font-size: 0.75rem;"><span class="badge bg-secondary">Batch: {{ i.batchNo || 'AUTO' }}</span></div>
+                                            <div class="text-danger fw-semibold mt-1" style="font-size: 0.75rem;" v-if="i.expiredDate">Exp: {{ i.expiredDate }}</div>
+                                        </td>
                                         <td class="text-center fw-bold fs-6">{{ i.qty }}</td>
                                         <td class="text-success fw-semibold">Rp {{ formatNumber(i.price) }}</td>
                                         <td class="text-primary-custom fw-bold fs-6">Rp {{ formatNumber(i.qty * i.price) }}</td>
@@ -3715,16 +3740,47 @@
                             </table>
                         </div>
                         
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                            <div class="fw-bold fs-5">TOTAL:</div>
-                            <div class="fw-bold fs-3 text-danger">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</div>
+                        <div class="row mt-3 pt-3 border-top">
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">Status Pembayaran</label>
+                                    <select class="form-select form-select-sm border-warning fw-semibold" v-model="formPurchase.paymentStatus">
+                                        <option value="LUNAS">LUNAS (Cash / Transfer)</option>
+                                        <option value="HUTANG">HUTANG / TEMPO (AP)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
+                                    <label class="form-label small fw-bold text-danger">Jatuh Tempo (Due Date) *</label>
+                                    <input type="date" class="form-control form-control-sm border-danger" v-model="formPurchase.dueDate">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="bg-light p-3 rounded border">
+                                    <div class="d-flex justify-content-between mb-2 align-items-center">
+                                        <span class="fw-bold text-muted">Grand Total PO:</span>
+                                        <span class="fw-bold fs-4 text-primary-custom">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
+                                        <span class="fw-bold text-muted small">DP / Dibayar Awal:</span>
+                                        <div class="input-group input-group-sm w-50">
+                                            <span class="input-group-text fw-bold">Rp</span>
+                                            <input type="number" class="form-control text-end fw-bold" v-model.number="formPurchase.paidAmount" placeholder="0">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-2 border-top pt-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
+                                        <span class="fw-bold text-danger">Sisa Hutang (AP):</span>
+                                        <span class="fw-bold text-danger fs-5">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0) - (formPurchase.paidAmount || 0)) }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="modal-footer bg-light border-top p-3">
+                    </div> <div class="modal-footer bg-light border-top p-3">
                         <button class="btn btn-primary-custom w-100 fw-bold py-3 fs-6 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId || !formPurchase.invoiceNo">
                             <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>PROSES & SINKRONISASI STOK MASUK
                         </button>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -4854,8 +4910,8 @@
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
                 formProductOriginalState: null,
 
-                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, isEdit: false },
-                formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '' },
+                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', isEdit: false },
+                formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '', batchNo: '', expiredDate: '' },
                 formOpname: { productId: '', variantSku: '', outletId: '', currentQty: 0, actualQty: 0, notes: '' },
                 variantDetail: { p: null, v: null, idx: -1 },
 
@@ -8290,13 +8346,19 @@ async fetchRolesFromDatabase() {
                     variantName: vName || '-',
                     qty: this.formPurchaseItem.qty || 1,
                     price: this.formPurchaseItem.price || 0,
-                    uom: p.uom || 'Pcs'
+                    uom: p.uom || 'Pcs',
+                    // TAMBAHAN: Masukkan data Batch & Expired
+                    batchNo: this.formPurchaseItem.batchNo || '',
+                    expiredDate: this.formPurchaseItem.expiredDate || ''
                 });
 
+                // Reset field agar kosong untuk input selanjutnya
                 this.formPurchaseItem.productId = '';
                 this.formPurchaseItem.variantSku = '';
                 this.formPurchaseItem.qty = '';
                 this.formPurchaseItem.price = '';
+                this.formPurchaseItem.batchNo = '';
+                this.formPurchaseItem.expiredDate = '';
             },
 
             async savePurchase() {
@@ -8535,7 +8597,7 @@ async fetchRolesFromDatabase() {
             
             cancelPurchaseEdit() {
                 this.hideModal('addPurchaseModal');
-                this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
+                this.formPurchase = { id: null, invoiceNo: (typeof this.generateInvoiceNumber === 'function' ? this.generateInvoiceNumber('PO') : ''), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', isEdit: false };
             },
 
             // ============================================
