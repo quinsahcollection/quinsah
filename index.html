@@ -4197,76 +4197,97 @@
         </div>
             
                    <div class="modal fade" id="posModifierModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content border-0 shadow">
-                    <template v-if="activeProduct">
-                        <div class="modal-header bg-light border-bottom p-3">
-                            <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
-                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <template v-if="activeProduct">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body bg-white p-3 border-top" v-if="(activeProduct.variants && activeProduct.variants.length > 0) && posModifierStep === 1">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
+                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ activeProduct.variants.length }} Opsi Tersedia</span>
                         </div>
                         
-                        <div class="modal-body bg-white text-center p-4" v-if="!hasVariants">
-                            <img :src="activeProduct.imageBase64 || 'https://via.placeholder.com/150'" width="120" height="120" class="rounded mb-3 shadow-sm object-fit-cover">
-                            
-                            <h5 class="text-muted text-decoration-line-through mb-0" v-if="getEffectiveBasePrice(activeProduct) < (activeProduct.sellPrice || activeProduct.basePrice)">Rp {{ formatNumber(activeProduct.sellPrice || activeProduct.basePrice) }}</h5>
-                            <h3 class="fw-bold text-primary-custom mb-2">Rp {{ formatNumber(getEffectiveBasePrice(activeProduct)) }}</h3>
-                            
-                            <p class="text-muted small fw-semibold mb-4">Stok Saat Ini: {{ getProductDisplayStock(activeProduct) }} {{ activeProduct.uom || 'Pcs' }} <span v-if="posActiveOutletId" class="text-primary-custom">(Outlet)</span></p>
-                            <button type="button" class="btn btn-primary-custom w-100 fw-bold py-3" @click="addToCart(null)"><i class="bi bi-cart-plus me-2 fs-5"></i> MASUKKAN KE KERANJANG</button>
-                        </div>
-
-                        <div class="modal-body bg-white p-3 border-top" v-else>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
-                                <span class="badge bg-primary bg-opacity-10 text-primary">{{ activeProduct.variants.length }} Opsi Tersedia</span>
-                            </div>
-                            
-                            <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
-                                <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
-                                    <div class="card border shadow-sm cursor-pointer hover-shadow" 
-                                         :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0}" 
-                                         @click="getVariantDisplayStock(v) > 0 ? addToCart(v) : null">
+                        <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
+                            <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
+                                <div class="card border shadow-sm cursor-pointer hover-shadow" 
+                                     :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0}" 
+                                     @click="getVariantDisplayStock(v) > 0 ? selectVariantNextStep(v) : null">
+                                    
+                                    <div class="card-body p-2 d-flex align-items-center">
+                                        <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
                                         
-                                        <div class="card-body p-2 d-flex align-items-center">
-                                            <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
-                                            
-                                            <div class="flex-grow-1 overflow-hidden">
-                                                <h6 class="mb-1 fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
-                                                    {{ v.name || v.attributes || 'Varian '+(idx+1) }}
-                                                </h6>
-                                                <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</span>
-                                                    <span class="badge fw-normal" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-danger'" style="font-size: 0.65rem;">
-                                                        Sisa: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}
-                                                    </span>
-                                                </div>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <h6 class="mb-1 fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                                {{ v.name || v.attributes || 'Varian '+(idx+1) }}
+                                            </h6>
+                                            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</span>
+                                                <span class="badge fw-normal" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-danger'" style="font-size: 0.65rem;">
+                                                    Sisa: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}
+                                                </span>
                                             </div>
-                                            
-                                            <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
-                                                <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">
-                                                    Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}
-                                                </div>
-                                                <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
-                                                    Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
-                                                </div>
-                                                <div class="mt-1" v-if="getVariantDisplayStock(v) > 0">
-                                                    <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
-                                                </div>
-                                                <div class="mt-1" v-else>
-                                                    <span class="text-danger small fw-bold">Habis</span>
-                                                </div>
+                                        </div>
+                                        
+                                        <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
+                                            <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">
+                                                Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}
                                             </div>
-                                            
+                                            <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
+                                                Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
+                                            </div>
+                                            <div class="mt-1" v-if="getVariantDisplayStock(v) > 0">
+                                                <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
+                                            </div>
+                                            <div class="mt-1" v-else>
+                                                <span class="text-danger small fw-bold">Habis</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            
                         </div>
-                    </template>
-                </div>
+                    </div>
+
+                    <div class="modal-body bg-white p-4 border-top" v-if="posModifierStep === 2">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-ui-checks-grid me-1"></i> PILIH OPSI TAMBAHAN :</p>
+                            <span class="badge bg-primary text-white px-2 py-1" v-if="posSelectedVariantForTopping">Varian: {{ posSelectedVariantForTopping.name || posSelectedVariantForTopping.attributes }}</span>
+                            <button class="btn btn-sm btn-outline-secondary py-0" v-if="activeProduct.variants && activeProduct.variants.length > 0" @click="posModifierStep = 1"><i class="bi bi-arrow-left me-1"></i>Kembali</button>
+                        </div>
+
+                        <div class="row g-2" style="max-height: 55vh; overflow-y: auto;">
+                            <div class="col-12" v-for="(mod, mIdx) in activeProduct.modifiers" :key="'mod'+mIdx">
+                                <div class="card border border-light shadow-sm p-3 mb-1 bg-light bg-opacity-50">
+                                    <label class="form-label small fw-bold mb-2" :class="mod.isRequired ? 'text-danger' : 'text-primary-custom'">
+                                        {{ getIdentifierGroupName(mod.groupId) }} {{ mod.isRequired ? '(Wajib Pilih 1) *' : '(Bebas Pilih)' }}
+                                    </label>
+                                    <div class="d-flex flex-column gap-2">
+                                        <label class="border rounded p-2 d-flex justify-content-between align-items-center cursor-pointer bg-white shadow-sm" v-for="(opt, oIdx) in mod.options" :key="'opt'+oIdx">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input v-if="mod.isRequired" class="form-check-input mt-0 cursor-pointer" type="radio" :value="opt" v-model="posSelectedModifiers[mIdx]" :name="'modRadio'+mIdx">
+                                                <input v-else class="form-check-input mt-0 cursor-pointer" type="checkbox" :value="opt" v-model="posSelectedModifiers[mIdx]">
+                                                <span class="small fw-semibold">{{ opt.name }}</span>
+                                            </div>
+                                            <span class="small fw-bold text-success" v-if="opt.price > 0">+Rp {{ formatNumber(opt.price) }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary-custom w-100 fw-bold py-3 mt-4 shadow" @click="confirmToppingAndCart">
+                            <i class="bi bi-cart-check me-2 fs-5"></i> MASUKKAN KE KERANJANG
+                        </button>
+                    </div>
+
+                </template>
             </div>
         </div>
+    </div>
  
     </div> 
     
@@ -4695,6 +4716,10 @@
                 identifierGroups: [],
                 formIdentifier: { id: null, name: '' },
                 
+                posModifierStep: 1,
+                posSelectedVariantForTopping: null,
+                posSelectedModifiers: {},
+                
                 // ==========================================
                 // STATE STOK OPNAME
                 // ==========================================
@@ -4785,6 +4810,7 @@
                     }
                     // Role Kasir (dummy) dihapus, sistem akan mengambil murni dari Firebase
                 ],
+                
                 usersList: [], // Array dikosongkan karena data riil ditarik dari Firebase
                 
                 loggedInUser: null, // Diubah menjadi null agar tidak ada akun dummy yang nyangkut
@@ -4793,6 +4819,7 @@
                 formUser: { id: null, username: '', password: '', roleId: null, namaLengkap: '' },
                 isEditingRole: false,
                 isEditingUser: false,
+                
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
@@ -7588,77 +7615,174 @@ async fetchRolesFromDatabase() {
                 return currentPrice;
             },
 
-            openPosModifier(product) {
-                this.activeProduct = product;
-                if(!this.hasVariants) {
-                    this.showModal('posModifierModal');
-                } else {
-                    this.showModal('posModifierModal');
+        // FUNGSI YANG HILANG: Untuk mengambil nama grup Topping
+                  getIdentifierGroupName(id) {
+                 if (!id) return 'Opsi Tambahan';
+                 const group = this.identifierGroups.find(g => g.id === id);
+                 return group ? group.name : 'Opsi Tambahan';
+        },
+
+           // 1. MEMBUKA MODAL (Tampilan Awal)
+        openPosModifier(product) {
+            this.activeProduct = product;
+            this.posModifierStep = 1; 
+            this.openModal('posModifierModal');
+        },
+
+        // 2. JEMBATAN PENGHUBUNG (Mencegah error pada tombol HTML Anda)
+        addToCart(variant = null) {
+            this.selectVariantNextStep(variant);
+        },
+
+        // 3. FUNGSI PERGESERAN LAYAR (Cek Topping)
+        selectVariantNextStep(variant = null) {
+            try {
+                this.posSelectedVariantForTopping = variant;
+                
+                // Jika punya topping, siapkan data dan geser ke Step 2
+                if (this.activeProduct.modifiers && this.activeProduct.modifiers.length > 0) {
+                    let tempModifiers = {};
+                    this.activeProduct.modifiers.forEach((mod, idx) => {
+                        tempModifiers[idx] = mod.isRequired ? null : [];
+                    });
+                    this.posSelectedModifiers = tempModifiers;
+                    
+                    // PERINTAH GESER LAYAR
+                    this.posModifierStep = 2; 
+                } 
+                // Jika tidak ada topping, langsung masuk keranjang
+                else {
+                    this.executeAddToCart(variant, 0, [], []);
                 }
-            },
-
-                        addToCart(variant = null) {
-            // PROTEKSI 1: Pastikan kasir sudah memilih cabang (Outlet)
-            if (!this.posActiveOutletId) {
-                Swal.fire('Pilih Cabang', 'Tentukan lokasi outlet kasir terlebih dahulu.', 'warning');
-                return;
-            }
-
-            let prod = this.activeProduct;
-
-            // PROTEKSI 2: Cek Sisa Stok Tersedia (Apakah masih ada sisa setelah ditahan kasir lain/antrian?)
-            let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
-            if (available < 1) {
-                Swal.fire({
-                    icon: 'error', 
-                    title: 'Stok Habis / Ditahan', 
-                    text: 'Stok tersedia tidak mencukupi (Mungkin sedang di-hold di antrian).'
-                });
-                return;
-            }
-
-            // LOGIKA BAWAAN ANDA (Ditambah basePrice & sellPrice untuk keamanan data riwayat)
-            let item = {
-                cartId: Date.now() + Math.random().toString(36).substring(7),
-                productId: prod.id,
-                name: prod.name,
-                sku: prod.sku,
-                uom: prod.uom,
-                qty: 1,
-                basePrice: prod.basePrice || prod.hppPrice, // Opsional: Bermanfaat untuk hitung laba di laporan
-                sellPrice: variant ? variant.sellPrice : prod.sellPrice,
-                promoPrice: variant ? this.getEffectiveVariantPrice(prod, variant) : this.getEffectiveBasePrice(prod),
-                posDiscountType: 'none', posDiscountValue: 0,
-                note: '',
-                tiers: JSON.parse(JSON.stringify(prod.tiers || []))
-            };
-            
-            if (variant) {
-                item.variantName = variant.name || variant.attributes;
-                item.variantSku = variant.variantSku;
-            }
-            
-            // LOGIKA AMAN: Cari barang yang sama, TAPI abaikan barang yang sudah ditandai "isSeparated" (Barang Bonus)
-            let existing = this.cart.find(c => 
-                c.productId === item.productId && 
-                c.variantSku === item.variantSku && 
-                !c.isSeparated
-            );
-            
-            if (existing) {
-                existing.qty += 1;
-            } else {
-                this.cart.push(item);
-            }
-            
-            this.hideModal('posModifierModal');
-
-            // Opsional: Bunyikan suara scan jika fungsi beep tersedia
-            if (typeof this.playBeepSound === 'function') {
-                this.playBeepSound();
+            } catch (error) {
+                // JIKA ADA ERROR, AKAN MUNCUL POP-UP PERINGATAN!
+                alert("ADA ERROR JAVASCRIPT: " + error.message);
+                console.error(error);
             }
         },
 
+        // 4. KONFIRMASI TOPPING (Dengan Pelacak Error)
+        confirmToppingAndCart() {
+            try {
+                // Validasi Opsi Wajib
+                if (this.activeProduct && this.activeProduct.modifiers) {
+                    for (let i = 0; i < this.activeProduct.modifiers.length; i++) {
+                        let mod = this.activeProduct.modifiers[i];
+                        let selected = this.posSelectedModifiers[i];
+                        
+                        if (mod.isRequired && (!selected || (Array.isArray(selected) && selected.length === 0))) {
+                            let groupName = this.getIdentifierGroupName(mod.groupId);
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Opsi Wajib!',
+                                text: `Silakan pilih setidaknya 1 opsi untuk: ${groupName}`
+                            });
+                            return; 
+                        }
+                    }
+                }
+
+                // Kalkulasi Harga
+                let modifierTotal = 0;
+                let modifierNotes = [];
+                let linkedProductIds = [];
+
+                if (this.posSelectedModifiers) {
+                    for (let key in this.posSelectedModifiers) {
+                        let selected = this.posSelectedModifiers[key];
+                        if (!selected) continue;
+                        
+                        let opts = Array.isArray(selected) ? selected : [selected];
+                        opts.forEach(opt => {
+                            if (opt) { // Pastikan opt tidak kosong
+                                modifierTotal += (opt.price || 0);
+                                let priceText = opt.price > 0 ? ` (+Rp ${this.formatNumber(opt.price)})` : '';
+                                modifierNotes.push(`${opt.name}${priceText}`);
+                                
+                                if (opt.linkedProductId) {
+                                    linkedProductIds.push({ id: opt.linkedProductId, qty: 1 });
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Lempar ke eksekutor
+                this.executeAddToCart(this.posSelectedVariantForTopping, modifierTotal, modifierNotes, linkedProductIds);
+
+            } catch (error) {
+                // JIKA ADA ERROR DI FUNGSI INI, POP-UP AKAN MUNCUL!
+                alert("ERROR DI TAHAP 1 (KONFIRMASI): " + error.message);
+                console.error(error);
+            }
+        },
+
+        // 5. EKSEKUSI KERANJANG (Dengan Pelacak Error)
+        executeAddToCart(variant, modifierTotal, modifierNotes, linkedProductIds) {
+            try {
+                if (!this.posActiveOutletId) {
+                    Swal.fire('Pilih Cabang', 'Tentukan lokasi outlet kasir terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                let prod = this.activeProduct;
+                let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
+                
+                if (available < 1) {
+                    Swal.fire({ icon: 'error', title: 'Stok Habis / Ditahan', text: 'Stok tersedia tidak mencukupi.' });
+                    return;
+                }
+
+                let basePromo = variant ? this.getEffectiveVariantPrice(prod, variant) : this.getEffectiveBasePrice(prod);
+                let baseSell = variant ? variant.sellPrice : prod.sellPrice;
+
+                let item = {
+                    cartId: Date.now() + Math.random().toString(36).substring(7),
+                    productId: prod.id,
+                    name: prod.name,
+                    sku: prod.sku,
+                    uom: prod.uom,
+                    qty: 1,
+                    basePrice: prod.basePrice || prod.hppPrice, 
+                    sellPrice: (baseSell || 0) + modifierTotal, 
+                    promoPrice: (basePromo || 0) + modifierTotal, 
+                    posDiscountType: 'none', posDiscountValue: 0,
+                    note: modifierNotes.join(', '), 
+                    linkedModifiers: linkedProductIds,
+                    tiers: JSON.parse(JSON.stringify(prod.tiers || []))
+                };
+                
+                if (variant) {
+                    item.variantName = variant.name || variant.attributes;
+                    item.variantSku = variant.variantSku;
+                }
+                
+                let existing = this.cart.find(c => 
+                    c.productId === item.productId && 
+                    c.variantSku === item.variantSku && 
+                    !c.isSeparated &&
+                    c.note === item.note // Memisahkan baris jika catatan toppingnya beda
+                );
+                
+                if (existing) {
+                    existing.qty += 1;
+                } else {
+                    this.cart.push(item);
+                }
+
+                if (typeof this.playBeepSound === 'function') {
+                    this.playBeepSound();
+                }
+                
+                // Tutup modal secara otomatis
+                this.hideModal('posModifierModal');
+
+            } catch (error) {
+                // JIKA ADA ERROR SAAT MASUK KERANJANG, POP-UP INI AKAN MUNCUL!
+                alert("ERROR DI TAHAP 2 (MASUK KERANJANG): " + error.message);
+                console.error(error);
+            }
+        },
 
             updateQty(cartId, delta) {
             let item = this.cart.find(c => c.cartId === cartId);
