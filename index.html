@@ -8424,11 +8424,13 @@ async fetchRolesFromDatabase() {
 
                                     // 5. Update BATCH (Untuk FIFO & LIFO)
                                     prodCopy.variants[vIdx].batches[dataToSave.outletId].push({
-                                        batchId: dataToSave.id,
-                                        tanggalMasuk: new Date().toISOString(),
-                                        qtySisa: item.qty, // Angka ini nanti yang akan dikurangi saat Kasir Jualan
-                                        hargaModal: item.price
-                                    });
+                                    batchId: dataToSave.id,
+                                    batchNo: item.batchNo || 'AUTO',           // <--- TAMBAHAN BARU
+                                    expiredDate: item.expiredDate || null,     // <--- TAMBAHAN BARU
+                                    tanggalMasuk: new Date().toISOString(),
+                                    qtySisa: item.qty, 
+                                    hargaModal: item.price
+                            });
                                 }
                                 updatePayload.variants = prodCopy.variants;
 
@@ -8455,11 +8457,13 @@ async fetchRolesFromDatabase() {
 
                                 // 5. Update BATCH (Untuk FIFO & LIFO)
                                 prodCopy.batches[dataToSave.outletId].push({
-                                    batchId: dataToSave.id,
-                                    tanggalMasuk: new Date().toISOString(),
-                                    qtySisa: item.qty, // Angka ini nanti yang akan dikurangi saat Kasir Jualan
-                                    hargaModal: item.price
-                                });
+                                batchId: dataToSave.id,
+                                batchNo: item.batchNo || 'AUTO',           // <--- TAMBAHAN BARU
+                                expiredDate: item.expiredDate || null,     // <--- TAMBAHAN BARU
+                                tanggalMasuk: new Date().toISOString(),
+                                qtySisa: item.qty, 
+                                hargaModal: item.price
+                            });
 
                                 // Siapkan payload untuk Firebase
                                 updatePayload.baseOutletStocks = prodCopy.baseOutletStocks;
