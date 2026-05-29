@@ -7700,21 +7700,28 @@ async fetchRolesFromDatabase() {
                 }
 
                 // Kalkulasi Harga
+                // Kalkulasi Harga & Format Catatan Baru (KODE BARU)
                 let modifierTotal = 0;
                 let modifierNotes = [];
                 let linkedProductIds = [];
 
-                if (this.posSelectedModifiers) {
+                if (this.posSelectedModifiers && this.activeProduct.modifiers) {
                     for (let key in this.posSelectedModifiers) {
                         let selected = this.posSelectedModifiers[key];
                         if (!selected) continue;
                         
+                        // Kunci Perbaikan: Ambil Nama Grup (Misal: "Topping" atau "Pedas")
+                        let mod = this.activeProduct.modifiers[key];
+                        let groupName = mod ? this.getIdentifierGroupName(mod.groupId) : 'Opsi';
+                        
                         let opts = Array.isArray(selected) ? selected : [selected];
                         opts.forEach(opt => {
-                            if (opt) { // Pastikan opt tidak kosong
+                            if (opt) { 
                                 modifierTotal += (opt.price || 0);
                                 let priceText = opt.price > 0 ? ` (+Rp ${this.formatNumber(opt.price)})` : '';
-                                modifierNotes.push(`${opt.name}${priceText}`);
+                                
+                                // FORMAT BARU: "Nama Grup : Nama Opsi (+Harga)"
+                                modifierNotes.push(`${groupName} : ${opt.name}${priceText}`);
                                 
                                 if (opt.linkedProductId) {
                                     linkedProductIds.push({ id: opt.linkedProductId, qty: 1 });
