@@ -673,9 +673,9 @@
         </div>
         
         <div class="list-group mb-4">
-            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'STANDARD'}">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': tempHppMethod === 'STANDARD'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
-                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="STANDARD" v-model="appSettings.hppMethod">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="STANDARD" v-model="tempHppMethod">
                     <span>
                         <span class="d-block fw-bold text-dark">Standard 
                             <span v-if="appSettings.hppMethod === 'STANDARD'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
@@ -690,9 +690,9 @@
                 </button>
             </div>
 
-            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'FIFO'}">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': tempHppMethod === 'FIFO'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
-                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FIFO" v-model="appSettings.hppMethod">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FIFO" v-model="tempHppMethod">
                     <span>
                         <span class="d-block fw-bold text-dark">FIFO <span class="text-muted fw-normal">(First-In, First-Out)</span>
                             <span v-if="appSettings.hppMethod === 'FIFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
@@ -707,9 +707,9 @@
                 </button>
             </div>
 
-            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'FEFO'}">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': tempHppMethod === 'FEFO'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
-                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FEFO" v-model="appSettings.hppMethod">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FEFO" v-model="tempHppMethod">
                     <span>
                         <span class="d-block fw-bold text-dark">FEFO <span class="text-muted fw-normal">(First-Expired, First-Out)</span> 
                             <span v-if="appSettings.hppMethod === 'FEFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
@@ -725,9 +725,9 @@
                 </button>
             </div>
             
-            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'LIFO'}">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': tempHppMethod === 'LIFO'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
-                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="LIFO" v-model="appSettings.hppMethod">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="LIFO" v-model="tempHppMethod">
                     <span>
                         <span class="d-block fw-bold text-dark">LIFO <span class="text-muted fw-normal">(Last-In, First-Out)</span>
                             <span v-if="appSettings.hppMethod === 'LIFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
@@ -742,9 +742,9 @@
                 </button>
             </div>
 
-            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'AVERAGE'}">
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': tempHppMethod === 'AVERAGE'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
-                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="AVERAGE" v-model="appSettings.hppMethod">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="AVERAGE" v-model="tempHppMethod">
                     <span>
                         <span class="d-block fw-bold text-dark">Average <span class="text-muted fw-normal">(Rata-rata Bergerak)</span>
                             <span v-if="appSettings.hppMethod === 'AVERAGE'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
@@ -4826,6 +4826,7 @@
                 appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'STANDARD' },
                 activeHppExample: 'FIFO',
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
+                tempHppMethod: 'FIFO',
                 
                 isEditingInvoice: false,  // Status penanda apakah sedang mengedit invoice
                 originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
@@ -6873,10 +6874,19 @@ async fetchRolesFromDatabase() {
             async saveSettings() {
                 this.isSaving = true;
                 try {
+                    // SUNTIKKAN DATA SEMENTARA KE VARIABEL UTAMA SEBELUM DISIMPAN
+                    this.appSettings.hppMethod = this.tempHppMethod;
+
                     await setDoc(doc(db, "settings", "app_settings"), this.appSettings);
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
-                    alert("Format Invoice berhasil disimpan!");
-                } catch(e) { console.error("Gagal simpan setting", e); }
+                    
+                    // (Opsional) Jika Anda menggunakan Swal untuk notifikasi yang lebih cantik:
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
+                    // Atau pakai alert bawaan: alert("Pengaturan Sistem berhasil disimpan!");
+                } catch(e) { 
+                    console.error("Gagal simpan setting", e); 
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
+                }
                 this.isSaving = false;
             },
 
