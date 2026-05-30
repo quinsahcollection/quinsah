@@ -7065,6 +7065,9 @@ async fetchRolesFromDatabase() {
         },
         
         // 1. FUNGSI LIHAT DETAIL OPNAME (Menggunakan Popup SweetAlert agar rapi)
+        // ==========================================
+        // 5. FUNGSI VIEW DETAIL OPNAME (Menampilkan Detail Inputan Batch & Expired)
+        // ==========================================
         viewOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname) return;
@@ -7086,7 +7089,11 @@ async fetchRolesFromDatabase() {
                     if (item.diff < 0 && item.cutBatches && item.cutBatches.length > 0) {
                         batchInfo = item.cutBatches.map(b => `<div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
                     } else if (item.diff > 0) {
-                        batchInfo = `<span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size:0.7rem;"><i class="bi bi-plus-circle me-1"></i>Batch Baru Dibuat</span>`;
+                        // LOGIKA BARU: Tampilkan Nomor Batch dan Expired Date dari Inputan Admin
+                        let bNo = item.batchNo ? item.batchNo : ('OPN-' + opname.id);
+                        let bExp = item.expiredDate ? new Date(item.expiredDate).toLocaleDateString('id-ID') : '-';
+                        
+                        batchInfo = `<div class="badge bg-success bg-opacity-10 text-success border border-success mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-plus-circle me-1"></i>Batch: ${bNo} | Exp: ${bExp}</div>`;
                     } else {
                         batchInfo = '<span class="text-muted small">Tidak Ada Mutasi</span>';
                     }
