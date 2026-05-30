@@ -677,7 +677,9 @@
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="STANDARD" v-model="appSettings.hppMethod">
                     <span>
-                        <span class="d-block fw-bold text-dark">Standard <span class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span></span>
+                        <span class="d-block fw-bold text-dark">Standard 
+                            <span v-if="appSettings.hppMethod === 'STANDARD'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
+                        </span>
                         <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
                             Sistem tidak membedakan stok lama atau baru. HPP dihitung murni berdasarkan 1 harga modal yang tertera di Master Produk.
                         </span>
@@ -692,7 +694,9 @@
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FIFO" v-model="appSettings.hppMethod">
                     <span>
-                        <span class="d-block fw-bold text-dark">FIFO <span class="text-muted fw-normal">(First-In, First-Out)</span></span>
+                        <span class="d-block fw-bold text-dark">FIFO <span class="text-muted fw-normal">(First-In, First-Out)</span>
+                            <span v-if="appSettings.hppMethod === 'FIFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
+                        </span>
                         <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
                             Barang yang dibeli lebih dulu (stok lama) akan dijual lebih dulu. HPP dihitung dari harga modal paling awal.
                         </span>
@@ -702,12 +706,32 @@
                     <i class="bi bi-info-circle fs-5"></i>
                 </button>
             </div>
+
+            <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'FEFO'}">
+                <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="FEFO" v-model="appSettings.hppMethod">
+                    <span>
+                        <span class="d-block fw-bold text-dark">FEFO <span class="text-muted fw-normal">(First-Expired, First-Out)</span> 
+                            <span v-if="appSettings.hppMethod === 'FEFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
+                            <span v-else class="badge bg-danger ms-1" style="font-size: 0.65em;">Rekomendasi F&B</span>
+                        </span>
+                        <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
+                            Barang dengan masa kedaluwarsa (Expired Date) paling dekat akan dijual/dipotong lebih dulu. Sangat cocok untuk produk makanan dan minuman.
+                        </span>
+                    </span>
+                </label>
+                <button class="btn btn-link text-info p-1 ms-3" @click.stop="showHppExample('FEFO')" title="Lihat Contoh Perhitungan">
+                    <i class="bi bi-info-circle fs-5"></i>
+                </button>
+            </div>
             
             <div class="list-group-item d-flex justify-content-between align-items-center p-3" :class="{'bg-light border-primary': appSettings.hppMethod === 'LIFO'}">
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="LIFO" v-model="appSettings.hppMethod">
                     <span>
-                        <span class="d-block fw-bold text-dark">LIFO <span class="text-muted fw-normal">(Last-In, First-Out)</span></span>
+                        <span class="d-block fw-bold text-dark">LIFO <span class="text-muted fw-normal">(Last-In, First-Out)</span>
+                            <span v-if="appSettings.hppMethod === 'LIFO'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
+                        </span>
                         <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
                             Barang yang terakhir dibeli (stok baru) akan dijual lebih dulu. HPP dihitung dari harga modal stok paling baru.
                         </span>
@@ -722,7 +746,9 @@
                 <label class="d-flex gap-3 flex-grow-1 mb-0" style="cursor: pointer;">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio" name="hppMethod" value="AVERAGE" v-model="appSettings.hppMethod">
                     <span>
-                        <span class="d-block fw-bold text-dark">Average <span class="text-muted fw-normal">(Rata-rata Bergerak)</span></span>
+                        <span class="d-block fw-bold text-dark">Average <span class="text-muted fw-normal">(Rata-rata Bergerak)</span>
+                            <span v-if="appSettings.hppMethod === 'AVERAGE'" class="badge bg-primary ms-1" style="font-size: 0.65em;">Sistem Saat Ini</span>
+                        </span>
                         <span class="d-block small text-muted mt-1" style="line-height: 1.4;">
                             Sistem akan menghitung ulang rata-rata harga modal otomatis setiap kali ada pembelian ke supplier.
                         </span>
