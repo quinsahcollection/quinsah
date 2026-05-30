@@ -6508,11 +6508,21 @@ async fetchRolesFromDatabase() {
                                 
                                 let sourceBatches = prodData.variants[vIdx].batches[tf.fromOutlet];
                                 
-                                if (hppMethod === 'LIFO') {
-                                    sourceBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk) - new Date(a.date || a.tanggalMasuk));
-                                } else {
-                                    sourceBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk) - new Date(b.date || b.tanggalMasuk));
-                                }
+                                if (hppMethod === 'FEFO') {
+                                // FEFO: Yang mau expired duluan, dikeluarkan duluan
+                                batches.sort((a, b) => {
+                                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                if (!a.expiredDate) return 1;
+                                if (!b.expiredDate) return -1;
+                                return new Date(a.expiredDate) - new Date(b.expiredDate);
+                            });
+                              } else if (hppMethod === 'LIFO') {
+                              // LIFO: Tanggal masuk paling baru di atas
+                              batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                              } else {
+                              // FIFO: Tanggal masuk paling lama di atas
+                              batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                              }
 
                                 // CATATAN: Kita simpan data HPP yang berhasil dipotong ke dalam item transfer, 
                                 // agar nanti cabang penerima tau harga modal aslinya berapa.
