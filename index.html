@@ -6395,9 +6395,11 @@ async fetchRolesFromDatabase() {
         viewTransfer(id) {
             let tf = this.transferHistory.find(t => t.id === id);
             if (!tf) return;
+            
+            // Tarik metode HPP yang sedang aktif
+            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
             let tableRows = tf.items.map(item => {
-                // RAKIT TAMPILAN BATCH FEFO
                 let batchInfo = '-';
                 if (item.hppTransferHistory && item.hppTransferHistory.length > 0) {
                     batchInfo = item.hppTransferHistory.map(b => `<div class="badge bg-info bg-opacity-10 text-dark border border-info mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
@@ -6409,7 +6411,8 @@ async fetchRolesFromDatabase() {
                 <tr>
                     <td class="text-start">${item.name} <br><small class="text-muted">${item.variantName !== '-' ? item.variantName : ''}</small></td>
                     <td class="text-center"><span class="badge bg-light text-dark border">${item.sku}</span></td>
-                    <td class="text-start">${batchInfo}</td> <td class="text-center fw-bold text-primary">${item.qty}</td>
+                    <td class="text-start">${batchInfo}</td> 
+                    <td class="text-center fw-bold text-primary">${item.qty}</td>
                 </tr>
             `}).join('');
 
@@ -6423,7 +6426,7 @@ async fetchRolesFromDatabase() {
                 </div>
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm align-middle" style="font-size: 0.8rem;">
-                        <thead class="table-secondary"><tr><th>Produk / Varian</th><th>SKU</th><th>Detail Batch Terkirim</th><th>Qty</th></tr></thead>
+                        <thead class="table-secondary text-center"><tr><th>Produk / Varian</th><th>SKU</th><th>Detail Batch (${hppMethod})</th><th>Qty</th></tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>`;
@@ -7043,14 +7046,16 @@ async fetchRolesFromDatabase() {
         viewOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname) return;
+            
+            // Tarik metode HPP yang sedang aktif
+            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
             let tableRows = opname.items.map(item => {
                 let diffText = item.diff > 0 ? `<span class="text-success">+${item.diff}</span>` : `<span class="text-danger">${item.diff}</span>`;
                 
-                // RAKIT TAMPILAN BATCH FEFO
                 let batchInfo = '-';
                 if (item.diff < 0 && item.cutBatches && item.cutBatches.length > 0) {
-                    batchInfo = item.cutBatches.map(b => `<div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
+                    batchInfo = item.cutBatches.map(b => `<div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
                 } else if (item.diff > 0) {
                     batchInfo = `<span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size:0.7rem;">Batch Baru Masuk</span>`;
                 }
@@ -7061,7 +7066,8 @@ async fetchRolesFromDatabase() {
                             <td class="text-center">${item.stokSistem}</td>
                             <td class="text-center fw-bold bg-warning bg-opacity-10">${item.stokFisik}</td>
                             <td class="text-center fw-bold">${diffText}</td>
-                            <td class="text-start">${batchInfo}</td> <td class="text-start small text-muted" style="white-space: normal; min-width: 150px;">${item.note || '-'}</td>
+                            <td class="text-start">${batchInfo}</td> 
+                            <td class="text-start small text-muted" style="white-space: normal; min-width: 150px;">${item.note || '-'}</td>
                         </tr>`;
             }).join('');
 
@@ -7087,7 +7093,7 @@ async fetchRolesFromDatabase() {
                                 <th>Sistem</th>
                                 <th>Fisik</th>
                                 <th>Selisih</th>
-                                <th>Detail Batch (FEFO)</th>
+                                <th>Detail Batch (${hppMethod})</th>
                                 <th>Catatan Item</th>
                             </tr>
                         </thead>
@@ -7099,7 +7105,7 @@ async fetchRolesFromDatabase() {
             Swal.fire({
                 title: 'Detail Stok Opname',
                 html: htmlContent,
-                width: '1000px', // Diperlebar agar info batch terlihat jelas
+                width: '1000px', 
                 confirmButtonText: 'Tutup',
                 confirmButtonColor: '#6c757d'
             });
