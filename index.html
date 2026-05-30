@@ -8102,7 +8102,7 @@ async fetchRolesFromDatabase() {
 
                 try {
                     // =================================================================
-                    // 0. VALIDASI NOMOR INVOICE LOKAL (KODE ANDA YANG SUDAH ADA)
+                    // 0. VALIDASI NOMOR INVOICE LOKAL
                     // =================================================================
                     let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
                     
@@ -8130,58 +8130,44 @@ async fetchRolesFromDatabase() {
                     }
 
                     // =================================================================
-                    // TAMBAHKAN KODE BARU INI (PENGAMAN KE FIREBASE / SERVER-SIDE)
+                    // PENGAMAN KE FIREBASE / SERVER-SIDE
                     // =================================================================
-                    // Kita cek langsung ke database Firebase (Bukan cuma ngecek memori lokal)
                     const trxRef = doc(db, "transactions", currentInvoiceId);
                     const trxSnap = await getDoc(trxRef);
 
-                    // Jika di database aslinya sudah ada (biasanya dipakai kasir lain beberapa detik lalu)
                     if (trxSnap.exists()) {
-                        // Namun, kecualikan jika ini adalah MODE EDIT (artinya memang numpang nimpa data sendiri)
                         const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
-                        
                         if (!isNumpangEdit) {
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Bentrok Nomor Invoice',
-                                html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain beberapa detik lalu.<br>Silakan ganti nomor invoice atau klik bayar ulang untuk mendapat nomor urut baru.`,
+                                html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
                                 confirmButtonColor: '#dc2626'
                             });
-                            
-                            // (Opsional) Langsung buatkan nomor baru otomatis
                             if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
                                 await this.generateInvoiceNumber(); 
                             }
-                            
                             this.isProcessing = false;
-                            return; // Stop. Jangan lanjutkan simpan data
+                            return; 
                         }
                     }
-                    // =================================================================
-
 
                     // =================================================================
-                    // 1. TAMBAHKAN LOGIKA EDIT DI SINI (Paling atas sebelum proses baru)
+                    // 1. LOGIKA EDIT
                     // =================================================================
                     if (this.isEditingInvoice && this.originalEditTrx) {
-                        // Kembalikan stok transaksi lama ke gudang terlebih dahulu
                         await this.revertPosStock(this.originalEditTrx);
-                        // Hapus dokumen transaksi lama
                         await deleteDoc(doc(db, "transactions", this.originalEditTrx.id));
                     }
-                    // =================================================================
 
                     // =================================================================
-                    // 2. KUNCI SEMUA VARIABEL TOTALAN SEBELUM TER-RESET
+                    // 2. KUNCI SEMUA VARIABEL TOTALAN
                     // =================================================================
                     let currentSubtotalBase = this.subtotalBase || 0;
                     let currentGlobalDiscountType = this.globalDiscountType || 'none';
                     let currentGlobalDiscountValue = this.globalDiscountValue || 0;
                     let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
                     let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
-                    
-                    // KUNCI PPN DAN SERVICE (Ini yang membuat Struk Anda bisa memunculkannya)
                     let currentTaxAmt = this.taxAmount || 0;
                     let currentServiceAmt = this.serviceAmount || 0;
                     let currentTotal = this.total || 0;
@@ -8192,20 +8178,17 @@ async fetchRolesFromDatabase() {
                         variantSku: c.variantSku || null,
                         variantName: c.variantName || null,
                         note: c.note || '',
-                        finalPrice: this.getFinalItemPrice(c)
+                        finalPrice: this.getFinalItemPrice(c),
+                        cutBatches: [], // WADAH BARU UNTUK MENCATAT BATCH YANG TERJUAL
+                        totalCogs: 0    // WADAH BARU UNTUK MENCATAT TOTAL HPP ITEM INI
                     })));
 
-                    // =========================================================
-                    // TAMBAHAN LOGIKA UNTUK FITUR AR (HUTANG / BAYAR SEBAGIAN)
-                    // =========================================================
-                    // Bantuan logika: Jika kasir mengetik 0, hargai sebagai 0.
-                    // Jika benar-benar kosong, baru anggap bayar full (currentTotal).
                     let uangDiterima = (this.paymentData.amountReceived !== undefined && this.paymentData.amountReceived !== null && this.paymentData.amountReceived !== '') 
                                         ? Number(this.paymentData.amountReceived) 
                                         : currentTotal;
 
                     let trxRaw = {
-                        id: currentInvoiceId, // Gunakan ID yang sudah divalidasi di atas
+                        id: currentInvoiceId,
                         dateStr: new Date().toLocaleString('id-ID'),
                         customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
                         customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
@@ -8214,192 +8197,177 @@ async fetchRolesFromDatabase() {
                         outletId: this.posActiveOutletId || '',
                         cashierName: this.userProfile.name || 'Admin',
                         paymentMethod: this.paymentData.method || 'CASH',
-                        
-                        // --- Variabel Baru Pembayaran & Status ---
                         amountReceived: uangDiterima,
                         sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
                         paymentStatus: (uangDiterima >= currentTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
-                        firstPayment: uangDiterima, // Merekam riwayat pembayaran pertama kali
+                        firstPayment: uangDiterima,
                         paymentHistory: [],
-                        // ------------------------------------------
-                        
                         subtotal: currentSubtotalBase,
                         discountAmt: currentDiscountAmt,
                         globalDiscountAmt: currentGlobalDiscountAmt,
                         globalDiscountType: currentGlobalDiscountType,
                         globalDiscountValue: currentGlobalDiscountValue,
-                        
-                        // GUNAKAN VARIABEL YANG SUDAH DIKUNCI DI ATAS
                         taxAmt: currentTaxAmt,
                         serviceAmt: currentServiceAmt,
                         total: currentTotal,
                         items: cleanItems
                     };
 
-
                     let trxData = JSON.parse(JSON.stringify(trxRaw));
                     trxData.createdAt = serverTimestamp();
-                    
                     this.posCustomInvoice = trxData.id;
 
+                    // SIMPAN DRAFT TRANSAKSI AWAL KE FIREBASE
                     await setDoc(doc(db, "transactions", trxData.id), trxData);
 
-                    for (let item of trxData.items) {
+                    let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+
+                    // ==========================================
+                    // ENGINE POTONG STOK & BATCH (SUDAH DIPERBAIKI)
+                    // ==========================================
+                    for (let i = 0; i < trxData.items.length; i++) {
+                        let item = trxData.items[i];
                         let prod = this.products.find(p => p.id === item.productId);
                         if (!prod) continue;
 
                         let prodCopy = JSON.parse(JSON.stringify(prod));
                         let requiredQty = item.qty;
+                        let outletId = trxData.outletId;
+                        let totalItemCogs = 0; // Kalkulator Harga Modal
 
-                        for (let item of trxData.items) {
-                        let prod = this.products.find(p => p.id === item.productId);
-                        if (!prod) continue;
-
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-                        let requiredQty = item.qty;
-                        let outletId = trxData.outletId; // Ambil ID cabang transaksi
-
-                        // ==========================================
-                        // ENGINE POTONG STOK & BATCH FIFO / LIFO
-                        // ==========================================
                         if (item.variantSku) {
                             let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
                             if (vIdx !== -1) {
-                                // 1. Kurangi stok utama di outlet
+                                // Kurangi stok utama
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[outletId] = (prodCopy.variants[vIdx].outletStocks[outletId] || 0) - requiredQty;
 
-                                // 2. Siapkan & Potong antrian Batch berdasarkan Outlet
+                                // Siapkan antrian Batch
                                 if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
                                 if (!prodCopy.variants[vIdx].batches[outletId]) prodCopy.variants[vIdx].batches[outletId] = [];
-                                
                                 let batches = prodCopy.variants[vIdx].batches[outletId]; 
-                                
-                                // DETEKSI METODE HPP (Default: FIFO)
-                                let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
+                                // SORTING FEFO/FIFO/LIFO
                                 if (hppMethod === 'FEFO') {
-            // FEFO: Yang mau expired duluan, dikeluarkan duluan
-            batches.sort((a, b) => {
-                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                if (!a.expiredDate) return 1;
-                if (!b.expiredDate) return -1;
-                return new Date(a.expiredDate) - new Date(b.expiredDate);
-            });
-        } else if (hppMethod === 'LIFO') {
-            // LIFO: Tanggal masuk paling baru di atas
-            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-        } else {
-            // FIFO: Tanggal masuk paling lama di atas
-            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-        }
+                                    batches.sort((a, b) => {
+                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                        if (!a.expiredDate) return 1;
+                                        if (!b.expiredDate) return -1;
+                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                    });
+                                } else if (hppMethod === 'LIFO') {
+                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                                } else {
+                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                                }
 
-                                for (let i = 0; i < batches.length; i++) {
-                                    if (requiredQty <= 0) break; // Jika kebutuhan qty terjual sudah terpenuhi, hentikan loop
-                                    let currentBatch = batches[i];
-                                    let availableInBatch = currentBatch.qty_remain !== undefined ? currentBatch.qty_remain : (currentBatch.qtySisa !== undefined ? currentBatch.qtySisa : (currentBatch.qty || 0));
+                                let reqQty = requiredQty;
+                                for (let j = 0; j < batches.length; j++) {
+                                    if (reqQty <= 0) break;
+                                    let b = batches[j];
+                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
 
-                                    if (availableInBatch > 0) {
-                                        if (availableInBatch >= requiredQty) {
-                                            // Batch ini cukup
-                                            if (currentBatch.qty_remain !== undefined) currentBatch.qty_remain -= requiredQty;
-                                            if (currentBatch.qtySisa !== undefined) currentBatch.qtySisa -= requiredQty;
-                                            requiredQty = 0;
-                                        } else {
-                                            // Batch ini tidak cukup, habiskan dan lanjut ke antrian berikutnya
-                                            requiredQty -= availableInBatch;
-                                            if (currentBatch.qty_remain !== undefined) currentBatch.qty_remain = 0;
-                                            if (currentBatch.qtySisa !== undefined) currentBatch.qtySisa = 0;
-                                        }
+                                    if (available > 0) {
+                                        let taken = Math.min(available, reqQty);
+                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                        reqQty -= taken;
+                                        
+                                        // Catat Modal (HPP) & Histori Potong Batch
+                                        let modalBatch = b.hargaModal || b.cost || prodCopy.variants[vIdx].hppPrice || 0;
+                                        totalItemCogs += (taken * modalBatch);
+                                        
+                                        item.cutBatches.push({ 
+                                            batchNo: b.batchNo || '-', 
+                                            expiredDate: b.expiredDate || '', 
+                                            qty: taken, 
+                                            cost: modalBatch 
+                                        });
                                     }
                                 }
-                                prodCopy.variants[vIdx].batches[outletId] = batches; // Kembalikan ke bungkusannya
+                                prodCopy.variants[vIdx].batches[outletId] = batches;
                             }
                         } else {
-                            // JIKA PRODUK INDUK NON-VARIAN
-                            // 1. Kurangi stok utama di outlet
+                            // JIKA PRODUK NON-VARIAN
                             if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
                             prodCopy.baseOutletStocks[outletId] = (prodCopy.baseOutletStocks[outletId] || 0) - requiredQty;
 
-                            // 2. Siapkan & Potong antrian Batch berdasarkan Outlet
                             if (!prodCopy.batches) prodCopy.batches = {};
                             if (!prodCopy.batches[outletId]) prodCopy.batches[outletId] = [];
-                            
                             let batches = prodCopy.batches[outletId];
 
-                            // DETEKSI METODE HPP (Default: FIFO)
-                            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
-
                             if (hppMethod === 'FEFO') {
-            // FEFO: Yang mau expired duluan, dikeluarkan duluan
-            batches.sort((a, b) => {
-                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                if (!a.expiredDate) return 1;
-                if (!b.expiredDate) return -1;
-                return new Date(a.expiredDate) - new Date(b.expiredDate);
-            });
-        } else if (hppMethod === 'LIFO') {
-            // LIFO: Tanggal masuk paling baru di atas
-            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-        } else {
-            // FIFO: Tanggal masuk paling lama di atas
-            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-        }
+                                batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                    if (!a.expiredDate) return 1;
+                                    if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                });
+                            } else if (hppMethod === 'LIFO') {
+                                batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                            } else {
+                                batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                            }
 
-                            for (let i = 0; i < batches.length; i++) {
-                                if (requiredQty <= 0) break;
-                                let currentBatch = batches[i];
-                                let availableInBatch = currentBatch.qty_remain !== undefined ? currentBatch.qty_remain : (currentBatch.qtySisa !== undefined ? currentBatch.qtySisa : (currentBatch.qty || 0));
+                            let reqQty = requiredQty;
+                            for (let j = 0; j < batches.length; j++) {
+                                if (reqQty <= 0) break;
+                                let b = batches[j];
+                                let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
 
-                                if (availableInBatch > 0) {
-                                    if (availableInBatch >= requiredQty) {
-                                        if (currentBatch.qty_remain !== undefined) currentBatch.qty_remain -= requiredQty;
-                                        if (currentBatch.qtySisa !== undefined) currentBatch.qtySisa -= requiredQty;
-                                        requiredQty = 0;
-                                    } else {
-                                        requiredQty -= availableInBatch;
-                                        if (currentBatch.qty_remain !== undefined) currentBatch.qty_remain = 0;
-                                        if (currentBatch.qtySisa !== undefined) currentBatch.qtySisa = 0;
-                                    }
+                                if (available > 0) {
+                                    let taken = Math.min(available, reqQty);
+                                    if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                    if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                    reqQty -= taken;
+                                    
+                                    let modalBatch = b.hargaModal || b.cost || prodCopy.hppPrice || 0;
+                                    totalItemCogs += (taken * modalBatch);
+                                        
+                                    item.cutBatches.push({ 
+                                        batchNo: b.batchNo || '-', 
+                                        expiredDate: b.expiredDate || '', 
+                                        qty: taken, 
+                                        cost: modalBatch 
+                                    });
                                 }
                             }
-                            prodCopy.batches[outletId] = batches; // Kembalikan ke bungkusannya
+                            prodCopy.batches[outletId] = batches;
                         }
 
-                        // Eksekusi Update ke Database Firebase
+                        // Simpan total HPP ke item transaksi
+                        item.totalCogs = totalItemCogs;
+
+                        // Eksekusi Update Produk ke Firebase
                         await updateDoc(doc(db, "products", prod.id), {
                             variants: prodCopy.variants || [],
                             baseOutletStocks: prodCopy.baseOutletStocks || {},
-                            batches: prodCopy.batches || {} // <-- Pastikan ini berupa object
+                            batches: prodCopy.batches || {} 
                         });
 
-                        // Log mutasi KELUAR via Fungsi Pusat
+                        // Log mutasi KELUAR
                         await this.logStock('OUT', {
                             productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
                             qty: -item.qty, outletId: trxData.outletId, refId: trxData.id, note: 'Penjualan Kasir POS'
                         });
-                        }
-                        }
+                    }
+
+                    // UPDATE DOKUMEN TRANSAKSI DI FIREBASE DENGAN DATA BATCH YANG BARU TERPOTONG
+                    await updateDoc(doc(db, "transactions", trxData.id), { items: trxData.items });
 
                     this.activePrintData = trxData;
                     this.printMode = 'receipt';
                     this.hideModal('paymentModal');
 
-                    // =================================================================
-                    // TAMBAHAN: OTOMATIS MUNCULKAN DIALOG PRINT TRANSAKSI KASIR
-                    // =================================================================
+                    // MUNCULKAN DIALOG PRINT
                     setTimeout(() => {
                         this.triggerPrint(trxData, 'receipt');
                     }, 500); 
-                    // =================================================================
 
-                    // =================================================================
-                    // 3. RESET SEMUA VARIABEL HANYA SETELAH PRINT DATA AMAN
-                    // =================================================================
+                    // RESET KASIR
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
                     this.cart = [];
                     this.selectedCustomer = null;
-                    // TAMBAHKAN INI AGAR DISKON MERESET SAAT TRANSAKSI SELESAI
                     this.globalDiscountType = 'none';
                     this.globalDiscountValue = 0;
                     this.paymentData = { method: 'CASH', amountReceived: 0 };
