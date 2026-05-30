@@ -1735,13 +1735,20 @@
                                                 <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
                                                     {{ getProductStockAtOutlet(p, invOutletFilter) }}
                                                 </td>
-                                                <td class="bg-warning bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]">
+                                                <td class="bg-warning bg-opacity-10" style="min-width: 160px;">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold mb-1" placeholder="Input Fisik" v-model.number="opnameFisik[p.id]">
+                                                    
+                                                    <div v-if="opnameFisik[p.id] > getProductStockAtOutlet(p, invOutletFilter)" class="p-2 mt-2 bg-success bg-opacity-10 border border-success rounded text-start shadow-sm">
+                                                        <span style="font-size: 0.65rem;" class="fw-bold text-success d-block mb-1"><i class="bi bi-info-circle me-1"></i>Stok Plus! Info Batch Baru:</span>
+                                                        <input type="text" class="form-control form-control-sm mb-1" style="font-size: 0.75rem;" placeholder="No. Batch (Opsional)" v-model="opnameBatchNo[p.id]">
+                                                        <input type="date" class="form-control form-control-sm" style="font-size: 0.75rem;" title="Tgl Expired" v-model="opnameExpired[p.id]">
+                                                    </div>
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[p.id]">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak, Nyelip..." v-model="opnameNote[p.id]">
                                                 </td>
                                             </tr>
+                                            
                                             <tr v-for="(v, index) in p.variants" :key="'op-v-'+index">
                                                 <td class="ps-3 text-muted">
                                                     <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes }}</span>
@@ -1750,11 +1757,17 @@
                                                 <td class="text-center fw-bold fs-6 bg-secondary bg-opacity-10">
                                                     {{ (v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0 }}
                                                 </td>
-                                                <td class="bg-warning bg-opacity-10">
-                                                    <input type="number" class="form-control form-control-sm text-center fw-bold" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]">
+                                                <td class="bg-warning bg-opacity-10" style="min-width: 160px;">
+                                                    <input type="number" class="form-control form-control-sm text-center fw-bold mb-1" placeholder="Input Fisik" v-model.number="opnameFisik[v.variantSku]">
+                                                    
+                                                    <div v-if="opnameFisik[v.variantSku] > ((v.outletStocks && v.outletStocks[invOutletFilter]) ? v.outletStocks[invOutletFilter] : 0)" class="p-2 mt-2 bg-success bg-opacity-10 border border-success rounded text-start shadow-sm">
+                                                        <span style="font-size: 0.65rem;" class="fw-bold text-success d-block mb-1"><i class="bi bi-info-circle me-1"></i>Stok Plus! Info Batch Baru:</span>
+                                                        <input type="text" class="form-control form-control-sm mb-1" style="font-size: 0.75rem;" placeholder="No. Batch (Opsional)" v-model="opnameBatchNo[v.variantSku]">
+                                                        <input type="date" class="form-control form-control-sm" style="font-size: 0.75rem;" title="Tgl Expired" v-model="opnameExpired[v.variantSku]">
+                                                    </div>
                                                 </td>
                                                 <td>
-                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak..." v-model="opnameNote[v.variantSku]">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="Contoh: Hilang, Rusak, Nyelip..." v-model="opnameNote[v.variantSku]">
                                                 </td>
                                             </tr>
                                         </template>
@@ -7018,7 +7031,7 @@ async fetchRolesFromDatabase() {
             startNewOpname() {
             this.opnameForm = {
                 id: 'OPN-' + Math.floor(Math.random() * 90000 + 10000),
-                firestoreId: null, // Penting untuk membedakan Edit dan Baru
+                firestoreId: null, 
                 dateStr: new Date().toLocaleString('id-ID'),
                 pic: this.userProfile ? this.userProfile.name : 'Admin',
                 note: '',
@@ -7027,6 +7040,8 @@ async fetchRolesFromDatabase() {
             };
             this.opnameFisik = {};
             this.opnameNote = {};
+            this.opnameBatchNo = {}; // WADAH BARU
+            this.opnameExpired = {}; // WADAH BARU
             this.opnameView = 'form';
         },
         
@@ -9115,7 +9130,9 @@ async fetchRolesFromDatabase() {
                             isVariant: false, productId: p.id, variantSku: null,
                             sku: p.sku || '-', name: p.name, variantName: '-',
                             diff: parseInt(fisikVal) - stokSistem, note: this.opnameNote[p.id] || 'Opname Fisik',
-                            stokFisik: parseInt(fisikVal), stokSistem: stokSistem
+                            stokFisik: parseInt(fisikVal), stokSistem: stokSistem,
+                            batchNo: this.opnameBatchNo[p.id] || '',     // SIMPAN BATCH KE DRAFT
+                            expiredDate: this.opnameExpired[p.id] || ''  // SIMPAN EXPIRED KE DRAFT
                         });
                     }
                 } else {
@@ -9127,7 +9144,9 @@ async fetchRolesFromDatabase() {
                                 isVariant: true, productId: p.id, variantSku: v.variantSku,
                                 sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes,
                                 diff: parseInt(fisikVal) - stokSistem, note: this.opnameNote[v.variantSku] || 'Opname Fisik',
-                                stokFisik: parseInt(fisikVal), stokSistem: stokSistem
+                                stokFisik: parseInt(fisikVal), stokSistem: stokSistem,
+                                batchNo: this.opnameBatchNo[v.variantSku] || '',    // SIMPAN BATCH KE DRAFT
+                                expiredDate: this.opnameExpired[v.variantSku] || '' // SIMPAN EXPIRED KE DRAFT
                             });
                         }
                     });
@@ -9205,7 +9224,6 @@ async fetchRolesFromDatabase() {
             let op = this.opnameHistory.find(o => o.id === id);
             if (!op || op.status !== 'PENDING') return;
 
-            // Load data ke dalam form
             this.opnameForm = {
                 id: op.id, firestoreId: op.firestoreId, dateStr: op.dateStr,
                 pic: op.pic, note: op.note, outletId: op.outletId, items: []
@@ -9213,17 +9231,23 @@ async fetchRolesFromDatabase() {
             this.invOutletFilter = op.outletId;
             this.opnameFisik = {};
             this.opnameNote = {};
+            this.opnameBatchNo = {}; // WADAH BARU
+            this.opnameExpired = {}; // WADAH BARU
 
-            // Masukkan kembali angka fisik ke kotak input
             op.items.forEach(item => {
                 let key = item.isVariant ? item.variantSku : item.productId;
                 this.opnameFisik[key] = item.stokFisik;
                 this.opnameNote[key] = item.note;
+                this.opnameBatchNo[key] = item.batchNo || '';       // TARIK DATA LAMA
+                this.opnameExpired[key] = item.expiredDate || '';   // TARIK DATA LAMA
             });
             this.opnameView = 'form';
         },
 
         // 2. FUNGSI APPROVE (MENGUBAH STOK & MENYESUAIKAN BATCH HPP)
+        // ==========================================
+        // FUNGSI APPROVE OPNAME (FULL & RAPI)
+        // ==========================================
         async approveOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname || opname.status !== 'PENDING') return;
@@ -9247,17 +9271,31 @@ async fetchRolesFromDatabase() {
                         if (item.isVariant) {
                             let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
+                                // 1. Update Stok Fisik (Varian)
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
 
+                                // 2. Siapkan Array Batches
                                 if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
                                 if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
                                 let batches = prodCopy.variants[vIdx].batches[oId];
 
                                 if (isPlus) {
+                                    // JIKA SURPLUS (+): Buat Batch Baru menggunakan Inputan Kasir
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    batches.push({ batchId: 'OPN-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
+                                    let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
+                                    let finalExpired = item.expiredDate ? item.expiredDate : '';
+                                    
+                                    batches.push({ 
+                                        batchId: 'OPN-' + id, 
+                                        batchNo: finalBatchNo,        // MASUKKAN BATCH DARI FORM
+                                        expiredDate: finalExpired,    // MASUKKAN EXPIRED DARI FORM
+                                        tanggalMasuk: new Date().toISOString(), 
+                                        qtySisa: qtyAbs, 
+                                        hargaModal: cost 
+                                    });
                                 } else {
+                                    // JIKA MINUS (-): Potong Batch Sesuai Metode
                                     if (hppMethod === 'FEFO') {
                                         batches.sort((a, b) => {
                                             if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
@@ -9290,17 +9328,31 @@ async fetchRolesFromDatabase() {
                                 prodCopy.variants[vIdx].batches[oId] = batches;
                             }
                         } else {
+                            // 1. Update Stok Fisik (Non-Varian)
                             if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
                             prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + item.diff;
 
+                            // 2. Siapkan Array Batches
                             if (!prodCopy.batches) prodCopy.batches = {};
                             if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
                             let batches = prodCopy.batches[oId];
 
                             if (isPlus) {
+                                // JIKA SURPLUS (+): Buat Batch Baru menggunakan Inputan Kasir
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                batches.push({ batchId: 'OPN-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
+                                let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
+                                let finalExpired = item.expiredDate ? item.expiredDate : '';
+                                
+                                batches.push({ 
+                                    batchId: 'OPN-' + id, 
+                                    batchNo: finalBatchNo,        // MASUKKAN BATCH DARI FORM
+                                    expiredDate: finalExpired,    // MASUKKAN EXPIRED DARI FORM
+                                    tanggalMasuk: new Date().toISOString(), 
+                                    qtySisa: qtyAbs, 
+                                    hargaModal: cost 
+                                });
                             } else {
+                                // JIKA MINUS (-): Potong Batch Sesuai Metode
                                 if (hppMethod === 'FEFO') {
                                     batches.sort((a, b) => {
                                         if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
@@ -9333,8 +9385,10 @@ async fetchRolesFromDatabase() {
                             prodCopy.batches[oId] = batches;
                         }
                         
+                        // 3. Simpan Update ke Firebase
                         await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, batches: prodCopy.batches || {} });
 
+                        // 4. Log Mutasi Stok
                         await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
                             productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
                             qty: item.diff, outletId: opname.outletId, refId: id, note: item.note || 'Approve Dokumen Opname'
@@ -9347,6 +9401,7 @@ async fetchRolesFromDatabase() {
                     if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
+                    console.error("Gagal Approve:", err);
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
                 }
                 this.isProcessing = false;
