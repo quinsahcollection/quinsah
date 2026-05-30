@@ -6401,10 +6401,17 @@ async fetchRolesFromDatabase() {
 
             let tableRows = tf.items.map(item => {
                 let batchInfo = '-';
-                if (item.hppTransferHistory && item.hppTransferHistory.length > 0) {
+                
+                // LOGIKA CERDAS MENDETEKSI STATUS DOKUMEN
+                if (tf.status === 'VOID') {
+                    batchInfo = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="bi bi-x-circle me-1"></i>Transfer Dibatalkan</span>';
+                } else if (tf.status === 'PENDING') {
+                    batchInfo = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning"><i class="bi bi-hourglass-split me-1"></i>Menunggu Konfirmasi</span>';
+                } else if (tf.status === 'DIKIRIM' && (!item.hppTransferHistory || item.hppTransferHistory.length === 0)) {
+                    batchInfo = '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary"><i class="bi bi-truck me-1"></i>Sedang Dalam Perjalanan</span>';
+                } else if (item.hppTransferHistory && item.hppTransferHistory.length > 0) {
+                    // JIKA SUDAH ADA DATA POTONGAN BATCH, TAMPILKAN DATANYA
                     batchInfo = item.hppTransferHistory.map(b => `<div class="badge bg-info bg-opacity-10 text-dark border border-info mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
-                } else {
-                    batchInfo = '<span class="text-muted small">Menunggu Diproses</span>';
                 }
 
                 return `
@@ -7052,12 +7059,22 @@ async fetchRolesFromDatabase() {
 
             let tableRows = opname.items.map(item => {
                 let diffText = item.diff > 0 ? `<span class="text-success">+${item.diff}</span>` : `<span class="text-danger">${item.diff}</span>`;
-                
                 let batchInfo = '-';
-                if (item.diff < 0 && item.cutBatches && item.cutBatches.length > 0) {
-                    batchInfo = item.cutBatches.map(b => `<div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
-                } else if (item.diff > 0) {
-                    batchInfo = `<span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size:0.7rem;">Batch Baru Masuk</span>`;
+                
+                // LOGIKA CERDAS MENDETEKSI STATUS DOKUMEN OPNAME
+                if (opname.status === 'VOID') {
+                    batchInfo = '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="bi bi-x-circle me-1"></i>Opname Dibatalkan</span>';
+                } else if (opname.status === 'PENDING') {
+                    batchInfo = '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning"><i class="bi bi-hourglass-split me-1"></i>Menunggu Konfirmasi</span>';
+                } else if (opname.status === 'SELESAI') {
+                    // JIKA SELESAI, TAMPILKAN POTONGAN BATCH ATAU INFO BATCH BARU
+                    if (item.diff < 0 && item.cutBatches && item.cutBatches.length > 0) {
+                        batchInfo = item.cutBatches.map(b => `<div class="badge bg-danger bg-opacity-10 text-danger border border-danger mb-1 text-wrap" style="font-size:0.7rem;"><i class="bi bi-box-seam me-1"></i>Batch: ${b.batchNo || '-'} | Exp: ${b.expiredDate ? new Date(b.expiredDate).toLocaleDateString('id-ID') : '-'} (Qty: ${b.qty})</div>`).join('<br>');
+                    } else if (item.diff > 0) {
+                        batchInfo = `<span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size:0.7rem;"><i class="bi bi-plus-circle me-1"></i>Batch Baru Dibuat</span>`;
+                    } else {
+                        batchInfo = '<span class="text-muted small">Tidak Ada Mutasi</span>';
+                    }
                 }
 
                 return `<tr>
