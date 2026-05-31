@@ -520,88 +520,93 @@
 
             <!-- PURCHASE VIEW -->
             <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
-    
-    <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & Stok Masuk</h6>
-    
-    <div class="row mb-3 align-items-end">
-        
-        <div class="col-12 col-md-3 mb-2">
-            <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
-            <div class="input-group">
-                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Ketik pencarian...">
+            
+            <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & PO</h6>
+            
+            <div class="row mb-3 align-items-end">
+                <div class="col-12 col-md-3 mb-2">
+                    <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Ketik pencarian...">
+                    </div>
+                </div>
+                <div class="col-12 col-md-3 mb-2">
+                    <button class="btn btn-primary-custom w-100 fw-bold" @click="openModal('addPurchaseModal')">
+                        <i class="bi bi-plus-lg me-1"></i> Buat PO Baru
+                    </button>
+                </div>
+                <div class="col-6 col-md-2 mb-2">
+                    <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
+                    <input type="date" class="form-control" v-model="purchaseStartDate">
+                </div>
+                <div class="col-6 col-md-2 mb-2">
+                    <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
+                    <input type="date" class="form-control" v-model="purchaseEndDate">
+                </div>
+                <div class="col-12 col-md-2 mb-2">
+                    <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom align-middle text-nowrap">
+                    <thead>
+                        <tr>
+                            <th>No. Invoice / PO</th>
+                            <th>Tanggal</th>
+                            <th>Supplier</th>
+                            <th>Status Barang</th>
+                            <th>Total Pembelian</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="po in filteredPurchases" :key="po.id">
+                            <td class="fw-bold small">
+                                <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
+                                <br>
+                                <span class="badge mt-1" :class="po.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
+                                    {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
+                                </span>
+                            </td>
+                            <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+                            <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
+                                {{ getSupplierName(po.supplierId) }}
+                            </td>
+                            <td>
+                                <span class="badge" :class="po.poStatus === 'SELESAI' ? 'bg-info text-dark' : 'bg-warning text-dark'">
+                                    <i class="bi" :class="po.poStatus === 'SELESAI' ? 'bi-box-seam-fill' : 'bi-truck'"></i>
+                                    {{ po.poStatus === 'SELESAI' ? 'Telah Diterima' : 'Menunggu Kedatangan' }}
+                                </span>
+                            </td>
+                            <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button v-if="po.poStatus !== 'SELESAI'" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
+                                        <i class="bi bi-check2-square me-1"></i> Terima Stok
+                                    </button>
+                                    <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
+                                        <i class="bi bi-printer"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredPurchases.length === 0">
+                            <td colspan="6" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <div class="col-12 col-md-3 mb-2">
-            <button class="btn btn-primary-custom w-100" @click="openModal('addPurchaseModal')">
-                <i class="bi bi-plus-lg me-1"></i> Transaksi Baru
-            </button>
-        </div>
-
-        <div class="col-6 col-md-2 mb-2">
-            <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
-            <input type="date" class="form-control" v-model="purchaseStartDate">
-        </div>
-        
-        <div class="col-6 col-md-2 mb-2">
-            <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
-            <input type="date" class="form-control" v-model="purchaseEndDate">
-        </div>
-
-        <div class="col-12 col-md-2 mb-2">
-            <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
-                <i class="bi bi-arrow-clockwise me-1"></i> Reset
-            </button>
-        </div>
-        
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-custom align-middle text-nowrap">
-            <thead>
-                <tr>
-                    <th>No. Invoice / PO</th>
-                    <th>Tanggal</th>
-                    <th>Supplier</th>
-                    <th>Outlet Tujuan</th>
-                    <th>Total Pembelian</th>
-                    <th class="text-center">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="po in filteredPurchases" :key="po.id">
-                    <td class="fw-bold text-primary-custom small">{{ po.id }}</td>
-                    <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
-                    <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
-                        {{ getSupplierName(po.supplierId) }}
-                    </td>
-                    <td><span class="badge bg-light border text-dark">{{ getOutletName(po.outletId) }}</span></td>
-                    <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
-                                <i class="bi bi-file-earmark-text"></i> A4
-                            </button>
-                            <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr v-if="filteredPurchases.length === 0">
-                    <td colspan="6" class="text-center py-4 text-muted small">
-                        Belum ada riwayat pembelian sesuai filter.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    
-</div>
 
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings' && userRole === 'Admin'">
@@ -2833,200 +2838,157 @@
                 </table>
             </div>
          </div>
-         
-                 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-light pb-2">
-                        <div>
-                            <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
-                            <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body bg-light pt-3" v-if="activeInvoiceDetail">
-                        <div class="row g-2 mb-3">
-                            <div class="col-4">
-                                <div class="p-2 bg-white border rounded text-center">
-                                    <div class="small text-muted fw-bold">Total Belanja</div>
-                                    <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="p-2 bg-white border rounded text-center">
-                                    <div class="small text-muted fw-bold">Sudah Dibayar</div>
-                                    <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
-                                    <div class="small fw-bold text-white-50">Sisa Tagihan</div>
-                                    <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
-                                </div>
-                            </div>
-                        </div>
+              
+              </main>
 
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
-                                    <thead class="table-light">
-                                        <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>{{ activeInvoiceDetail.dateStr }}</td>
-                                            <td>{{ activeInvoiceDetail.paymentMethod }}</td>
-                                            <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
-                                            <td class="text-muted">Pembayaran Awal (Kasir)</td>
-                                        </tr>
-                                        <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
-                                            <td>{{ pay.date }}</td>
-                                            <td>{{ pay.method }}</td>
-                                            <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
-                                            <td class="text-muted">{{ pay.note || '-' }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                </main>
 
-                        <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
-                            <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
-                            <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label small fw-bold">Metode Bayar</label>
-                                        <select class="form-select form-select-sm" v-model="installmentForm.method">
-                                            <option value="CASH">Uang Tunai (CASH)</option>
-                                            <option value="TRANSFER">Transfer Bank</option>
-                                            <option value="QRIS">QRIS / E-Wallet</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label small fw-bold">Nominal (Rp)</label>
-                                        <input type="number" class="form-control form-control-sm fw-bold" v-model.number="installmentForm.amount" :max="activeInvoiceDetail.sisaTagihan">
-                                        <div class="text-danger mt-1" style="font-size:0.65rem;" v-if="installmentForm.amount > activeInvoiceDetail.sisaTagihan">Nominal melebihi sisa tagihan!</div>
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <button class="btn btn-sm btn-success w-100 fw-bold py-1" @click="processInstallment" :disabled="isProcessing || !installmentForm.amount || installmentForm.amount <= 0 || installmentForm.amount > activeInvoiceDetail.sisaTagihan">
-                                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-                                            <span v-else><i class="bi bi-check-circle me-1"></i> Simpan</span>
-                                        </button>
-                                    </div>
-                                    <div class="col-12 mt-2">
-                                        <input type="text" class="form-control form-control-sm" v-model="installmentForm.note" placeholder="Catatan opsional (misal: Transfer dari Bpk Budi)...">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="modal-footer bg-light p-2">
-                        <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
+<div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light pb-2">
+                <div>
+                    <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
+                    <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body bg-light pt-3" v-if="activeInvoiceDetail">
+                
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white fw-bold small"><i class="bi bi-cart-check me-1"></i> Rincian Produk & Biaya</div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nama Produk</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Harga Satuan</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, idx) in activeInvoiceDetail.items" :key="idx">
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ item.name }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;" v-if="item.variantName && item.variantName !== '-'">Varian: {{ item.variantName }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;" v-if="item.note">Catatan: {{ item.note }}</div>
+                                    </td>
+                                    <td class="text-center align-middle">{{ item.qty }}</td>
+                                    <td class="text-end align-middle">Rp {{ formatNumber(item.finalPrice || item.price || item.sellPrice || 0) }}</td>
+                                    <td class="text-end align-middle fw-bold">Rp {{ formatNumber((item.finalPrice || item.price || item.sellPrice || 0) * item.qty) }}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light text-end">
+                                <tr>
+                                    <td colspan="3" class="small text-muted fw-bold border-bottom-0 pb-0 pt-2">Subtotal Barang:</td>
+                                    <td class="fw-bold border-bottom-0 pb-0 pt-2">Rp {{ formatNumber(activeInvoiceDetail.subtotal || 0) }}</td>
+                                </tr>
+                                <tr v-if="(activeInvoiceDetail.discountAmt || 0) + (activeInvoiceDetail.globalDiscountAmt || 0) > 0">
+                                    <td colspan="3" class="small text-danger fw-bold border-bottom-0 pb-0">Total Diskon:</td>
+                                    <td class="fw-bold text-danger border-bottom-0 pb-0">- Rp {{ formatNumber((activeInvoiceDetail.discountAmt || 0) + (activeInvoiceDetail.globalDiscountAmt || 0)) }}</td>
+                                </tr>
+                                <tr v-if="activeInvoiceDetail.taxAmt > 0">
+                                    <td colspan="3" class="small text-muted fw-bold border-bottom-0 pb-0">Pajak (PPN):</td>
+                                    <td class="fw-bold border-bottom-0 pb-0">Rp {{ formatNumber(activeInvoiceDetail.taxAmt) }}</td>
+                                </tr>
+                                <tr v-if="activeInvoiceDetail.serviceAmt > 0">
+                                    <td colspan="3" class="small text-muted fw-bold border-bottom-0 pb-0">Biaya Layanan:</td>
+                                    <td class="fw-bold border-bottom-0 pb-0">Rp {{ formatNumber(activeInvoiceDetail.serviceAmt) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="small text-dark fw-bold pt-2">TOTAL AKHIR:</td>
+                                    <td class="fw-bold text-primary-custom fs-6 pt-2">Rp {{ formatNumber(activeInvoiceDetail.total || 0) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 </div>
-            </div>
-        </div>
 
-
-        </main>
-
-                <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-light pb-2">
-                        <div>
-                            <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
-                            <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <div class="p-2 bg-white border rounded text-center">
+                            <div class="small text-muted fw-bold">Total Belanja</div>
+                            <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body bg-light pt-3" v-if="activeInvoiceDetail">
-                        <div class="row g-2 mb-3">
-                            <div class="col-4">
-                                <div class="p-2 bg-white border rounded text-center">
-                                    <div class="small text-muted fw-bold">Total Belanja</div>
-                                    <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="p-2 bg-white border rounded text-center">
-                                    <div class="small text-muted fw-bold">Sudah Dibayar</div>
-                                    <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
-                                    <div class="small fw-bold text-white-50">Sisa Tagihan</div>
-                                    <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
-                                </div>
-                            </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-white border rounded text-center">
+                            <div class="small text-muted fw-bold">Sudah Dibayar</div>
+                            <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
                         </div>
-
-                        <div class="card border-0 shadow-sm mb-3">
-                            <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
-                                    <thead class="table-light">
-                                        <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>{{ activeInvoiceDetail.dateStr }}</td>
-                                            <td>{{ activeInvoiceDetail.paymentMethod }}</td>
-                                            <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
-                                            <td class="text-muted">Pembayaran Awal (Kasir)</td>
-                                        </tr>
-                                        <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
-                                            <td>{{ pay.date }}</td>
-                                            <td>{{ pay.method }}</td>
-                                            <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
-                                            <td class="text-muted">{{ pay.note || '-' }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
-                            <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
-                            <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label small fw-bold">Metode Bayar</label>
-                                        <select class="form-select form-select-sm" v-model="installmentForm.method">
-                                            <option value="CASH">Uang Tunai (CASH)</option>
-                                            <option value="TRANSFER">Transfer Bank</option>
-                                            <option value="QRIS">QRIS / E-Wallet</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label small fw-bold">Nominal (Rp)</label>
-                                        <input type="number" class="form-control form-control-sm fw-bold" v-model.number="installmentForm.amount" :max="activeInvoiceDetail.sisaTagihan">
-                                        <div class="text-danger mt-1" style="font-size:0.65rem;" v-if="installmentForm.amount > activeInvoiceDetail.sisaTagihan">Nominal melebihi sisa tagihan!</div>
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-end">
-                                        <button class="btn btn-sm btn-success w-100 fw-bold py-1" @click="processInstallment" :disabled="isProcessing || !installmentForm.amount || installmentForm.amount <= 0 || installmentForm.amount > activeInvoiceDetail.sisaTagihan">
-                                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-                                            <span v-else><i class="bi bi-check-circle me-1"></i> Simpan</span>
-                                        </button>
-                                    </div>
-                                    <div class="col-12 mt-2">
-                                        <input type="text" class="form-control form-control-sm" v-model="installmentForm.note" placeholder="Catatan opsional (misal: Transfer dari Bpk Budi)...">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
-                    <div class="modal-footer bg-light p-2">
-                        <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
+                    <div class="col-4">
+                        <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
+                            <div class="small fw-bold text-white-50">Sisa Tagihan</div>
+                            <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
+                        </div>
                     </div>
                 </div>
+
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                            <thead class="table-light">
+                                <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ activeInvoiceDetail.dateStr }}</td>
+                                    <td>{{ activeInvoiceDetail.paymentMethod }}</td>
+                                    <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
+                                    <td class="text-muted">Pembayaran Awal (Kasir)</td>
+                                </tr>
+                                <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
+                                    <td>{{ pay.date }}</td>
+                                    <td>{{ pay.method }}</td>
+                                    <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
+                                    <td class="text-muted">{{ pay.note || '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
+                    <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Metode Bayar</label>
+                                <select class="form-select form-select-sm" v-model="installmentForm.method">
+                                    <option value="CASH">Uang Tunai (CASH)</option>
+                                    <option value="TRANSFER">Transfer Bank</option>
+                                    <option value="QRIS">QRIS / E-Wallet</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">Nominal (Rp)</label>
+                                <input type="number" class="form-control form-control-sm fw-bold" v-model.number="installmentForm.amount" :max="activeInvoiceDetail.sisaTagihan">
+                                <div class="text-danger mt-1" style="font-size:0.65rem;" v-if="installmentForm.amount > activeInvoiceDetail.sisaTagihan">Nominal melebihi sisa tagihan!</div>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button class="btn btn-sm btn-success w-100 fw-bold py-1" @click="processInstallment" :disabled="isProcessing || !installmentForm.amount || installmentForm.amount <= 0 || installmentForm.amount > activeInvoiceDetail.sisaTagihan">
+                                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                                    <span v-else><i class="bi bi-check-circle me-1"></i> Simpan</span>
+                                </button>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <input type="text" class="form-control form-control-sm" v-model="installmentForm.note" placeholder="Catatan opsional (misal: Transfer dari Bpk Budi)...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
-
+    </div>
+</div>
 
         <div class="modal fade" id="batchDetailModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-xl"> <div class="modal-content border-0 shadow-lg">
@@ -3340,7 +3302,6 @@
             </div>
         </div>
 
-        <!-- MODAL SUPPLIER DETAIL (CRM) -->
         <div class="modal fade" id="supplierDetailModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content border-0 shadow">
@@ -3695,18 +3656,18 @@
             <div class="modal-dialog modal-dialog-centered modal-xl">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header bg-light border-bottom p-3">
-                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Stok Masuk (Pembelian)</h6>
+                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-cart-plus me-2"></i>Form Purchase Order (PO)</h6>
                         <button type="button" class="btn-close shadow-none" @click="cancelPurchaseEdit"></button>
                     </div>
                     
                     <div class="modal-body bg-white p-3 p-md-4" style="max-height: 75vh; overflow-y: auto;">
                         <div class="row g-3 mb-3 border-bottom pb-3">
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">Nomor Invoice / PO</label>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Nomor PO / Invoice</label>
                                 <input type="text" class="form-control fw-bold text-primary-custom" v-model="formPurchase.invoiceNo" placeholder="Invoice Pembelian..." :disabled="formPurchase.isEdit">
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">Pilih Supplier (Pemasok)</label>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Pilih Supplier</label>
                                 <div class="input-group">
                                     <select class="form-select fw-semibold" v-model="formPurchase.supplierId" :disabled="formPurchase.isEdit">
                                         <option value="">-- Pilih Supplier --</option>
@@ -3715,11 +3676,18 @@
                                     <button class="btn btn-outline-primary-custom" type="button" @click="openModal('addSupplierModal')" title="Tambah Supplier Baru" :disabled="formPurchase.isEdit"><i class="bi bi-plus-lg"></i></button>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok (Outlet)</label>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-primary-custom">Lokasi Masuk Stok</label>
                                 <select class="form-select fw-semibold border-primary" v-model="formPurchase.outletId" :disabled="formPurchase.isEdit">
                                     <option value="">-- Pilih Cabang Outlet --</option>
                                     <option v-for="o in outlets" :value="o.id">{{ o.name }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-warning">Status Pengiriman Barang</label>
+                                <select class="form-select fw-bold border-warning" v-model="formPurchase.poStatus">
+                                    <option value="PENDING">Menunggu Kedatangan (Pre-Order)</option>
+                                    <option value="SELESAI">Barang Telah Diterima (Masuk Stok)</option>
                                 </select>
                             </div>
                         </div>
@@ -3755,7 +3723,7 @@
                             </div>
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-2">
-                                    <label class="form-label small fw-bold mb-1">Qty Masuk</label>
+                                    <label class="form-label small fw-bold mb-1">Qty Beli</label>
                                     <input type="number" class="form-control form-control-sm" v-model.number="formPurchaseItem.qty" placeholder="0" min="1">
                                 </div>
                                 <div class="col-md-3">
@@ -3791,7 +3759,7 @@
                                         <td class="text-primary-custom fw-bold fs-6">Rp {{ formatNumber(i.qty * i.price) }}</td>
                                         <td class="text-center"><button class="btn btn-sm btn-outline-danger py-0 px-2" @click="formPurchase.items.splice(idx,1)"><i class="bi bi-trash"></i></button></td>
                                     </tr>
-                                    <tr v-if="formPurchase.items.length === 0"><td colspan="6" class="text-center text-muted py-4">Belum ada item ditambahkan ke keranjang pembelian.</td></tr>
+                                    <tr v-if="formPurchase.items.length === 0"><td colspan="6" class="text-center text-muted py-4">Belum ada item ditambahkan ke PO.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -3799,9 +3767,9 @@
                         <div class="row mt-3 pt-3 border-top">
                             <div class="col-md-6">
                                 <div class="mb-2">
-                                    <label class="form-label small fw-bold">Status Pembayaran</label>
+                                    <label class="form-label small fw-bold">Status Pembayaran ke Supplier</label>
                                     <select class="form-select form-select-sm border-warning fw-semibold" v-model="formPurchase.paymentStatus">
-                                        <option value="LUNAS">LUNAS (Cash / Transfer)</option>
+                                        <option value="LUNAS">LUNAS (Dibayar Penuh)</option>
                                         <option value="HUTANG">HUTANG / TEMPO (AP)</option>
                                     </select>
                                 </div>
@@ -3814,26 +3782,38 @@
                             <div class="col-md-6">
                                 <div class="bg-light p-3 rounded border">
                                     <div class="d-flex justify-content-between mb-2 align-items-center">
-                                        <span class="fw-bold text-muted">Grand Total PO:</span>
-                                        <span class="fw-bold fs-4 text-primary-custom">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</span>
+                                        <span class="fw-bold text-muted small">Subtotal:</span>
+                                        <span class="fw-bold">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0)) }}</span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
+                                    <div class="d-flex justify-content-between mb-2 align-items-center">
+                                        <span class="fw-bold text-muted small">Pajak / PPN (+):</span>
+                                        <div class="input-group input-group-sm w-50">
+                                            <span class="input-group-text fw-bold">Rp</span>
+                                            <input type="number" class="form-control text-end fw-bold" v-model.number="formPurchase.taxAmount" placeholder="0">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2 mt-3 pt-2 border-top align-items-center">
+                                        <span class="fw-bold text-dark">Grand Total PO:</span>
+                                        <span class="fw-bold fs-4 text-primary-custom">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0) + (formPurchase.taxAmount || 0)) }}</span>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-2 mt-3" v-if="formPurchase.paymentStatus === 'HUTANG'">
                                         <span class="fw-bold text-muted small">DP / Dibayar Awal:</span>
                                         <div class="input-group input-group-sm w-50">
                                             <span class="input-group-text fw-bold">Rp</span>
                                             <input type="number" class="form-control text-end fw-bold" v-model.number="formPurchase.paidAmount" placeholder="0">
                                         </div>
                                     </div>
-                                    <div class="d-flex justify-content-between mt-2 border-top pt-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
+                                    <div class="d-flex justify-content-between mt-2 pt-2" v-if="formPurchase.paymentStatus === 'HUTANG'">
                                         <span class="fw-bold text-danger">Sisa Hutang (AP):</span>
-                                        <span class="fw-bold text-danger fs-5">Rp {{ formatNumber(formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0) - (formPurchase.paidAmount || 0)) }}</span>
+                                        <span class="fw-bold text-danger fs-5">Rp {{ formatNumber((formPurchase.items.reduce((sum, item) => sum + (item.qty * item.price), 0) + (formPurchase.taxAmount || 0)) - (formPurchase.paidAmount || 0)) }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div> <div class="modal-footer bg-light border-top p-3">
                         <button class="btn btn-primary-custom w-100 fw-bold py-3 fs-6 shadow" @click="savePurchase" :disabled="isSaving || formPurchase.items.length === 0 || !formPurchase.supplierId || !formPurchase.outletId || !formPurchase.invoiceNo">
-                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>PROSES & SINKRONISASI STOK MASUK
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SIMPAN DOKUMEN PO
                         </button>
                     </div>
 
@@ -3866,6 +3846,84 @@
                 </div>
             </div>
         </div>
+<div class="modal fade" id="purchaseDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom p-3">
+                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-receipt me-2"></i>Detail Pembelian & Hutang</h6>
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4" v-if="activePurchaseDetail">
+                        <div class="row mb-3 bg-light p-3 rounded border">
+                            <div class="col-sm-6">
+                                <div class="text-muted small">Nomor Invoice / PO</div>
+                                <div class="fw-bold text-dark fs-5">{{ activePurchaseDetail.id }}</div>
+                                <div class="text-muted small mt-2">Tanggal PO: <span class="fw-bold text-dark">{{ activePurchaseDetail.dateStr }}</span></div>
+                            </div>
+                            <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                                <div class="text-muted small">Supplier Pemasok</div>
+                                <div class="fw-bold text-primary">{{ getSupplierName(activePurchaseDetail.supplierId) }}</div>
+                                <div class="mt-2">
+                                    <span class="badge" :class="activePurchaseDetail.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
+                                        Status: {{ activePurchaseDetail.paymentStatus }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive mb-4">
+                            <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.8rem;">
+                                <thead class="table-secondary text-center">
+                                    <tr><th>Barang</th><th>Qty</th><th>Hrg Beli</th><th>Subtotal</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="item in activePurchaseDetail.items" :key="item.productId">
+                                        <td><b>{{ item.productName }}</b> <span class="text-muted" v-if="item.variantName">- {{item.variantName}}</span></td>
+                                        <td class="text-center fw-bold">{{ item.qty }}</td>
+                                        <td class="text-end">Rp {{ formatNumber(item.price) }}</td>
+                                        <td class="text-end fw-bold">Rp {{ formatNumber(item.qty * item.price) }}</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr><td colspan="3" class="text-end fw-bold">Pajak (PPN):</td><td class="text-end fw-bold text-danger">Rp {{ formatNumber(activePurchaseDetail.taxAmount || 0) }}</td></tr>
+                                    <tr class="table-light"><td colspan="3" class="text-end fw-bold text-dark">GRAND TOTAL:</td><td class="text-end fw-bold text-primary-custom fs-6">Rp {{ formatNumber(activePurchaseDetail.total) }}</td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div v-if="activePurchaseDetail.paymentStatus !== 'LUNAS'" class="border border-danger rounded p-3 bg-danger bg-opacity-10 mb-3">
+                            <h6 class="fw-bold text-danger mb-3"><i class="bi bi-cash-coin me-2"></i>Form Pembayaran Hutang Supplier</h6>
+                            <div class="row align-items-end g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark">Nominal Bayar (Rp)</label>
+                                    <input type="number" class="form-control fw-bold" v-model.number="purchasePaymentForm.amount">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark">Sisa Hutang Saat Ini</label>
+                                    <input type="text" class="form-control fw-bold text-danger" :value="'Rp ' + formatNumber((activePurchaseDetail.total) - (activePurchaseDetail.paidAmount || 0))" disabled>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-danger fw-bold w-100" @click="payPurchaseDebt" :disabled="!purchasePaymentForm.amount || purchasePaymentForm.amount <= 0 || isProcessing">
+                                        Bayar Tagihan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="activePurchaseDetail.paymentHistory && activePurchaseDetail.paymentHistory.length > 0">
+                            <h6 class="fw-bold small text-muted mb-2">Riwayat Pembayaran Cicilan / Termin:</h6>
+                            <ul class="list-group list-group-flush border rounded small">
+                                <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(hist, hIdx) in activePurchaseDetail.paymentHistory" :key="hIdx">
+                                    <span><i class="bi bi-check2-circle text-success me-2"></i>{{ hist.date }}</span>
+                                    <span class="fw-bold text-success">Rp {{ formatNumber(hist.amount) }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <div class="modal fade" id="addCustomerModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -4700,6 +4758,7 @@
                     <div style="font-size:26px; font-weight:bold; color:#ccc; text-transform:uppercase; letter-spacing:2px;">PURCHASE ORDER</div>
                     <div style="font-size:14px; margin-top:5px;"><b># {{ activePrintData.id }}</b></div>
                     <div style="font-size:12px; margin-top:3px;">Tanggal: {{ activePrintData.dateStr }}</div>
+                    <div style="font-size:12px; margin-top:3px; font-weight:bold; color: #d9534f;" v-if="activePrintData.paymentStatus === 'HUTANG'">Jatuh Tempo: {{ activePrintData.dueDate }}</div>
                 </div>
             </div>
 
@@ -4718,12 +4777,12 @@
             <table class="a4-table">
                 <thead>
                     <tr>
-                        <th style="width:5%;">No</th>
+                        <th style="width:5%; text-align:center;">No</th>
                         <th style="width:40%;">Deskripsi Barang</th>
-                        <th style="width:15%;">SKU</th>
-                        <th style="width:10%;">Qty</th>
-                        <th style="width:15%;">Harga Beli</th>
-                        <th style="width:15%;">Subtotal</th>
+                        <th style="width:15%; text-align:center;">SKU</th>
+                        <th style="width:10%; text-align:center;">Qty</th>
+                        <th style="width:15%; text-align:right;">Harga Beli</th>
+                        <th style="width:15%; text-align:right;">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -4742,10 +4801,22 @@
             </table>
 
             <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                <table style="width:40%; font-size:13px; border-collapse:collapse;">
+                <table style="width:45%; font-size:13px; border-collapse:collapse;">
                     <tr>
-                        <td style="padding:10px; font-weight:bold; font-size:16px; border-top: 2px solid #000;">TOTAL PEMBELIAN</td>
+                        <td style="padding:5px 10px; font-weight:bold; text-align:right;">Subtotal:</td>
+                        <td style="padding:5px 10px; text-align:right;">Rp {{ formatNumber(activePrintData.items.reduce((s,i) => s + (i.qty * i.price), 0)) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 10px; font-weight:bold; text-align:right;">Pajak (PPN):</td>
+                        <td style="padding:5px 10px; text-align:right;">Rp {{ formatNumber(activePrintData.taxAmount || 0) }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px; font-weight:bold; font-size:16px; border-top: 2px solid #000; text-align:right;">TOTAL PEMBELIAN:</td>
                         <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark); border-top: 2px solid #000;">Rp {{ formatNumber(activePrintData.total) }}</td>
+                    </tr>
+                    <tr v-if="activePrintData.paymentStatus === 'HUTANG'">
+                        <td style="padding:5px 10px; font-weight:bold; text-align:right; color:#d9534f;">Sisa Hutang:</td>
+                        <td style="padding:5px 10px; text-align:right; color:#d9534f; font-weight:bold;">Rp {{ formatNumber(activePrintData.total - (activePrintData.paidAmount || 0)) }}</td>
                     </tr>
                 </table>
             </div>
@@ -4764,9 +4835,8 @@
                 Dokumen PO (Purchase Order) Resmi Quinsah Collection.
             </div>
         </div>
-
     </div> 
-    </div>  
+ 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -4832,6 +4902,10 @@
                 originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
                 purchaseStartDate: '',
                 purchaseEndDate: '',
+                // (Tambahkan variabel ini)
+                activePurchaseDetail: null,
+                purchasePaymentForm: { amount: 0 },
+                
                 transactionStartDate: '',
                 transactionEndDate: '',
                 
@@ -4967,7 +5041,11 @@
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
                 formProductOriginalState: null,
 
-                formPurchase: { id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', isEdit: false },
+                formPurchase: { 
+                    id: null, invoiceNo: '', supplierId: '', outletId: '', items: [], note: '', total: 0, 
+                    paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', isEdit: false, 
+                    taxAmount: 0, poStatus: 'PENDING' 
+                },
                 formPurchaseItem: { productId: '', variantSku: '', qty: '', price: '', batchNo: '', expiredDate: '' },
                 formOpname: { productId: '', variantSku: '', outletId: '', currentQty: 0, actualQty: 0, notes: '' },
                 variantDetail: { p: null, v: null, idx: -1 },
@@ -8525,14 +8603,20 @@ async fetchRolesFromDatabase() {
                 this.formPurchaseItem.expiredDate = '';
             },
 
+            // ---------------------------------------------------------
+            // FUNGSI PEMBELIAN (UPDATE)
+            // ---------------------------------------------------------
             async savePurchase() {
                 this.isSaving = true;
                 try {
+                    // Jika Edit dan status sebelumnya sudah SELESAI, tarik stok dulu sebelum di-update ulang
                     if (this.formPurchase.isEdit && this.formPurchase.originalPo) {
                         await this.revertPurchaseStock(this.formPurchase.originalPo);
                     }
 
-                    this.formPurchase.total = this.formPurchase.items.reduce((s, i) => s + (i.qty * i.price), 0);
+                    // Hitung Grand Total = Subtotal Items + Pajak
+                    let subtotal = this.formPurchase.items.reduce((s, i) => s + (i.qty * i.price), 0);
+                    this.formPurchase.total = subtotal + (this.formPurchase.taxAmount || 0);
                     this.formPurchase.dateStr = new Date().toLocaleString('id-ID');
                     
                     let dataToSave = JSON.parse(JSON.stringify(this.formPurchase));
@@ -8542,111 +8626,115 @@ async fetchRolesFromDatabase() {
                     dataToSave.createdAt = serverTimestamp();
                     dataToSave.userName = this.userProfile.name || 'Admin'; 
 
+                    // Inisialisasi Riwayat Pembayaran (Jika ada DP)
+                    if (!dataToSave.paymentHistory) dataToSave.paymentHistory = [];
+                    if (dataToSave.paidAmount > 0 && dataToSave.paymentHistory.length === 0) {
+                        dataToSave.paymentHistory.push({ date: new Date().toLocaleString('id-ID'), amount: dataToSave.paidAmount });
+                    }
+
                     await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
 
-                    // PROSES SINKRONISASI STOK KE MASTER PRODUK
-                    for (let item of dataToSave.items) {
-                        let prod = this.products.find(p => p.id === item.productId);
-                        if (prod) {
-                            let prodCopy = JSON.parse(JSON.stringify(prod));
-                            let updatePayload = {}; // Variabel penampung data yang akan diupdate ke Firebase
+                    // =========================================================
+                    // SINKRONISASI STOK (HANYA BERJALAN JIKA STATUS == 'SELESAI')
+                    // =========================================================
+                    if (dataToSave.poStatus === 'SELESAI') {
+                        for (let item of dataToSave.items) {
+                            let prod = this.products.find(p => p.id === item.productId);
+                            if (prod) {
+                                let prodCopy = JSON.parse(JSON.stringify(prod));
+                                let updatePayload = {}; 
 
-                            if(item.variantSku) {
-                                // ----- LOGIKA JIKA PRODUK MEMILIKI VARIAN -----
-                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
-                                if(vIdx !== -1) {
-                                    // 1. Inisialisasi properti jika belum ada
-                                    if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                    if(!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
-                                    if(!prodCopy.variants[vIdx].batches[dataToSave.outletId]) prodCopy.variants[vIdx].batches[dataToSave.outletId] = [];
-                                    
-                                    // Hitung total stok lama untuk Rumus Average
-                                    let oldStock = Object.values(prodCopy.variants[vIdx].outletStocks).reduce((a,b)=>a+b, 0) || 0;
-                                    let oldAvg = prodCopy.variants[vIdx].averageCost || prodCopy.variants[vIdx].hppPrice || 0;
+                                if(item.variantSku) {
+                                    let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                                    if(vIdx !== -1) {
+                                        if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                        if(!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                                        if(!prodCopy.variants[vIdx].batches[dataToSave.outletId]) prodCopy.variants[vIdx].batches[dataToSave.outletId] = [];
+                                        
+                                        let oldStock = Object.values(prodCopy.variants[vIdx].outletStocks).reduce((a,b)=>a+b, 0) || 0;
+                                        let oldAvg = prodCopy.variants[vIdx].averageCost || prodCopy.variants[vIdx].hppPrice || 0;
 
-                                    // 2. Tambah Stok Kuantitas (Cara Lama)
-                                    prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] = (prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] || 0) + item.qty;
-                                    
-                                    // 3. Update HPP STANDARD (Harga Beli Terakhir)
-                                    prodCopy.variants[vIdx].hppPrice = item.price;
+                                        prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] = (prodCopy.variants[vIdx].outletStocks[dataToSave.outletId] || 0) + item.qty;
+                                        prodCopy.variants[vIdx].hppPrice = item.price;
 
-                                    // 4. Update HPP AVERAGE (Rata-rata Bergerak)
+                                        let newTotalStock = oldStock + item.qty;
+                                        prodCopy.variants[vIdx].averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
+
+                                        prodCopy.variants[vIdx].batches[dataToSave.outletId].push({
+                                            batchId: dataToSave.id, batchNo: item.batchNo || 'AUTO', expiredDate: item.expiredDate || null, 
+                                            tanggalMasuk: new Date().toISOString(), qtySisa: item.qty, hargaModal: item.price
+                                        });
+                                    }
+                                    updatePayload.variants = prodCopy.variants;
+                                } else {
+                                    if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                    if(!prodCopy.batches) prodCopy.batches = {};
+                                    if(!prodCopy.batches[dataToSave.outletId]) prodCopy.batches[dataToSave.outletId] = [];
+
+                                    let oldStock = Object.values(prodCopy.baseOutletStocks).reduce((a,b)=>a+b, 0) || 0;
+                                    let oldAvg = prodCopy.averageCost || prodCopy.hppPrice || 0;
+
+                                    prodCopy.baseOutletStocks[dataToSave.outletId] = (prodCopy.baseOutletStocks[dataToSave.outletId] || 0) + item.qty;
+                                    prodCopy.hppPrice = item.price;
+
                                     let newTotalStock = oldStock + item.qty;
-                                    prodCopy.variants[vIdx].averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
+                                    prodCopy.averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
 
-                                    // 5. Update BATCH (Untuk FIFO & LIFO)
-                                    prodCopy.variants[vIdx].batches[dataToSave.outletId].push({
-                                    batchId: dataToSave.id,
-                                    batchNo: item.batchNo || 'AUTO',           // <--- TAMBAHAN BARU
-                                    expiredDate: item.expiredDate || null,     // <--- TAMBAHAN BARU
-                                    tanggalMasuk: new Date().toISOString(),
-                                    qtySisa: item.qty, 
-                                    hargaModal: item.price
-                            });
+                                    prodCopy.batches[dataToSave.outletId].push({
+                                        batchId: dataToSave.id, batchNo: item.batchNo || 'AUTO', expiredDate: item.expiredDate || null, 
+                                        tanggalMasuk: new Date().toISOString(), qtySisa: item.qty, hargaModal: item.price
+                                    });
+
+                                    updatePayload.baseOutletStocks = prodCopy.baseOutletStocks;
+                                    updatePayload.hppPrice = prodCopy.hppPrice;
+                                    updatePayload.averageCost = prodCopy.averageCost;
+                                    updatePayload.batches = prodCopy.batches;
                                 }
-                                updatePayload.variants = prodCopy.variants;
-
-                            } else {
-                                // ----- LOGIKA JIKA PRODUK INDUK (TANPA VARIAN) -----
-                                // 1. Inisialisasi properti jika belum ada
-                                if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                                if(!prodCopy.batches) prodCopy.batches = {};
-                                if(!prodCopy.batches[dataToSave.outletId]) prodCopy.batches[dataToSave.outletId] = [];
-
-                                // Hitung total stok lama untuk Rumus Average
-                                let oldStock = Object.values(prodCopy.baseOutletStocks).reduce((a,b)=>a+b, 0) || 0;
-                                let oldAvg = prodCopy.averageCost || prodCopy.hppPrice || 0;
-
-                                // 2. Tambah Stok Kuantitas (Cara Lama)
-                                prodCopy.baseOutletStocks[dataToSave.outletId] = (prodCopy.baseOutletStocks[dataToSave.outletId] || 0) + item.qty;
                                 
-                                // 3. Update HPP STANDARD (Harga Beli Terakhir)
-                                prodCopy.hppPrice = item.price;
-
-                                // 4. Update HPP AVERAGE (Rata-rata Bergerak)
-                                let newTotalStock = oldStock + item.qty;
-                                prodCopy.averageCost = newTotalStock > 0 ? ((oldStock * oldAvg) + (item.qty * item.price)) / newTotalStock : item.price;
-
-                                // 5. Update BATCH (Untuk FIFO & LIFO)
-                                prodCopy.batches[dataToSave.outletId].push({
-                                batchId: dataToSave.id,
-                                batchNo: item.batchNo || 'AUTO',           // <--- TAMBAHAN BARU
-                                expiredDate: item.expiredDate || null,     // <--- TAMBAHAN BARU
-                                tanggalMasuk: new Date().toISOString(),
-                                qtySisa: item.qty, 
-                                hargaModal: item.price
-                            });
-
-                                // Siapkan payload untuk Firebase
-                                updatePayload.baseOutletStocks = prodCopy.baseOutletStocks;
-                                updatePayload.hppPrice = prodCopy.hppPrice;
-                                updatePayload.averageCost = prodCopy.averageCost;
-                                updatePayload.batches = prodCopy.batches;
+                                await updateDoc(doc(db, "products", prod.id), updatePayload);
+                                
+                                await this.logStock('IN', {
+                                    productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                                    qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
+                                });
                             }
-                            
-                            // Eksekusi Update ke Database Firebase
-                            await updateDoc(doc(db, "products", prod.id), updatePayload);
-
-                            // Log mutasi MASUK via Fungsi Pusat
-                            await this.logStock('IN', {
-                                productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                                qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
-                            });
                         }
                     }
 
                     this.hideModal('addPurchaseModal');
-                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false };
+                    this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', taxAmount: 0, poStatus: 'PENDING', isEdit: false };
+                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Dokumen Pembelian berhasil disimpan!', timer: 2000, showConfirmButton: false });
 
                 } catch(e) {
                     console.error("Gagal PO:", e);
-                    alert("Gagal memproses PO.");
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses dokumen Pembelian.' });
                 }
                 this.isSaving = false;
             },
 
+            // Eksekusi Tombol "Terima Barang" (Pindah status dari PENDING jadi SELESAI)
+            async receivePurchase(po) {
+                this.askConfirm('Terima Kedatangan Barang?', `Ubah status PO ${po.id} menjadi Diterima dan proses penambahan STOK ke gudang?`, async () => {
+                    this.isProcessing = true;
+                    try {
+                        let poCopy = JSON.parse(JSON.stringify(po));
+                        poCopy.poStatus = 'SELESAI';
+                        
+                        // Gunakan logika fungsi formEdit tapi jangan buka formnya, langsung save di background
+                        this.formPurchase = poCopy;
+                        this.formPurchase.isEdit = true;
+                        this.formPurchase.originalPo = po; // Karena sebelumnya PENDING, revertPurchaseStock tidak akan merusak stok
+                        
+                        await this.savePurchase();
+                        
+                    } catch (e) { console.error(e); }
+                    this.isProcessing = false;
+                });
+            },
+
             async revertPurchaseStock(po) {
-                if (!po || !po.items) return;
+                // SANGAT PENTING: Hanya Tarik Mundur Stok JIKA PO Tersebut Sebelumnya Sudah SELESAI / Masuk Gudang!
+                if (!po || !po.items || po.poStatus !== 'SELESAI') return;
                 
                 for (let item of po.items) {
                     let prod = this.products.find(p => p.id === item.productId);
@@ -8655,12 +8743,10 @@ async fetchRolesFromDatabase() {
                         let updatePayload = {};
 
                         if (item.variantSku) {
-                            // ----- REVERT JIKA PRODUK VARIAN -----
                             let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if(!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 
-                                // 1. Hitung Mundur Average Cost
                                 let currentTotal = Object.values(prodCopy.variants[vIdx].outletStocks).reduce((a,b)=>a+b, 0) || 0;
                                 let currentAvg = prodCopy.variants[vIdx].averageCost || 0;
                                 let newTotalAfterRevert = currentTotal - item.qty;
@@ -8672,10 +8758,8 @@ async fetchRolesFromDatabase() {
                                     prodCopy.variants[vIdx].averageCost = 0;
                                 }
 
-                                // 2. Kurangi Stok Kuantitas
                                 prodCopy.variants[vIdx].outletStocks[po.outletId] = Math.max(0, (prodCopy.variants[vIdx].outletStocks[po.outletId] || 0) - item.qty);
                                 
-                                // 3. Hapus BATCH yang berasal dari PO ini
                                 if(prodCopy.variants[vIdx].batches && prodCopy.variants[vIdx].batches[po.outletId]) {
                                     prodCopy.variants[vIdx].batches[po.outletId] = prodCopy.variants[vIdx].batches[po.outletId].filter(b => b.batchId !== po.id);
                                 }
@@ -8683,10 +8767,8 @@ async fetchRolesFromDatabase() {
                             updatePayload.variants = prodCopy.variants;
 
                         } else {
-                            // ----- REVERT JIKA PRODUK INDUK -----
                             if(!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
                             
-                            // 1. Hitung Mundur Average Cost
                             let currentTotal = Object.values(prodCopy.baseOutletStocks).reduce((a,b)=>a+b, 0) || 0;
                             let currentAvg = prodCopy.averageCost || 0;
                             let newTotalAfterRevert = currentTotal - item.qty;
@@ -8698,10 +8780,8 @@ async fetchRolesFromDatabase() {
                                 prodCopy.averageCost = 0;
                             }
 
-                            // 2. Kurangi Stok Kuantitas
                             prodCopy.baseOutletStocks[po.outletId] = Math.max(0, (prodCopy.baseOutletStocks[po.outletId] || 0) - item.qty);
                             
-                            // 3. Hapus BATCH yang berasal dari PO ini
                             if(prodCopy.batches && prodCopy.batches[po.outletId]) {
                                 prodCopy.batches[po.outletId] = prodCopy.batches[po.outletId].filter(b => b.batchId !== po.id);
                             }
@@ -8711,10 +8791,8 @@ async fetchRolesFromDatabase() {
                             updatePayload.batches = prodCopy.batches;
                         }
                         
-                        // Eksekusi Update ke Database Firebase
                         await updateDoc(doc(db, "products", prod.id), updatePayload);
                         
-                        // Log mutasi KELUAR via Fungsi Pusat
                         await this.logStock('OUT', {
                             productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
                             qty: -item.qty, outletId: po.outletId, refId: po.id + ' (BATAL)', note: 'Revisi/Batal Dokumen PO'
@@ -8754,7 +8832,7 @@ async fetchRolesFromDatabase() {
         },
 
             editPurchase(po) {
-                this.askConfirm('Revisi Data Pembelian?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, stok lama akan otomatis ditarik & diganti dengan stok yang baru.', () => {
+                this.askConfirm('Revisi Data PO?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, data akan ditimpa ulang (dan stok disesuaikan jika statusnya SELESAI).', () => {
                     this.formPurchase = JSON.parse(JSON.stringify(po));
                     this.formPurchase.isEdit = true;
                     this.formPurchase.originalPo = JSON.parse(JSON.stringify(po));
@@ -8765,7 +8843,46 @@ async fetchRolesFromDatabase() {
             
             cancelPurchaseEdit() {
                 this.hideModal('addPurchaseModal');
-                this.formPurchase = { id: null, invoiceNo: (typeof this.generateInvoiceNumber === 'function' ? this.generateInvoiceNumber('PO') : ''), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', isEdit: false };
+                this.formPurchase = { id: null, invoiceNo: (typeof this.generateInvoiceNumber === 'function' ? this.generateInvoiceNumber('PO') : ''), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', taxAmount: 0, poStatus: 'PENDING', isEdit: false };
+            },
+            
+            // Fungsi Buka Detail Invoice PO
+            openPurchaseDetail(po) {
+                this.activePurchaseDetail = po;
+                this.purchasePaymentForm.amount = 0;
+                this.showModal('purchaseDetailModal');
+            },
+
+            // Fungsi Eksekusi Cicilan / Pembayaran Hutang Supplier
+            async payPurchaseDebt() {
+                if(this.purchasePaymentForm.amount <= 0) return;
+                let po = this.activePurchaseDetail;
+                
+                this.isProcessing = true;
+                try {
+                    let newPaid = (po.paidAmount || 0) + this.purchasePaymentForm.amount;
+                    let newStatus = newPaid >= po.total ? 'LUNAS' : 'HUTANG';
+                    
+                    let history = po.paymentHistory || [];
+                    history.push({ date: new Date().toLocaleString('id-ID'), amount: this.purchasePaymentForm.amount });
+
+                    await updateDoc(doc(db, "purchases", po.id), {
+                        paidAmount: newPaid,
+                        paymentStatus: newStatus,
+                        paymentHistory: history
+                    });
+
+                    // Update UI realtime
+                    po.paidAmount = newPaid;
+                    po.paymentStatus = newStatus;
+                    po.paymentHistory = history;
+                    
+                    this.purchasePaymentForm.amount = 0;
+                    Swal.fire({ icon: 'success', title: 'Pembayaran Sukses', text: 'Cicilan hutang ke supplier berhasil dicatat.', timer: 1500, showConfirmButton: false });
+                } catch(e) {
+                    console.error("Gagal bayar hutang PO:", e);
+                }
+                this.isProcessing = false;
             },
 
             // ============================================
