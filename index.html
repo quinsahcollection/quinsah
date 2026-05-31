@@ -585,8 +585,15 @@
                                     {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
                                 </span>
                             </td>
-                            <td class="small fw-semibold text-muted">
-                                <i class="bi bi-wallet2 me-1"></i> {{ po.paymentMethod || '-' }}
+                            <td>
+                                <div class="small fw-semibold text-dark">
+                                    <i class="bi bi-wallet2 text-muted me-1"></i> 
+                                    {{ getPaymentMethods(po) }}: 
+                                    <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
+                                </div>
+                                <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.7rem;">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
+                                </div>
                             </td>
                             <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
                             <td class="text-center">
@@ -6098,6 +6105,21 @@
             }
         },
         
+        // --- FUNGSI BARU CEK METODE BAYAR ---
+            getPaymentMethods(po) {
+                // Jika PO punya riwayat cicilan/pembayaran
+                if (po.paymentHistory && po.paymentHistory.length > 0) {
+                    // Ambil semua metode bayar dari riwayat
+                    let methods = po.paymentHistory.map(h => h.method || 'CASH');
+                    // Buang yang duplikat (misal 2x bayar Cash, cukup tampil 1x)
+                    let uniqueMethods = [...new Set(methods)];
+                    // Gabungkan dengan simbol '&'
+                    return uniqueMethods.join(' & '); 
+                }
+                // Jika tidak ada riwayat (data lama), ambil metode default
+                return po.paymentMethod || 'CASH';
+            },
+        
                     // 1. Warna Status Pembayaran
             getPaymentStatusColor(status) {
                 if (status === 'LUNAS') return 'bg-success text-white';
@@ -8680,10 +8702,21 @@ async fetchRolesFromDatabase() {
                     dataToSave.createdAt = serverTimestamp();
                     dataToSave.userName = this.userProfile.name || 'Admin'; 
 
+                    // --- TAMBAHAN PENTING: AUTO KALKULASI LUNAS ---
+                    // Jika status dipilih LUNAS, pastikan nominal bayar otomatis sama dengan Grand Total
+                    if (dataToSave.paymentStatus === 'LUNAS') {
+                        dataToSave.paidAmount = dataToSave.total;
+                    }
+                    // ----------------------------------------------
+
                     // Inisialisasi Riwayat Pembayaran (Jika ada DP)
                     if (!dataToSave.paymentHistory) dataToSave.paymentHistory = [];
                     if (dataToSave.paidAmount > 0 && dataToSave.paymentHistory.length === 0) {
-                        dataToSave.paymentHistory.push({ date: new Date().toLocaleString('id-ID'), amount: dataToSave.paidAmount });
+                        dataToSave.paymentHistory.push({ 
+                            date: new Date().toLocaleString('id-ID'), 
+                            amount: dataToSave.paidAmount,
+                            method: dataToSave.paymentMethod || 'CASH'
+                        });
                     }
 
                     await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
