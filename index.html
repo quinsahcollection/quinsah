@@ -585,13 +585,35 @@
                                     {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
                                 </span>
                             </td>
-                            <td>
-                                <div class="small fw-semibold text-dark">
-                                    <i class="bi bi-wallet2 text-muted me-1"></i> 
-                                    {{ getPaymentMethods(po) }}: 
-                                    <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
-                                </div>
-                                <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.7rem;">
+                            <td class="small">
+                                <!-- JIKA PUNYA RIWAYAT CICILAN / MULTIPAYMENT -->
+                                <template v-if="po.paymentHistory && po.paymentHistory.length > 0">
+                                    <!-- Pembayaran Pertama (Header) -->
+                                    <div class="fw-semibold text-dark mb-1">
+                                        <i class="bi bi-wallet2 text-muted me-1"></i> 
+                                        {{ po.paymentHistory[0].method || 'CASH' }}: 
+                                        <span class="text-success">Rp {{ formatNumber(po.paymentHistory[0].amount) }}</span>
+                                    </div>
+                                    
+                                    <!-- Pembayaran Selanjutnya (Pohon Breakdown / Slice dari index 1) -->
+                                    <div v-for="(hist, idx) in po.paymentHistory.slice(1)" :key="'hist-'+idx" class="text-muted" style="font-size: 0.75rem;">
+                                        <span class="ms-1 me-1 text-black-50">|</span> 
+                                        <i class="bi bi-arrow-return-right me-1"></i> 
+                                        {{ hist.method || 'CASH' }}: Rp {{ formatNumber(hist.amount) }}
+                                    </div>
+                                </template>
+                                
+                                <!-- JIKA DATA LAMA / TIDAK PUNYA RIWAYAT (Fallback) -->
+                                <template v-else>
+                                    <div class="fw-semibold text-dark">
+                                        <i class="bi bi-wallet2 text-muted me-1"></i> 
+                                        {{ po.paymentMethod || 'CASH' }}: 
+                                        <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
+                                    </div>
+                                </template>
+
+                                <!-- STATUS SISA HUTANG (Berlaku untuk semuanya) -->
+                                <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.75rem;">
                                     <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
                                 </div>
                             </td>
