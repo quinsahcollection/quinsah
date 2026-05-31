@@ -5468,9 +5468,16 @@
                     
                     if (trx.items && Array.isArray(trx.items)) {
                         trx.items.forEach(item => {
-                            // Mengambil HPP asli barang saat dimasukkan ke dalam keranjang belanja
-                            let hppSatuan = item.basePrice || 0; 
-                            totalHppNota += (hppSatuan * (item.qty || 0));
+                            // --- PERBAIKAN FEFO ---
+                            // 1. Cek apakah ada HPP Dinamis dari FEFO (totalCogs)
+                            if (item.totalCogs && item.totalCogs > 0) {
+                                totalHppNota += item.totalCogs;
+                            } 
+                            // 2. Jika tidak ada (misal transaksi lama sebelum FEFO), pakai HPP Master
+                            else {
+                                let hppSatuan = item.basePrice || item.cost || item.hppPrice || 0; 
+                                totalHppNota += (hppSatuan * (item.qty || 0));
+                            }
                         });
                     }
                     
