@@ -277,8 +277,19 @@
 
             <div v-if="authError" class="alert alert-danger py-2 small fw-semibold">{{ authError }}</div>
             <form @submit.prevent="handleAuthAction">
-                <div class="mb-3" v-if="authMode === 'register'"><label class="form-label small fw-bold">Nama Lengkap</label><input type="text" class="form-control" v-model="authUser.name" required></div>
-                <div class="mb-3"><label class="form-label small fw-bold">Email Address</label><input type="email" class="form-control" v-model="authUser.email" required></div>
+                <div class="mb-3" v-if="authMode === 'register'">
+                    <label class="form-label small fw-bold">Nama Lengkap</label>
+                    <input type="text" class="form-control" v-model="authUser.name" required>
+                </div>
+                
+                <div class="mb-3" v-if="authMode === 'register'">
+                    <label class="form-label small fw-bold">Nama Usaha / Toko</label>
+                    <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Email Address</label>
+                    <input type="email" class="form-control" v-model="authUser.email" required>
+                </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Password</label>
                     <input type="password" class="form-control" v-model="authUser.password" required>
@@ -5133,7 +5144,8 @@
             
             return {
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
-                authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '' },
+                
+                authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '', companyName: '' },
 
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
                 
@@ -7872,41 +7884,53 @@ async fetchRolesFromDatabase() {
             },
             
             async handleAuthAction() {
-    this.authError = ''; 
-    this.isProcessingAuth = true;
-    
-    try {
-        if (this.authMode === 'login') {
-            await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
-        } else {
-            // PROSES REGISTRASI
-            const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
-            
-            // Simpan ke Firestore dengan status 'pending'
-            await setDoc(doc(db, "users", res.user.uid), {
-                namaLengkap: this.authUser.name, // Pastikan ini sesuai dengan input di form Anda
-                email: this.authUser.email,
-                roleId: 'pending',              // <--- KUNCI KEAMANAN
-                createdAt: serverTimestamp()
-            });
+                this.authError = ''; 
+                this.isProcessingAuth = true;
+                
+                try {
+                    if (this.authMode === 'login') {
+                        await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+                    } else {
+                        // PROSES REGISTRASI SAAS (MULTI-TENANT)
+                        const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+                        
+                        // 1. Buat data Perusahaan / Tenant Baru di Firestore
+                        // Kita pakai addDoc agar Firebase membuatkan ID Perusahaan secara otomatis
+                        const companyRef = await addDoc(collection(db, "companies"), {
+                            namaUsaha: this.authUser.companyName,
+                            pemilik: this.authUser.name,
+                            email: this.authUser.email,
+                            paketLangganan: 'Trial 14 Hari', // Set default paket saat baru daftar
+                            tanggalDaftar: serverTimestamp(),
+                            status: 'Aktif'
+                        });
 
-            // Berikan notifikasi bahwa akun sedang menunggu verifikasi
-            Swal.fire({
-                icon: 'success',
-                title: 'Registrasi Berhasil!',
-                text: 'Akun Anda telah dibuat. Mohon hubungi Admin untuk verifikasi hak akses.',
-                confirmButtonText: 'Mengerti'
-            });
-            
-            // Reset mode ke login setelah daftar
-            this.authMode = 'login';
-        }
-    } catch(e) {
-        // Tampilkan pesan error spesifik dari Firebase
-        this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
-    }
-    this.isProcessingAuth = false;
-},
+                        // 2. Simpan User ke Firestore, dan tempelkan companyId
+                        await setDoc(doc(db, "users", res.user.uid), {
+                            namaLengkap: this.authUser.name,
+                            email: this.authUser.email,
+                            companyId: companyRef.id, // <--- KUNCI UTAMA MULTI-TENANT
+                            roleId: 'Owner', // Pembuat toko otomatis jadi Owner, bukan pending
+                            createdAt: serverTimestamp()
+                        });
+
+                        // Berikan notifikasi sukses
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Toko Berhasil Dibuat!',
+                            text: `Selamat datang, ${this.authUser.name}! Silakan masuk untuk mulai mengatur kasir ${this.authUser.companyName}.`,
+                            confirmButtonText: 'Mulai'
+                        });
+                        
+                        // Reset form & pindah ke mode login
+                        this.authMode = 'login';
+                        this.authUser = { name: '', email: '', password: '', companyName: '' };
+                    }
+                } catch(e) {
+                    this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
+                }
+                this.isProcessingAuth = false;
+            },
             
             logout() { this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { await signOut(auth); this.cart = []; this.selectedCustomer = null; }); },
             
