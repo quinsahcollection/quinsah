@@ -650,9 +650,9 @@
           <div v-if="currentView === 'payment' && userRole === 'Admin'" class="dashboard-card">
             <h6 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-bank me-2"></i>Manajemen Keuangan & Arus Kas</h6>
             
-            <div class="row mb-3 align-items-center">
-                <div class="col-md-8">
-                    <ul class="nav nav-pills gap-2 mb-2 mb-md-0" style="font-size: 0.85rem;">
+            <div class="row mb-3 align-items-end g-2">
+                <div class="col-12 col-md-5 mb-2">
+                    <ul class="nav nav-pills gap-2 flex-nowrap overflow-auto" style="font-size: 0.85rem; white-space: nowrap;">
                         <li class="nav-item">
                             <a class="nav-link border" :class="{'active fw-bold': paymentTab === 'sales_payment'}" href="#" @click.prevent="paymentTab = 'sales_payment'"><i class="bi bi-box-arrow-in-down-left me-1"></i>Pembayaran Masuk</a>
                         </li>
@@ -667,108 +667,157 @@
                         </li>
                     </ul>
                 </div>
-                <div class="col-md-4">
+                
+                <div class="col-6 col-md-2 mb-2" v-if="paymentTab === 'sales_payment' || paymentTab === 'purchase_payment'">
+                    <label class="form-label small fw-bold text-muted mb-1">Dari Tanggal</label>
+                    <input type="date" class="form-control form-control-sm border-primary" v-model="paymentStartDate">
+                </div>
+                <div class="col-6 col-md-2 mb-2" v-if="paymentTab === 'sales_payment' || paymentTab === 'purchase_payment'">
+                    <label class="form-label small fw-bold text-muted mb-1">Sampai Tanggal</label>
+                    <input type="date" class="form-control form-control-sm border-primary" v-model="paymentEndDate">
+                </div>
+
+                <div class="col-12 mb-2" :class="(paymentTab === 'sales_payment' || paymentTab === 'purchase_payment') ? 'col-md-3' : 'col-md-7'">
+                    <label class="form-label small fw-bold text-muted mb-1">Cari Data Transaksi</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" v-model="paymentSearchQuery" placeholder="Cari No. Invoice / Nama...">
+                        <input type="text" class="form-control" v-model="paymentSearchQuery" placeholder="No. Invoice / Nama...">
+                        <button v-if="paymentStartDate || paymentEndDate || paymentSearchQuery" class="btn btn-outline-danger" @click="paymentStartDate=''; paymentEndDate=''; paymentSearchQuery=''" title="Reset Filter"><i class="bi bi-x-lg"></i></button>
                     </div>
                 </div>
             </div>
 
-            <div class="table-responsive">
+            <div>
                 
                 <div v-if="paymentTab === 'sales_payment'">
+                    <div class="card bg-success bg-opacity-10 border-success border-start border-4 mb-3 shadow-sm">
+                        <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                            <div class="text-success fw-bold mb-1 mb-md-0"><i class="bi bi-graph-up-arrow me-2"></i>Total Pemasukan (Sesuai Filter)</div>
+                            <h4 class="text-success fw-bolder mb-0">Rp {{ formatNumber(financeSalesPayments.reduce((sum, g) => sum + g.total, 0)) }}</h4>
+                        </div>
+                    </div>
+
                     <div v-for="(group, gIdx) in financeSalesPayments" :key="'spg'+gIdx" class="mb-4 border rounded shadow-sm overflow-hidden">
                         <div class="bg-primary-custom bg-opacity-10 p-3 border-bottom d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-bold text-primary-custom"><i class="bi bi-wallet2 me-2"></i>METODE: {{ group.method }}</h6>
                             <h5 class="mb-0 fw-bold text-success">Total: Rp {{ formatNumber(group.total) }}</h5>
                         </div>
-                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
-                            <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. Invoice</th><th>Pelanggan</th><th class="text-end pe-4">Nominal Masuk</th></tr></thead>
-                            <tbody>
-                                <tr v-for="(item, iIdx) in group.items" :key="'spi'+iIdx">
-                                    <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
-                                    <td class="fw-bold">{{ item.id }}</td>
-                                    <td>{{ item.name }}</td>
-                                    <td class="text-end pe-4 fw-bold text-success">Rp {{ formatNumber(item.amount) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.85rem;">
+                                <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. Invoice</th><th>Pelanggan</th><th class="text-end pe-4">Nominal Masuk</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(item, iIdx) in group.items" :key="'spi'+iIdx">
+                                        <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
+                                        <td class="fw-bold">{{ item.id }}</td>
+                                        <td>{{ item.name }}</td>
+                                        <td class="text-end pe-4 fw-bold text-success">Rp {{ formatNumber(item.amount) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div v-if="financeSalesPayments.length === 0" class="text-center py-4 text-muted border rounded">Belum ada data pembayaran masuk.</div>
+                    <div v-if="financeSalesPayments.length === 0" class="text-center py-4 text-muted border rounded shadow-sm">Belum ada data pembayaran masuk pada tanggal ini.</div>
                 </div>
 
                 <div v-if="paymentTab === 'purchase_payment'">
+                    <div class="card bg-danger bg-opacity-10 border-danger border-start border-4 mb-3 shadow-sm">
+                        <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                            <div class="text-danger fw-bold mb-1 mb-md-0"><i class="bi bi-graph-down-arrow me-2"></i>Total Pengeluaran (Sesuai Filter)</div>
+                            <h4 class="text-danger fw-bolder mb-0">Rp {{ formatNumber(financePurchasePayments.reduce((sum, g) => sum + g.total, 0)) }}</h4>
+                        </div>
+                    </div>
+
                     <div v-for="(group, gIdx) in financePurchasePayments" :key="'ppg'+gIdx" class="mb-4 border border-danger rounded shadow-sm overflow-hidden">
                         <div class="bg-danger bg-opacity-10 p-3 border-bottom border-danger d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-wallet2 me-2"></i>METODE: {{ group.method }}</h6>
                             <h5 class="mb-0 fw-bold text-danger">Total: Rp {{ formatNumber(group.total) }}</h5>
                         </div>
-                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
-                            <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. PO</th><th>Supplier</th><th class="text-end pe-4">Nominal Keluar</th></tr></thead>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle text-nowrap mb-0" style="font-size: 0.85rem;">
+                                <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. PO</th><th>Supplier</th><th class="text-end pe-4">Nominal Keluar</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(item, iIdx) in group.items" :key="'ppi'+iIdx">
+                                        <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
+                                        <td class="fw-bold">{{ item.id }}</td>
+                                        <td>{{ item.name }}</td>
+                                        <td class="text-end pe-4 fw-bold text-danger">Rp {{ formatNumber(item.amount) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-if="financePurchasePayments.length === 0" class="text-center py-4 text-muted border rounded shadow-sm">Belum ada data pembayaran keluar pada tanggal ini.</div>
+                </div>
+
+                <div v-if="paymentTab === 'ar_data'">
+                    <div class="card bg-danger bg-opacity-10 border-danger border-start border-4 mb-3 shadow-sm">
+                        <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                            <div class="text-danger fw-bold mb-1 mb-md-0"><i class="bi bi-journal-arrow-down me-2"></i>Total Sisa Piutang (Tagihan di Luar)</div>
+                            <h4 class="text-danger fw-bolder mb-0">Rp {{ formatNumber(financeARList.reduce((sum, ar) => sum + getSisaTagihan(ar), 0)) }}</h4>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive border rounded shadow-sm">
+                        <table class="table table-custom align-middle text-nowrap mb-0">
+                            <thead class="table-danger"><tr><th>No. Invoice</th><th>Tgl Invoice</th><th>Pelanggan</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Piutang (AR)</th><th class="text-center">Aksi</th></tr></thead>
                             <tbody>
-                                <tr v-for="(item, iIdx) in group.items" :key="'ppi'+iIdx">
-                                    <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
-                                    <td class="fw-bold">{{ item.id }}</td>
-                                    <td>{{ item.name }}</td>
-                                    <td class="text-end pe-4 fw-bold text-danger">Rp {{ formatNumber(item.amount) }}</td>
+                                <tr v-for="ar in financeARList" :key="'ar'+ar.id">
+                                    <td class="fw-bold">{{ ar.id }}</td>
+                                    <td class="small">{{ ar.dateStr || '-' }}</td>
+                                    <td class="fw-semibold text-primary">{{ getCustomerName(ar.customerId) || 'Umum' }}</td>
+                                    <td class="text-end">Rp {{ formatNumber(ar.total) }}</td>
+                                    <td class="text-end small">
+                                        <div v-for="(ph, idx) in getPaymentBreakdown(ar)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
+                                            {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
+                                        </div>
+                                        <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ar)) }}</div>
+                                    </td>
+                                    <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ar)) }}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-danger fw-bold" @click="openInvoiceDetail(ar)" title="Tarik/Bayar Tagihan">Bayar AR</button>
+                                    </td>
                                 </tr>
+                                <tr v-if="financeARList.length === 0"><td colspan="7" class="text-center py-4 text-muted">Hore! Tidak ada pelanggan yang berhutang (Piutang Bersih).</td></tr>
                             </tbody>
                         </table>
                     </div>
-                    <div v-if="financePurchasePayments.length === 0" class="text-center py-4 text-muted border rounded">Belum ada data pembayaran keluar.</div>
                 </div>
 
-                <table v-if="paymentTab === 'ar_data'" class="table table-custom align-middle text-nowrap">
-                    <thead class="table-danger"><tr><th>No. Invoice</th><th>Tgl Invoice</th><th>Pelanggan</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Piutang (AR)</th><th class="text-center">Aksi</th></tr></thead>
-                    <tbody>
-                        <tr v-for="ar in financeARList" :key="'ar'+ar.id">
-                            <td class="fw-bold">{{ ar.id }}</td>
-                            <td class="small">{{ ar.dateStr || '-' }}</td>
-                            <td class="fw-semibold text-primary">{{ getCustomerName(ar.customerId) || 'Umum' }}</td>
-                            <td class="text-end">Rp {{ formatNumber(ar.total) }}</td>
-                            
-                            <td class="text-end small">
-                                <div v-for="(ph, idx) in getPaymentBreakdown(ar)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
-                                    {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
-                                </div>
-                                <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ar)) }}</div>
-                            </td>
+                <div v-if="paymentTab === 'ap_data'">
+                    <div class="card bg-warning bg-opacity-10 border-warning border-start border-4 mb-3 shadow-sm">
+                        <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                            <div class="text-dark fw-bold mb-1 mb-md-0"><i class="bi bi-journal-arrow-up me-2"></i>Total Sisa Hutang ke Supplier</div>
+                            <h4 class="text-dark fw-bolder mb-0">Rp {{ formatNumber(financeAPList.reduce((sum, ap) => sum + getSisaTagihan(ap), 0)) }}</h4>
+                        </div>
+                    </div>
 
-                            <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ar)) }}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-danger fw-bold" @click="openInvoiceDetail(ar)" title="Tarik/Bayar Tagihan">Bayar AR</button>
-                            </td>
-                        </tr>
-                        <tr v-if="financeARList.length === 0"><td colspan="7" class="text-center py-4 text-muted border rounded">Hore! Tidak ada pelanggan yang berhutang (Piutang Bersih).</td></tr>
-                    </tbody>
-                </table>
+                    <div class="table-responsive border rounded shadow-sm">
+                        <table class="table table-custom align-middle text-nowrap mb-0">
+                            <thead class="table-warning"><tr><th>No. PO / Invoice</th><th>Tgl PO</th><th>Supplier</th><th>Jatuh Tempo</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Hutang (AP)</th><th class="text-center">Aksi</th></tr></thead>
+                            <tbody>
+                                <tr v-for="ap in financeAPList" :key="'ap'+ap.id">
+                                    <td class="fw-bold">{{ ap.id }}</td>
+                                    <td class="small">{{ (ap.dateStr || '').split(',')[0] }}</td>
+                                    <td class="fw-semibold text-primary">{{ getSupplierName(ap.supplierId) }}</td>
+                                    <td><span class="badge bg-danger">{{ ap.dueDate || 'Belum Diatur' }}</span></td>
+                                    <td class="text-end">Rp {{ formatNumber(ap.total) }}</td>
+                                    <td class="text-end small">
+                                        <div v-for="(ph, idx) in getPaymentBreakdown(ap)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
+                                            {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
+                                        </div>
+                                        <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ap)) }}</div>
+                                    </td>
+                                    <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ap)) }}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-danger fw-bold" @click="openPurchaseDetail(ap)" title="Lunasi Hutang">Bayar AP</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="financeAPList.length === 0"><td colspan="8" class="text-center py-4 text-muted">Bagus! Toko Anda sedang tidak memiliki hutang ke Supplier manapun.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                <table v-if="paymentTab === 'ap_data'" class="table table-custom align-middle text-nowrap">
-                    <thead class="table-warning"><tr><th>No. PO / Invoice</th><th>Tgl PO</th><th>Supplier</th><th>Jatuh Tempo</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Hutang (AP)</th><th class="text-center">Aksi</th></tr></thead>
-                    <tbody>
-                        <tr v-for="ap in financeAPList" :key="'ap'+ap.id">
-                            <td class="fw-bold">{{ ap.id }}</td>
-                            <td class="small">{{ (ap.dateStr || '').split(',')[0] }}</td>
-                            <td class="fw-semibold text-primary">{{ getSupplierName(ap.supplierId) }}</td>
-                            <td><span class="badge bg-danger">{{ ap.dueDate || 'Belum Diatur' }}</span></td>
-                            <td class="text-end">Rp {{ formatNumber(ap.total) }}</td>
-                            
-                            <td class="text-end small">
-                                <div v-for="(ph, idx) in getPaymentBreakdown(ap)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
-                                    {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
-                                </div>
-                                <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ap)) }}</div>
-                            </td>
-
-                            <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ap)) }}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-danger fw-bold" @click="openPurchaseDetail(ap)" title="Lunasi Hutang">Bayar AP</button>
-                            </td>
-                        </tr>
-                        <tr v-if="financeAPList.length === 0"><td colspan="8" class="text-center py-4 text-muted border rounded">Bagus! Toko Anda sedang tidak memiliki hutang ke Supplier manapun.</td></tr>
-                    </tbody>
-                </table>
             </div>
         </div>
 
@@ -5088,6 +5137,8 @@
                     
                 paymentTab: 'sales_payment',
                 paymentSearchQuery: '',
+                paymentStartDate: '', // Tambahan untuk filter tgl
+                paymentEndDate: '',
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
@@ -5741,15 +5792,26 @@
                 let groups = {};
                 let q = (this.paymentSearchQuery || '').toLowerCase();
                 
+                // Setel default ke Hari Ini jika filter tanggal kosong
+                let t = new Date();
+                let todayStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+                let startFilter = this.paymentStartDate || todayStr;
+                let endFilter = this.paymentEndDate || todayStr;
+
                 (this.transactions || []).forEach(trx => {
                     let custName = this.getCustomerName(trx.customerId) || 'Pelanggan Umum';
                     let processPayment = (method, amount, date, type) => {
                         if (amount <= 0) return;
-                        let m = (method || 'CASH').toUpperCase();
-                        if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
-                        if (String(trx.id || '').toLowerCase().includes(q) || custName.toLowerCase().includes(q)) {
-                            groups[m].items.push({ id: String(trx.id || ''), name: custName, amount: amount, date: String(date || '').replace(',', ''), type: type });
-                            groups[m].total += amount;
+                        
+                        // Cek apakah tanggal pembayaran masuk dalam filter
+                        let pDate = this.parseDateToStandard(date);
+                        if (pDate >= startFilter && pDate <= endFilter) {
+                            let m = (method || 'CASH').toUpperCase();
+                            if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
+                            if (String(trx.id || '').toLowerCase().includes(q) || custName.toLowerCase().includes(q)) {
+                                groups[m].items.push({ id: String(trx.id || ''), name: custName, amount: amount, date: String(date || '').replace(',', ''), type: type });
+                                groups[m].total += amount;
+                            }
                         }
                     };
 
@@ -5777,15 +5839,26 @@
                 let groups = {};
                 let q = (this.paymentSearchQuery || '').toLowerCase();
                 
+                // Setel default ke Hari Ini jika filter tanggal kosong
+                let t = new Date();
+                let todayStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+                let startFilter = this.paymentStartDate || todayStr;
+                let endFilter = this.paymentEndDate || todayStr;
+
                 (this.purchases || []).forEach(po => {
                     let supName = this.getSupplierName(po.supplierId) || 'Supplier Unknown';
                     let processPayment = (method, amount, date, type) => {
                         if (amount <= 0) return;
-                        let m = (method || 'CASH').toUpperCase();
-                        if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
-                        if (String(po.id || '').toLowerCase().includes(q) || supName.toLowerCase().includes(q)) {
-                            groups[m].items.push({ id: String(po.id || ''), name: supName, amount: amount, date: String(date || '').replace(',', ''), type: type });
-                            groups[m].total += amount;
+                        
+                        // Cek apakah tanggal pembayaran masuk dalam filter
+                        let pDate = this.parseDateToStandard(date);
+                        if (pDate >= startFilter && pDate <= endFilter) {
+                            let m = (method || 'CASH').toUpperCase();
+                            if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
+                            if (String(po.id || '').toLowerCase().includes(q) || supName.toLowerCase().includes(q)) {
+                                groups[m].items.push({ id: String(po.id || ''), name: supName, amount: amount, date: String(date || '').replace(',', ''), type: type });
+                                groups[m].total += amount;
+                            }
                         }
                     };
 
@@ -6336,6 +6409,21 @@
                 batchModal.show();
             }
         },
+        
+        // Fungsi penyeragam format tanggal untuk filter pencarian
+            parseDateToStandard(dStr) {
+                if (!dStr) return '';
+                let datePart = String(dStr).split(',')[0].trim(); 
+                if (datePart.includes('/')) {
+                    let parts = datePart.split('/');
+                    if (parts.length === 3) {
+                        let y = parts[2].length === 4 ? parts[2] : `20${parts[2]}`;
+                        return `${y}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+                if (datePart.includes('-')) return datePart.split(' ')[0];
+                return '';
+            },
         
         // Fungsi pencari nama pelanggan (Penangkal Error Render)
             getCustomerName(id) {
