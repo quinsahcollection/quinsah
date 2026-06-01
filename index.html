@@ -341,6 +341,10 @@
                     <i class="bi bi-receipt"></i> Penjualan
                 </div>
                 
+                <div class="nav-icon" :class="{'active': currentView === 'payment'}" @click="currentView = 'payment'" v-if="hasAccess('sales', 'read')">
+                    <i class="bi bi-bank"></i> Payment
+                </div>
+                
                 <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
                     <i class="bi bi-graph-up-arrow"></i> Laporan
                 </div>
@@ -517,7 +521,6 @@
     </div>
 </div>
 
-
             <!-- PURCHASE VIEW -->
             <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
             
@@ -638,6 +641,132 @@
                         <tr v-if="filteredPurchases.length === 0">
                             <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
                         </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        
+          <div v-if="currentView === 'payment' && userRole === 'Admin'" class="dashboard-card">
+            <h6 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-bank me-2"></i>Manajemen Keuangan & Arus Kas</h6>
+            
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-8">
+                    <ul class="nav nav-pills gap-2 mb-2 mb-md-0" style="font-size: 0.85rem;">
+                        <li class="nav-item">
+                            <a class="nav-link border" :class="{'active fw-bold': paymentTab === 'sales_payment'}" href="#" @click.prevent="paymentTab = 'sales_payment'"><i class="bi bi-box-arrow-in-down-left me-1"></i>Pembayaran Masuk</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link border" :class="{'active fw-bold': paymentTab === 'purchase_payment'}" href="#" @click.prevent="paymentTab = 'purchase_payment'"><i class="bi bi-box-arrow-up-right me-1"></i>Pembayaran Keluar</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link border text-danger" :class="{'active bg-danger text-white fw-bold border-danger': paymentTab === 'ar_data'}" href="#" @click.prevent="paymentTab = 'ar_data'"><i class="bi bi-book me-1"></i>Piutang (AR)</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link border text-danger" :class="{'active bg-danger text-white fw-bold border-danger': paymentTab === 'ap_data'}" href="#" @click.prevent="paymentTab = 'ap_data'"><i class="bi bi-book-half me-1"></i>Hutang (AP)</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" v-model="paymentSearchQuery" placeholder="Cari No. Invoice / Nama...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                
+                <div v-if="paymentTab === 'sales_payment'">
+                    <div v-for="(group, gIdx) in financeSalesPayments" :key="'spg'+gIdx" class="mb-4 border rounded shadow-sm overflow-hidden">
+                        <div class="bg-primary-custom bg-opacity-10 p-3 border-bottom d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-primary-custom"><i class="bi bi-wallet2 me-2"></i>METODE: {{ group.method }}</h6>
+                            <h5 class="mb-0 fw-bold text-success">Total: Rp {{ formatNumber(group.total) }}</h5>
+                        </div>
+                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. Invoice</th><th>Pelanggan</th><th class="text-end pe-4">Nominal Masuk</th></tr></thead>
+                            <tbody>
+                                <tr v-for="(item, iIdx) in group.items" :key="'spi'+iIdx">
+                                    <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
+                                    <td class="fw-bold">{{ item.id }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td class="text-end pe-4 fw-bold text-success">Rp {{ formatNumber(item.amount) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-if="financeSalesPayments.length === 0" class="text-center py-4 text-muted border rounded">Belum ada data pembayaran masuk.</div>
+                </div>
+
+                <div v-if="paymentTab === 'purchase_payment'">
+                    <div v-for="(group, gIdx) in financePurchasePayments" :key="'ppg'+gIdx" class="mb-4 border border-danger rounded shadow-sm overflow-hidden">
+                        <div class="bg-danger bg-opacity-10 p-3 border-bottom border-danger d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-wallet2 me-2"></i>METODE: {{ group.method }}</h6>
+                            <h5 class="mb-0 fw-bold text-danger">Total: Rp {{ formatNumber(group.total) }}</h5>
+                        </div>
+                        <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light"><tr><th>Waktu Pembayaran</th><th>No. PO</th><th>Supplier</th><th class="text-end pe-4">Nominal Keluar</th></tr></thead>
+                            <tbody>
+                                <tr v-for="(item, iIdx) in group.items" :key="'ppi'+iIdx">
+                                    <td>{{ item.date }} <span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">{{ item.type }}</span></td>
+                                    <td class="fw-bold">{{ item.id }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td class="text-end pe-4 fw-bold text-danger">Rp {{ formatNumber(item.amount) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div v-if="financePurchasePayments.length === 0" class="text-center py-4 text-muted border rounded">Belum ada data pembayaran keluar.</div>
+                </div>
+
+                <table v-if="paymentTab === 'ar_data'" class="table table-custom align-middle text-nowrap">
+                    <thead class="table-danger"><tr><th>No. Invoice</th><th>Tgl Invoice</th><th>Pelanggan</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Piutang (AR)</th><th class="text-center">Aksi</th></tr></thead>
+                    <tbody>
+                        <tr v-for="ar in financeARList" :key="'ar'+ar.id">
+                            <td class="fw-bold">{{ ar.id }}</td>
+                            <td class="small">{{ ar.dateStr || '-' }}</td>
+                            <td class="fw-semibold text-primary">{{ getCustomerName(ar.customerId) || 'Umum' }}</td>
+                            <td class="text-end">Rp {{ formatNumber(ar.total) }}</td>
+                            
+                            <td class="text-end small">
+                                <div v-for="(ph, idx) in getPaymentBreakdown(ar)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
+                                    {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
+                                </div>
+                                <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ar)) }}</div>
+                            </td>
+
+                            <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ar)) }}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-danger fw-bold" @click="openInvoiceDetail(ar)" title="Tarik/Bayar Tagihan">Bayar AR</button>
+                            </td>
+                        </tr>
+                        <tr v-if="financeARList.length === 0"><td colspan="7" class="text-center py-4 text-muted border rounded">Hore! Tidak ada pelanggan yang berhutang (Piutang Bersih).</td></tr>
+                    </tbody>
+                </table>
+
+                <table v-if="paymentTab === 'ap_data'" class="table table-custom align-middle text-nowrap">
+                    <thead class="table-warning"><tr><th>No. PO / Invoice</th><th>Tgl PO</th><th>Supplier</th><th>Jatuh Tempo</th><th class="text-end">Total Tagihan</th><th class="text-end">Sudah Dibayar</th><th class="text-end">Sisa Hutang (AP)</th><th class="text-center">Aksi</th></tr></thead>
+                    <tbody>
+                        <tr v-for="ap in financeAPList" :key="'ap'+ap.id">
+                            <td class="fw-bold">{{ ap.id }}</td>
+                            <td class="small">{{ (ap.dateStr || '').split(',')[0] }}</td>
+                            <td class="fw-semibold text-primary">{{ getSupplierName(ap.supplierId) }}</td>
+                            <td><span class="badge bg-danger">{{ ap.dueDate || 'Belum Diatur' }}</span></td>
+                            <td class="text-end">Rp {{ formatNumber(ap.total) }}</td>
+                            
+                            <td class="text-end small">
+                                <div v-for="(ph, idx) in getPaymentBreakdown(ap)" :key="idx" class="text-muted" style="font-size: 0.75rem;">
+                                    {{ ph.method }}: <span class="text-success fw-bold">Rp {{ formatNumber(ph.amount) }}</span>
+                                </div>
+                                <div class="border-top mt-1 pt-1 fw-bold text-success">Total: Rp {{ formatNumber(getActualPaid(ap)) }}</div>
+                            </td>
+
+                            <td class="text-end text-danger fw-bold fs-6">Rp {{ formatNumber(getSisaTagihan(ap)) }}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-danger fw-bold" @click="openPurchaseDetail(ap)" title="Lunasi Hutang">Bayar AP</button>
+                            </td>
+                        </tr>
+                        <tr v-if="financeAPList.length === 0"><td colspan="8" class="text-center py-4 text-muted border rounded">Bagus! Toko Anda sedang tidak memiliki hutang ke Supplier manapun.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -4954,7 +5083,11 @@
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
                 
                 // viewTitles diperbarui agar sinkron dengan menu baru
-                viewTitles: { pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Manajemen Data Utama', crm: 'Loyalitas Pelanggan', outlets: 'Jaringan Toko', reports: 'Catatan Penjualan', inventory: 'Arus Inventori', settings: 'Pengaturan Sistem', opname: 'Stok Opname Fisik', transfer: 'Transfer Antar Cabang', barcode: 'Cetak Barcode' },
+                viewTitles: { 
+                    pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', payment: 'Manajemen Keuangan (AR/AP)'},
+                    
+                paymentTab: 'sales_payment',
+                paymentSearchQuery: '',
                 
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
@@ -5601,6 +5734,96 @@
                 return total;
             },
 
+            // ==========================================
+            // MODUL FINANCE (AR / AP / PAYMENTS) - ANTI CRASH
+            // ==========================================
+            financeSalesPayments() {
+                let groups = {};
+                let q = (this.paymentSearchQuery || '').toLowerCase();
+                
+                (this.transactions || []).forEach(trx => {
+                    let custName = this.getCustomerName(trx.customerId) || 'Pelanggan Umum';
+                    let processPayment = (method, amount, date, type) => {
+                        if (amount <= 0) return;
+                        let m = (method || 'CASH').toUpperCase();
+                        if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
+                        if (String(trx.id || '').toLowerCase().includes(q) || custName.toLowerCase().includes(q)) {
+                            groups[m].items.push({ id: String(trx.id || ''), name: custName, amount: amount, date: String(date || '').replace(',', ''), type: type });
+                            groups[m].total += amount;
+                        }
+                    };
+
+                    let actualPaidAmount = this.getActualPaid(trx);
+                    let historyTotal = 0;
+
+                    if (trx.paymentHistory && trx.paymentHistory.length > 0) {
+                        trx.paymentHistory.forEach(ph => {
+                            let amt = ph.amount || 0;
+                            processPayment(ph.method, amt, ph.date, 'Cicilan');
+                            historyTotal += amt;
+                        });
+                    }
+
+                    let unaccounted = actualPaidAmount - historyTotal;
+                    if (unaccounted > 0) {
+                        let method = trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : 'CASH');
+                        processPayment(method, unaccounted, trx.dateStr, 'DP / Awal');
+                    }
+                });
+                return Object.values(groups).filter(g => g.items.length > 0).sort((a,b) => b.total - a.total);
+            },
+            
+            financePurchasePayments() {
+                let groups = {};
+                let q = (this.paymentSearchQuery || '').toLowerCase();
+                
+                (this.purchases || []).forEach(po => {
+                    let supName = this.getSupplierName(po.supplierId) || 'Supplier Unknown';
+                    let processPayment = (method, amount, date, type) => {
+                        if (amount <= 0) return;
+                        let m = (method || 'CASH').toUpperCase();
+                        if (!groups[m]) groups[m] = { method: m, total: 0, items: [] };
+                        if (String(po.id || '').toLowerCase().includes(q) || supName.toLowerCase().includes(q)) {
+                            groups[m].items.push({ id: String(po.id || ''), name: supName, amount: amount, date: String(date || '').replace(',', ''), type: type });
+                            groups[m].total += amount;
+                        }
+                    };
+
+                    let actualPaidAmount = this.getActualPaid(po);
+                    let historyTotal = 0;
+
+                    if (po.paymentHistory && po.paymentHistory.length > 0) {
+                        po.paymentHistory.forEach(ph => {
+                            let amt = ph.amount || 0;
+                            processPayment(ph.method, amt, ph.date, 'Cicilan');
+                            historyTotal += amt;
+                        });
+                    }
+
+                    let unaccounted = actualPaidAmount - historyTotal;
+                    if (unaccounted > 0) {
+                        processPayment(po.paymentMethod, unaccounted, po.dateStr, 'DP / Awal');
+                    }
+                });
+                return Object.values(groups).filter(g => g.items.length > 0).sort((a,b) => b.total - a.total);
+            },
+
+            financeARList() {
+                let q = (this.paymentSearchQuery || '').toLowerCase();
+                return (this.transactions || []).filter(t => 
+                    t.paymentStatus !== 'LUNAS' && this.getSisaTagihan(t) > 0 &&
+                    (String(t.id || '').toLowerCase().includes(q) || String(this.getCustomerName(t.customerId) || '').toLowerCase().includes(q))
+                ).sort((a,b) => String(b.id || '').localeCompare(String(a.id || '')));
+            },
+
+            financeAPList() {
+                let q = (this.paymentSearchQuery || '').toLowerCase();
+                return (this.purchases || []).filter(p => 
+                    p.paymentStatus !== 'LUNAS' && this.getSisaTagihan(p) > 0 &&
+                    (String(p.id || '').toLowerCase().includes(q) || String(this.getSupplierName(p.supplierId) || '').toLowerCase().includes(q))
+                ).sort((a,b) => String(b.id || '').localeCompare(String(a.id || '')));
+            },
+
             // 1. MEMBEDAH SETIAP NOTA TRANSAKSI SECARA RINCI
             processedReportData() {
                 let trxs = this.transactions || [];
@@ -6114,6 +6337,54 @@
             }
         },
         
+        // Fungsi pencari nama pelanggan (Penangkal Error Render)
+            getCustomerName(id) {
+                if (!id) return 'Pelanggan Umum';
+                
+                // Jika Anda memiliki master data pelanggan
+                if (this.customers && Array.isArray(this.customers)) {
+                    let cust = this.customers.find(c => c.id === id);
+                    if (cust) return cust.name;
+                }
+                
+                // Jika nama pelanggan diketik manual/langsung tersimpan di ID (misal: "Erika", "Yunie")
+                return id; 
+            },
+            
+            getActualPaid(trx) {
+                if (trx.paymentStatus === 'LUNAS') return trx.total || 0;
+                if (trx.sisaTagihan !== undefined) return (trx.total || 0) - trx.sisaTagihan; // Khusus Penjualan
+                if (trx.paidAmount !== undefined) return trx.paidAmount; // Khusus Pembelian
+                if (trx.amountReceived !== undefined) return trx.amountReceived; // Khusus Penjualan Lama
+                return 0;
+            },
+            
+            getSisaTagihan(trx) {
+                if (trx.paymentStatus === 'LUNAS') return 0;
+                if (trx.sisaTagihan !== undefined) return trx.sisaTagihan;
+                return (trx.total || 0) - this.getActualPaid(trx);
+            },
+            
+            getPaymentBreakdown(trx) {
+                let history = [];
+                let actualPaidAmount = this.getActualPaid(trx);
+                let historyTotal = 0;
+
+                if (trx.paymentHistory && trx.paymentHistory.length > 0) {
+                    trx.paymentHistory.forEach(ph => {
+                        let amt = ph.amount || 0;
+                        history.push({ method: (ph.method || 'CASH').toUpperCase(), amount: amt });
+                        historyTotal += amt;
+                    });
+                }
+
+                let unaccounted = actualPaidAmount - historyTotal;
+                if (unaccounted > 0) {
+                    let method = trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : 'CASH');
+                    history.unshift({ method: method.toUpperCase(), amount: unaccounted }); 
+                }
+                return history;
+            },
         
         addModifierGroupToProduct() {
             if (!this.formProduct.modifiers) {
