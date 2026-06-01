@@ -9866,15 +9866,24 @@ async fetchRolesFromDatabase() {
         
         async fetchOpnameHistory() {
             try {
-                // Query mengambil koleksi stockOpnames diurutkan berdasarkan tanggal buat terbaru
-                const q = query(collection(db, "stockOpnames"), orderBy("createdAt", "desc"));
+                // 1. Ambil ID Perusahaan
+                const companyId = this.userProfile?.companyId;
+                if (!companyId) return; // Hentikan jika tidak ada ID
+
+                // 2. Tambahkan where() untuk memfilter berdasarkan companyId
+                const q = query(
+                    collection(db, "stockOpnames"), 
+                    where("companyId", "==", companyId), 
+                    orderBy("createdAt", "desc")
+                );
+                
                 const querySnapshot = await getDocs(q);
                 
                 let list = [];
                 querySnapshot.forEach((doc) => {
                     let data = doc.data();
                     list.push({
-                        firestoreId: doc.id, // ID Dokumen unik Firestore asli untuk kebutuhan Void nanti
+                        firestoreId: doc.id,
                         id: data.id,
                         dateStr: data.dateStr,
                         outletId: data.outletId,
