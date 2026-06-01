@@ -6824,81 +6824,48 @@ switchUserSimulate(userId) {
 
 async fetchUsersFromDatabase() {
             try {
-                // MENGGUNAKAN FIREBASE FIRESTORE, BUKAN FETCH URL
-                const usersRef = collection(db, "users"); 
-                const querySnapshot = await getDocs(usersRef);
+                const companyId = this.userProfile?.companyId;
+                if (!companyId) return;
+
+                // Tambahkan filter where companyId
+                const q = query(
+                    collection(db, "users"), 
+                    where("companyId", "==", companyId),
+                    orderBy("createdAt", "desc") // (Jika Anda memakai orderBy)
+                );
                 
-                let dataDariFirebase = [];
-                
+                const querySnapshot = await getDocs(q);
+                let list = [];
                 querySnapshot.forEach((doc) => {
-                    let userData = doc.data(); 
-                    
-                    dataDariFirebase.push({
-                        id: doc.id, 
-                        username: userData.email || userData.username || '-', 
-                        password: '*** (Terenkripsi)', 
-                        roleId: userData.roleId || 2, 
-                        namaLengkap: userData.namaLengkap || userData.nama || 'User Tanpa Nama' 
-                    });
+                    list.push({ id: doc.id, ...doc.data() });
                 });
-
-                // Memasukkan data ke tabel Vue
-                this.usersList = dataDariFirebase;
-
-            } catch (error) {
-                console.error("Gagal mengambil data dari Firebase:", error);
-                Swal.fire('Error Firebase', error.message, 'error');
+                this.usersList = list; // Sesuaikan dengan nama variabel Anda (misal: usersList atau users)
+            } catch (err) {
+                console.error("Gagal memuat data pengguna:", err);
             }
         },
 
 async fetchRolesFromDatabase() {
-    try {
-        const rolesRef = collection(db, "roles");
-        const querySnapshot = await getDocs(rolesRef);
-        let dataDariFirebase = [];
+            try {
+                const companyId = this.userProfile?.companyId;
+                if (!companyId) return;
 
-        querySnapshot.forEach((doc) => {
-            dataDariFirebase.push({
-                id: parseInt(doc.id) || doc.id, // Pertahankan ID sebagai angka atau string
-                ...doc.data()
-            });
-        });
-
-        // JIKA DI DATABASE FIREBASE MASIH KOSONG, ISI DENGAN DATA DEFAULT UTK AWAL
-        if (dataDariFirebase.length === 0) {
-            this.roles = [
-                { id: 1, name: 'Super Admin', permissions: {} },
-                { 
-                    id: 2, 
-                    name: 'Kasir', 
-                    permissions: {
-                        'pos': { read: true, write: true },
-                        'purchase': { read: false, write: false },
-                        'catalog': { read: true, write: false },
-                        'inventory': { read: false, write: false },
-                        'crm': { read: true, write: true },
-                        'outlets': { read: false, write: false },
-                        'reports': { read: false, write: false },
-                        'settings': { read: false, write: false }
-                    }
-                }
-            ];
-            // Langsung upload data awal ini ke Firebase agar database tidak kosong lagi
-            for (let r of this.roles) {
-                await setDoc(doc(db, "roles", String(r.id)), {
-                    name: r.name,
-                    permissions: r.permissions
+                // Tambahkan filter where companyId
+                const q = query(
+                    collection(db, "roles"), 
+                    where("companyId", "==", companyId)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                let list = [];
+                querySnapshot.forEach((doc) => {
+                    list.push({ id: doc.id, ...doc.data() });
                 });
+                this.rolesList = list; // Sesuaikan dengan nama variabel Anda
+            } catch (err) {
+                console.error("Gagal memuat data roles:", err);
             }
-        } else {
-            // Jika ada isinya, pasang langsung ke aplikasi Vue
-            this.roles = dataDariFirebase;
-        }
-
-    } catch (error) {
-        console.error("Gagal memuat matriks hak akses:", error);
-    }
-},
+        },
 
             generateInvoiceNumber(type) {
             const s = this.appSettings;
