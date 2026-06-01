@@ -6975,7 +6975,17 @@ async fetchRolesFromDatabase() {
         
         async fetchTransferHistory() {
             try {
-                const q = query(collection(db, "stockTransfers"), orderBy("createdAt", "desc"));
+                // 1. Ambil ID Perusahaan
+                const companyId = this.userProfile?.companyId;
+                if (!companyId) return; // Hentikan jika tidak ada ID
+
+                // 2. Tambahkan where() untuk memfilter berdasarkan companyId
+                const q = query(
+                    collection(db, "stockTransfers"), 
+                    where("companyId", "==", companyId), 
+                    orderBy("createdAt", "desc")
+                );
+                
                 const querySnapshot = await getDocs(q);
                 let list = [];
                 querySnapshot.forEach((doc) => {
