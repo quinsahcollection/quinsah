@@ -5123,7 +5123,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
@@ -5146,6 +5146,7 @@
                 isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
                 
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '', companyName: '' },
+                isRegistering: false,
 
                 currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
                 
@@ -5381,6 +5382,10 @@
             // =======================================================
 
             onAuthStateChanged(auth, async (user) => {
+                // --- TAMBAHAN LANGKAH 2: Tahan sistem jika sedang proses registrasi ---
+                if (this.isRegistering) return; 
+                // ----------------------------------------------------------------------
+
                 try {
                     if (user) { 
                         await this.fetchUserProfile(user); 
@@ -7892,34 +7897,40 @@ async fetchRolesFromDatabase() {
                         await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
                     } else {
                         // PROSES REGISTRASI SAAS (MULTI-TENANT)
+                        this.isRegistering = true; // 1. Tahan sistem agar tidak auto-login
+
                         const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
                         
-                        // 1. Buat data Perusahaan / Tenant Baru di Firestore
-                        // Kita pakai addDoc agar Firebase membuatkan ID Perusahaan secara otomatis
+                        // Buat data Perusahaan / Tenant Baru
                         const companyRef = await addDoc(collection(db, "companies"), {
                             namaUsaha: this.authUser.companyName,
                             pemilik: this.authUser.name,
                             email: this.authUser.email,
-                            paketLangganan: 'Trial 14 Hari', // Set default paket saat baru daftar
+                            paketLangganan: 'Trial 14 Hari',
                             tanggalDaftar: serverTimestamp(),
                             status: 'Aktif'
                         });
 
-                        // 2. Simpan User ke Firestore, dan tempelkan companyId
+                        // Simpan User ke Firestore
                         await setDoc(doc(db, "users", res.user.uid), {
                             namaLengkap: this.authUser.name,
                             email: this.authUser.email,
-                            companyId: companyRef.id, // <--- KUNCI UTAMA MULTI-TENANT
-                            roleId: 'Owner', // Pembuat toko otomatis jadi Owner, bukan pending
+                            companyId: companyRef.id, 
+                            role: 'Admin', // <--- UBAH JADI 'role' AGAR DIA JADI ADMIN
+                            roleId: 'Owner',
                             createdAt: serverTimestamp()
                         });
+
+                        // 2. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual
+                        await signOut(auth);
+                        this.isRegistering = false; // 3. Lepaskan kembali penahan sistem
 
                         // Berikan notifikasi sukses
                         Swal.fire({
                             icon: 'success',
                             title: 'Toko Berhasil Dibuat!',
-                            text: `Selamat datang, ${this.authUser.name}! Silakan masuk untuk mulai mengatur kasir ${this.authUser.companyName}.`,
-                            confirmButtonText: 'Mulai'
+                            text: `Selamat datang, ${this.authUser.name}! Silakan Login untuk mulai mengatur kasir ${this.authUser.companyName}.`,
+                            confirmButtonText: 'Login Sekarang'
                         });
                         
                         // Reset form & pindah ke mode login
@@ -7935,16 +7946,36 @@ async fetchRolesFromDatabase() {
             logout() { this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { await signOut(auth); this.cart = []; this.selectedCustomer = null; }); },
             
             initAppListeners() {
+                // 1. Ambil ID Perusahaan (Tenant ID) dari profil user yang sedang login
+                const companyId = this.userProfile?.companyId;
+                
+                // Jika user tidak punya companyId, hentikan proses tarik data (Keamanan Ekstra)
+                if (!companyId) {
+                    console.error("Akses Ditolak: User ini tidak memiliki ID Perusahaan.");
+                    Swal.fire('Akses Ditolak', 'Akun Anda tidak terkait dengan perusahaan/toko manapun. Hubungi Admin.', 'error');
+                    return;
+                }
+
+                // 2. Ambil Pengaturan Aplikasi (Settings)
                 onSnapshot(doc(db, "settings", "app_settings"), (docSnap) => {
                     if(docSnap.exists()) { this.appSettings = { ...this.appSettings, ...docSnap.data() }; }
                     if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
                 });
                 
-                // PERHATIKAN BARIS INI: Saya sudah menambahkan 'identifierGroups' di bagian paling akhir
-                const collections = ['categories', 'memberships', 'products', 'transactions', 'outlets', 'customers', 'uoms', 'tags', 'suppliers', 'purchases', 'stockLogs', 'identifierGroups'];
+                // 3. DAFTAR KOLEKSI OPERASIONAL
+                const collections = ['categories', 'memberships', 'products', 'transactions', 'stockOpnames', 'stockTransfers', 'outlets', 'roles', 'customers', 'uoms', 'tags', 'suppliers', 'purchases', 'stockLogs', 'identifierGroups'];
                 
                 collections.forEach(col => { 
-                    onSnapshot(collection(db, col), snap => { 
+                    // ========================================================
+                    // KUNCI UTAMA MULTI-TENANT: Filter data berdasarkan companyId
+                    // ========================================================
+                    const q = query(
+                        collection(db, col), 
+                        where("companyId", "==", companyId)
+                    );
+
+                    // Gunakan variabel 'q' (yang sudah disaring), BUKAN collection biasa
+                    onSnapshot(q, snap => { 
                         const r = []; 
                         snap.forEach(d => r.push({ id: d.id, ...d.data() })); 
                         r.sort((a,b) => {
@@ -7953,7 +7984,7 @@ async fetchRolesFromDatabase() {
                             return tB - tA;
                         });
                         this[col] = r; 
-                    }, e => console.error(e)); 
+                    }, e => console.error(`Error mengambil data ${col}:`, e)); 
                 });
             },
             
