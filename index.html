@@ -7902,9 +7902,53 @@ async fetchRolesFromDatabase() {
                 }; 
             },
             async fetchUserProfile(user) {
-                const userDocRef = doc(db, "users", user.uid); const userSnap = await getDoc(userDocRef);
-                if (userSnap.exists()) { this.userProfile = userSnap.data(); this.userRole = this.userProfile.role || 'Karyawan'; } 
-                else { const newUser = { name: user.displayName || 'Karyawan', email: user.email, role: 'Karyawan', createdAt: serverTimestamp() }; await setDoc(userDocRef, newUser); this.userProfile = newUser; this.userRole = 'Karyawan'; }
+                const userDocRef = doc(db, "users", user.uid); 
+                const userSnap = await getDoc(userDocRef);
+                
+                if (userSnap.exists()) { 
+                    this.userProfile = userSnap.data(); 
+                    this.userRole = this.userProfile.role || 'Karyawan'; 
+                    
+                    // ========================================================
+                    // 🔒 SISTEM KEAMANAN MASA TRIAL 7 HARI
+                    // ========================================================
+                    if (this.userProfile.companyId) {
+                        const companyRef = doc(db, "companies", this.userProfile.companyId);
+                        const companySnap = await getDoc(companyRef);
+                        
+                        if (companySnap.exists()) {
+                            const compData = companySnap.data();
+                            this.userProfile.companyData = compData; // Simpan info toko
+                            
+                            // Cek Masa Berlaku Trial
+                            const now = new Date();
+                            // Ambil expiredDate atau gunakan tanggal daftar + 7 hari sebagai cadangan
+                            let expiredDate = compData.expiredDate ? new Date(compData.expiredDate) : null;
+                            
+                            if (expiredDate && now > expiredDate) {
+                                // WAKTU HABIS! Kunci akses.
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Masa Trial Berakhir',
+                                    text: 'Masa uji coba 7 hari untuk toko Anda telah berakhir. Silakan hubungi Admin untuk berlangganan Premium.',
+                                    allowOutsideClick: false,
+                                    showConfirmButton: false,
+                                    footer: '<a href="https://wa.me/6281234567890" target="_blank" class="btn btn-success">Hubungi CS via WhatsApp</a>'
+                                });
+                                // Logout paksa
+                                await signOut(auth);
+                                this.isLoggedIn = false;
+                                return; // Hentikan proses masuk
+                            }
+                        }
+                    }
+                } else { 
+                    // Jika data tidak ada (Seharusnya jarang terjadi di SaaS)
+                    const newUser = { name: user.displayName || 'Karyawan', email: user.email, role: 'Karyawan', createdAt: serverTimestamp() }; 
+                    await setDoc(userDocRef, newUser); 
+                    this.userProfile = newUser; 
+                    this.userRole = 'Karyawan'; 
+                }
             },
             
             async handleAuthAction() {
@@ -7915,41 +7959,72 @@ async fetchRolesFromDatabase() {
                     if (this.authMode === 'login') {
                         await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
                     } else {
-                        // PROSES REGISTRASI SAAS (MULTI-TENANT)
-                        this.isRegistering = true; // 1. Tahan sistem agar tidak auto-login
+                        // ==========================================================
+                        // PROSES REGISTRASI SAAS (MULTI-TENANT + STARTER PACK)
+                        // ==========================================================
+                        this.isRegistering = true; // Tahan sistem agar tidak auto-login
 
+                        // 1. Buat Autentikasi Firebase
                         const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
                         
-                        // Buat data Perusahaan / Tenant Baru
+                        // 2. Hitung Tanggal Jatuh Tempo (Hari ini + 7 Hari)
+                        const currentDate = new Date();
+                        const expiredDate = new Date(currentDate);
+                        expiredDate.setDate(currentDate.getDate() + 7); // Tambah 7 Hari
+                        
+                        // 3. Buat Data Perusahaan (Tenant Baru)
                         const companyRef = await addDoc(collection(db, "companies"), {
                             namaUsaha: this.authUser.companyName,
                             pemilik: this.authUser.name,
                             email: this.authUser.email,
-                            paketLangganan: 'Trial 14 Hari',
-                            tanggalDaftar: serverTimestamp(),
+                            paketLangganan: 'Trial 7 Hari',
+                            tanggalDaftar: currentDate.toISOString(),
+                            expiredDate: expiredDate.toISOString(), // Simpan masa kadaluarsa
                             status: 'Aktif'
                         });
 
-                        // Simpan User ke Firestore
-                        await setDoc(doc(db, "users", res.user.uid), {
-                            namaLengkap: this.authUser.name,
-                            email: this.authUser.email,
-                            companyId: companyRef.id, 
-                            role: 'Admin', // <--- UBAH JADI 'role' AGAR DIA JADI ADMIN
-                            roleId: 'Owner',
+                        const newCompanyId = companyRef.id;
+
+                        // 4. STARTER PACK: Buat Role Khusus "Super Admin" untuk Toko Ini
+                        // Gunakan string waktu (timestamp) sebagai ID Role
+                        const superAdminRoleId = "ROLE_" + Date.now();
+                        
+                        // Daftar Izin Penuh (Sesuai dengan nama modul di aplikasi Anda)
+                        const fullPermissions = {
+                            pos: true, sales: true, purchase: true, catalog: true, 
+                            inventory: true, opname: true, transfer: true, barcode: true, 
+                            crm: true, outlets: true, reports: true, settings: true
+                        };
+
+                        await setDoc(doc(db, "roles", superAdminRoleId), {
+                            name: "Super Admin",
+                            companyId: newCompanyId, // <--- Label Hak Milik Toko
+                            permissions: fullPermissions,
                             createdAt: serverTimestamp()
                         });
 
-                        // 2. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual
-                        await signOut(auth);
-                        this.isRegistering = false; // 3. Lepaskan kembali penahan sistem
+                        // 5. Simpan User Pemilik Toko & Tempelkan Role Super Admin Tersebut!
+                        await setDoc(doc(db, "users", res.user.uid), {
+                            namaLengkap: this.authUser.name,
+                            email: this.authUser.email,
+                            companyId: newCompanyId, 
+                            roleId: superAdminRoleId, // <--- Berikan jabatan Super Admin
+                            role: 'Admin', // (Untuk kebutuhan legacy kode lama jika masih ada)
+                            createdAt: serverTimestamp()
+                        });
 
-                        // Berikan notifikasi sukses
+                        // 6. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual
+                        await signOut(auth);
+                        this.isRegistering = false; 
+
+                        // Berikan notifikasi sukses beserta info Trial
                         Swal.fire({
                             icon: 'success',
                             title: 'Toko Berhasil Dibuat!',
-                            text: `Selamat datang, ${this.authUser.name}! Silakan Login untuk mulai mengatur kasir ${this.authUser.companyName}.`,
-                            confirmButtonText: 'Login Sekarang'
+                            html: `Selamat datang, <b>${this.authUser.name}</b>!<br><br>
+                                   Toko <b>${this.authUser.companyName}</b> telah aktif dengan masa percobaan gratis (Free Trial) selama <b>7 Hari</b>.<br>
+                                   Silakan Login untuk mulai mengatur kasir Anda.`,
+                            confirmButtonText: 'Mulai Sekarang'
                         });
                         
                         // Reset form & pindah ke mode login
