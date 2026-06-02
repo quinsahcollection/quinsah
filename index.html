@@ -1186,8 +1186,8 @@
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold">Username</label>
-                        <input type="text" class="form-control form-control-sm" v-model="formUser.username">
+                        <label class="form-label small fw-bold">Email Karyawan</label>
+                        <input type="email" class="form-control form-control-sm" v-model="formUser.email">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-bold">Password</label>
@@ -1203,11 +1203,11 @@
 
         <div class="table-responsive">
             <table class="table table-custom align-middle">
-                <thead><tr><th>Nama Karyawan</th><th>Username</th><th>Role / Jabatan</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Nama Karyawan</th><th>Email</th><th>Role / Jabatan</th><th>Aksi</th></tr></thead>
                 <tbody>
                     <tr v-for="u in usersList" :key="u.id">
                         <td class="fw-bold small">{{ u.namaLengkap }}</td>
-                        <td><code>{{ u.username }}</code></td>
+                        <td><code>{{ u.email }}</code></td>
                         <td><span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ getRoleName(u.roleId) }}</span></td>
                         <td>
                             <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editUser(u)"><i class="bi bi-pencil"></i></button>
@@ -6647,6 +6647,7 @@ getRoleName(roleId) {
     const role = this.roles.find(r => r.id == roleId);
     return role ? role.name : 'Tidak Ada Role';
 },
+
 initNewRole() {
     this.isEditingRole = false;
     this.formRole = { id: Date.now(), name: '', permissions: {} };
@@ -6664,6 +6665,7 @@ editRole(role) {
         }
     });
 },
+
 async saveRole() {
     if (!this.formRole.name.trim()) {
         Swal.fire('Error', 'Nama Role tidak boleh kosong!', 'error');
@@ -6727,65 +6729,99 @@ async deleteRole(roleId) {
         }
     });
 },
+
 initNewUser() {
-    this.isEditingUser = false;
-    this.formUser = { id: Date.now(), username: '', password: '', roleId: '', namaLengkap: '' };
-},
+            // Pastikan ada properti 'email' di sini
+            this.formUser = { id: 'NEW', email: '', password: '', roleId: '', namaLengkap: '' };
+            this.isEditingUser = false;
+        },
+
 editUser(user) {
     this.isEditingUser = true;
     this.formUser = { ...user };
 },
+
 async saveUser() {
-    // 1. Validasi Input (Password tidak wajib saat edit karena diatur oleh Firebase Auth)
-    if (!this.formUser.namaLengkap || !this.formUser.roleId) {
-        Swal.fire('Error', 'Nama Lengkap dan Jabatan wajib diisi!', 'error');
-        return;
-    }
+            // 1. Validasi Input
+            if (!this.formUser.namaLengkap || !this.formUser.roleId || (!this.isEditingUser && (!this.formUser.email || !this.formUser.password))) {
+                Swal.fire('Error', 'Nama Lengkap, Jabatan, Email, dan Password wajib diisi!', 'error');
+                return;
+            }
 
-    // Ubah roleId menjadi angka (integer) agar cocok dengan pengecekan di hasAccess
-    let roleIdNumber = parseInt(this.formUser.roleId);
-    if (isNaN(roleIdNumber)) roleIdNumber = this.formUser.roleId; // Fallback jika text (misal 'pending')
+            let roleIdNumber = parseInt(this.formUser.roleId);
+            if (isNaN(roleIdNumber)) roleIdNumber = this.formUser.roleId;
 
-    try {
-        if (this.isEditingUser) {
-            // ==========================================
-            // JIKA EDIT USER (Promosi Jabatan / Ubah Nama)
-            // ==========================================
-            const userRef = doc(db, "users", this.formUser.id);
-            
-            await updateDoc(userRef, {
-                namaLengkap: this.formUser.namaLengkap,
-                roleId: roleIdNumber
-            });
-            
-            Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate di database.', 'success');
-            
-        } else {
-            // ==========================================
-            // JIKA TAMBAH USER BARU DARI DALAM APLIKASI
-            // ==========================================
-            // Penting: Firebase Authentication akan secara otomatis melogout Admin 
-            // jika membuat akun baru dari dalam aplikasi menggunakan fungsi standar.
-            Swal.fire({
-                icon: 'info',
-                title: 'Informasi Keamanan Firebase',
-                text: 'Untuk menambah user baru, arahkan karyawan untuk mendaftar lewat halaman "Register" di awal. Setelah mereka mendaftar, Anda bisa mengubah jabatan mereka dari menu ini.'
-            });
-            return; // Hentikan eksekusi
-        }
+            this.isProcessing = true;
 
-        // Bersihkan form kembali ke awal
-        this.formUser = { id: null, username: '', password: '', roleId: null, namaLengkap: '' };
-        this.isEditingUser = false;
+            try {
+                if (this.isEditingUser) {
+                    // ==========================================
+                    // JIKA EDIT USER (Promosi Jabatan / Ubah Nama)
+                    // ==========================================
+                    const userRef = doc(db, "users", this.formUser.id);
+                    await updateDoc(userRef, {
+                        namaLengkap: this.formUser.namaLengkap,
+                        roleId: roleIdNumber
+                    });
+                    
+                    Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate.', 'success');
+                    
+                } else {
+                    // ==========================================
+                    // JIKA TAMBAH USER BARU (TANPA LOGOUT ADMIN)
+                    // ==========================================
+                    
+                    // 1. Ambil API Key Firebase milik Anda secara otomatis
+                    const apiKey = auth.app.options.apiKey;
+
+                    // 2. Tembak langsung ke Server Firebase (REST API) agar Admin tidak ter-logout
+                    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: this.formUser.email,
+                            password: this.formUser.password,
+                            returnSecureToken: true
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    // 3. Tangani jika terjadi error (Email sudah dipakai, dll)
+                    if (!response.ok) {
+                        let errorMsg = 'Gagal mendaftarkan karyawan.';
+                        if (data.error && data.error.message === 'EMAIL_EXISTS') errorMsg = 'Email ini sudah terdaftar! Gunakan email lain.';
+                        if (data.error && data.error.message === 'WEAK_PASSWORD : Password should be at least 6 characters') errorMsg = 'Password terlalu lemah (minimal 6 karakter).';
+                        throw new Error(errorMsg);
+                    }
+
+                    // 4. Jika sukses, simpan profil Karyawan ke Database dengan ID Toko Bos-nya
+                    const newUserId = data.localId; // UID User Baru
+                    
+                    await setDoc(doc(db, "users", newUserId), {
+                        namaLengkap: this.formUser.namaLengkap,
+                        email: this.formUser.email,
+                        roleId: roleIdNumber,
+                        companyId: this.userProfile.companyId, // <--- KUNCI MULTI-TENANT
+                        createdAt: serverTimestamp()
+                    });
+
+                    Swal.fire('Berhasil', 'Karyawan berhasil didaftarkan! Karyawan kini bisa langsung login menggunakan email tersebut.', 'success');
+                }
+
+                // Bersihkan form kembali ke awal dan Refresh Tabel
+                this.formUser = { id: null, email: '', password: '', roleId: null, namaLengkap: '' };
+                this.isEditingUser = false;
+                this.fetchUsersFromDatabase();
+
+            } catch (error) {
+                console.error("Gagal menyimpan ke Firebase:", error);
+                Swal.fire('Error', error.message || 'Terjadi kesalahan pada sistem.', 'error');
+            } finally {
+                this.isProcessing = false;
+            }
+        },
         
-        // Refresh tabel dari database agar otomatis berubah
-        this.fetchUsersFromDatabase();
-
-    } catch (error) {
-        console.error("Gagal menyimpan ke Firebase:", error);
-        Swal.fire('Error', 'Gagal menyimpan perubahan ke database.', 'error');
-    }
-},
 async deleteUser(userId) {
     if (userId === 1 || userId === '1') {
         Swal.fire('Ditolak', 'Super Admin utama tidak bisa dihapus!', 'warning');
@@ -6814,6 +6850,7 @@ async deleteUser(userId) {
         }
     });
 },
+
 switchUserSimulate(userId) {
     const user = this.usersList.find(u => u.id == userId);
     if(user) {
@@ -6828,11 +6865,10 @@ async fetchUsersFromDatabase() {
                 const companyId = this.userProfile?.companyId;
                 if (!companyId) return;
 
-                // Tambahkan filter where companyId
+                // HANYA gunakan where, HAPUS orderBy agar tidak diblokir Firebase
                 const q = query(
                     collection(db, "users"), 
-                    where("companyId", "==", companyId),
-                    orderBy("createdAt", "desc") // (Jika Anda memakai orderBy)
+                    where("companyId", "==", companyId)
                 );
                 
                 const querySnapshot = await getDocs(q);
@@ -6840,7 +6876,8 @@ async fetchUsersFromDatabase() {
                 querySnapshot.forEach((doc) => {
                     list.push({ id: doc.id, ...doc.data() });
                 });
-                this.usersList = list; // Sesuaikan dengan nama variabel Anda (misal: usersList atau users)
+                
+                this.usersList = list; 
             } catch (err) {
                 console.error("Gagal memuat data pengguna:", err);
             }
