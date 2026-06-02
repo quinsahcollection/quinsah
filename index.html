@@ -7922,7 +7922,50 @@ async fetchRolesFromDatabase() {
                 this.isProcessingAuth = false;
             },
             
-            logout() { this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { await signOut(auth); this.cart = []; this.selectedCustomer = null; }); },
+            logout() { 
+                this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { 
+                    await signOut(auth); 
+                    
+                    // 1. Bersihkan Data Transaksi Aktif (Kasir)
+                    this.cart = []; 
+                    this.selectedCustomer = null; 
+                    
+                    // 2. CUCI BERSIH SEMUA STATE DARI DATABASE (Sesuai Data Firestore)
+                    this.categories = [];
+                    this.companies = [];
+                    this.customers = [];
+                    this.identifierGroups = [];
+                    this.memberships = [];
+                    this.outlets = [];
+                    this.products = [];
+                    this.purchases = [];
+                    this.roles = []; 
+                    this.rolesList = []; 
+                    this.stockLogs = [];
+                    this.stockOpnames = [];
+                    this.opnameHistory = []; 
+                    this.stockTransfers = [];
+                    this.transferHistory = []; 
+                    this.suppliers = [];
+                    this.tags = [];
+                    this.transactions = [];
+                    this.uoms = [];
+                    this.users = [];
+                    this.usersList = []; 
+                    
+                    // 3. CUCI BERSIH ANTREAN & MEMORI BARCODE
+                    this.barcodeSelectedItems = []; 
+                    this.activeBarcodeSku = null;
+                    this.barcodeSearchQuery = '';
+                    
+                    // 4. Reset Profil dan Setting
+                    this.userProfile = {};
+                    this.appSettings = {};
+
+                    // 5. Bersihkan Local Storage (Jika ada sisa memori cache)
+                    localStorage.removeItem('companyId');
+                }); 
+            },
             
             initAppListeners() {
                 // 1. Ambil ID Perusahaan (Tenant ID) dari profil user yang sedang login
