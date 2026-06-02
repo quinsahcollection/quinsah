@@ -7579,6 +7579,9 @@ async fetchRolesFromDatabase() {
                 
                 // Simpan langsung ke Firebase stockLogs
                 await addDoc(collection(db, "stockLogs"), {
+                    // <--- TAMBAHAN MULTI-TENANT 
+                    companyId: this.userProfile.companyId,
+                    // ------------------------------------
                     createdAt: serverTimestamp(),
                     dateStr: nowStr,
                     type: type,          // Isinya nanti: 'IN' (Masuk), 'OUT' (Keluar), atau 'ADJUST' (Opname)
