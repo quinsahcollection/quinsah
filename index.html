@@ -6867,23 +6867,57 @@ getRoleName(roleId) {
     return role ? role.name : 'Tidak Ada Role';
 },
 
-initNewRole() {
-    this.isEditingRole = false;
-    this.formRole = { id: Date.now(), name: '', permissions: {} };
-    this.appModules.forEach(mod => {
-        this.formRole.permissions[mod.id] = { read: false, write: false };
-    });
-},
-editRole(role) {
-    this.isEditingRole = true;
-    this.formRole = JSON.parse(JSON.stringify(role));
-    // Validasi jika ada modul baru yang belum terdaftar di role lama
-    this.appModules.forEach(mod => {
-        if (!this.formRole.permissions[mod.id]) {
-            this.formRole.permissions[mod.id] = { read: false, write: false };
-        }
-    });
-},
+// ==============================================================
+            // PEMBARUAN: FUNGSI MEMBUKA FORM ROLE YANG ANTI NGE-BLANK
+            // ==============================================================
+            
+            initNewRole() {
+                // 1. Siapkan keranjang kosong untuk hak akses
+                let defaultPermissions = {};
+                
+                // 2. Absen semua modul, dan setel default ke FALSE (Belum dicentang)
+                this.appModules.forEach(mod => {
+                    defaultPermissions[mod.id] = { read: false, write: false };
+                });
+
+                // 3. Masukkan ke dalam form
+                this.formRole = { 
+                    id: Date.now().toString(), // Gunakan waktu saat ini sebagai ID unik sementara
+                    name: '', 
+                    permissions: defaultPermissions 
+                };
+                
+                this.isEditingRole = false;
+            },
+
+            editRole(role) {
+                // 1. Siapkan keranjang kosong
+                let safePermissions = {};
+                
+                // 2. Absen semua modul dari daftar master aplikasi Anda
+                this.appModules.forEach(mod => {
+                    // Cek apakah di database lama sudah ada settingan untuk modul ini?
+                    if (role.permissions && role.permissions[mod.id]) {
+                        // Jika sudah ada, salin datanya
+                        safePermissions[mod.id] = {
+                            read: role.permissions[mod.id].read || false,
+                            write: role.permissions[mod.id].write || false
+                        };
+                    } else {
+                        // Jika ini modul baru (misal: 'opname'), otomatis setel ke FALSE agar tidak error
+                        safePermissions[mod.id] = { read: false, write: false };
+                    }
+                });
+
+                // 3. Masukkan ke dalam form
+                this.formRole = {
+                    id: role.id,
+                    name: role.name,
+                    permissions: safePermissions
+                };
+                
+                this.isEditingRole = true;
+            },
 
 async saveRole() {
     if (!this.formRole.name.trim()) {
