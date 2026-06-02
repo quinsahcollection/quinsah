@@ -7682,12 +7682,17 @@ async fetchRolesFromDatabase() {
                     // SUNTIKKAN DATA SEMENTARA KE VARIABEL UTAMA SEBELUM DISIMPAN
                     this.appSettings.hppMethod = this.tempHppMethod;
 
-                    await setDoc(doc(db, "settings", "app_settings"), this.appSettings);
+                    // <--- TAMBAHAN MULTI-TENANT WAJIB --->
+                    this.appSettings.companyId = this.userProfile.companyId;
+                    // ------------------------------------
+
+                    // UBAH NAMA DOKUMEN: Jangan pakai "app_settings" lagi. 
+                    // Gunakan ID Toko sebagai nama dokumen agar tidak bentrok dengan toko lain!
+                    await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
+                    
                     this.posCustomInvoice = this.generateInvoiceNumber('POS');
                     
-                    // (Opsional) Jika Anda menggunakan Swal untuk notifikasi yang lebih cantik:
                     Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
-                    // Atau pakai alert bawaan: alert("Pengaturan Sistem berhasil disimpan!");
                 } catch(e) { 
                     console.error("Gagal simpan setting", e); 
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
