@@ -6836,30 +6836,48 @@
 
             // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
 hasAccess(moduleId, action = 'read') {
-    // 1. Ambil data profil (bisa dari userProfile Firebase atau variabel lokal)
-    const profile = this.userProfile || this.loggedInUser;
-    
-    // Jika belum ada data sama sekali, tolak (tunggu loading selesai)
-    if (!profile) return false;
+    try {
+        const profile = this.userProfile || this.loggedInUser;
+        if (!profile) return false;
 
-    // 2. KUNCI PENYELAMAT (RESCUE): 
-    // Jika akun lama di database masih tertulis role: 'Admin' atau userRole global adalah 'Admin'
-    // ATAU roleId-nya adalah 1, berikan akses 100% penuh!
-    if (profile.role === 'Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
-        return true; 
+        // 1. KUNCI BOS (Otomatis buka semua)
+        if (profile.role === 'Admin' || profile.role === 'Super Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
+            return true; 
+        }
+
+        if (profile.roleId === 'pending') return false;
+
+        // 2. Tentukan Wadah Role
+        let userRole = null;
+        if (this.roles && this.roles.length > 0) {
+            userRole = this.roles.find(r => r.id == profile.roleId);
+        }
+        if (!userRole && this.rolesList && this.rolesList.length > 0) {
+            userRole = this.rolesList.find(r => r.id == profile.roleId);
+        }
+
+        // Jika tidak ketemu
+        if (!userRole || !userRole.permissions) return false;
+
+        // 3. Ambil nilai centang dari database
+        const perm = userRole.permissions[moduleId];
+        if (perm === undefined || perm === null) return false;
+
+        // 4. PENYELAMAT BUG VUE (Membaca semua jenis centang: Boolean, Text, Angka)
+        if (typeof perm === 'object') {
+            let isRead = perm.read === true || perm.read == "true" || perm.read == 1 || perm.read === "on";
+            let isWrite = perm.write === true || perm.write == "true" || perm.write == 1 || perm.write === "on";
+
+            if (action === 'read') return isRead || isWrite;
+            if (action === 'write') return isWrite;
+        } else {
+            return perm === true || perm == "true" || perm == 1 || perm === "on";
+        }
+
+        return false;
+    } catch (e) {
+        return false; 
     }
-
-    // 3. KUNCI KEAMANAN: Tolak akses jika akun baru daftar (pending)
-    if (profile.roleId === 'pending') return false;
-
-    // 4. Proses Role Kasir / Karyawan
-    const userRole = this.roles.find(r => r.id == profile.roleId);
-    
-    // Jika data role tidak ditemukan di matriks Vue kita, tolak akses
-    if (!userRole || !userRole.permissions || !userRole.permissions[moduleId]) return false;
-
-    // 5. Kembalikan izin berdasarkan centang read/write
-    return userRole.permissions[moduleId][action] === true;
 },
 
 getRoleName(roleId) {
@@ -8352,9 +8370,11 @@ async fetchRolesFromDatabase() {
                 }
 
                 // 2. Ambil Pengaturan Aplikasi (Settings)
-                onSnapshot(doc(db, "settings", "app_settings"), (docSnap) => {
-                    if(docSnap.exists()) { this.appSettings = { ...this.appSettings, ...docSnap.data() }; }
-                    if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                onSnapshot(doc(db, "settings", companyId), (docSnap) => {
+                if(docSnap.exists()) { 
+                this.appSettings = { ...this.appSettings, ...docSnap.data() }; 
+                 }
+                if(!this.posCustomInvoice) this.posCustomInvoice = this.generateInvoiceNumber('POS');
                 });
                 
                 // 3. DAFTAR KOLEKSI OPERASIONAL
