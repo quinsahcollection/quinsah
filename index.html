@@ -372,12 +372,60 @@
                     <h4 class="mb-0 fw-bold">{{ viewTitles[currentView] }}</h4>
                     <span class="badge mt-1" :class="userRole === 'Admin' ? 'bg-danger' : 'bg-primary'">Akses: {{ userRole }}</span>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="text-end d-none d-sm-block">
-                        <div class="fw-bold fs-6 lh-1">{{ userProfile.name || 'User' }}</div>
-                        <small class="text-success fw-bold" style="font-size: 0.70rem;">Online</small>
-                    </div>
-                    <button class="btn btn-sm btn-light border text-danger" @click="logout" title="Keluar"><i class="bi bi-box-arrow-right fw-bold fs-6"></i></button>
+                
+                <div class="dropdown">
+                    <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2 border shadow-sm" type="button" id="userProfileMenu" data-bs-toggle="dropdown" aria-expanded="false" style="background: white; border-radius: 8px; padding: 5px 12px;">
+                        <div class="text-end d-none d-sm-block">
+                            <div class="fw-bold text-dark fs-6 lh-1">{{ userProfile.namaLengkap || userProfile.name || 'User' }}</div>
+                            <small class="text-success fw-bold" style="font-size: 0.70rem;"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>Online</small>
+                        </div>
+                        <div class="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 35px; height: 35px; font-weight: bold; font-size: 1.1rem;">
+                            {{ (userProfile.namaLengkap || userProfile.name || 'U').charAt(0).toUpperCase() }}
+                        </div>
+                    </button>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="userProfileMenu" style="width: 280px; border-radius: 12px; margin-top: 10px;">
+                        
+                        <li class="px-3 py-3 border-bottom text-center">
+                            <h6 class="mb-0 fw-bold">{{ userProfile.namaLengkap || userProfile.name || 'Nama Tidak Diketahui' }}</h6>
+                            <small class="text-muted">{{ userProfile.email || '-' }}</small><br>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary mt-2">
+                                {{ userRole === 'Admin' || userProfile.role === 'Admin' ? 'Pemilik Toko' : 'Karyawan' }}
+                            </span>
+                        </li>
+
+                        <template v-if="userProfile.companyData && (userProfile.role === 'Admin' || userRole === 'Admin' || userRole === 'Super Admin')">
+                            <li class="px-3 py-2 border-bottom bg-light">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted fw-bold">Toko:</small>
+                                    <small class="fw-bold text-dark text-end">{{ userProfile.companyData.namaUsaha || '-' }}</small>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted fw-bold">Paket:</small>
+                                    <span class="badge bg-warning text-dark shadow-sm">{{ userProfile.companyData.paketLangganan || 'Free' }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted fw-bold">Status:</small>
+                                    <small class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>{{ userProfile.companyData.status || 'Aktif' }}</small>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted fw-bold">Batas Waktu:</small>
+                                    <small class="text-danger fw-bold">{{ formatTanggalCantik(userProfile.companyData.expiredDate) }}</small>
+                                </div>
+                            </li>
+                            <li class="px-3 py-2 border-bottom text-center">
+                                <button class="btn btn-sm btn-outline-success w-100 fw-bold" style="border-radius: 6px;">
+                                    <i class="bi bi-star-fill me-1"></i> Upgrade Premium
+                                </button>
+                            </li>
+                        </template>
+
+                        <li class="px-3 py-2 mt-1">
+                            <button class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2 fw-bold" style="border-radius: 8px;" @click="logout()">
+                                <i class="bi bi-box-arrow-right"></i> Keluar (Log Out)
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             </header>
             
@@ -6447,6 +6495,16 @@
                 if (datePart.includes('-')) return datePart.split(' ')[0];
                 return '';
             },
+        
+        formatTanggalCantik(dateString) {
+            if (!dateString) return '-';
+            try {
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                return new Date(dateString).toLocaleDateString('id-ID', options);
+            } catch (e) {
+                return dateString; // Kembalikan apa adanya jika error
+            }
+        },
         
         // Fungsi pencari nama pelanggan (Penangkal Error Render)
             getCustomerName(id) {
