@@ -584,7 +584,7 @@
 </div>
 
             <!-- PURCHASE VIEW -->
-            <div v-if="currentView === 'purchase' && userRole === 'Admin'" class="dashboard-card">
+            <div v-if="currentView === 'purchase'" class="dashboard-card">
             
             <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & PO</h6>
             
@@ -709,7 +709,7 @@
         </div>
         
         
-          <div v-if="currentView === 'payment' && userRole === 'Admin'" class="dashboard-card">
+          <div v-if="currentView === 'payment'" class="dashboard-card">
             <h6 class="fw-bold mb-3 pb-2 border-bottom"><i class="bi bi-bank me-2"></i>Manajemen Keuangan & Arus Kas</h6>
             
             <div class="row mb-3 align-items-end g-2">
@@ -884,7 +884,7 @@
         </div>
 
             <!-- SETTINGS VIEW -->
-            <div v-if="currentView === 'settings' && userRole === 'Admin'">
+            <div v-if="currentView === 'settings'">
     
     <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
@@ -1384,7 +1384,7 @@
 </div>
 </div>
             <!-- CATALOG VIEW -->
-            <div v-if="currentView === 'catalog' && userRole === 'Admin'">
+            <div v-if="currentView === 'catalog'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Master Produk</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='variants', 'bg-primary-custom': catalogTab==='variants'}" href="#" @click.prevent="catalogTab='variants'">Daftar SKU Varian</a></li>
@@ -2082,7 +2082,7 @@
                 </div>
 
             <!-- INVENTORY VIEW -->
-            <div v-if="currentView === 'inventory' && userRole === 'Admin'">
+            <div v-if="currentView === 'inventory'">
                 <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Informasi Stok</a></li>
                     <li class="nav-item"><a class="nav-link" :class="{active: invTab==='allocation', 'bg-primary-custom': invTab==='allocation'}" href="#" @click.prevent="invTab='allocation'"><i class="bi bi-diagram-3 me-1"></i>Alokasi Stok</a></li>
@@ -2584,7 +2584,7 @@
             </div>
 
             <!-- OUTLETS VIEW -->
-            <div v-if="currentView === 'outlets' && userRole === 'Admin'" class="dashboard-card">
+            <div v-if="currentView === 'outlets'" class="dashboard-card">
                 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0">Manajemen Outlet & Pajak</h6>
                     <button class="btn btn-sm btn-primary-custom px-3 py-2" @click="openModal('addOutletModal')"><i class="bi bi-shop me-1"></i> Tambah Toko</button>
@@ -6874,9 +6874,9 @@ hasAccess(moduleId, action = 'read') {
             return perm === true || perm == "true" || perm == 1 || perm === "on";
         }
 
-        return false;
+        return true;
     } catch (e) {
-        return false; 
+        return true; 
     }
 },
 
@@ -7072,7 +7072,7 @@ async saveUser() {
                     await setDoc(doc(db, "users", newUserId), {
                         namaLengkap: this.formUser.namaLengkap,
                         email: this.formUser.email,
-                        roleId: roleIdNumber,
+                        roleId: String(this.formUser.roleId),
                         companyId: this.userProfile.companyId, // <--- KUNCI MULTI-TENANT
                         createdAt: serverTimestamp()
                     });
@@ -7729,28 +7729,31 @@ async fetchRolesFromDatabase() {
         },
 
             async saveSettings() {
-                this.isSaving = true;
-                try {
-                    // SUNTIKKAN DATA SEMENTARA KE VARIABEL UTAMA SEBELUM DISIMPAN
-                    this.appSettings.hppMethod = this.tempHppMethod;
+        // --- GEMBOK PENGAMAN ---
+        if (!this.userProfile || !this.userProfile.companyId) {
+            Swal.fire('Akses Ditolak', 'Sistem belum selesai memuat ID Toko Anda. Silakan refresh halaman.', 'error');
+            return;
+        }
 
-                    // <--- TAMBAHAN MULTI-TENANT WAJIB --->
-                    this.appSettings.companyId = this.userProfile.companyId;
-                    // ------------------------------------
+        this.isSaving = true;
+        try {
+            this.appSettings.hppMethod = this.tempHppMethod;
+            this.appSettings.companyId = this.userProfile.companyId;
 
-                    // UBAH NAMA DOKUMEN: Jangan pakai "app_settings" lagi. 
-                    // Gunakan ID Toko sebagai nama dokumen agar tidak bentrok dengan toko lain!
-                    await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
-                    
-                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
-                    
-                    Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
-                } catch(e) { 
-                    console.error("Gagal simpan setting", e); 
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
-                }
-                this.isSaving = false;
-            },
+            // NAMA DOKUMEN MENGGUNAKAN ID TOKO (Sudah Benar!)
+            await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
+            
+            if (typeof this.generateInvoiceNumber === 'function') {
+                this.posCustomInvoice = this.generateInvoiceNumber('POS');
+            }
+            
+            Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
+        } catch(e) { 
+            console.error("Gagal simpan setting", e); 
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
+        }
+        this.isSaving = false;
+    },
 
             resetPosDate() {
                 const now = new Date();
@@ -8499,6 +8502,20 @@ async fetchRolesFromDatabase() {
                 else if(modalId === 'addMembershipModal') this.formMembership = {id:null, tierName:'', discountPercent: 0};
                 else if(modalId === 'addOutletModal') this.formOutlet = {id:null, code:'', name:'', location:'', taxPercent: 0, serviceChargePercent: 0};
                 else if(modalId === 'addPurchaseModal') { this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, isEdit: false }; this.formPurchaseItem={productId:'', variantSku:'', qty:'', price:''}; }
+                
+                // --- 👇👇 OBAT PENYAKIT ROLE (TAMBAHAN BARU) 👇👇 ---
+                else if(modalId === 'addRoleModal') {
+                    let defaultPerms = {};
+                    if (this.appModules) {
+                        this.appModules.forEach(mod => {
+                            // Siapkan centangan kosong (false) untuk semua modul
+                            defaultPerms[mod.id] = { read: false, write: false };
+                        });
+                    }
+                    this.formRole = { id: null, name: '', permissions: defaultPerms };
+                }
+                // ----------------------------------------------------
+
                 this.showModal(modalId);
             },
             
@@ -8521,6 +8538,21 @@ async fetchRolesFromDatabase() {
                     if (!copy.taxPercent) copy.taxPercent = 0;
                     if (!copy.serviceChargePercent) copy.serviceChargePercent = 0;
                 }
+
+                // --- 👇👇 OBAT EDIT ROLE (TAMBAHAN BARU) 👇👇 ---
+                if (formName === 'formRole') {
+                    if (!copy.permissions) copy.permissions = {};
+                    // Pastikan wadahnya lengkap jika ada modul aplikasi baru
+                    if (this.appModules) {
+                        this.appModules.forEach(mod => {
+                            if (!copy.permissions[mod.id]) {
+                                copy.permissions[mod.id] = { read: false, write: false };
+                            }
+                        });
+                    }
+                }
+                // ------------------------------------------------
+
                 this[formName] = copy; this.showModal(modalId);
             },
             
