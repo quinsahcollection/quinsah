@@ -374,23 +374,26 @@
                 </div>
                 
                 <div class="dropdown">
-                    <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2 border shadow-sm" type="button" id="userProfileMenu" data-bs-toggle="dropdown" aria-expanded="false" style="background: white; border-radius: 8px; padding: 5px 12px;">
+                    <button class="btn dropdown-toggle d-flex align-items-center gap-2 border-0" type="button" id="userProfileMenu" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; box-shadow: none; padding: 0;">
+                        
                         <div class="text-end d-none d-sm-block">
-                            <div class="fw-bold text-dark fs-6 lh-1">{{ userProfile.namaLengkap || userProfile.name || 'User' }}</div>
-                            <small class="text-success fw-bold" style="font-size: 0.70rem;"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>Online</small>
+                            <div class="fw-bold text-dark fs-6 lh-1" style="text-decoration: none;">{{ userProfile.namaLengkap || userProfile.name || 'User' }}</div>
+                            <small class="text-success fw-bold" style="font-size: 0.75rem;"><i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>Online</small>
                         </div>
-                        <div class="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 35px; height: 35px; font-weight: bold; font-size: 1.1rem;">
+                        
+                        <div class="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 38px; height: 38px; font-weight: bold; font-size: 1.2rem;">
                             {{ (userProfile.namaLengkap || userProfile.name || 'U').charAt(0).toUpperCase() }}
                         </div>
+                        
                     </button>
                     
-                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="userProfileMenu" style="width: 280px; border-radius: 12px; margin-top: 10px;">
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="userProfileMenu" style="width: 280px; border-radius: 12px; margin-top: 15px;">
                         
                         <li class="px-3 py-3 border-bottom text-center">
                             <h6 class="mb-0 fw-bold">{{ userProfile.namaLengkap || userProfile.name || 'Nama Tidak Diketahui' }}</h6>
                             <small class="text-muted">{{ userProfile.email || '-' }}</small><br>
                             <span class="badge bg-primary bg-opacity-10 text-primary border border-primary mt-2">
-                                {{ userRole === 'Admin' || userProfile.role === 'Admin' ? 'Pemilik Toko' : 'Karyawan' }}
+                                {{ userRole === 'Admin' || userProfile.role === 'Admin' ? 'Owner' : 'Karyawan' }}
                             </span>
                         </li>
 
@@ -409,14 +412,14 @@
                                     <small class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>{{ userProfile.companyData.status || 'Aktif' }}</small>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <small class="text-muted fw-bold">Batas Waktu:</small>
-                                    <small class="text-danger fw-bold">{{ formatTanggalCantik(userProfile.companyData.expiredDate) }}</small>
-                                </div>
+                                <small class="text-muted fw-bold">Batas Waktu:</small>
+                                <small class="text-danger fw-bold">{{ userProfile.companyData.expiredDate ? formatTanggalCantik(userProfile.companyData.expiredDate) : 'Tanpa Batas' }}</small>
+                               </div>
                             </li>
                             <li class="px-3 py-2 border-bottom text-center">
-                                <button class="btn btn-sm btn-outline-success w-100 fw-bold" style="border-radius: 6px;">
-                                    <i class="bi bi-star-fill me-1"></i> Upgrade Premium
-                                </button>
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold" style="border-radius: 6px;" @click="upgradePremium()">
+                            <i class="bi bi-star-fill me-1"></i> Upgrade Premium
+                            </button>
                             </li>
                         </template>
 
@@ -6495,6 +6498,49 @@
                 if (datePart.includes('-')) return datePart.split(' ')[0];
                 return '';
             },
+        
+        upgradePremium() {
+            // Tutup dropdown jika masih terbuka
+            let dropdownEl = document.getElementById('userProfileMenu');
+            if (dropdownEl) {
+                let dropdownInstance = bootstrap.Dropdown.getInstance(dropdownEl);
+                if (dropdownInstance) dropdownInstance.hide();
+            }
+
+            Swal.fire({
+                title: 'Upgrade ke Premium 🚀',
+                html: `
+                    <div class="text-start mt-3">
+                        <p>Dapatkan akses tanpa batas ke semua fitur pro kami dan kembangkan bisnis Anda lebih cepat.</p>
+                        <div class="card border-success mb-2">
+                            <div class="card-body py-2">
+                                <h6 class="fw-bold text-success mb-0">Paket Bulanan</h6>
+                                <small>Rp 99.000 / bulan</small>
+                            </div>
+                        </div>
+                        <div class="card border-primary">
+                            <div class="card-body py-2">
+                                <h6 class="fw-bold text-primary mb-0">Paket Tahunan <span class="badge bg-danger ms-1">Hemat 15%</span></h6>
+                                <small>Rp 999.000 / tahun</small>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#25D366', // Warna Hijau WhatsApp
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="bi bi-whatsapp"></i> Hubungi CS via WhatsApp',
+                cancelButtonText: 'Nanti Saja'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Ganti nomor ini dengan nomor WhatsApp aktif Anda (Gunakan format 62...)
+                    const noWhatsApp = '6285760035568'; 
+                    const pesan = encodeURIComponent(`Halo, saya Pemilik Toko *${this.userProfile.companyData.namaUsaha || this.userProfile.namaLengkap}*. Saya tertarik dan ingin Upgrade akun aplikasi kasir saya ke Premium.`);
+                    window.open(`https://wa.me/${noWhatsApp}?text=${pesan}`, '_blank');
+                }
+            });
+        },
         
         formatTanggalCantik(dateString) {
             if (!dateString) return '-';
