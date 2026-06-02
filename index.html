@@ -6678,7 +6678,8 @@ async saveRole() {
         // Simpan matriks ke Firestore
         await setDoc(roleRef, {
             name: this.formRole.name,
-            permissions: this.formRole.permissions
+            permissions: this.formRole.permissions,
+            companyId: this.userProfile.companyId // <--- TAMBAHAN MULTI-TENANT
         });
 
         Swal.fire('Berhasil', 'Konfigurasi Hak Akses berhasil disimpan ke database cloud.', 'success');
@@ -7069,6 +7070,7 @@ async fetchRolesFromDatabase() {
                         let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
                         await addDoc(collection(db, "stockTransfers"), {
                             id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
+                            companyId: this.userProfile.companyId, // <--- TAMBAHAN MULTI-TENANT
                             fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
                             pic: currentUser, note: this.transferForm.note || 'Pengajuan Transfer',
                             status: 'PENDING', items: transferItems
@@ -8154,7 +8156,9 @@ async fetchRolesFromDatabase() {
                 try {
                     const dataToSave = { ...formObj };
                     dataToSave.updatedBy = this.userProfile.name || 'Admin';
-
+                    // <--- TAMBAHAN MULTI-TENANT: Stiker Hak Milik Toko
+                    dataToSave.companyId = this.userProfile.companyId; 
+                    // -----------------------------------------------
                     let finalDocId = null;
 
                     if (!dataToSave.id) { 
@@ -9137,6 +9141,10 @@ async fetchRolesFromDatabase() {
                     dataToSave.createdAt = serverTimestamp();
                     dataToSave.userName = this.userProfile.name || 'Admin'; 
 
+                    // <--- TAMBAHAN MULTI-TENANT
+                    dataToSave.companyId = this.userProfile.companyId; 
+                    // --------------------------
+
                     // --- TAMBAHAN PENTING: AUTO KALKULASI LUNAS ---
                     // Jika status dipilih LUNAS, pastikan nominal bayar otomatis sama dengan Grand Total
                     if (dataToSave.paymentStatus === 'LUNAS') {
@@ -9814,6 +9822,7 @@ async fetchRolesFromDatabase() {
 
                     let docData = {
                         id: this.opnameForm.id,
+                        companyId: this.userProfile.companyId, // <--- TAMBAHAN MULTI-TENANT
                         dateStr: nowStr,
                         outletId: this.invOutletFilter,
                         pic: currentUser,
