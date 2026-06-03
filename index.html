@@ -7178,27 +7178,30 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = true;
                 try {
                     let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin';
+                    
+                    // PERBAIKAN 1: Pelindung nama user
+                    let currentUser = this.userProfile?.name || 'Admin';
 
                     // 3. LOGIKA BERCABANG: Update dokumen lama ATAU Buat dokumen baru
                     if (this.isEditingTransfer && this.editTransferId) {
-                        // JIKA MODE EDIT: Perbarui data di Firebase tanpa mengubah ID dan Tanggal Buat
+                        // JIKA MODE EDIT
                         await updateDoc(doc(db, "stockTransfers", this.editTransferId), {
                             fromOutlet: this.transferForm.fromOutlet,
                             toOutlet: this.transferForm.toOutlet,
                             note: this.transferForm.note,
                             items: transferItems,
-                            pic: currentUser // Update nama petugas terakhir yang mengedit
+                            pic: currentUser || 'Admin' // PERBAIKAN 2: Pelindung saat update
                         });
                         Swal.fire({ icon: 'success', title: 'Diperbarui', text: 'Draft transfer berhasil diubah.', timer: 2000, showConfirmButton: false});
                     } else {
-                        // JIKA BUAT BARU: Buat dokumen baru di Firebase
+                        // JIKA BUAT BARU
                         let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
                         await addDoc(collection(db, "stockTransfers"), {
                             id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
-                            companyId: this.userProfile.companyId, // <--- TAMBAHAN MULTI-TENANT
+                            companyId: this.userProfile?.companyId || '', // Pelindung jika companyId kosong
                             fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
-                            pic: currentUser, note: this.transferForm.note || 'Pengajuan Transfer',
+                            pic: currentUser || 'Admin', // PERBAIKAN 3: Pelindung saat buat baru
+                            note: this.transferForm.note || 'Pengajuan Transfer',
                             status: 'PENDING', items: transferItems
                         });
                         Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
@@ -10107,14 +10110,16 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = true;
                 try {
                     let nowStr = new Date().toLocaleString('id-ID');
-                    let currentUser = this.userProfile ? this.userProfile.name : 'Admin'; 
+                    
+                    // PERBAIKAN 4: Pelindung nama user di fungsi Opname
+                    let currentUser = this.userProfile?.name || 'Admin'; 
 
                     let docData = {
                         id: this.opnameForm.id,
-                        companyId: this.userProfile.companyId, // <--- TAMBAHAN MULTI-TENANT
+                        companyId: this.userProfile?.companyId || '', // Pelindung companyId
                         dateStr: nowStr,
                         outletId: this.invOutletFilter,
-                        pic: currentUser,
+                        pic: currentUser || 'Admin', // PERBAIKAN 5: Pelindung saat masuk database
                         note: this.opnameForm.note || 'Menunggu Persetujuan',
                         status: 'PENDING', // STATUS AWAL ADALAH PENDING (TIDAK UBAH STOK)
                         items: updatesToMake 
