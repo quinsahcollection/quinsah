@@ -132,6 +132,21 @@
             .sidebar-right { max-width: 100%; }
             .product-card { padding: 8px; }
             .product-img { height: 130px !important; }
+            
+            /* PERBAIKAN MENU BAWAH MOBILE (KIRI-KANAN / HORIZONTAL) */
+            .sidebar-left {
+                position: fixed !important; bottom: 0 !important; left: 0 !important; display: flex !important; 
+                flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; 
+                overflow-y: hidden !important; justify-content: flex-start !important; width: 100vw !important; 
+                -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; background: #fff; 
+                border-top: 1px solid #dee2e6; z-index: 1050;
+            }
+            .sidebar-left::-webkit-scrollbar { display: none !important; }
+            .sidebar-left .nav-icon {
+                flex: 0 0 auto !important; min-width: 80px !important; white-space: nowrap !important; 
+                font-size: 0.75rem !important; padding: 10px 5px !important; 
+            }
+            .app-container { padding-bottom: 85px !important; }
         }
 
         /* ======================================================= */
@@ -150,113 +165,75 @@
         /* ======================================================= */
         /* 2. SEMBUNYIKAN KARDUS CETAKAN DARI LAYAR UTAMA          */
         /* ======================================================= */
-        #print-section {
-            display: none !important;
-        }
+        #print-section { display: none !important; }
 
         /* ======================================================= */
         /* 3. CSS DARURAT: KEMBALIKAN SCROLL PC/LAPTOP             */
         /* ======================================================= */
-        html, body {
-            overflow: visible !important;
-        }
+        html, body { overflow: visible !important; }
 
         @media (min-width: 992px) {
-            .app-container {
-                display: flex !important;
-                height: 100vh !important;
-                overflow: hidden !important;
-            }
-            .main-content {
-                flex-grow: 1 !important;
-                height: 100vh !important;
-                overflow-y: auto !important; 
-                padding-bottom: 50px !important;
-            }
+            .app-container { display: flex !important; height: 100vh !important; overflow: hidden !important; }
+            .main-content { flex-grow: 1 !important; height: 100vh !important; overflow-y: auto !important;  padding-bottom: 50px !important; }
             
             /* --- STRUKTUR BARU SIDEBAR --- */
-            .sidebar-left {
-                width: 80px; /* Sesuaikan lebar sidebar Anda */
-                height: 100vh !important;
-                display: flex !important;
-                flex-direction: column !important;
-                background: #ffffff; /* Sesuaikan warna latar */
-                border-right: 1px solid #dee2e6;
-            }
-
-            /* 1. Logo tetap di atas (tidak ikut scroll) */
-            .sidebar-left .logo-icon {
-                height: 64px; /* Tinggi area logo */
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0; /* Penting agar logo tidak mengecil */
-                border-bottom: 1px solid #eee;
-            }
-
-            /* 2. Container Menu Icon yang bisa di-scroll */
-            .sidebar-left .menu-scroll-area {
-                flex-grow: 1;
-                display: flex; /* Kunci agar mt-auto (Setelan) bisa turun ke bawah */
-                flex-direction: column;
-                overflow-y: auto !important; /* Di sinilah scroll terjadi */
-                overflow-x: hidden;
-                padding: 10px 0;
-            }
-
-            /* 3. Posisi Setelan (mt-auto) tetap di bawah */
-            .sidebar-left .mt-auto {
-                margin-top: auto !important;
-            }
-
-            /* Desain scrollbar */
+            .sidebar-left { width: 80px; height: 100vh !important; display: flex !important; flex-direction: column !important; background: #ffffff; border-right: 1px solid #dee2e6; }
+            .sidebar-left .logo-icon { height: 64px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-bottom: 1px solid #eee; }
+            .sidebar-left .menu-scroll-area { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto !important; overflow-x: hidden; padding: 10px 0; }
+            .sidebar-left .mt-auto { margin-top: auto !important; }
             .menu-scroll-area::-webkit-scrollbar { width: 4px; }
             .menu-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        }
+
+        /* PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET) */
+        @media (min-width: 768px) {
+            .sidebar-left { 
+                position: sticky; top: 0; height: 100vh; overflow-y: auto; padding-bottom: 40px; 
+                scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+            }
+            .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
+            .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+            .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         }
         
         /* ======================================================= */
         /* FIX POPUP SWEETALERT TERTUTUP MODAL BOOTSTRAP           */
         /* ======================================================= */
-        .swal2-container {
-            z-index: 999999 !important;
-        }
+        .swal2-container { z-index: 999999 !important; }
 
         /* ======================================================= */
-        /* FIX PRINT UNTUK IPAD / IOS / SAFARI (KODE ASLI)         */
+        /* TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB (BARCODE)     */
+        /* ======================================================= */
+        .barcode-print-sheet { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; width: 100%; background: #fff; align-content: flex-start; }
+        .barcode-label-box { border: 1px dashed #ccc; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px; text-align: center; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+        .barcode-label-box.size-small { width: 140px; height: 80px; font-size: 9px; }
+        .barcode-label-box.size-medium { width: 180px; height: 110px; font-size: 11px; }
+        .barcode-label-box.size-large { width: 240px; height: 140px; font-size: 13px; }
+        .bc-biz-name { font-weight: bold; text-transform: uppercase; color: #555; font-size: 0.85em; white-space: nowrap; }
+        .bc-prod-name { font-weight: bold; color: #000; margin: 2px 0; line-height: 1.1; max-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .barcode-mock-bars { height: 25px; width: 100%; background: linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 7px, transparent 7px, transparent 8px, #000 8px, #000 9px, transparent 9px, transparent 12px, #000 12px, #000 13px, transparent 13px, transparent 14px, #000 14px, #000 17px); background-size: 22px 100%; margin: 2px auto; }
+        .barcode-label-box.size-large .barcode-mock-bars { height: 45px; }
+        .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
+        .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
+
+        /* ======================================================= */
+        /* PENGATURAN CETAK (GABUNGAN IPAD/IOS & THERMAL BARCODE)  */
         /* ======================================================= */
         @media print {
-            /* 1. Sembunyikan SELURUH aplikasi utama saat nge-print */
-            body.safe-print-mode > * {
-                display: none !important;
-            }
+            body.safe-print-mode > * { display: none !important; }
+            body.safe-print-mode > #temp-print-section { display: block !important; width: 100% !important; position: relative !important; left: 0 !important; top: 0 !important; margin: 0 auto !important; }
             
-            /* 2. Tampilkan HANYA area cetak hasil kloningan kita */
-            body.safe-print-mode > #temp-print-section {
-                display: block !important;
-                width: 100% !important;
-                position: relative !important;
-                left: 0 !important;
-                top: 0 !important;
-                margin: 0 auto !important;
-            }
-            
-            /* 3. Bebaskan kuncian Bootstrap (Pencegah Layar Blank/Putih) */
-            html, body.safe-print-mode {
-                overflow: visible !important;
-                height: auto !important;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+            html, body.safe-print-mode { overflow: visible !important; height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-            @page {
-                margin: 0; 
-                size: auto;
-            }
+            @page { margin: 0mm; size: auto; }
+
+            .no-print-area, #sidebar, .dashboard-card, .btn, .navbar { display: none !important; }
+            
+            body { background: #fff !important; margin: 0 !important; padding: 0 !important; display: block !important; }
+
+            .barcode-print-sheet { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; background: #fff !important; padding: 0 !important; margin: 0 !important; gap: 0 !important; width: 100% !important; }
+            .barcode-label-box { border: none !important; page-break-inside: avoid; margin: 0 !important; }
         }
-
     </style>
 </head>
 <body>
@@ -1749,164 +1726,7 @@
                     </div>
                 </div>
             </div>
-
         </div>
-    
-    <style>
-                    /* 1. TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB */
-                    .barcode-print-sheet {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 8px;
-                        padding: 15px;
-                        width: 100%;
-                        background: #fff;
-                        align-content: flex-start;
-                    }
-                    .barcode-label-box {
-                        border: 1px dashed #ccc;
-                        background: #fff;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: space-between;
-                        padding: 6px;
-                        text-align: center;
-                        box-sizing: border-box;
-                        font-family: 'Courier New', Courier, monospace;
-                        overflow: hidden;
-                    }
-                    
-                    /* Penyetelan Ukuran Kotak Label */
-                    .barcode-label-box.size-small { width: 140px; height: 80px; font-size: 9px; }
-                    .barcode-label-box.size-medium { width: 180px; height: 110px; font-size: 11px; }
-                    .barcode-label-box.size-large { width: 240px; height: 140px; font-size: 13px; }
-
-                    .bc-biz-name { font-weight: bold; text-transform: uppercase; color: #555; font-size: 0.85em; white-space: nowrap; }
-                    .bc-prod-name { font-weight: bold; color: #000; margin: 2px 0; line-height: 1.1; max-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-                    
-                    /* Efek Batang Barcode Palsu (Bisa di-scan jika pakai library JsBarcode nanti) */
-                    .barcode-mock-bars {
-                        height: 25px;
-                        width: 100%;
-                        background: linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 7px, transparent 7px, transparent 8px, #000 8px, #000 9px, transparent 9px, transparent 12px, #000 12px, #000 13px, transparent 13px, transparent 14px, #000 14px, #000 17px);
-                        background-size: 22px 100%;
-                        margin: 2px auto;
-                    }
-                    .barcode-label-box.size-large .barcode-mock-bars { height: 45px; }
-                    .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
-                    .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
-
-                    /* ======================================================== */
-                    /* 2. SIHIR UTAMA: CSS BERAKSI SAAT TOMBOL PRINT DIKLIK     */
-                    /* ======================================================== */
-                    @media print {
-    /* 1. Atur ukuran halaman dan hilangkan margin bawaan browser HP */
-    @page {
-        margin: 0mm; 
-        /* size: 50mm 30mm; Opsional: Jika selalu pakai printer thermal stiker ukuran tertentu, aktifkan dan sesuaikan ukurannya */
-    }
-
-    /* 2. Sembunyikan elemen UI secara lebih spesifik, JANGAN gunakan 'body *' */
-    /* Karena 'body *' akan menyembunyikan isi dalam barcode-label-box juga di beberapa browser mobile */
-    .no-print-area, #sidebar, .dashboard-card, .btn, .navbar {
-        display: none !important;
-    }
-
-    /* 3. Reset Body agar bersahabat dengan layout cetak multi-halaman */
-    body {
-        background: #fff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        display: block !important; /* Jangan jadikan body sebagai flex saat print */
-    }
-
-    /* 4. Tampilkan Lembar Cetak */
-    .barcode-print-sheet {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        visibility: visible !important;
-        
-        /* GANTI position: absolute; menjadi relative atau static. 
-           Absolute sering membuat halaman kedua terpotong/hilang di HP */
-        position: relative !important; 
-        left: 0 !important;
-        top: 0 !important;
-        
-        background: #fff !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        gap: 0 !important; 
-        width: 100% !important;
-    }
-
-    /* 5. Penyesuaian Kotak Label di Kertas */
-    .barcode-label-box {
-        border: none !important; 
-        page-break-inside: avoid;
-        margin: 0 !important; /* Pastikan tidak ada margin tak terduga */
-        /* Jika cetak 1 baris 1 stiker di printer thermal, paksa width 100% */
-        /* width: 100% !important; */ 
-    }
-}
-                    
-    /* ======================================================== */
-    /* 3. PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET)    */
-    /* ======================================================== */
-    @media (min-width: 768px) {
-        .sidebar-left { 
-            position: sticky; /* Menahan posisi sidebar agar diam saat tabel ditarik */
-            top: 0;
-            height: 100vh; 
-            overflow-y: auto; /* Mengaktifkan scroll atas-bawah di dalam sidebar */
-            padding-bottom: 40px; /* Jarak bawah agar menu paling ujung tidak terpotong */
-            
-            /* Munculkan scrollbar tipis agar bisa diklik dan di-drag oleh pengguna Mouse */
-            scrollbar-width: thin; 
-            scrollbar-color: #cbd5e1 transparent;
-        }
-        
-        /* Desain scrollbar tipis untuk Chrome/Safari/Edge */
-        .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
-        .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
-    }
-
-    /* ======================================================== */
-    /* 4. PERBAIKAN MENU BAWAH MOBILE (KIRI-KANAN / HORIZONTAL) */
-    /* ======================================================== */
-    @media (max-width: 767px) {
-        .sidebar-left {
-            position: fixed !important; /* Paksa agar selalu menempel di bawah layar HP */
-            bottom: 0 !important;
-            left: 0 !important;
-            display: flex !important; 
-            flex-direction: row !important; 
-            flex-wrap: nowrap !important;
-            
-            overflow-x: auto !important; /* Di HP, scrollnya ditarik ke KIRI-KANAN */
-            overflow-y: hidden !important; /* Matikan atas-bawah agar layout rapi */
-            
-            justify-content: flex-start !important;
-            width: 100vw !important; 
-            -webkit-overflow-scrolling: touch !important; /* Scroll halus untuk layar sentuh */
-            scrollbar-width: none !important;
-            background: #fff; /* Pastikan menu tidak tembus pandang */
-            border-top: 1px solid #dee2e6;
-            z-index: 1050; /* Pastikan berada di atas elemen lain */
-        }
-        .sidebar-left::-webkit-scrollbar { display: none !important; }
-        .sidebar-left .nav-icon {
-            flex: 0 0 auto !important; 
-            min-width: 80px !important; 
-            white-space: nowrap !important; 
-            font-size: 0.75rem !important;
-            padding: 10px 5px !important; 
-        }
-        /* Memberi ruang di bagian bawah area utama agar tertutup menu */
-        .app-container { padding-bottom: 85px !important; }
-    } 
-    </style>
     
             <div v-if="currentView === 'opname'" class="dashboard-card mb-4">
                     
@@ -2716,7 +2536,7 @@
                                     </thead>
                                     <tbody>
                                         <template v-for="p in products" :key="'tf-'+p.id">
-                                            <tr v-if="(!p.variants || p.variants.length === 0) && (p.name.toLowerCase().includes(transferSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(transferSearchQuery.toLowerCase())))">
+                                                <tr v-if="(!p.variants || p.variants.length === 0) && ((p.name || '').toLowerCase().includes((transferSearchQuery || '').toLowerCase()) || ((p.sku || '').toLowerCase().includes((transferSearchQuery || '').toLowerCase())))">
                                                 <td class="fw-bold"><i class="bi bi-box me-1"></i>{{ p.name }}</td>
                                                 <td class="text-center"><span class="sku-badge">{{ p.sku || '-' }}</span></td>
                                                 <td class="text-center fw-bold fs-6 bg-danger bg-opacity-10 text-danger">
@@ -3112,11 +2932,8 @@
                     </tbody>
                 </table>
             </div>
-         </div>
-              
+         </div>          
               </main>
-
-                </main>
 
 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
