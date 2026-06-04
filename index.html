@@ -5567,43 +5567,6 @@
                 if(!this.activeSupplierDetail) return [];
                 return this.purchases.filter(p => p.supplierId === this.activeSupplierDetail.id);
             },
-
-            // Letakkan di dalam blok computed: { ... }
-        filteredCustomers() {
-            // Jika data customers belum dimuat, kembalikan array kosong
-            if (!this.customers) return [];
-            
-            return this.customers.filter(c => {
-                // 1. Logika Pencarian Teks (Nama, Telp, Alamat)
-                const q = this.customerSearchQuery.toLowerCase();
-                const matchSearch = 
-                    (c.name && c.name.toLowerCase().includes(q)) ||
-                    (c.phone && c.phone.toLowerCase().includes(q)) ||
-                    (c.address && c.address.toLowerCase().includes(q));
-
-                // 2. Logika Filter Promo
-                let matchPromo = true;
-                if (this.customerPromoFilter === 'ada') {
-                    // Catatan: Sesuaikan 'c.promo' atau 'c.tier' dengan nama variabel promo di database Anda
-                    matchPromo = c.promo || c.tier || (c.discount && c.discount > 0); 
-                } else if (this.customerPromoFilter === 'tidak') {
-                    matchPromo = !c.promo && !c.tier && (!c.discount || c.discount === 0);
-                }
-
-                return matchSearch && matchPromo;
-            });
-        },
-
-        filteredSuppliers() {
-            if (!this.suppliers) return [];
-            
-            return this.suppliers.filter(s => {
-                const q = this.supplierSearchQuery.toLowerCase();
-                return (s.name && s.name.toLowerCase().includes(q)) ||
-                       (s.phone && s.phone.toLowerCase().includes(q)) ||
-                       (s.address && s.address.toLowerCase().includes(q));
-            });
-        },
         
             // POS & INVENTORY FILTERING
             filteredProducts() { 
