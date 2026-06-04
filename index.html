@@ -467,9 +467,11 @@
             <div class="dropdown h-100 w-100">
                 <div class="input-group input-group-sm shadow-sm h-100" data-bs-toggle="dropdown" style="cursor: pointer;">
                     <span class="input-group-text bg-white p-1 px-2 d-flex align-items-center"><i class="bi bi-funnel-fill text-primary"></i></span>
+                    
                     <div class="form-control d-flex align-items-center px-1 bg-white fw-semibold text-dark text-truncate" style="font-size: 0.75rem; padding-top: 0.35rem; padding-bottom: 0.35rem;">
-                        {{ posCategoryFilter === '' ? 'Kategori' : 'Filter' }}
+                        {{ posCategoryFilter === '' ? 'Kategori' : (structuredCategories.find(c => c.id === posCategoryFilter)?.name || 'Kategori') }}
                     </div>
+
                 </div>
                 <ul class="dropdown-menu shadow w-100" style="max-height: 250px; overflow-y: auto; font-size: 0.8rem;">
                     <li><a class="dropdown-item fw-bold" :class="{'bg-light text-primary': posCategoryFilter === ''}" href="#" @click.prevent="posCategoryFilter = ''">Semua Kategori</a></li>
@@ -6196,18 +6198,26 @@
         },
         
         watch: {
-            // Fungsi bawaan Anda (TIDAK DIHAPUS)
+            // PERBAIKAN: Logika Outlet yang lebih cerdas
             outlets(newVal) { 
-                if(newVal.length > 0 && !this.posActiveOutletId) this.posActiveOutletId = newVal[0].id; 
+                if (newVal.length > 0) {
+                    // 1. Cek apakah outlet yang sedang dipilih masih ada di daftar terbaru
+                    let outletMasihAda = newVal.find(o => o.id === this.posActiveOutletId);
+                    
+                    // 2. Jika belum ada yang dipilih ATAU outlet yang dipilih ternyata sudah dihapus
+                    if (!this.posActiveOutletId || !outletMasihAda) {
+                        this.posActiveOutletId = newVal[0].id; // Otomatis pilih outlet urutan pertama
+                    }
+                } else {
+                    // 3. Jika semua outlet dihapus sampai habis
+                    this.posActiveOutletId = ''; 
+                }
             },
+            
             total(newVal) { 
                 if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; 
             },
 
-            // ==========================================
-            // TAMBAHAN BARU: Memperbaiki riwayat kosong 
-            // saat pindah menu setelah login
-            // ==========================================
             currentView(newView) {
                 if (newView === 'opname') {
                     if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
