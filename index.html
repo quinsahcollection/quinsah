@@ -4620,10 +4620,11 @@
                         
                         <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
                             <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
+                                
                                 <div class="card border shadow-sm cursor-pointer hover-shadow" 
-                                     :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0}" 
-                                     @click="getVariantDisplayStock(v) > 0 ? selectVariantNextStep(v) : null">
-                                    
+                                     :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0 && !appSettings.allowNegativeInventory}" 
+                                     @click="(getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory) ? selectVariantNextStep(v) : null">
+                                     
                                     <div class="card-body p-2 d-flex align-items-center">
                                         <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
                                         
@@ -4646,12 +4647,13 @@
                                             <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
                                                 Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
                                             </div>
-                                            <div class="mt-1" v-if="getVariantDisplayStock(v) > 0">
+                                            
+                                            <div class="mt-1" v-if="getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory">
                                                 <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
                                             </div>
                                             <div class="mt-1" v-else>
                                                 <span class="text-danger small fw-bold">Habis</span>
-                                            </div>
+                                            </div>     
                                         </div>
                                     </div>
                                 </div>
