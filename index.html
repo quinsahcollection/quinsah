@@ -4219,13 +4219,19 @@
                             <img v-if="formProduct.imageBase64" :src="formProduct.imageBase64" width="70" height="70" class="rounded border object-fit-cover shadow-sm ms-2">
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-bold">HPP (Modal Dasar / Rp)</label>
-                        <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.hppPrice" placeholder="Harga kulakan/modal...">
-                    </div>
+                    
                     <div class="col-md-4">
                         <label class="form-label small fw-bold text-success">Harga Jual Normal (Rp)</label>
                         <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
+                    </div>
+
+                    <div class="col-md-6" v-if="formProduct.variants.length === 0">
+                        <label class="form-label small fw-bold text-danger"><i class="bi bi-bell-fill me-1"></i>Min. Stock (Alert)</label>
+                        <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.minStock" placeholder="Batas minimum stok untuk muncul di Notifikasi...">
+                    </div>
+                    <div class="col-md-6" v-if="formProduct.variants.length === 0">
+                        <label class="form-label small fw-bold text-primary"><i class="bi bi-box-seam me-1"></i>Max. Stock (Batas Gudang)</label>
+                        <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.maxStock" placeholder="Kapasitas maksimum gudang...">
                     </div>
 
                     <div class="col-md-12">
@@ -4322,49 +4328,53 @@
                         </div>
 
                         <div class="table-responsive mt-3" v-if="formProduct.variants.length > 0">
-                            <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Geser ke samping untuk melihat & edit)</p>
-                            <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.75rem; min-width: 800px;">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th>Nama Varian</th>
-                                        <th>Foto Spesifik</th>
-                                        <th>SKU Varian</th>
-                                        <th>HPP (Modal)</th>
-                                        <th>Harga Jual Normal</th>
-                                        <th>Override Diskon</th>
-                                        <th v-for="out in outlets" :key="out.id">Stok: {{ out.code }}</th>
-                                        <th><i class="bi bi-trash"></i></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(v, index) in formProduct.variants" :key="index">
-                                        <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
-                                        <td>
-                                            <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
-                                                <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 100%; font-size:0.65rem;">
-                                                <img v-if="v.imageBase64" :src="v.imageBase64" width="60" height="60" class="rounded border object-fit-cover shadow-sm">
-                                            </div>
-                                        </td>
-                                        <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
-                                        <td><input type="number" class="form-control form-control-sm px-2 text-center" v-model.number="v.hppPrice" style="min-width: 90px;"></td>
-                                        <td><input type="number" class="form-control form-control-sm px-2 text-success fw-bold text-center" v-model.number="v.sellPrice" style="min-width: 100px;"></td>
-                                        <td>
-                                            <div class="input-group input-group-sm" style="min-width: 140px;">
-                                                <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
-                                                    <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
-                                                </select>
-                                                <input type="number" class="form-control px-1 text-center" v-model.number="v.discountValue" :disabled="!v.discountType || v.discountType === 'none'" placeholder="0">
-                                            </div>
-                                        </td>
-                                        <td v-for="out in outlets" :key="out.id">
-                                            <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
-                                        </td>
-                                        <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-x-circle-fill fs-5"></i></button></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        <p class="fw-bold small text-primary-custom mb-1"><i class="bi bi-table me-1"></i> Tabel SKU Varian Final (Geser ke samping untuk melihat & edit)</p>
+                        <table class="table table-sm table-bordered align-middle text-nowrap" style="font-size: 0.75rem; min-width: 800px;">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Nama Varian</th>
+                                    <th>Foto Spesifik</th>
+                                    <th>SKU Varian</th>
+                                    <th>HPP (Modal)</th>
+                                    <th>Harga Jual Normal</th>
+                                    <th>Override Diskon</th>
+                                    <th class="text-danger">Min. Stock</th>
+                                    <th class="text-primary">Max. Stock</th>
+                                    <th v-for="out in outlets" :key="out.id">Stok: {{ out.code }}</th>
+                                    <th><i class="bi bi-trash"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(v, index) in formProduct.variants" :key="index">
+                                    <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
+                                    <td>
+                                        <div class="d-flex flex-column align-items-center gap-1" style="min-width: 90px;">
+                                            <input type="file" class="form-control form-control-sm px-1" accept="image/*" @change="handleImageUpload($event, v, true)" style="max-width: 100%; font-size:0.65rem;">
+                                            <img v-if="v.imageBase64" :src="v.imageBase64" width="60" height="60" class="rounded border object-fit-cover shadow-sm">
+                                        </div>
+                                    </td>
+                                    <td><input type="text" class="form-control form-control-sm px-2 text-center font-monospace fw-semibold" v-model="v.variantSku" style="min-width: 120px;"></td>
+                                    <td><input type="number" class="form-control form-control-sm px-2 text-center" v-model.number="v.hppPrice" style="min-width: 90px;"></td>
+                                    <td><input type="number" class="form-control form-control-sm px-2 text-success fw-bold text-center" v-model.number="v.sellPrice" style="min-width: 100px;"></td>
+                                    <td>
+                                        <div class="input-group input-group-sm" style="min-width: 140px;">
+                                            <select class="form-select px-1" v-model="v.discountType" @change="v.discountValue = 0">
+                                                <option value="none">Ikut Induk</option><option value="percent">%</option><option value="nominal">Rp</option>
+                                            </select>
+                                            <input type="number" class="form-control px-1 text-center" v-model.number="v.discountValue" :disabled="!v.discountType || v.discountType === 'none'" placeholder="0">
+                                        </div>
+                                    </td>
+                                    <td><input type="number" class="form-control form-control-sm px-2 text-center text-danger fw-bold" v-model.number="v.minStock" placeholder="0" style="min-width: 80px;"></td>
+                                    <td><input type="number" class="form-control form-control-sm px-2 text-center text-primary fw-bold" v-model.number="v.maxStock" placeholder="0" style="min-width: 80px;"></td>
+                                    <td v-for="out in outlets" :key="out.id">
+                                        <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
+                                    </td>
+                                    <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-x-circle-fill fs-5"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                 </div>
 
                     <div class="col-12 mt-4">
                         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
@@ -8366,6 +8376,7 @@ async fetchRolesFromDatabase() {
             
             editData(colName, dataObj, formName, modalId) {
                 let copy = JSON.parse(JSON.stringify(dataObj));
+                
                 if (formName === 'formProduct') {
                     if (!copy.baseOutletStocks) copy.baseOutletStocks = {};
                     if (!copy.variants) copy.variants = [];
@@ -8374,11 +8385,32 @@ async fetchRolesFromDatabase() {
                     if (!copy.uom) copy.uom = 'Pcs';
                     if (!copy.productTags) copy.productTags = [];
                     copy.productTagInput = '';
-                    copy.variants.forEach(v => { if (!v.outletStocks) v.outletStocks = {}; if (!v.discountType) { v.discountType = 'none'; v.discountValue = 0; } });
-                    if (!copy.dynamicVariantsData || copy.dynamicVariantsData.length === 0) { copy.dynamicVariantsData = [{ name: 'Warna', tags: [], input: '' }]; }
+                    
+                    // --- 👇 TAMBAHAN PENGAMAN MIN & MAX STOCK INDUK 👇 ---
+                    if (copy.minStock === undefined) copy.minStock = 0;
+                    if (copy.maxStock === undefined) copy.maxStock = 0;
+                    // -----------------------------------------------------
+
+                    copy.variants.forEach(v => { 
+                        if (!v.outletStocks) v.outletStocks = {}; 
+                        if (!v.discountType) { 
+                            v.discountType = 'none'; 
+                            v.discountValue = 0; 
+                        } 
+                        
+                        // --- 👇 TAMBAHAN PENGAMAN MIN & MAX STOCK VARIAN 👇 ---
+                        if (v.minStock === undefined) v.minStock = 0;
+                        if (v.maxStock === undefined) v.maxStock = 0;
+                        // ------------------------------------------------------
+                    });
+                    
+                    if (!copy.dynamicVariantsData || copy.dynamicVariantsData.length === 0) { 
+                        copy.dynamicVariantsData = [{ name: 'Warna', tags: [], input: '' }]; 
+                    }
                     
                     this.formProductOriginalState = JSON.parse(JSON.stringify(copy));
                 }
+                
                 if (formName === 'formOutlet') {
                     if (!copy.taxPercent) copy.taxPercent = 0;
                     if (!copy.serviceChargePercent) copy.serviceChargePercent = 0;
@@ -8398,7 +8430,8 @@ async fetchRolesFromDatabase() {
                 }
                 // ------------------------------------------------
 
-                this[formName] = copy; this.showModal(modalId);
+                this[formName] = copy; 
+                this.showModal(modalId);
             },
             
             removeData(colName, id) { 
