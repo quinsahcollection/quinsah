@@ -9038,7 +9038,7 @@ async fetchRolesFromDatabase() {
             }
         },
 
-        // 5. EKSEKUSI KERANJANG (Dengan Pelacak Error)
+        // 5. EKSEKUSI KERANJANG (Dengan Pelacak Error & Pengaman Negative Inventory)
         executeAddToCart(variant, modifierTotal, modifierNotes, linkedProductIds) {
             try {
                 if (!this.posActiveOutletId) {
@@ -9049,10 +9049,21 @@ async fetchRolesFromDatabase() {
                 let prod = this.activeProduct;
                 let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
                 
-                if (available < 1) {
-                    Swal.fire({ icon: 'error', title: 'Stok Habis / Ditahan', text: 'Stok tersedia tidak mencukupi.' });
+                // ==========================================
+                // 👇 KUNCI PROTEKSI NEGATIVE INVENTORY 👇
+                // ==========================================
+                // Hanya blokir JIKA stok tidak cukup DAN saklar "allowNegativeInventory" dalam keadaan MATI (false)
+                if (available < 1 && !this.appSettings.allowNegativeInventory) {
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Stok Habis!', 
+                        text: 'Stok fisik barang ini di cabang sudah habis. Aktifkan fitur "Negative Inventory" di Pengaturan jika ingin tetap bisa menjualnya.' 
+                    });
                     return;
                 }
+                // Jika stok < 1 tapi saklar NYALA, lolos!
+                // Jika stok > 0, otomatis lolos!
+                // ==========================================
 
                 let basePromo = variant ? this.getEffectiveVariantPrice(prod, variant) : this.getEffectiveBasePrice(prod);
                 let baseSell = variant ? variant.sellPrice : prod.sellPrice;
@@ -9086,6 +9097,11 @@ async fetchRolesFromDatabase() {
                 );
                 
                 if (existing) {
+                    // Cek lagi saat menambah qty existing (untuk keamanan ekstra)
+                    if (available < existing.qty + 1 && !this.appSettings.allowNegativeInventory) {
+                        Swal.fire({ icon: 'warning', title: 'Batas Maksimal', text: 'Tidak bisa menambah lebih dari stok yang tersedia.' });
+                        return;
+                    }
                     existing.qty += 1;
                 } else {
                     this.cart.push(item);
@@ -9115,18 +9131,21 @@ async fetchRolesFromDatabase() {
                     if (prod) {
                         let variant = item.variantSku && prod.variants ? prod.variants.find(v => v.variantSku === item.variantSku) : null;
                         
-                        // Cek Sisa Stok Tersedia (Apakah masih ada sisa setelah dikurangi yang sudah di keranjang/hold?)
+                        // Cek Sisa Stok Tersedia
                         let available = this.getAvailableStock(prod, variant, this.posActiveOutletId);
                         
-                        // Jika stok tersedia sudah 0 (atau kurang dari jumlah yang mau ditambah), blokir!
-                        if (available < delta) {
+                        // ==========================================
+                        // 👇 KUNCI PROTEKSI NEGATIVE INVENTORY 👇
+                        // ==========================================
+                        if (available < delta && !this.appSettings.allowNegativeInventory) {
                             Swal.fire({ 
                                 icon: 'warning', 
                                 title: 'Batas Maksimal', 
-                                text: 'Sisa stok tersedia di cabang ini sudah habis dialokasikan.' 
+                                text: 'Sisa stok fisik di cabang ini sudah habis. Tidak bisa menambah jumlah pesanan.' 
                             });
-                            return; // Hentikan fungsi di sini, kuantitas tidak akan bertambah
+                            return; // Hentikan fungsi di sini
                         }
+                        // ==========================================
                     }
                 }
 
