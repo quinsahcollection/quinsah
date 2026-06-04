@@ -3702,7 +3702,10 @@
                             <label class="form-label small fw-bold">Alamat Lengkap</label>
                             <textarea class="form-control form-control-sm" v-model="formSupplier.address" rows="2" placeholder="Alamat supplier..."></textarea>
                         </div>
-                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('suppliers', formSupplier, 'addSupplierModal')"><i class="bi bi-save me-1"></i> Simpan Supplier</button>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('suppliers', formSupplier, 'addSupplierModal')" :disabled="isProcessing">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Supplier' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3983,8 +3986,10 @@
                                 <span class="input-group-text bg-white fw-bold">%</span>
                             </div>
                         </div>
-                        
-                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('memberships', formMembership, 'addMembershipModal')"><i class="bi bi-save me-1"></i> Simpan Data</button>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('memberships', formMembership, 'addMembershipModal')" :disabled="isProcessing">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Data' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -4110,8 +4115,10 @@
                                 <option v-for="m in memberships" :value="m.id">{{ m.tierName }} (Diskon {{ m.discountPercent }}%)</option>
                             </select>
                         </div>
-                        
-                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('customers', formCustomer, 'addCustomerModal')"><i class="bi bi-save me-1"></i> Simpan Pelanggan</button>
+                        <button class="btn btn-primary-custom btn-sm w-100 fw-bold py-2" @click="saveData('customers', formCustomer, 'addCustomerModal')" :disabled="isProcessing">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Pelanggan' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -8456,38 +8463,69 @@ async fetchRolesFromDatabase() {
             },
             
             async saveData(colName, formObj, modalId) {
-                this.isSaving = true;
-                try {
-                    const dataToSave = { ...formObj };
-                    dataToSave.updatedBy = this.userProfile.name || 'Admin';
-                    // <--- TAMBAHAN MULTI-TENANT: Stiker Hak Milik Toko
-                    dataToSave.companyId = this.userProfile.companyId; 
-                    // -----------------------------------------------
-                    let finalDocId = null;
+            // 1. PENCEGAH DOUBLE KLIK (Abaikan klik jika sistem sedang menyimpan)
+            if (this.isSaving) return;
 
-                    if (!dataToSave.id) { 
-                        delete dataToSave.id; 
-                        dataToSave.createdAt = serverTimestamp(); 
-                        dataToSave.createdBy = this.userProfile.name || 'Admin';
-                        const addedDoc = await addDoc(collection(db, colName), dataToSave); 
-                        finalDocId = addedDoc.id;
-                    } else { 
-                        finalDocId = dataToSave.id; 
-                        delete dataToSave.id; 
-                        await updateDoc(doc(db, colName, finalDocId), dataToSave); 
-                    }
-
-                    if (colName === 'products') {
-                        await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
-                    }
-
-                    this.hideModal(modalId);
-                } catch(e) { 
-                    console.error("Gagal Save Data", e);
-                    this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+            // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI (Pelanggan / Supplier / Membership)
+            let duplikat = null;
+            if (colName === 'customers' || colName === 'suppliers') {
+                // Untuk Pelanggan & Supplier: Cek apakah No Telp sudah ada
+                let daftarData = colName === 'customers' ? this.customers : this.suppliers;
+                duplikat = daftarData.find(item => 
+                    item.phone === formObj.phone && 
+                    item.id !== formObj.id // Abaikan pencegahan jika sedang mode Edit
+                );
+                if (duplikat) {
+                    return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
                 }
+            } 
+            else if (colName === 'memberships') {
+                // Untuk Membership: Cek apakah Nama Tier sudah ada
+                duplikat = this.memberships.find(m => 
+                    m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
+                    m.id !== formObj.id
+                );
+                if (duplikat) {
+                    return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
+                }
+            }
+
+            // 3. KUNCI TOMBOL (Mulai Proses)
+            this.isSaving = true;
+            
+            try {
+                const dataToSave = { ...formObj };
+                dataToSave.updatedBy = this.userProfile?.name || 'Admin';
+                // <--- TAMBAHAN MULTI-TENANT: Stiker Hak Milik Toko
+                dataToSave.companyId = this.userProfile?.companyId || ''; 
+                // -----------------------------------------------
+                let finalDocId = null;
+
+                if (!dataToSave.id) { 
+                    delete dataToSave.id; 
+                    dataToSave.createdAt = serverTimestamp(); 
+                    dataToSave.createdBy = this.userProfile?.name || 'Admin';
+                    const addedDoc = await addDoc(collection(db, colName), dataToSave); 
+                    finalDocId = addedDoc.id;
+                } else { 
+                    finalDocId = dataToSave.id; 
+                    delete dataToSave.id; 
+                    await updateDoc(doc(db, colName, finalDocId), dataToSave); 
+                }
+
+                if (colName === 'products') {
+                    await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
+                }
+
+                this.hideModal(modalId);
+            } catch(e) { 
+                console.error("Gagal Save Data", e);
+                this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+            } finally {
+                // 4. BUKA KUNCI TOMBOL SETELAH SELESAI / ERROR
                 this.isSaving = false;
-            },
+            }
+        },
 
             async logProductStockDifferences(oldP, newP, productId) {
                 const currentUser = this.userProfile.name || 'Admin';
