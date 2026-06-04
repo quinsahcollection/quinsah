@@ -868,6 +868,8 @@
     <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='hpp', 'bg-primary-custom': settingTab==='hpp'}" href="#" @click.prevent="settingTab='hpp'">Metode HPP</a></li>
+        
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='inventory_rules', 'bg-primary-custom': settingTab==='inventory_rules'}" href="#" @click.prevent="settingTab='inventory_rules'">Aturan Stok</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='uoms', 'bg-primary-custom': settingTab==='uoms'}" href="#" @click.prevent="settingTab='uoms'">Satuan (UOM)</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='tags', 'bg-primary-custom': settingTab==='tags'}" href="#" @click.prevent="settingTab='tags'">Tag Produk</a></li>
         
@@ -877,6 +879,28 @@
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='users', 'bg-primary-custom': settingTab==='users'}" href="#" @click.prevent="settingTab='users'">Manajemen User</a></li>
     </ul>
 
+    <div v-if="settingTab==='inventory_rules'" class="dashboard-card">
+        <div class="mb-3">
+            <h6 class="fw-bold mb-1">Pengaturan Aturan Inventory (Stok)</h6>
+            <p class="text-muted small">Atur bagaimana sistem menangani dan membatasi penjualan barang berdasarkan ketersediaan stok fisik.</p>
+        </div>
+        
+        <div class="p-3 bg-light border border-secondary rounded mb-4 shadow-sm">
+            <h6 class="fw-bold text-dark"><i class="bi bi-box-seam text-danger me-2"></i>Negative Inventory (Penjualan Tanpa Stok)</h6>
+            <div class="form-check form-switch mt-3">
+                <input class="form-check-input shadow-none cursor-pointer fs-5" type="checkbox" v-model="appSettings.allowNegativeInventory" id="negInv">
+                <label class="form-check-label fw-bold ms-2 mt-1 cursor-pointer" for="negInv">Izinkan Penjualan Walau Stok Habis / Kosong</label>
+                <p class="text-muted small mt-1 mb-0" style="margin-left: 2.2rem; line-height: 1.5;">
+                    Jika saklar ini <b class="text-success">DIHIDUPKAN</b>, kasir di menu POS tetap bisa menginput dan menjual barang meskipun sisa stoknya 0. Sisa stok di sistem akan otomatis berubah menjadi minus (-).<br>
+                    Jika saklar ini <b class="text-danger">DIMATIKAN</b>, sistem akan memblokir kasir jika mencoba memasukkan barang yang stoknya sudah habis.
+                </p>
+            </div>
+        </div>
+
+        <button class="btn btn-primary-custom fw-bold px-4 w-100 w-md-auto" @click="saveSettings" :disabled="isSaving">
+            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Pengaturan Stok
+        </button>
+    </div>
     <div v-if="settingTab==='invoice'" class="dashboard-card">
         <div class="mb-3">
             <h6 class="fw-bold mb-1">Pengaturan Penomoran Invoice Otomatis</h6>
@@ -1104,29 +1128,6 @@
                     </tr>
                 </tbody>
             </table>
-        </div>
-    </div>
-
-    <div class="modal fade" id="addIdentifierModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-light border-bottom p-3">
-                    <h6 class="modal-title fw-bold text-dark mb-0"><i class="bi bi-tags me-2 text-primary"></i>{{ formIdentifier.id ? 'Edit' : 'Tambah' }} Grup Identifier</h6>
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Grup Identifier <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" v-model="formIdentifier.name" placeholder="Contoh: Topping, Level Pedas, Packaging">
-                    </div>
-                </div>
-                <div class="modal-footer border-top bg-light p-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-primary-custom btn-sm fw-bold px-4" @click="saveData('identifierGroups', formIdentifier, 'addIdentifierModal')" :disabled="isSaving">
-                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span> Simpan Grup
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -5144,7 +5145,7 @@
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
                 // SETELAN APLIKASI UTAMA (DITAMBAH hppMethod)
-                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'STANDARD' },
+                appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'STANDARD', allowNegativeInventory: false },
                 activeHppExample: 'FIFO',
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 tempHppMethod: 'FIFO',
@@ -5411,6 +5412,32 @@
                 });
                 return items;
             },
+
+            lowStockItems() {
+        let alerts = [];
+        this.products.forEach(p => {
+            if (!p.variants || p.variants.length === 0) {
+                // Hitung total stok dari semua outlet untuk base product
+                let totalStock = 0;
+                if (p.baseOutletStocks) Object.values(p.baseOutletStocks).forEach(qty => totalStock += (qty || 0));
+                
+                // Masukkan ke daftar jika stok <= minStock (dan minStock sudah diatur > 0)
+                if (p.minStock > 0 && totalStock <= p.minStock) {
+                    alerts.push({ name: p.name, sku: p.sku || '-', currentStock: totalStock, minStock: p.minStock });
+                }
+            } else {
+                p.variants.forEach(v => {
+                    let totalStock = 0;
+                    if (v.outletStocks) Object.values(v.outletStocks).forEach(qty => totalStock += (qty || 0));
+                    
+                    if (v.minStock > 0 && totalStock <= v.minStock) {
+                        alerts.push({ name: `${p.name} - ${v.name || v.attributes}`, sku: v.variantSku || '-', currentStock: totalStock, minStock: v.minStock });
+                    }
+                });
+            }
+        });
+        return alerts.sort((a, b) => a.currentStock - b.currentStock); // Urutkan dari yang paling habis
+    },
 
             // MASTER PRODUCT & SKU VARIANT FILTERING
             filteredCatalogProducts() {
