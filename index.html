@@ -1928,167 +1928,214 @@
 
             <!-- INVENTORY VIEW -->
             <div v-if="currentView === 'inventory'">
-                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Informasi Stok</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='allocation', 'bg-primary-custom': invTab==='allocation'}" href="#" @click.prevent="invTab='allocation'"><i class="bi bi-diagram-3 me-1"></i>Alokasi Stok</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='logs', 'bg-primary-custom': invTab==='logs'}" href="#" @click.prevent="invTab='logs'">Log Mutasi Stok</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
-                </ul>
+            
+            <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
+                <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stocks', 'bg-primary-custom': invTab==='stocks'}" href="#" @click.prevent="invTab='stocks'">Informasi Stok</a></li>
+                
+                <li class="nav-item">
+                    <a class="nav-link text-danger fw-bold border border-danger border-opacity-25" :class="{active: invTab==='alerts', 'bg-danger text-white': invTab==='alerts', 'bg-danger bg-opacity-10': invTab!=='alerts'}" href="#" @click.prevent="invTab='alerts'">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Stock Alert
+                        <span v-if="lowStockItems && lowStockItems.length > 0" class="badge ms-1 rounded-pill" :class="invTab==='alerts' ? 'bg-white text-danger' : 'bg-danger text-white'">{{ lowStockItems.length }}</span>
+                    </a>
+                </li>
+                <li class="nav-item"><a class="nav-link" :class="{active: invTab==='allocation', 'bg-primary-custom': invTab==='allocation'}" href="#" @click.prevent="invTab='allocation'"><i class="bi bi-diagram-3 me-1"></i>Alokasi Stok</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active: invTab==='logs', 'bg-primary-custom': invTab==='logs'}" href="#" @click.prevent="invTab='logs'">Log Mutasi Stok</a></li>
+                <li class="nav-item"><a class="nav-link" :class="{active: invTab==='stockcard', 'bg-primary-custom': invTab==='stockcard'}" href="#" @click.prevent="invTab='stockcard'">Kartu Stok (Ledger)</a></li>
+            </ul>
 
-                <div v-if="invTab==='stocks'">
-                    
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded d-flex justify-content-between align-items-center h-100">
-                                <div>
-                                    <div class="text-primary fw-bold small"><i class="bi bi-wallet2 me-1"></i>Total Aset (HPP)</div>
-                                    <h4 class="text-primary mb-0 fw-bold">Rp {{ formatNumber(totalAsetStok) }}</h4>
-                                    <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
-                                </div>
-                                <i class="bi bi-box-seam text-primary opacity-50" style="font-size: 2.5rem;"></i>
+            <div v-if="invTab==='alerts'">
+                <div class="dashboard-card mb-3 border-danger border border-2 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3 bg-danger bg-opacity-10 p-2 rounded">
+                        <h6 class="fw-bold mb-0 text-danger"><i class="bi bi-bell-fill me-2"></i>Daftar Produk yang Membutuhkan Restock</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produk / Varian</th>
+                                    <th>SKU</th>
+                                    <th class="text-center">Sisa Stok</th>
+                                    <th class="text-center">Batas Minimum</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="alert in lowStockItems" :key="alert.sku">
+                                    <td class="fw-bold small text-dark">{{ alert.name }}</td>
+                                    <td><code class="text-secondary">{{ alert.sku }}</code></td>
+                                    <td class="text-center fw-bold text-danger fs-5">{{ alert.currentStock }}</td>
+                                    <td class="text-center text-muted fw-bold">{{ alert.minStock }}</td>
+                                    <td class="text-center">
+                                        <span v-if="alert.currentStock <= 0" class="badge bg-dark px-3 py-2">HABIS TOTAL</span>
+                                        <span v-else class="badge bg-danger px-3 py-2">SEGERA RESTOCK</span>
+                                    </td>
+                                </tr>
+                                <tr v-if="!lowStockItems || lowStockItems.length === 0">
+                                    <td colspan="5" class="text-center py-5 text-success fw-bold">
+                                        <i class="bi bi-shield-check d-block mb-2" style="font-size: 3rem;"></i>
+                                        Semua stok produk Anda dalam kondisi aman!<br>
+                                        <span class="text-muted fw-normal small">Tidak ada produk yang menyentuh batas minimum stok.</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="invTab==='stocks'">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded d-flex justify-content-between align-items-center h-100">
+                            <div>
+                                <div class="text-primary fw-bold small"><i class="bi bi-wallet2 me-1"></i>Total Aset (HPP)</div>
+                                <h4 class="text-primary mb-0 fw-bold">Rp {{ formatNumber(totalAsetStok) }}</h4>
+                                <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-success bg-opacity-10 border border-success rounded d-flex justify-content-between align-items-center h-100">
-                                <div>
-                                    <div class="text-success fw-bold small"><i class="bi bi-graph-up-arrow me-1"></i>Total Potensi Omset (Hrg Jual)</div>
-                                    <h4 class="text-success mb-0 fw-bold">Rp {{ formatNumber(totalPotensiOmset) }}</h4>
-                                    <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
-                                </div>
-                                <i class="bi bi-cash-coin text-success opacity-50" style="font-size: 2.5rem;"></i>
-                            </div>
+                            <i class="bi bi-box-seam text-primary opacity-50" style="font-size: 2.5rem;"></i>
                         </div>
                     </div>
-
-                    <div class="dashboard-card">
-                        <div class="row g-2 mb-3 bg-light p-3 rounded border">
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">Pencarian</label>
-                                <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Cari nama, SKU, Varian...">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-success bg-opacity-10 border border-success rounded d-flex justify-content-between align-items-center h-100">
+                            <div>
+                                <div class="text-success fw-bold small"><i class="bi bi-graph-up-arrow me-1"></i>Total Potensi Omset (Hrg Jual)</div>
+                                <h4 class="text-success mb-0 fw-bold">Rp {{ formatNumber(totalPotensiOmset) }}</h4>
+                                <div class="text-muted mt-1" style="font-size: 0.65rem;">Menyesuaikan filter di bawah</div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">Kategori</label>
-                                <select class="form-select form-select-sm" v-model="invCategoryFilter">
-                                    <option value="">-- Semua Kategori --</option>
-                                    <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-bold">Pilih Produk</label>
-                                <select class="form-select form-select-sm" v-model="invProductFilter">
-                                    <option value="">-- Semua Produk --</option>
-                                    <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-bold">Filter Outlet</label>
-                                <select class="form-select form-select-sm" v-model="invOutletFilter">
-                                    <option value="">-- Semua Cabang --</option>
-                                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="invSearchQuery=''; invCategoryFilter=''; invProductFilter=''; invOutletFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
-                            </div>
+                            <i class="bi bi-cash-coin text-success opacity-50" style="font-size: 2.5rem;"></i>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
-                                        <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
-                                        <th :colspan="displayOutlets.length > 0 ? displayOutlets.length : 1">Stok Fisik Outlet</th>
-                                        <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
-                                    </tr>
-                                    <tr>
-                                        <th class="bg-secondary bg-opacity-10 text-center" title="Harga Pokok Penjualan (Standard & Average)">HPP <br><span style="font-size:0.6rem;" class="fw-normal text-muted">(Otomatis/Manual)</span></th>
-                                        <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
-                                        <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
-                                        <th v-if="displayOutlets.length === 0">-</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template v-for="p in filteredInventoryProducts" :key="p.id">
-                                        <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
-                                            <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
-                                            
-                                            <td class="text-center align-middle" style="width: 140px;">
-                                                <div class="d-flex flex-column gap-1 align-items-start w-100">
-                                                    <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
-                                                        Std: {{ formatNumber(p.hppPrice || 0) }}
-                                                        <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
-                                                    </div>
-                                                    
-                                                    <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
-                                                        Avg: {{ formatNumber(p.averageCost || p.hppPrice || 0) }}
-                                                        <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
-                                                    </div>
-                                                    
-                                                    <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
-                                                            :class="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
-                                                            style="font-size: 0.65rem;" @click="openBatchDetail(p, null)">
-                                                        <i class="bi bi-boxes me-1"></i> Rincian Batch
-                                                        <i v-if="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
+                    </div>
+                </div>
 
-                                            <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
-                                            
-                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
-                                                {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
-                                            <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
-                                                {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : getBaseTotalStock(p) }} 
-                                                <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                        </tr>
-
-                                        <tr v-for="(v, index) in p.variants" :key="index">
-                                            <td class="ps-3 text-muted">
-                                                <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes || 'Varian '+(index+1) }}</span>
-                                                <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
-                                            </td>
-                                            
-                                            <td class="text-center align-middle" style="width: 140px;">
-                                                <div class="d-flex flex-column gap-1 align-items-start w-100">
-                                                    <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
-                                                        Std: {{ formatNumber(v.hppPrice || 0) }}
-                                                        <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
-                                                    </div>
-                                                    
-                                                    <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
-                                                        Avg: {{ formatNumber(v.averageCost || v.hppPrice || 0) }}
-                                                        <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
-                                                    </div>
-                                                    
-                                                    <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
-                                                            :class="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
-                                                            style="font-size: 0.65rem;" @click="openBatchDetail(p, v)">
-                                                        <i class="bi bi-boxes me-1"></i> Rincian Batch
-                                                        <i v-if="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-
-                                            <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
-                                            
-                                            <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
-                                                {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                            <td v-if="displayOutlets.length === 0" class="text-center">-</td>
-                                            <td class="text-center fw-bold fs-6">
-                                                {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : getVariantTotalStock(v) }} 
-                                                <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                    <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="displayOutlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk/varian yang sesuai filter.</td></tr>
-                                </tbody>
-                            </table>
+                <div class="dashboard-card">
+                    <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Pencarian</label>
+                            <input type="text" class="form-control form-control-sm" v-model="invSearchQuery" placeholder="Cari nama, SKU, Varian...">
                         </div>
-                    </div> 
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Kategori</label>
+                            <select class="form-select form-select-sm" v-model="invCategoryFilter">
+                                <option value="">-- Semua Kategori --</option>
+                                <option v-for="cat in structuredCategories" :key="cat.id" :value="cat.id">{{ getCategoryLabel(cat) }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Pilih Produk</label>
+                            <select class="form-select form-select-sm" v-model="invProductFilter">
+                                <option value="">-- Semua Produk --</option>
+                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">Filter Outlet</label>
+                            <select class="form-select form-select-sm" v-model="invOutletFilter">
+                                <option value="">-- Semua Cabang --</option>
+                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="invSearchQuery=''; invCategoryFilter=''; invProductFilter=''; invOutletFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th rowspan="2" class="align-middle text-start">Produk / Nama Varian</th>
+                                    <th colspan="2" class="align-middle text-center bg-secondary bg-opacity-10">Harga (Rp)</th>
+                                    <th :colspan="displayOutlets.length > 0 ? displayOutlets.length : 1">Stok Fisik Outlet</th>
+                                    <th rowspan="2" class="align-middle bg-danger text-white">{{ invOutletFilter ? 'Total Outlet Ini' : 'Total Keseluruhan' }}</th>
+                                </tr>
+                                <tr>
+                                    <th class="bg-secondary bg-opacity-10 text-center" title="Harga Pokok Penjualan (Standard & Average)">HPP <br><span style="font-size:0.6rem;" class="fw-normal text-muted">(Otomatis/Manual)</span></th>
+                                    <th class="bg-secondary bg-opacity-10 text-center text-success">Jual</th>
+                                    <th v-for="out in displayOutlets" :key="out.id">{{ out.name }}</th>
+                                    <th v-if="displayOutlets.length === 0">-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template v-for="p in filteredInventoryProducts" :key="p.id">
+                                    <tr class="table-secondary fw-bold" v-if="!p.variants || p.variants.length === 0 || invSearchQuery === '' || (p.name.toLowerCase().includes(invSearchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(invSearchQuery.toLowerCase())))">
+                                        <td><i class="bi bi-box me-1"></i>{{ p.name }} <span class="sku-badge ms-2" @click="showBarcode(p.sku)">{{ p.sku }}</span></td>
+                                        
+                                        <td class="text-center align-middle" style="width: 140px;">
+                                            <div class="d-flex flex-column gap-1 align-items-start w-100">
+                                                <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
+                                                    Std: {{ formatNumber(p.hppPrice || 0) }}
+                                                    <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                </div>
+                                                
+                                                <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
+                                                    Avg: {{ formatNumber(p.averageCost || p.hppPrice || 0) }}
+                                                    <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                </div>
+                                                
+                                                <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
+                                                        :class="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
+                                                        style="font-size: 0.65rem;" @click="openBatchDetail(p, null)">
+                                                    <i class="bi bi-boxes me-1"></i> Rincian Batch
+                                                    <i v-if="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center text-success">{{ formatNumber(getEffectiveBasePrice(p)) }}</td>
+                                        
+                                        <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-bold">
+                                            {{ getProductStockAtOutlet(p, out.id) }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
+                                        <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                        <td class="text-center bg-danger bg-opacity-10 fw-bold fs-6">
+                                            {{ invOutletFilter ? getProductStockAtOutlet(p, invOutletFilter) : getBaseTotalStock(p) }} 
+                                            <span class="text-danger fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
+                                    </tr>
+
+                                    <tr v-for="(v, index) in p.variants" :key="index">
+                                        <td class="ps-3 text-muted">
+                                            <i class="bi bi-arrow-return-right me-1"></i>{{ p.name }} - <span class="text-dark fw-bold">{{ v.name || v.attributes || 'Varian '+(index+1) }}</span>
+                                            <span class="sku-badge bg-dark text-white ms-2" @click="showBarcode(v.variantSku || '-')">{{ v.variantSku || '-' }}</span>
+                                        </td>
+                                        
+                                        <td class="text-center align-middle" style="width: 140px;">
+                                            <div class="d-flex flex-column gap-1 align-items-start w-100">
+                                                <div :class="appSettings && appSettings.hppMethod === 'STANDARD' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
+                                                    Std: {{ formatNumber(v.hppPrice || 0) }}
+                                                    <i v-if="appSettings && appSettings.hppMethod === 'STANDARD'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                </div>
+                                                
+                                                <div :class="appSettings && appSettings.hppMethod === 'AVERAGE' ? 'fw-bold text-success bg-success bg-opacity-10 px-2 py-1 rounded w-100 text-start border border-success' : 'text-muted px-2 py-1 w-100 text-start'" style="font-size: 0.7rem;">
+                                                    Avg: {{ formatNumber(v.averageCost || v.hppPrice || 0) }}
+                                                    <i v-if="appSettings && appSettings.hppMethod === 'AVERAGE'" class="bi bi-check-circle-fill float-end" title="Metode Aktif"></i>
+                                                </div>
+                                                
+                                                <button class="btn btn-sm py-1 px-2 mt-1 w-100 text-start" 
+                                                        :class="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod) ? 'btn-success fw-bold shadow-sm' : 'btn-light border text-secondary fw-semibold'" 
+                                                        style="font-size: 0.65rem;" @click="openBatchDetail(p, v)">
+                                                    <i class="bi bi-boxes me-1"></i> Rincian Batch
+                                                    <i v-if="appSettings && ['FIFO', 'LIFO', 'FEFO'].includes(appSettings.hppMethod)" class="bi bi-check-circle-fill float-end mt-1" title="Metode Aktif"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+
+                                        <td class="text-center text-success fw-bold">{{ formatNumber(getEffectiveVariantPrice(p, v)) }}</td>
+                                        
+                                        <td v-for="out in displayOutlets" :key="out.id" class="text-center fw-semibold">
+                                            {{ (v.outletStocks && v.outletStocks[out.id]) ? v.outletStocks[out.id] : 0 }} <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
+                                        <td v-if="displayOutlets.length === 0" class="text-center">-</td>
+                                        <td class="text-center fw-bold fs-6">
+                                            {{ invOutletFilter ? (v.outletStocks && v.outletStocks[invOutletFilter] ? v.outletStocks[invOutletFilter] : 0) : getVariantTotalStock(v) }} 
+                                            <span class="text-muted fw-normal" style="font-size: 0.65rem;">{{ p.uom || 'Pcs' }}</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr v-if="filteredInventoryProducts.length === 0"><td :colspan="displayOutlets.length + 4" class="text-center py-4 text-muted">Tidak ada data produk/varian yang sesuai filter.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 </div>
             
                 <div v-if="invTab==='allocation'" class="dashboard-card">
