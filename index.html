@@ -6171,10 +6171,29 @@
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() { return Math.round(this.netSubtotal + this.taxAmount + this.serviceAmount); }
         },
+        
         watch: {
-            outlets(newVal) { if(newVal.length > 0 && !this.posActiveOutletId) this.posActiveOutletId = newVal[0].id; },
-            total(newVal) { if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; }
+            // Fungsi bawaan Anda (TIDAK DIHAPUS)
+            outlets(newVal) { 
+                if(newVal.length > 0 && !this.posActiveOutletId) this.posActiveOutletId = newVal[0].id; 
+            },
+            total(newVal) { 
+                if(this.paymentData.method === 'CASH' && this.paymentData.amountReceived === 0) this.paymentData.amountReceived = newVal; 
+            },
+
+            // ==========================================
+            // TAMBAHAN BARU: Memperbaiki riwayat kosong 
+            // saat pindah menu setelah login
+            // ==========================================
+            currentView(newView) {
+                if (newView === 'opname') {
+                    if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
+                } else if (newView === 'transfer') {
+                    if (typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
+                }
+            }
         },
+        
         methods: {
             askConfirm(title, message, callback) {
                 this.confirmTitle = title;
