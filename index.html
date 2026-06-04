@@ -4162,8 +4162,10 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveData('outlets', formOutlet, 'addOutletModal')"><i class="bi bi-save me-1"></i> Simpan Pengaturan Cabang</button>
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveData('outlets', formOutlet, 'addOutletModal')" :disabled="isSaving">
+                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Pengaturan Cabang' }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -8463,24 +8465,25 @@ async fetchRolesFromDatabase() {
             },
             
             async saveData(colName, formObj, modalId) {
-            // 1. PENCEGAH DOUBLE KLIK (Abaikan klik jika sistem sedang menyimpan)
+            // 1. PENCEGAH DOUBLE KLIK
             if (this.isSaving) return;
 
-            // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI (Pelanggan / Supplier / Membership)
+            // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI
             let duplikat = null;
+            
             if (colName === 'customers' || colName === 'suppliers') {
-                // Untuk Pelanggan & Supplier: Cek apakah No Telp sudah ada
+                // Pelanggan & Supplier -> Cek Nomor Telepon
                 let daftarData = colName === 'customers' ? this.customers : this.suppliers;
                 duplikat = daftarData.find(item => 
                     item.phone === formObj.phone && 
-                    item.id !== formObj.id // Abaikan pencegahan jika sedang mode Edit
+                    item.id !== formObj.id
                 );
                 if (duplikat) {
                     return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
                 }
             } 
             else if (colName === 'memberships') {
-                // Untuk Membership: Cek apakah Nama Tier sudah ada
+                // Membership -> Cek Nama Tier
                 duplikat = this.memberships.find(m => 
                     m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
                     m.id !== formObj.id
@@ -8489,6 +8492,35 @@ async fetchRolesFromDatabase() {
                     return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
                 }
             }
+            else if (colName === 'outlets') {
+                // Wajib isi kode dan nama
+                if (!formObj.code || !formObj.name) {
+                    return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Kode Cabang dan Nama Toko/Cabang wajib diisi.' });
+                }
+                
+                // Outlet -> Cek Kode Cabang
+                let duplikatKode = this.outlets.find(o => 
+                    o.code.toUpperCase() === formObj.code.toUpperCase() && 
+                    o.id !== formObj.id
+                );
+                if (duplikatKode) {
+                    return Swal.fire({ icon: 'warning', title: 'Kode Terpakai!', text: `Kode cabang "${formObj.code.toUpperCase()}" sudah dipakai oleh ${duplikatKode.name}.` });
+                }
+
+                // ==========================================
+                // TAMBAHAN BARU: Cek Duplikat Nama Outlet
+                // ==========================================
+                let duplikatNama = this.outlets.find(o => 
+                    o.name.toLowerCase() === formObj.name.toLowerCase() && 
+                    o.id !== formObj.id
+                );
+                if (duplikatNama) {
+                    return Swal.fire({ icon: 'warning', title: 'Nama Terpakai!', text: `Nama cabang "${formObj.name}" sudah terdaftar di database. Silakan bedakan namanya (misal: Quinsah Cab. A).` });
+                }
+                
+                // Rapikan kode menjadi huruf besar semua sebelum disimpan
+                formObj.code = formObj.code.toUpperCase();
+            }
 
             // 3. KUNCI TOMBOL (Mulai Proses)
             this.isSaving = true;
@@ -8496,9 +8528,7 @@ async fetchRolesFromDatabase() {
             try {
                 const dataToSave = { ...formObj };
                 dataToSave.updatedBy = this.userProfile?.name || 'Admin';
-                // <--- TAMBAHAN MULTI-TENANT: Stiker Hak Milik Toko
                 dataToSave.companyId = this.userProfile?.companyId || ''; 
-                // -----------------------------------------------
                 let finalDocId = null;
 
                 if (!dataToSave.id) { 
