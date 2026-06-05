@@ -963,17 +963,29 @@
             <!-- KIRI: FORM PENGATURAN -->
             <div class="col-lg-7">
                 <div class="row g-3">
+                    
+                    <!-- 👇 TAMBAHAN BARU: DROPDOWN PILIH CABANG 👇 -->
+                    <div class="col-12">
+                        <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded shadow-sm">
+                            <label class="form-label small fw-bold text-primary"><i class="bi bi-shop me-2"></i>Pengaturan Struk Untuk Cabang:</label>
+                            <select class="form-select form-select-sm fw-bold border-primary" v-model="appSettings.selectedReceiptOutletId">
+                                <option value="global">Pengaturan Global (Untuk Semua Cabang)</option>
+                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">{{ outlet.name }}</option>
+                            </select>
+                            <small class="text-primary mt-1 d-block" style="font-size: 0.65rem;">Pilih nama cabang jika cabang tersebut memiliki Nomor WA, Instagram, atau Syarat & Ketentuan yang berbeda dari pusat.</small>
+                        </div>
+                    </div>
+                    <!-- 👆 ===================================== 👆 -->
+
                     <!-- KOTAK 1: LOGO & KERTAS -->
                     <div class="col-12">
                         <div class="p-3 bg-light border rounded shadow-sm">
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-shop me-2 text-primary"></i>Informasi & Logo Toko</h6>
-                            
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Pilih Logo / Gambar Struk</label>
                                 <input class="form-control form-control-sm" type="file" accept="image/*" @change="onReceiptLogoUpload">
                                 <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Disarankan gambar hitam-putih (.jpg/.png) maksimal 1 MB.</small>
                             </div>
-
                             <div class="mb-2">
                                 <label class="form-label small fw-bold">Mode Live Preview & Default Kertas</label>
                                 <select class="form-select form-select-sm border-primary" v-model="appSettings.defaultPrintSize">
@@ -989,7 +1001,6 @@
                     <div class="col-12">
                         <div class="p-3 bg-light border rounded shadow-sm">
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-share me-2 text-danger"></i>Kontak & Marketplace</h6>
-                            
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <label class="form-label" style="font-size: 0.7rem; font-weight:bold;">WhatsApp / CS</label>
@@ -1027,21 +1038,18 @@
                         </div>
                     </div>
 
-                    <!-- KOTAK 3: T&C DAN FOOTER -->
+                    <!-- KOTAK 3: T&C, FOOTER, & QR CODE -->
                     <div class="col-12">
                         <div class="p-3 bg-light border rounded shadow-sm">
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-card-text me-2 text-warning"></i>Catatan Kaki & Aturan (T&C)</h6>
-                            
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Syarat & Ketentuan (T&C)</label>
-                                <textarea class="form-control form-control-sm" v-model="appSettings.termsAndConditions" rows="4" placeholder="Cth: 1. Barang yang sudah dibeli tidak dapat ditukar.&#10;2. Komplain wajib menyertakan video unboxing.&#10;3. Garansi 7 hari."></textarea>
+                                <textarea class="form-control form-control-sm" v-model="appSettings.termsAndConditions" rows="4" placeholder="Cth: 1. Barang yang sudah dibeli tidak dapat ditukar."></textarea>
                             </div>
-
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <label class="form-label small fw-bold">Pesan Penutup Singkat</label>
                                 <input type="text" class="form-control form-control-sm" v-model="appSettings.receiptFooter" placeholder="Cth: Terima kasih atas kunjungan Anda!">
                             </div>
-                            
                             <div class="mb-2 p-2 border rounded bg-white">
                                 <label class="form-label small fw-bold text-primary"><i class="bi bi-qr-code-scan me-1"></i>QR Code Struk Online</label>
                                 <div class="form-check form-switch mt-1">
@@ -1054,10 +1062,15 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-12 mt-2">
+                        <button class="btn btn-primary-custom fw-bold px-4 w-100 shadow py-2" @click="saveSettings" :disabled="isSaving">
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+                            <i class="bi bi-save me-2" v-else></i> Simpan Pengaturan Struk
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- KANAN: LIVE PREVIEW LAYAR STRUK -->
             <!-- KANAN: LIVE PREVIEW LAYAR STRUK -->
             <div class="col-lg-5">
                 <div class="p-3 bg-secondary bg-opacity-25 rounded h-100 d-flex flex-column align-items-center justify-content-start border border-secondary shadow-inner" style="min-height: 500px; max-height: 600px; overflow-y: auto;">
