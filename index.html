@@ -4273,6 +4273,16 @@
                         <input type="number" class="form-control form-control-sm fw-bold border-success text-success mb-2" v-model.number="formProduct.sellPrice" placeholder="Harga jual ke pelanggan...">
                     </div>
 
+                    <div class="col-md-3">
+                    <label class="form-label small fw-bold">Tampil di Kasir (POS)</label>
+                    <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" v-model="formProduct.isSellable" id="isSellable">
+                    <label class="form-check-label small" for="isSellable">
+            {{ formProduct.isSellable ? 'Aktif (Muncul di POS)' : 'Disembunyikan' }}
+        </label>
+    </div>
+</div>
+
                     <div class="col-md-6" v-if="formProduct.variants.length === 0">
                         <label class="form-label small fw-bold text-danger"><i class="bi bi-bell-fill me-1"></i>Min. Stock (Alert)</label>
                         <input type="number" class="form-control form-control-sm mb-2" v-model.number="formProduct.minStock" placeholder="Batas minimum stok untuk muncul di Notifikasi...">
@@ -5665,8 +5675,14 @@
         
             // POS & INVENTORY FILTERING
             filteredProducts() { 
-                // Tambahkan filter ini agar produk yang dicontinue (isActive === false) otomatis hilang dari kasir
-                let filtered = (this.products || []).filter(p => p.isActive !== false);
+                // 👇 PERBAIKAN: Tambahkan filter isSellable di sini 👇
+                let filtered = (this.products || []).filter(p => 
+                    p.isActive !== false && 
+                    p.isSellable !== false && 
+                    p.isSellable !== "false" && 
+                    p.isSellable !== 0
+                );
+                // 👆 ============================================== 👆
 
                 if (this.posCategoryFilter) {
                     filtered = filtered.filter(p => 
@@ -8108,9 +8124,17 @@ async fetchRolesFromDatabase() {
                     id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', 
                     uom: 'Pcs', productTags: [], productTagInput: '',
                     hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], 
-                    discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] 
+                    
+                    // 👇 INI DIA TERSANGKANYA! Saya sudah tambahkan koma ( , ) di bagian paling belakang baris ini:
+                    discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }],
+                    
+                    // BARIS BARU:
+                    minStock: 0,
+                    maxStock: 0,
+                    isSellable: true
                 }; 
             },
+            
             async fetchUserProfile(user) {
                 const userDocRef = doc(db, "users", user.uid); 
                 const userSnap = await getDoc(userDocRef);
@@ -8462,9 +8486,10 @@ async fetchRolesFromDatabase() {
                     if (!copy.productTags) copy.productTags = [];
                     copy.productTagInput = '';
                     
-                    // --- 👇 TAMBAHAN PENGAMAN MIN & MAX STOCK INDUK 👇 ---
+                    // --- 👇 TAMBAHAN PENGAMAN STOK & VISIBILITAS POS 👇 ---
                     if (copy.minStock === undefined) copy.minStock = 0;
                     if (copy.maxStock === undefined) copy.maxStock = 0;
+                    if (copy.isSellable === undefined) copy.isSellable = true; // <--- INI PENGAMAN BARUNYA
                     // -----------------------------------------------------
 
                     copy.variants.forEach(v => { 
@@ -8492,7 +8517,7 @@ async fetchRolesFromDatabase() {
                     if (!copy.serviceChargePercent) copy.serviceChargePercent = 0;
                 }
 
-                // --- 👇👇 OBAT EDIT ROLE (TAMBAHAN BARU) 👇👇 ---
+                // --- 👇👇 OBAT EDIT ROLE 👇👇 ---
                 if (formName === 'formRole') {
                     if (!copy.permissions) copy.permissions = {};
                     // Pastikan wadahnya lengkap jika ada modul aplikasi baru
