@@ -5127,16 +5127,23 @@
             
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             
-            <div style="display: flex; justify-content: flex-end;">
-                <table style="width: 90%; font-size: 0.95em;">
-                    <tr v-if="activePrintData.subtotal > 0"><td style="padding-bottom:3px;">Subtotal</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.subtotal) }}</td></tr>
-                    <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0"><td style="padding-bottom:3px;">Diskon Item</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td></tr>
-                    <tr v-if="activePrintData.globalDiscountAmt > 0"><td style="padding-bottom:3px;">Diskon Invoice</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
-                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding-bottom:3px;">PPN</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
-                    <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
-                    <tr><td style="padding-top:5px; text-transform:uppercase;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align: right; padding-top:5px;">{{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
-                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="font-weight:bold;">KEMBALI</td><td style="text-align: right; font-weight:bold;">{{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
-                    <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                
+                <!-- Info Pembayaran (Print) -->
+                <div v-if="appSettings && appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; font-size: 12px;">
+                    <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
+                    <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
+                </div>
+                <div v-else style="width: 45%;"></div>
+
+                <table style="width: 50%; font-size: 14px;">
+                    <tr><td style="padding: 8px 10px;">Subtotal Produk</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.subtotal) }}</td></tr>
+                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
+                    <tr v-else><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp 0</td></tr>
+                    <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
+                    <tr><td style="padding: 8px 10px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
+                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Kembalian</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
+                    <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
                 </table>
             </div>
 
