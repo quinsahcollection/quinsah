@@ -5096,13 +5096,17 @@
     
    <div id="print-section">
         
+        <!-- ========================================== -->
+        <!-- 1. CETAK THERMAL 80mm / 58mm               -->
+        <!-- ========================================== -->
         <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt" 
              :style="(appSettings.defaultPrintSize === '58mm') ? 'width: 220px; font-family: monospace; font-size: 10px; color: #000; margin: 0 auto;' : 'width: 320px; font-family: monospace; font-size: 13px; color: #000; margin: 0 auto;'">
             
             <div style="text-align: center; margin-bottom: 10px;">
                 <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 60%; max-height: 80px; margin-bottom: 8px; object-fit: contain;">
-                <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">QUINSAH COLLECTION</div>
-                <div style="margin-top: 4px; font-size: 0.9em; color: #444;">{{ getOutletAddress(activePrintData.outletId) }}</div>
+                <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+                <div style="margin-top: 4px; font-size: 0.9em; color: #444; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
+                <div v-if="appSettings && appSettings.storePhone" style="font-size: 0.9em; color: #444; margin-top: 2px;">Telp: {{ appSettings.storePhone }}</div>
             </div>
             
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
@@ -5127,23 +5131,17 @@
             
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                
-                <!-- Info Pembayaran (Print) -->
-                <div v-if="appSettings && appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; font-size: 12px;">
-                    <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
-                    <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
-                </div>
-                <div v-else style="width: 45%;"></div>
-
-                <table style="width: 50%; font-size: 14px;">
-                    <tr><td style="padding: 8px 10px;">Subtotal Produk</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.subtotal) }}</td></tr>
-                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
-                    <tr v-else><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp 0</td></tr>
-                    <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
-                    <tr><td style="padding: 8px 10px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
-                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Kembalian</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
-                    <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
+            <!-- TOTALS THERMAL (KEMBALI NORMAL, RATA KANAN SAJA) -->
+            <div style="display: flex; justify-content: flex-end;">
+                <table style="width: 90%; font-size: 0.95em;">
+                    <tr v-if="activePrintData.subtotal > 0"><td style="padding-bottom:3px;">Subtotal</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.subtotal) }}</td></tr>
+                    <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0"><td style="padding-bottom:3px;">Diskon Item</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td></tr>
+                    <tr v-if="activePrintData.globalDiscountAmt > 0"><td style="padding-bottom:3px;">Diskon Invoice</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
+                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding-bottom:3px;">PPN</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
+                    <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
+                    <tr><td style="padding-top:5px; text-transform:uppercase;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align: right; padding-top:5px;">{{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
+                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="font-weight:bold;">KEMBALI</td><td style="text-align: right; font-weight:bold;">{{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
+                    <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
                 </table>
             </div>
 
@@ -5174,12 +5172,16 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- 2. CETAK INVOICE A4 (INFO PEMBAYARAN DI SINI) -->
+        <!-- ========================================== -->
         <div v-if="printMode === 'invoiceA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
             <div style="display:flex; justify-content:space-between; margin-bottom: 30px;">
                 <div>
                     <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 150px; max-height: 80px; margin-bottom: 10px; object-fit: contain;">
-                    <div style="color: #991b1b; font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1;">QUINSAH COLLECTION</div>
-                    <div style="color: #666; font-size: 14px;">{{ getOutletAddress(activePrintData.outletId) }}</div>
+                    <div style="color: #991b1b; font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+                    <div style="color: #666; font-size: 14px; max-width: 300px; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
+                    <div v-if="appSettings && appSettings.storePhone" style="color: #666; font-size: 14px; margin-top: 4px;">Telp: {{ appSettings.storePhone }}</div>
                 </div>
                 <div style="text-align: right;">
                     <div style="color: #d1d5db; font-size: 36px; font-weight: 800; letter-spacing: 3px; line-height: 1;">INVOICE</div>
@@ -5224,7 +5226,16 @@
                 </tr>
             </table>
 
-            <div style="display: flex; justify-content: flex-end;">
+            <!-- INFO PEMBAYARAN DAN TOTAL A4 YANG BENAR -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                
+                <!-- Info Pembayaran (Print) -->
+                <div v-if="appSettings && appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; font-size: 12px;">
+                    <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
+                    <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
+                </div>
+                <div v-else style="width: 45%;"></div>
+
                 <table style="width: 50%; font-size: 14px;">
                     <tr><td style="padding: 8px 10px;">Subtotal Produk</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.subtotal) }}</td></tr>
                     <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
@@ -5254,7 +5265,7 @@
 
                 <div style="width: 30%;">
                     <p style="margin-bottom: 60px;">Hormat Kami,</p>
-                    <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">Quinsah Collection</div>
+                    <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
                 </div>
             </div>
 
@@ -5273,12 +5284,15 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- 3. CETAK LABEL / PACKING SLIP              -->
+        <!-- ========================================== -->
         <div v-if="printMode === 'label' && activePrintData" class="mode-label">
             <div class="label-border-box">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:10px;">
                     <div>
-                        <div style="font-size:18px; font-weight:bold;">QUINSAH COLLECTION</div>
-                        <div style="font-size:11px; max-width: 250px;">{{ getOutletAddress(activePrintData.outletId) }}</div>
+                        <div style="font-size:18px; font-weight:bold;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+                        <div style="font-size:11px; max-width: 250px;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:12px; border:2px solid #000; padding:4px 10px; font-weight:bold; letter-spacing: 1px;">PACKING SLIP</div>
@@ -5289,7 +5303,7 @@
                 <div style="display:flex; border:2px solid #000; margin-bottom:15px;">
                     <div style="width:50%; border-right:2px solid #000; padding:10px;">
                         <div style="font-size:10px; font-weight:bold; margin-bottom:5px; text-decoration: underline;">PENGIRIM:</div>
-                        <div style="font-size:14px; font-weight:bold;">Admin Toko Quinsah</div>
+                        <div style="font-size:14px; font-weight:bold;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'Admin Toko Quinsah' }}</div>
                         <div style="font-size:12px; margin-top:3px;">PIC: {{ activePrintData.cashierName }}</div>
                     </div>
                     <div style="width:50%; padding:10px;">
@@ -5332,11 +5346,14 @@
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- 4. CETAK PURCHASE ORDER (PO)               -->
+        <!-- ========================================== -->
         <div v-if="printMode === 'poA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px;">
                 <div style="width: 50%;">
-                    <h1 style="margin:0; font-size:28px; font-weight:bold; color:var(--primary-dark);">QUINSAH COLLECTION</h1>
-                    <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ getOutletAddress(activePrintData.outletId) }}</p>
+                    <h1 style="margin:0; font-size:28px; font-weight:bold; color:var(--primary-dark);">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</h1>
+                    <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</p>
                 </div>
                 <div style="text-align:right; width: 50%;">
                     <div style="font-size:26px; font-weight:bold; color:#ccc; text-transform:uppercase; letter-spacing:2px;">PURCHASE ORDER</div>
