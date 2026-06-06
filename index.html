@@ -968,7 +968,7 @@
                     <div class="col-12">
                         <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded shadow-sm">
                             <label class="form-label small fw-bold text-primary"><i class="bi bi-shop me-2"></i>Pengaturan Struk Untuk Cabang:</label>
-                            <select class="form-select form-select-sm fw-bold border-primary" v-model="appSettings.selectedReceiptOutletId">
+                            <select class="form-select form-select-sm fw-bold border-primary" v-model="appSettings.selectedReceiptOutletId" @change="onChangeReceiptOutlet">
                                 <option value="global">Pengaturan Global (Untuk Semua Cabang)</option>
                                 <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">{{ outlet.name }}</option>
                             </select>
@@ -2824,13 +2824,36 @@
                 </div>
                 <div class="table-responsive">
                     <table class="table table-custom align-middle">
-                        <thead><tr><th>Kode</th><th>Nama Outlet</th><th>Pajak (PPN)</th><th>Service Charge</th><th>Aksi</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama Outlet</th>
+                                <th>Pajak (PPN)</th>
+                                <th>Service Charge</th>
+                                <th class="text-center">Desain Struk</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <tr v-for="o in outlets" :key="o.id">
                                 <td><span class="badge bg-dark">{{ o.code }}</span></td>
                                 <td class="fw-bold small">{{ o.name }}<div class="text-muted" style="font-size:0.65rem;">{{ o.location }}</div></td>
                                 <td class="fw-bold text-danger">{{ o.taxPercent || 0 }}%</td>
                                 <td class="fw-bold text-warning">{{ o.serviceChargePercent || 0 }}%</td>
+                                
+                                <td class="text-center">
+                                    <button v-if="appSettings && appSettings.outletReceipts && appSettings.outletReceipts[o.id]" 
+                                            class="btn btn-sm btn-outline-success fw-bold rounded-pill shadow-sm py-1"
+                                            @click="goToReceiptSettings(o.id)">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Edit Struk
+                                    </button>
+                                    
+                                    <button v-else 
+                                            class="btn btn-sm btn-danger fw-bold rounded-pill shadow-sm py-1"
+                                            @click="goToReceiptSettings(o.id)">
+                                        <i class="bi bi-plus-circle me-1"></i> Buat Struk
+                                    </button>
+                                </td>
                                 <td>
                                     <button class="btn btn-sm btn-light border text-primary me-1 py-1" @click="editData('outlets', o, 'formOutlet', 'addOutletModal')"><i class="bi bi-pencil"></i></button>
                                     <button class="btn btn-sm btn-light border text-danger py-1" @click="removeData('outlets', o.id)"><i class="bi bi-trash"></i></button>
@@ -2840,7 +2863,7 @@
                     </table>
                 </div>
             </div>
-
+            
             <div v-if="currentView === 'transfer'" class="dashboard-card mb-4">
                     <div v-if="transferView === 'list'">
                         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
@@ -6775,6 +6798,59 @@
         },
         
         // ==========================================
+        // 1. FUNGSI SAAT DROPDOWN CABANG DIGANTI
+        // ==========================================
+        onChangeReceiptOutlet() {
+            const outletId = this.appSettings.selectedReceiptOutletId || 'global';
+            
+            // Pastikan laci "outletReceipts" sudah ada di database/sistem
+            if (!this.appSettings.outletReceipts) {
+                this.appSettings.outletReceipts = {};
+            }
+
+            // Ambil data dari laci toko yang dipilih. Jika belum pernah disetting, buat kosong.
+            const config = this.appSettings.outletReceipts[outletId] || {
+                receiptLogo: '', defaultPrintSize: '80mm',
+                socialWa: '', socialIg: '', socialFb: '', socialTiktok: '',
+                socialShopee: '', socialTokped: '', socialLazada: '', socialBlibli: '',
+                termsAndConditions: '', receiptFooter: '', showQrCode: false
+            };
+
+            // Timpa isian form saat ini dengan data dari toko tersebut
+            this.appSettings.receiptLogo = config.receiptLogo;
+            this.appSettings.defaultPrintSize = config.defaultPrintSize || '80mm';
+            this.appSettings.socialWa = config.socialWa || '';
+            this.appSettings.socialIg = config.socialIg || '';
+            this.appSettings.socialFb = config.socialFb || '';
+            this.appSettings.socialTiktok = config.socialTiktok || '';
+            this.appSettings.socialShopee = config.socialShopee || '';
+            this.appSettings.socialTokped = config.socialTokped || '';
+            this.appSettings.socialLazada = config.socialLazada || '';
+            this.appSettings.socialBlibli = config.socialBlibli || '';
+            this.appSettings.termsAndConditions = config.termsAndConditions || '';
+            this.appSettings.receiptFooter = config.receiptFooter || '';
+            this.appSettings.showQrCode = config.showQrCode || false;
+        },
+
+        // ==========================================
+        // 2. FUNGSI PERSIAPAN SEBELUM PRINT (PENTING)
+        // ==========================================
+        loadReceiptDataForPrint(outletId) {
+            // Fungsi ini dipanggil tepat SEBELUM window.print() dijalankan
+            // Tujuannya agar struk mencetak data WA/IG sesuai toko tempat transaksi terjadi
+            
+            if (!this.appSettings.outletReceipts) return; // Jika belum ada settingan multi-cabang, abaikan.
+
+            // Coba cari settingan khusus cabang ini. Jika tidak ada, pakai settingan 'global'
+            const config = this.appSettings.outletReceipts[outletId] || this.appSettings.outletReceipts['global'];
+            
+            if (config) {
+                // Terapkan sementara ke appSettings agar terbaca oleh HTML Print
+                Object.assign(this.appSettings, config);
+            }
+        },
+        
+        // ==========================================
         // FUNGSI UPLOAD LOGO STRUK KASIR
         // ==========================================
         onReceiptLogoUpload(event) {
@@ -6799,6 +6875,30 @@
                 this.appSettings = JSON.parse(JSON.stringify(this.appSettings));
             };
             reader.readAsDataURL(file);
+        },
+        
+        // ==============================================================
+        // FUNGSI JALAN PINTAS: DARI TABEL OUTLET KE PENGATURAN STRUK
+        // ==============================================================
+        goToReceiptSettings(outletId) {
+            // 1. Pindah ke halaman Setelan (sesuaikan dengan nama variabel menu Anda)
+            // Di kode Anda sepertinya menggunakan 'currentView'
+            this.currentView = 'settings'; 
+            
+            // 2. Langsung buka tab 'Pengaturan Struk (Receipt)'
+            this.settingTab = 'receipt';
+            
+            // 3. Set dropdown "Pilih Cabang" ke cabang yang baru saja diklik
+            if (!this.appSettings) this.appSettings = {};
+            this.appSettings.selectedReceiptOutletId = outletId;
+            
+            // 4. Panggil fungsi yang memuat isi laci data cabang tersebut ke dalam form
+            if (typeof this.onChangeReceiptOutlet === 'function') {
+                this.onChangeReceiptOutlet();
+            }
+            
+            // 5. Gulir layar ke atas dengan mulus agar form langsung terlihat
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
         
         upgradePremium() {
@@ -8034,7 +8134,7 @@ async fetchRolesFromDatabase() {
         },
 
             async saveSettings() {
-        // --- GEMBOK PENGAMAN ---
+        // --- GEMBOK PENGAMAN (Asli Bawaan Anda, Tidak Diubah) ---
         if (!this.userProfile || !this.userProfile.companyId) {
             Swal.fire('Akses Ditolak', 'Sistem belum selesai memuat ID Toko Anda. Silakan refresh halaman.', 'error');
             return;
@@ -8042,9 +8142,39 @@ async fetchRolesFromDatabase() {
 
         this.isSaving = true;
         try {
+            // Data bawaan
             this.appSettings.hppMethod = this.tempHppMethod;
             this.appSettings.companyId = this.userProfile.companyId;
 
+            // =========================================================
+            // 👇 LOGIKA BARU: SIMPAN PENGATURAN STRUK KE LACI CABANG 👇
+            // =========================================================
+            const outletId = this.appSettings.selectedReceiptOutletId || 'global';
+            
+            // Pastikan laci objek tersedia
+            if (!this.appSettings.outletReceipts) {
+                this.appSettings.outletReceipts = {};
+            }
+
+            // Kemas semua input form saat ini ke dalam ID Cabang yang dipilih
+            this.appSettings.outletReceipts[outletId] = {
+                receiptLogo: this.appSettings.receiptLogo || '',
+                defaultPrintSize: this.appSettings.defaultPrintSize || '80mm',
+                socialWa: this.appSettings.socialWa || '',
+                socialIg: this.appSettings.socialIg || '',
+                socialFb: this.appSettings.socialFb || '',
+                socialTiktok: this.appSettings.socialTiktok || '',
+                socialShopee: this.appSettings.socialShopee || '',
+                socialTokped: this.appSettings.socialTokped || '',
+                socialLazada: this.appSettings.socialLazada || '',
+                socialBlibli: this.appSettings.socialBlibli || '',
+                termsAndConditions: this.appSettings.termsAndConditions || '',
+                receiptFooter: this.appSettings.receiptFooter || '',
+                showQrCode: this.appSettings.showQrCode || false
+            };
+            // 👆 ======================================================= 👆
+
+            // PROSES SIMPAN KE DATABASE (Asli Bawaan Anda, Tidak Diubah)
             // NAMA DOKUMEN MENGGUNAKAN ID TOKO (Sudah Benar!)
             await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
             
