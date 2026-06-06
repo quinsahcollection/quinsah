@@ -981,14 +981,28 @@
                     <div class="col-12">
                         <div class="p-3 bg-light border rounded shadow-sm">
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-shop me-2 text-primary"></i>Informasi & Logo Toko</h6>
+                            
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Pilih Logo / Gambar Struk</label>
                                 <input class="form-control form-control-sm" type="file" accept="image/*" @change="onReceiptLogoUpload">
                                 <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">Disarankan gambar hitam-putih (.jpg/.png) maksimal 1 MB.</small>
                             </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Nama Toko (Header Struk)</label>
+                                <input type="text" class="form-control form-control-sm border-primary" v-model="appSettings.storeName" placeholder="Cth: Quinsah Collection">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Alamat Toko (Struk)</label>
+                                <textarea class="form-control form-control-sm border-primary" v-model="appSettings.storeAddress" rows="2" placeholder="Cth: Jl. Seni Budaya Raya No.7A"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">No. Telp Toko</label>
+                                <input type="text" class="form-control form-control-sm border-primary" v-model="appSettings.storePhone" placeholder="Cth: 021-1234567 atau 0812...">
+                            </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-bold">Mode Live Preview & Default Kertas</label>
-                                <select class="form-select form-select-sm border-primary" v-model="appSettings.defaultPrintSize">
+                                <select class="form-select form-select-sm" v-model="appSettings.defaultPrintSize">
                                     <option value="80mm">Thermal 80mm (Standar Cafe / Resto)</option>
                                     <option value="58mm">Thermal 58mm (Mesin Kasir Mini / EDC)</option>
                                     <option value="A4">Kertas A4 (Invoice Pembelian / B2B Besar)</option>
@@ -1076,18 +1090,15 @@
                 <div class="p-3 bg-secondary bg-opacity-25 rounded h-100 d-flex flex-column align-items-center justify-content-start border border-secondary shadow-inner" style="min-height: 500px; max-height: 600px; overflow-y: auto;">
                     <h6 class="fw-bold text-dark mb-3"><i class="bi bi-eye me-2"></i>Live Preview ({{ appSettings.defaultPrintSize || '80mm' }})</h6>
                     
-                    <!-- ========================================== -->
-                    <!-- PREVIEW THERMAL 80mm / 58mm (MODERN LOOK) -->
-                    <!-- ========================================== -->
                     <div v-if="appSettings.defaultPrintSize === '58mm' || appSettings.defaultPrintSize === '80mm' || !appSettings.defaultPrintSize"
                          class="bg-white shadow mx-auto transition-all mb-3" 
                          :style="appSettings.defaultPrintSize === '58mm' ? 'width: 220px; padding: 15px; font-family: monospace; font-size: 0.65rem; color: #000; border-top: 3px dashed #ccc; border-bottom: 3px dashed #ccc;' : 'width: 320px; padding: 20px; font-family: monospace; font-size: 0.8rem; color: #000; border-top: 3px dashed #ccc; border-bottom: 3px dashed #ccc;'"
                     >
-                        <!-- Header Thermal -->
                         <div class="text-center mb-3">
                             <img v-if="appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 60%; max-height: 70px; margin-bottom: 8px; object-fit: contain;">
-                            <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">QUINSAH COLLECTION</div>
-                            <div style="margin-top: 4px; font-size: 0.9em; color: #444;">Jl. Seni Budaya Raya No.7A</div>
+                            <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">{{ appSettings.storeName || 'NAMA TOKO ANDA' }}</div>
+                            <div style="margin-top: 4px; font-size: 0.9em; color: #444; white-space: pre-wrap;">{{ appSettings.storeAddress || 'Alamat Toko Belum Diisi' }}</div>
+                            <div v-if="appSettings.storePhone" style="font-size: 0.9em; color: #444; margin-top: 2px;">Telp: {{ appSettings.storePhone }}</div>
                         </div>
                         
                         <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
@@ -1101,7 +1112,6 @@
                         </div>
                         <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
 
-                        <!-- Item Thermal -->
                         <div class="mb-3">
                             <div class="fw-bold" style="font-size: 1.05em;">Baju Kaos Pria Motif Tanjiro</div>
                             <div style="font-size: 0.85em; color: #555; margin-bottom: 2px;">Varian: Maroon - M</div>
@@ -1113,7 +1123,6 @@
                         
                         <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
                         
-                        <!-- Totals Thermal -->
                         <div class="d-flex justify-content-end">
                             <table style="width: 85%; font-size: 0.95em;">
                                 <tr><td style="padding-bottom:3px;">Subtotal</td><td style="text-align: right; padding-bottom:3px;">475.000</td></tr>
@@ -1124,7 +1133,6 @@
                             </table>
                         </div>
 
-                        <!-- T&C Thermal -->
                         <div v-if="appSettings.termsAndConditions" style="border-top: 1px dashed #000; margin: 15px 0 10px; padding-top: 10px;">
                             <div style="font-weight:bold; margin-bottom:3px; font-size:0.9em; text-transform:uppercase;">Syarat & Ketentuan:</div>
                             <div style="white-space: pre-wrap; text-align: left; line-height: 1.3; font-size:0.8em; color: #333;">{{ appSettings.termsAndConditions }}</div>
@@ -1132,13 +1140,11 @@
 
                         <div style="border-top: 1px dashed #000; margin: 15px 0 10px;"></div>
                         
-                        <!-- QR CODE PREVIEW THERMAL -->
                         <div v-if="appSettings.showQrCode" class="text-center mb-3">
                             <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://quinsah.com/inv/INV-20260604-1" style="width: 70px; height: 70px; margin-bottom: 4px;">
                             <div style="font-size: 0.75em; font-weight: bold;">Scan untuk e-Receipt</div>
                         </div>
 
-                        <!-- Footer Sosmed Thermal -->
                         <div class="text-center">
                             <div class="fw-bold mb-2 d-flex flex-wrap justify-content-center gap-2" style="font-size:0.85em; font-family: sans-serif;">
                                 <div v-if="appSettings.socialWa"><i class="bi bi-whatsapp"></i> {{ appSettings.socialWa }}</div>
@@ -1154,19 +1160,16 @@
                         </div>
                     </div>
 
-                    <!-- ========================================== -->
-                    <!-- PREVIEW A4 (FULL COMPLETED)                -->
-                    <!-- ========================================== -->
                     <div v-if="appSettings.defaultPrintSize === 'A4'"
                          class="bg-white shadow mx-auto transition-all mb-3" 
                          style="width: 100%; max-width: 600px; padding: 30px; font-family: sans-serif; color: #000; border: 1px solid #ddd; border-radius: 4px;"
                     >
-                        <!-- Header A4 -->
                         <div style="display:flex; justify-content:space-between; margin-bottom: 25px;">
                             <div>
                                 <img v-if="appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 150px; max-height: 60px; margin-bottom: 10px; object-fit: contain;">
-                                <div style="color: #991b1b; font-size: 24px; font-weight: 800; margin-bottom: 4px; line-height: 1;">QUINSAH COLLECTION</div>
-                                <div style="color: #666; font-size: 11px;">Jl. Seni Budaya Raya No.7A</div>
+                                <div style="color: #991b1b; font-size: 24px; font-weight: 800; margin-bottom: 4px; line-height: 1;">{{ appSettings.storeName || 'NAMA TOKO ANDA' }}</div>
+                                <div style="color: #666; font-size: 11px; max-width: 250px; white-space: pre-wrap;">{{ appSettings.storeAddress || 'Alamat Toko Belum Diisi' }}</div>
+                                <div v-if="appSettings.storePhone" style="color: #666; font-size: 11px; margin-top: 3px;">Telp: {{ appSettings.storePhone }}</div>
                             </div>
                             <div style="text-align: right;">
                                 <div style="color: #d1d5db; font-size: 28px; font-weight: 800; letter-spacing: 3px; line-height: 1;">INVOICE</div>
@@ -1175,7 +1178,6 @@
                             </div>
                         </div>
 
-                        <!-- Info Box A4 -->
                         <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; display: flex; margin-bottom: 25px; font-size: 12px;">
                             <div style="width: 50%;">
                                 <div style="color: #6b7280; font-weight: 800; font-size: 10px; margin-bottom: 8px;">DITERBITKAN OLEH:</div>
@@ -1190,7 +1192,6 @@
                             </div>
                         </div>
 
-                        <!-- Table Item A4 -->
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #000; margin-bottom: 15px;">
                             <tr style="background-color: #f3f4f6; text-align: center; font-weight: bold;">
                                 <td style="border: 1px solid #000; padding: 10px; width: 5%;">No</td>
@@ -1213,7 +1214,6 @@
                             </tr>
                         </table>
 
-                        <!-- Totals A4 -->
                         <div style="display: flex; justify-content: flex-end;">
                             <table style="width: 50%; font-size: 12px;">
                                 <tr>
@@ -1239,20 +1239,17 @@
                             </table>
                         </div>
 
-                        <!-- T&C A4 -->
                         <div v-if="appSettings.termsAndConditions" style="margin-top: 25px; padding: 15px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 6px; font-size: 10px;">
                             <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Syarat & Ketentuan:</div>
                             <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.termsAndConditions }}</div>
                         </div>
 
-                        <!-- Signatures & QR Code A4 -->
                         <div style="margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; text-align: center; font-size: 11px;">
                             <div style="width: 30%;">
                                 <p style="margin-bottom: 50px;">Penerima / Pelanggan,</p>
                                 <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">Herman</div>
                             </div>
                             
-                            <!-- QR CODE A4 -->
                             <div v-if="appSettings.showQrCode" style="width: 30%; text-align: center;">
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://quinsah.com/inv/INV-20260604-61720" style="width: 70px; height: 70px;">
                                 <div style="font-size: 9px; margin-top: 5px; color: #666; font-weight: bold;">Scan untuk e-Receipt</div>
@@ -1264,7 +1261,6 @@
                             </div>
                         </div>
 
-                        <!-- Footer Sosmed A4 -->
                         <div style="margin-top: 30px; border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 9px; color: #666;">
                             <div style="font-size: 11px; margin-bottom: 8px; color:#000; font-weight:bold; white-space: pre-wrap;">{{ appSettings.receiptFooter || 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
                             <div class="d-flex flex-wrap justify-content-center gap-3" style="color: #000; font-weight: bold;">
@@ -1280,14 +1276,13 @@
                         </div>
                     </div>
 
-                    <!-- TOMBOL TEST PRINT -->
                     <button class="btn btn-dark w-100 shadow mt-auto" @click="testPrintReceipt">
                         <i class="bi bi-printer me-2"></i>Coba Test Print Sekarang
                     </button>
                 </div>
             </div>
-            </div>
-            </div>
+         </div>
+       </div>
 
     <div v-if="settingTab==='hpp'" class="dashboard-card">
         <div class="mb-3">
@@ -6803,22 +6798,23 @@
         onChangeReceiptOutlet() {
             const outletId = this.appSettings.selectedReceiptOutletId || 'global';
             
-            // Pastikan laci "outletReceipts" sudah ada di database/sistem
             if (!this.appSettings.outletReceipts) {
                 this.appSettings.outletReceipts = {};
             }
 
-            // Ambil data dari laci toko yang dipilih. Jika belum pernah disetting, buat kosong.
             const config = this.appSettings.outletReceipts[outletId] || {
                 receiptLogo: '', defaultPrintSize: '80mm',
+                storeName: '', storeAddress: '', storePhone: '', // <- INI TAMBAHAN BARU
                 socialWa: '', socialIg: '', socialFb: '', socialTiktok: '',
                 socialShopee: '', socialTokped: '', socialLazada: '', socialBlibli: '',
                 termsAndConditions: '', receiptFooter: '', showQrCode: false
             };
 
-            // Timpa isian form saat ini dengan data dari toko tersebut
             this.appSettings.receiptLogo = config.receiptLogo;
             this.appSettings.defaultPrintSize = config.defaultPrintSize || '80mm';
+            this.appSettings.storeName = config.storeName || '';       // <- INI TAMBAHAN BARU
+            this.appSettings.storeAddress = config.storeAddress || ''; // <- INI TAMBAHAN BARU
+            this.appSettings.storePhone = config.storePhone || '';     // <- INI TAMBAHAN BARU
             this.appSettings.socialWa = config.socialWa || '';
             this.appSettings.socialIg = config.socialIg || '';
             this.appSettings.socialFb = config.socialFb || '';
@@ -8133,62 +8129,59 @@ async fetchRolesFromDatabase() {
             });
         },
 
-            async saveSettings() {
-        // --- GEMBOK PENGAMAN (Asli Bawaan Anda, Tidak Diubah) ---
-        if (!this.userProfile || !this.userProfile.companyId) {
-            Swal.fire('Akses Ditolak', 'Sistem belum selesai memuat ID Toko Anda. Silakan refresh halaman.', 'error');
-            return;
-        }
-
-        this.isSaving = true;
-        try {
-            // Data bawaan
-            this.appSettings.hppMethod = this.tempHppMethod;
-            this.appSettings.companyId = this.userProfile.companyId;
-
-            // =========================================================
-            // 👇 LOGIKA BARU: SIMPAN PENGATURAN STRUK KE LACI CABANG 👇
-            // =========================================================
-            const outletId = this.appSettings.selectedReceiptOutletId || 'global';
-            
-            // Pastikan laci objek tersedia
-            if (!this.appSettings.outletReceipts) {
-                this.appSettings.outletReceipts = {};
+            // ==========================================
+            // 2. FUNGSI SIMPAN SETTING KE DATABASE
+            // ==========================================
+        async saveSettings() {
+            if (!this.userProfile || !this.userProfile.companyId) {
+                Swal.fire('Akses Ditolak', 'Sistem belum selesai memuat ID Toko Anda. Silakan refresh halaman.', 'error');
+                return;
             }
 
-            // Kemas semua input form saat ini ke dalam ID Cabang yang dipilih
-            this.appSettings.outletReceipts[outletId] = {
-                receiptLogo: this.appSettings.receiptLogo || '',
-                defaultPrintSize: this.appSettings.defaultPrintSize || '80mm',
-                socialWa: this.appSettings.socialWa || '',
-                socialIg: this.appSettings.socialIg || '',
-                socialFb: this.appSettings.socialFb || '',
-                socialTiktok: this.appSettings.socialTiktok || '',
-                socialShopee: this.appSettings.socialShopee || '',
-                socialTokped: this.appSettings.socialTokped || '',
-                socialLazada: this.appSettings.socialLazada || '',
-                socialBlibli: this.appSettings.socialBlibli || '',
-                termsAndConditions: this.appSettings.termsAndConditions || '',
-                receiptFooter: this.appSettings.receiptFooter || '',
-                showQrCode: this.appSettings.showQrCode || false
-            };
-            // 👆 ======================================================= 👆
+            this.isSaving = true;
+            try {
+                this.appSettings.hppMethod = this.tempHppMethod;
+                this.appSettings.companyId = this.userProfile.companyId;
 
-            // PROSES SIMPAN KE DATABASE (Asli Bawaan Anda, Tidak Diubah)
-            // NAMA DOKUMEN MENGGUNAKAN ID TOKO (Sudah Benar!)
-            await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
-            
-            if (typeof this.generateInvoiceNumber === 'function') {
-                this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                const outletId = this.appSettings.selectedReceiptOutletId || 'global';
+                
+                if (!this.appSettings.outletReceipts) {
+                    this.appSettings.outletReceipts = {};
+                }
+
+                // Masukkan juga Nama, Alamat, dan Telp ke Laci Cabang
+                this.appSettings.outletReceipts[outletId] = {
+                    receiptLogo: this.appSettings.receiptLogo || '',
+                    defaultPrintSize: this.appSettings.defaultPrintSize || '80mm',
+                    storeName: this.appSettings.storeName || '',       // <- INI TAMBAHAN BARU
+                    storeAddress: this.appSettings.storeAddress || '', // <- INI TAMBAHAN BARU
+                    storePhone: this.appSettings.storePhone || '',     // <- INI TAMBAHAN BARU
+                    socialWa: this.appSettings.socialWa || '',
+                    socialIg: this.appSettings.socialIg || '',
+                    socialFb: this.appSettings.socialFb || '',
+                    socialTiktok: this.appSettings.socialTiktok || '',
+                    socialShopee: this.appSettings.socialShopee || '',
+                    socialTokped: this.appSettings.socialTokped || '',
+                    socialLazada: this.appSettings.socialLazada || '',
+                    socialBlibli: this.appSettings.socialBlibli || '',
+                    termsAndConditions: this.appSettings.termsAndConditions || '',
+                    receiptFooter: this.appSettings.receiptFooter || '',
+                    showQrCode: this.appSettings.showQrCode || false
+                };
+
+                await setDoc(doc(db, "settings", this.userProfile.companyId), this.appSettings);
+                
+                if (typeof this.generateInvoiceNumber === 'function') {
+                    this.posCustomInvoice = this.generateInvoiceNumber('POS');
+                }
+                
+                Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
+            } catch(e) { 
+                console.error("Gagal simpan setting", e); 
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
             }
-            
-            Swal.fire({ icon: 'success', title: 'Tersimpan', text: 'Pengaturan Sistem berhasil disimpan!', timer: 2000, showConfirmButton: false });
-        } catch(e) { 
-            console.error("Gagal simpan setting", e); 
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan pengaturan.' });
-        }
-        this.isSaving = false;
-    },
+            this.isSaving = false;
+        },
 
             resetPosDate() {
                 const now = new Date();
