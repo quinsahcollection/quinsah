@@ -1000,6 +1000,11 @@
                                 <label class="form-label small fw-bold">No. Telp Toko</label>
                                 <input type="text" class="form-control form-control-sm border-primary" v-model="appSettings.storePhone" placeholder="Cth: 021-1234567 atau 0812...">
                             </div>
+                            <div class="mb-3 p-2 bg-warning bg-opacity-10 border border-warning rounded">
+                                <label class="form-label small fw-bold text-dark">Info Rekening / Pembayaran <span class="badge bg-danger ms-1">Khusus A4</span></label>
+                                <textarea class="form-control form-control-sm border-warning" v-model="appSettings.storePaymentInfo" rows="2" placeholder="Cth: BCA 123456789 a.n Quinsah Collection"></textarea>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;"><i class="bi bi-info-circle me-1"></i>Akan ditampilkan di sebelah kiri total tagihan pada Invoice A4.</small>
+                            </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-bold">Mode Live Preview & Default Kertas</label>
                                 <select class="form-select form-select-sm" v-model="appSettings.defaultPrintSize">
@@ -1214,7 +1219,16 @@
                             </tr>
                         </table>
 
-                        <div style="display: flex; justify-content: flex-end;">
+                        <!-- Totals & Payment Info A4 -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            
+                            <!-- Info Pembayaran (Kiri) -->
+                            <div v-if="appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 10px; font-size: 10px;">
+                                <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
+                                <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
+                            </div>
+                            <div v-else style="width: 45%;"></div>
+                            
                             <table style="width: 50%; font-size: 12px;">
                                 <tr>
                                     <td style="padding: 6px 10px;">Subtotal Produk</td>
@@ -6804,7 +6818,7 @@
 
             const config = this.appSettings.outletReceipts[outletId] || {
                 receiptLogo: '', defaultPrintSize: '80mm',
-                storeName: '', storeAddress: '', storePhone: '', // <- INI TAMBAHAN BARU
+                storeName: '', storeAddress: '', storePhone: '', storePaymentInfo: '',
                 socialWa: '', socialIg: '', socialFb: '', socialTiktok: '',
                 socialShopee: '', socialTokped: '', socialLazada: '', socialBlibli: '',
                 termsAndConditions: '', receiptFooter: '', showQrCode: false
@@ -6815,6 +6829,7 @@
             this.appSettings.storeName = config.storeName || '';       // <- INI TAMBAHAN BARU
             this.appSettings.storeAddress = config.storeAddress || ''; // <- INI TAMBAHAN BARU
             this.appSettings.storePhone = config.storePhone || '';     // <- INI TAMBAHAN BARU
+            this.appSettings.storePaymentInfo = config.storePaymentInfo || '';
             this.appSettings.socialWa = config.socialWa || '';
             this.appSettings.socialIg = config.socialIg || '';
             this.appSettings.socialFb = config.socialFb || '';
@@ -8156,6 +8171,7 @@ async fetchRolesFromDatabase() {
                     storeName: this.appSettings.storeName || '',       // <- INI TAMBAHAN BARU
                     storeAddress: this.appSettings.storeAddress || '', // <- INI TAMBAHAN BARU
                     storePhone: this.appSettings.storePhone || '',     // <- INI TAMBAHAN BARU
+                    storePaymentInfo: this.appSettings.storePaymentInfo || '', // <- TAMBAHAN BARU
                     socialWa: this.appSettings.socialWa || '',
                     socialIg: this.appSettings.socialIg || '',
                     socialFb: this.appSettings.socialFb || '',
