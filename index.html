@@ -3518,9 +3518,12 @@
                         </div>
                     </div>
                 </div>
-
             </div>
-            <div class="modal-footer bg-light p-2">
+            <div class="modal-footer bg-light p-2 d-flex justify-content-between">
+                <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" @click="openReturnModal(activeInvoiceDetail)" v-if="activeInvoiceDetail && activeInvoiceDetail.paymentStatus !== 'DIRETUR'">
+                    <i class="bi bi-arrow-return-left me-1"></i> Retur / Kembalikan Barang
+                </button>
+                
                 <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
@@ -5091,9 +5094,71 @@
             </div>
         </div>
     </div>
- 
-    </div> 
     
+    <div class="modal fade" id="returnInvoiceModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger bg-opacity-10 pb-2">
+                <div>
+                    <h5 class="modal-title fw-bold text-danger mb-1"><i class="bi bi-arrow-return-left me-2"></i>Proses Retur Invoice</h5>
+                    <div class="small text-muted" v-if="returnForm">Inv: {{ returnForm.id }} | Pelanggan: {{ returnForm.customer }}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body pt-3" v-if="returnForm">
+                <div class="alert alert-warning small py-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Masukkan jumlah barang yang ingin diretur. Stok barang akan otomatis dikembalikan ke gudang/cabang terkait.
+                </div>
+
+                <table class="table table-sm table-bordered align-middle text-center" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start">Nama Produk</th>
+                            <th>Qty Beli</th>
+                            <th>Harga Satuan</th>
+                            <th style="width: 120px;">Qty Diretur</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, idx) in returnForm.items" :key="idx">
+                            <td class="text-start fw-bold">
+                                {{ item.name }}
+                                <div class="text-muted fw-normal" style="font-size: 0.7rem;" v-if="item.variantName">Varian: {{ item.variantName }}</div>
+                            </td>
+                            <td>{{ item.qty }}</td>
+                            <td>Rp {{ formatNumber(item.finalPrice || item.price) }}</td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm text-center fw-bold" 
+                                       v-model.number="item.returnQty" 
+                                       min="0" :max="item.qty" 
+                                       @input="if(item.returnQty > item.qty) item.returnQty = item.qty; if(item.returnQty < 0) item.returnQty = 0;">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Alasan Retur</label>
+                    <textarea class="form-control form-control-sm" v-model="returnForm.reason" rows="2" placeholder="Contoh: Barang cacat pabrik, salah kirim ukuran..."></textarea>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center bg-light p-3 border rounded">
+                    <span class="fw-bold text-muted">Estimasi Nilai Pengembalian (Refund):</span>
+                    <span class="fw-bold fs-5 text-danger">Rp {{ formatNumber(calculateRefundAmount()) }}</span>
+                </div>
+            </div>
+
+            <div class="modal-footer p-2">
+                <button type="button" class="btn btn-sm btn-light border fw-bold" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-sm btn-danger fw-bold" @click="processReturn" :disabled="isProcessing || calculateRefundAmount() === 0">
+                    <i class="bi bi-check-circle me-1"></i> Konfirmasi Retur
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
    <div id="print-section">
         
         <!-- ========================================== -->
@@ -5530,6 +5595,8 @@
                 
                 transactionStartDate: '',
                 transactionEndDate: '',
+                
+                returnForm: null,
                 
                 // Tambahkan di dalam data()
                 activeInvoiceDetail: null,
@@ -6800,6 +6867,85 @@
                 if (datePart.includes('-')) return datePart.split(' ')[0];
                 return '';
             },
+        
+        // ================================
+        // FUNGSI RETUR BARANG
+        // ================================
+        openReturnModal(invoiceData) {
+            this.returnForm = JSON.parse(JSON.stringify(invoiceData));
+            if(this.returnForm && this.returnForm.items) {
+                this.returnForm.items.forEach(item => {
+                    item.returnQty = 0;
+                });
+            }
+            this.returnForm.reason = '';
+            
+            let detailModal = bootstrap.Modal.getInstance(document.getElementById('invoiceDetailModal'));
+            if (detailModal) detailModal.hide();
+            
+            let returnModal = new bootstrap.Modal(document.getElementById('returnInvoiceModal'));
+            returnModal.show();
+        },
+
+        calculateRefundAmount() {
+            if (!this.returnForm || !this.returnForm.items) return 0;
+            let refundTotal = 0;
+            this.returnForm.items.forEach(item => {
+                if (item.returnQty > 0) {
+                    refundTotal += (item.returnQty * (item.finalPrice || item.price || 0));
+                }
+            });
+            return refundTotal;
+        },
+
+        // ================================
+        // FUNGSI RETUR BARANG
+        // ================================
+        openReturnModal(invoiceData) {
+            this.returnForm = JSON.parse(JSON.stringify(invoiceData));
+            if(this.returnForm && this.returnForm.items) {
+                this.returnForm.items.forEach(item => {
+                    item.returnQty = 0;
+                });
+            }
+            this.returnForm.reason = '';
+            
+            let detailModal = bootstrap.Modal.getInstance(document.getElementById('invoiceDetailModal'));
+            if (detailModal) detailModal.hide();
+            
+            let returnModal = new bootstrap.Modal(document.getElementById('returnInvoiceModal'));
+            returnModal.show();
+        },
+
+        calculateRefundAmount() {
+            if (!this.returnForm || !this.returnForm.items) return 0;
+            let refundTotal = 0;
+            this.returnForm.items.forEach(item => {
+                if (item.returnQty > 0) {
+                    refundTotal += (item.returnQty * (item.finalPrice || item.price || 0));
+                }
+            });
+            return refundTotal;
+        },
+
+        processReturn() {
+            let refundTotal = this.calculateRefundAmount();
+            if (refundTotal <= 0) {
+                Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin diretur!', 'warning');
+                return;
+            }
+            
+            this.isProcessing = true;
+            console.log("Proses retur berjalan. Nilai refund: Rp " + refundTotal);
+            // (Logika potong stok dan update database akan kita lengkapi nanti)
+            
+            setTimeout(() => {
+                this.isProcessing = false;
+                let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
+                if (returnModal) returnModal.hide();
+                Swal.fire('Berhasil', 'Retur berhasil diproses', 'success');
+            }, 1000);
+        },
         
         testPrintReceipt() {
             // 1. Buat data transaksi bohongan untuk dicetak
