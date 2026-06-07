@@ -6869,37 +6869,7 @@
             },
         
         // ================================
-        // FUNGSI RETUR BARANG
-        // ================================
-        openReturnModal(invoiceData) {
-            this.returnForm = JSON.parse(JSON.stringify(invoiceData));
-            if(this.returnForm && this.returnForm.items) {
-                this.returnForm.items.forEach(item => {
-                    item.returnQty = 0;
-                });
-            }
-            this.returnForm.reason = '';
-            
-            let detailModal = bootstrap.Modal.getInstance(document.getElementById('invoiceDetailModal'));
-            if (detailModal) detailModal.hide();
-            
-            let returnModal = new bootstrap.Modal(document.getElementById('returnInvoiceModal'));
-            returnModal.show();
-        },
-
-        calculateRefundAmount() {
-            if (!this.returnForm || !this.returnForm.items) return 0;
-            let refundTotal = 0;
-            this.returnForm.items.forEach(item => {
-                if (item.returnQty > 0) {
-                    refundTotal += (item.returnQty * (item.finalPrice || item.price || 0));
-                }
-            });
-            return refundTotal;
-        },
-
-        // ================================
-        // FUNGSI RETUR BARANG
+        // FUNGSI RETUR BARANG (SUDAH DIPERBAIKI & DILENGKAPI STOK LOGIC)
         // ================================
         openReturnModal(invoiceData) {
             this.returnForm = JSON.parse(JSON.stringify(invoiceData));
@@ -6936,15 +6906,95 @@
             }
             
             this.isProcessing = true;
-            console.log("Proses retur berjalan. Nilai refund: Rp " + refundTotal);
-            // (Logika potong stok dan update database akan kita lengkapi nanti)
+
+            // ---------------------------------------------------------
+            // A. KEMBALIKAN STOK KE MASTER PRODUK & CATAT LOG MUTASI
+            // ---------------------------------------------------------
+            this.returnForm.items.forEach(retItem => {
+                if (retItem.returnQty > 0) {
+                    let product = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                    
+                    if (product) {
+                        let stokLama = product.stock || 0;
+                        product.stock = stokLama + retItem.returnQty;
+
+                        if (!this.mutations) this.mutations = []; 
+                        this.mutations.push({
+                            id: 'RET-' + Date.now() + Math.floor(Math.random() * 1000),
+                            date: new Date().toLocaleString('id-ID'),
+                            type: 'IN',
+                            category: 'Retur Penjualan',
+                            productName: product.name,
+                            sku: product.sku || '-',
+                            qty: retItem.returnQty,
+                            lastStock: stokLama,
+                            currentStock: product.stock,
+                            note: 'Retur dari Inv: ' + this.returnForm.id + ' | ' + (this.returnForm.reason || ''),
+                            operator: 'Kasir'
+                        });
+                    }
+                }
+            });
+
+            // ---------------------------------------------------------
+            // B. UPDATE INVOICE (KURANGI QTY, TOTAL, & RUBAH STATUS)
+            // ---------------------------------------------------------
+            let originalInvoiceIndex = this.transactions.findIndex(t => t.id === this.returnForm.id);
+            
+            if (originalInvoiceIndex !== -1) {
+                let inv = this.transactions[originalInvoiceIndex];
+                let isSisaBarangAda = false; 
+
+                inv.items.forEach(invItem => {
+                    let retItem = this.returnForm.items.find(r => r.name === invItem.name);
+                    if (retItem && retItem.returnQty > 0) {
+                        invItem.qty -= retItem.returnQty;
+                        invItem.isReturned = true; 
+                    }
+                    if (invItem.qty > 0) {
+                        isSisaBarangAda = true;
+                    }
+                });
+
+                inv.subtotal = inv.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.price)), 0);
+                
+                inv.total -= refundTotal;
+                if(inv.total < 0) inv.total = 0;
+
+                inv.paymentHistory = inv.paymentHistory || [];
+                inv.paymentHistory.push({
+                    date: new Date().toLocaleString('id-ID'),
+                    method: 'REFUND RETUR',
+                    amount: -refundTotal, 
+                    note: this.returnForm.reason || 'Pengembalian barang'
+                });
+
+                if (isSisaBarangAda) {
+                    inv.paymentStatus = 'RETUR SEBAGIAN';
+                } else {
+                    inv.paymentStatus = 'DIRETUR';
+                }
+
+                this.activeInvoiceDetail = JSON.parse(JSON.stringify(inv));
+            }
+
+            // ---------------------------------------------------------
+            // C. SIMPAN SEMUA PERUBAHAN KE DATABASE
+            // ---------------------------------------------------------
+            if(typeof this.saveProducts === 'function') this.saveProducts();
+            if(typeof this.saveTransactions === 'function') this.saveTransactions();
+            if(typeof this.saveMutations === 'function') this.saveMutations();
             
             setTimeout(() => {
                 this.isProcessing = false;
+                
                 let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
                 if (returnModal) returnModal.hide();
-                Swal.fire('Berhasil', 'Retur berhasil diproses', 'success');
-            }, 1000);
+                
+                Swal.fire('Berhasil!', 'Retur Berhasil! Stok barang telah kembali, mutasi tercatat, dan invoice terupdate.', 'success');
+                
+                if(typeof this.filterTransactions === 'function') this.filterTransactions();
+            }, 800);
         },
         
         testPrintReceipt() {
