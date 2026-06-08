@@ -6898,104 +6898,145 @@
             return refundTotal;
         },
 
-        processReturn() {
-            let refundTotal = this.calculateRefundAmount();
-            if (refundTotal <= 0) {
-                Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin diretur!', 'warning');
-                return;
-            }
+        async processReturn() {
+    // 1. Validasi Jumlah
+    let refundTotal = this.calculateRefundAmount();
+    if (refundTotal <= 0) {
+        Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin diretur!', 'warning');
+        return;
+    }
+    
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
+    try {
+        // 2. AMBIL TRANSAKSI ASLI DARI DATABASE LOKAL
+        let trxIdx = this.transactions.findIndex(t => t.id === this.returnForm.id);
+        if (trxIdx === -1) throw new Error("Transaksi tidak ditemukan");
+        let trx = JSON.parse(JSON.stringify(this.transactions[trxIdx])); // Clone data
+
+        // Siapkan array histori untuk dicetak di struk
+        if (!trx.returHistory) trx.returHistory = []; 
+
+        // 3. LOOPING SEMUA BARANG YANG DIRETUR DI FORM
+        for (let i = 0; i < this.returnForm.items.length; i++) {
+            let retItem = this.returnForm.items[i];
             
-            this.isProcessing = true;
+            if (retItem.returnQty > 0) {
+                // ========================================================
+                // A. KEMBALIKAN STOK KE GUDANG (Update ke Firebase Products)
+                // ========================================================
+                let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                if (prod) {
+                    let prodCopy = JSON.parse(JSON.stringify(prod));
 
-            // ---------------------------------------------------------
-            // A. KEMBALIKAN STOK KE MASTER PRODUK & CATAT LOG MUTASI
-            // ---------------------------------------------------------
-            this.returnForm.items.forEach(retItem => {
-                if (retItem.returnQty > 0) {
-                    let product = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
-                    
-                    if (product) {
-                        let stokLama = product.stock || 0;
-                        product.stock = stokLama + retItem.returnQty;
-
-                        if (!this.mutations) this.mutations = []; 
-                        this.mutations.push({
-                            id: 'RET-' + Date.now() + Math.floor(Math.random() * 1000),
-                            date: new Date().toLocaleString('id-ID'),
-                            type: 'IN',
-                            category: 'Retur Penjualan',
-                            productName: product.name,
-                            sku: product.sku || '-',
-                            qty: retItem.returnQty,
-                            lastStock: stokLama,
-                            currentStock: product.stock,
-                            note: 'Retur dari Inv: ' + this.returnForm.id + ' | ' + (this.returnForm.reason || ''),
-                            operator: 'Kasir'
-                        });
+                    // Cek apakah produk ini Varian atau Standar
+                    if (retItem.variantSku) {
+                        let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                        if (vIdx !== -1) {
+                            if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                            prodCopy.variants[vIdx].outletStocks[trx.outletId] = (prodCopy.variants[vIdx].outletStocks[trx.outletId] || 0) + retItem.returnQty;
+                        }
+                    } else {
+                        if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                        prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + retItem.returnQty;
                     }
-                }
-            });
 
-            // ---------------------------------------------------------
-            // B. UPDATE INVOICE (KURANGI QTY, TOTAL, & RUBAH STATUS)
-            // ---------------------------------------------------------
-            let originalInvoiceIndex = this.transactions.findIndex(t => t.id === this.returnForm.id);
-            
-            if (originalInvoiceIndex !== -1) {
-                let inv = this.transactions[originalInvoiceIndex];
-                let isSisaBarangAda = false; 
+                    // Tembak Data Stok Baru ke Firebase
+                    await updateDoc(doc(db, "products", prod.id), {
+                        variants: prodCopy.variants || [],
+                        baseOutletStocks: prodCopy.baseOutletStocks || {}
+                    });
 
-                inv.items.forEach(invItem => {
-                    let retItem = this.returnForm.items.find(r => r.name === invItem.name);
-                    if (retItem && retItem.returnQty > 0) {
-                        invItem.qty -= retItem.returnQty;
-                        invItem.isReturned = true; 
-                    }
-                    if (invItem.qty > 0) {
-                        isSisaBarangAda = true;
-                    }
-                });
-
-                inv.subtotal = inv.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.price)), 0);
-                
-                inv.total -= refundTotal;
-                if(inv.total < 0) inv.total = 0;
-
-                inv.paymentHistory = inv.paymentHistory || [];
-                inv.paymentHistory.push({
-                    date: new Date().toLocaleString('id-ID'),
-                    method: 'REFUND RETUR',
-                    amount: -refundTotal, 
-                    note: this.returnForm.reason || 'Pengembalian barang'
-                });
-
-                if (isSisaBarangAda) {
-                    inv.paymentStatus = 'RETUR SEBAGIAN';
-                } else {
-                    inv.paymentStatus = 'DIRETUR';
+                    // CATAT MUTASI STOK MASUK (Gunakan fungsi pusat logStock)
+                    await this.logStock('IN', {
+                        productId: prod.id,
+                        sku: retItem.sku || prod.sku || '-',
+                        name: prod.name,
+                        variantSku: retItem.variantSku || null,
+                        variantName: retItem.variantName || '-',
+                        qty: retItem.returnQty,
+                        outletId: trx.outletId,
+                        refId: `RETUR-${trx.id}`,
+                        note: `Retur dari Inv: ${trx.id} | ${this.returnForm.reason || 'Tanpa Keterangan'}`
+                    });
                 }
 
-                this.activeInvoiceDetail = JSON.parse(JSON.stringify(inv));
-            }
+                // ========================================================
+                // B. POTONG QTY DI DALAM INVOICE & CATAT REFUND STRUK
+                // ========================================================
+                let invItem = trx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+                if (invItem) {
+                    invItem.qty -= retItem.returnQty;
+                    invItem.isReturned = true;
 
-            // ---------------------------------------------------------
-            // C. SIMPAN SEMUA PERUBAHAN KE DATABASE
-            // ---------------------------------------------------------
-            if(typeof this.saveProducts === 'function') this.saveProducts();
-            if(typeof this.saveTransactions === 'function') this.saveTransactions();
-            if(typeof this.saveMutations === 'function') this.saveMutations();
-            
-            setTimeout(() => {
-                this.isProcessing = false;
-                
-                let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
-                if (returnModal) returnModal.hide();
-                
-                Swal.fire('Berhasil!', 'Retur Berhasil! Stok barang telah kembali, mutasi tercatat, dan invoice terupdate.', 'success');
-                
-                if(typeof this.filterTransactions === 'function') this.filterTransactions();
-            }, 800);
-        },
+                    // Catat ke memori struk
+                    trx.returHistory.push({
+                        date: new Date().toLocaleString('id-ID'),
+                        productName: retItem.name,
+                        qtyRetur: retItem.returnQty,
+                        refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                        alasan: this.returnForm.reason || 'Retur Pelanggan'
+                    });
+                }
+            }
+        } // Tutup For Loop
+
+        // ========================================================
+        // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA
+        // ========================================================
+        trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || 0)), 0);
+        
+        trx.total -= refundTotal;
+        if (trx.total < 0) trx.total = 0;
+        trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
+
+        let isSisaBarangAda = trx.items.some(i => i.qty > 0);
+        trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+        trx.status = trx.paymentStatus; // Update status utama juga
+
+        trx.paymentHistory = trx.paymentHistory || [];
+        trx.paymentHistory.push({
+            date: new Date().toLocaleString('id-ID'),
+            method: 'REFUND',
+            amount: -refundTotal,
+            note: this.returnForm.reason || 'Pengembalian Dana (Retur)'
+        });
+
+        // ========================================================
+        // D. SIMPAN PERMANEN KE FIREBASE (Mencegah hilang saat refresh)
+        // ========================================================
+        await updateDoc(doc(db, "transactions", trx.id), {
+            items: trx.items,
+            total: trx.total,
+            subtotal: trx.subtotal,
+            sisaTagihan: trx.sisaTagihan,
+            paymentStatus: trx.paymentStatus,
+            status: trx.status,
+            paymentHistory: trx.paymentHistory,
+            returHistory: trx.returHistory // Wajib disave agar struk refund muncul
+        });
+
+        // ========================================================
+        // E. UPDATE UI DAN TUTUP MODAL
+        // ========================================================
+        this.transactions[trxIdx] = trx;
+        this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx)); // Update layar pop-up jika sedang terbuka
+        
+        let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
+        if (returnModal) returnModal.hide();
+
+        Swal.fire('Berhasil!', 'Retur Berhasil! Stok barang telah kembali, mutasi tercatat, dan database terupdate secara Cloud.', 'success');
+
+        if(typeof this.filterTransactions === 'function') this.filterTransactions();
+
+    } catch (error) {
+        console.error("Gagal Retur:", error);
+        Swal.fire('Error', 'Terjadi kesalahan sistem saat memproses retur: ' + error.message, 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
         
         testPrintReceipt() {
             // 1. Buat data transaksi bohongan untuk dicetak
@@ -10665,7 +10706,7 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = false;
             },
 
-              editPosTransaction(trx) {
+             editPosTransaction(trx) {
                 this.askConfirm('Edit Invoice?', 'Invoice ini akan dimuat ulang ke keranjang untuk Anda ubah. Transaksi lama baru akan ditimpa/dihapus SETELAH Anda menyelesaikan pembayaran. Lanjutkan?', () => {
                     
                     // 1. Masukkan barang ke cart tanpa menghapus database
