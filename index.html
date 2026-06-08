@@ -1138,6 +1138,19 @@
                             </table>
                         </div>
 
+                        <div style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
+                        <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 11px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
+                           <i class="bi bi-arrow-return-left"></i> INFO RETUR / REFUND
+                       </div>
+                       <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;">
+                         <span>[RETUR] Baju Kaos... (1x)</span>
+                         <span style="color: #dc3545; font-weight: bold;">- Rp 95.000</span>
+                       </div>
+                       <div style="text-align: right; margin-top: 5px; border-top: 1px solid #ddd; padding-top: 5px; font-weight: bold; font-size: 0.9em;">
+                       TOTAL REFUND: <span style="color: #dc3545;">- Rp 95.000</span>
+    </div>
+</div>
+
                         <div v-if="appSettings.termsAndConditions" style="border-top: 1px dashed #000; margin: 15px 0 10px; padding-top: 10px;">
                             <div style="font-weight:bold; margin-bottom:3px; font-size:0.9em; text-transform:uppercase;">Syarat & Ketentuan:</div>
                             <div style="white-space: pre-wrap; text-align: left; line-height: 1.3; font-size:0.8em; color: #333;">{{ appSettings.termsAndConditions }}</div>
@@ -1252,6 +1265,21 @@
                                 </tr>
                             </table>
                         </div>
+                        
+                        <div style="margin-bottom: 15px; border: 1px solid #dc3545; border-radius: 6px; padding: 10px; background-color: #fef2f2;">
+    <div style="color: #dc3545; font-weight: 800; font-size: 12px; margin-bottom: 8px;">
+        <i class="bi bi-arrow-return-left"></i> INFORMASI RETUR / REFUND
+    </div>
+    <table style="width: 100%; font-size: 11px;">
+        <tr>
+            <td style="width: 70%;"><strong>[RETUR] Baju Kaos Pria Motif Tanjiro</strong> (1 pcs)<br><span style="color:#666; font-size: 10px;">Alasan: Tukar ukuran / Cacat</span></td>
+            <td style="width: 30%; text-align: right; color: #dc3545; font-weight: bold;">- Rp 95.000</td>
+        </tr>
+    </table>
+    <div style="text-align: right; margin-top: 8px; border-top: 1px dashed #fca5a5; padding-top: 8px; font-weight: bold; font-size: 12px;">
+        TOTAL REFUND: <span style="color: #dc3545;">- Rp 95.000</span>
+    </div>
+</div>
 
                         <div v-if="appSettings.termsAndConditions" style="margin-top: 25px; padding: 15px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 6px; font-size: 10px;">
                             <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Syarat & Ketentuan:</div>
@@ -5154,6 +5182,9 @@
                 <button type="button" class="btn btn-sm btn-danger fw-bold" @click="processReturn" :disabled="isProcessing || calculateRefundAmount() === 0">
                     <i class="bi bi-check-circle me-1"></i> Konfirmasi Retur
                 </button>
+                <button type="button" @click="prosesTukarTambah(returnForm.id, itemToReturn, returnQty, returnReason)" class="btn btn-warning text-dark">
+                <i class="fas fa-exchange-alt"></i> Tukar Tambah
+                </button>
             </div>
         </div>
     </div>
@@ -5209,6 +5240,27 @@
                     <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
                 </table>
             </div>
+            
+            <!-- MASUKKAN KE AREA PRINT ASLI -->
+            <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
+            <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
+            INFO RETUR / REFUND
+            </div>
+    
+            <div v-for="(retur, idx) in activePrintData.returHistory" :key="idx" style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 6px;">
+            <span style="width: 65%;">
+            <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+            <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
+            </span>
+            <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
+            - Rp {{ formatNumber(retur.refundAmount) }}
+          </span>
+    </div>
+    
+    <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
+        TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
+    </div>
+</div>
 
             <div v-if="appSettings && appSettings.termsAndConditions" style="border-top: 1px dashed #000; margin: 15px 0 10px; padding-top: 10px;">
                 <div style="font-weight:bold; margin-bottom:3px; font-size:0.9em; text-transform:uppercase;">Syarat & Ketentuan:</div>
@@ -5311,6 +5363,26 @@
                     <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
                 </table>
             </div>
+
+            <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
+    <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
+        INFO RETUR / REFUND
+    </div>
+    
+    <div v-for="(retur, idx) in activePrintData.returHistory" :key="idx" style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 6px;">
+        <span style="width: 65%;">
+            <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+            <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
+        </span>
+        <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
+            - Rp {{ formatNumber(retur.refundAmount) }}
+        </span>
+    </div>
+    
+    <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
+        TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
+    </div>
+</div>
 
             <div v-if="appSettings && appSettings.termsAndConditions" style="margin-top: 30px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 6px; font-size: 12px;">
                 <div style="font-weight:bold; margin-bottom:8px; color:#333; text-transform:uppercase;">Syarat & Ketentuan:</div>
@@ -7036,6 +7108,72 @@
     } finally {
         this.isProcessing = false;
     }
+},
+        
+        async prosesTukarTambah(trxId, itemToExchange, qtyTukar, alasan) {
+    // 1. Validasi Input
+    if (qtyTukar <= 0) return Swal.fire('Error', 'Qty harus lebih dari 0', 'error');
+    if (!itemToExchange) return Swal.fire('Error', 'Pilih barang yang ingin ditukar', 'error');
+
+    // Tanya konfirmasi
+    Swal.fire({
+        title: 'Tukar Tambah?',
+        text: 'Barang lama akan diretur (stok kembali) dan saldo akan dibawa ke layar Kasir untuk memotong harga barang pengganti.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'Ya, Lanjut ke Kasir'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            
+            // 2. Hitung saldo uang yang bisa dipakai untuk beli barang baru
+            let nominalSaldo = itemToExchange.finalPrice * qtyTukar;
+            
+            // 3. Eksekusi fungsi Retur secara diam-diam (agar stok lama kembali gudang & tercatat)
+            await this.processReturn(trxId, itemToExchange, qtyTukar, alasan + ' (Tukar Tambah)');
+            
+            // 4. Buat Item Bayangan (Saldo Potongan) untuk keranjang Kasir
+            let itemTukar = {
+                cartId: 'EXC-' + Date.now(),
+                productId: 'EXCHANGE', // Pakai ID dummy agar sistem tidak mencari stoknya
+                name: `[SALDO TUKAR] ${itemToExchange.name}`,
+                sku: 'TUKAR-01',
+                uom: '-',
+                qty: 1,
+                basePrice: 0,
+                sellPrice: -nominalSaldo, // PERHATIKAN: HARGANYA MINUS (Untuk memotong total)
+                promoPrice: -nominalSaldo,
+                posDiscountType: 'none', 
+                posDiscountValue: 0,
+                note: `Saldo tukar dari Inv: ${trxId}`,
+                isSeparated: true
+            };
+
+            // 5. Bawa uang (saldo) ke layar POS
+            this.cart = []; // Kosongkan keranjang sebelumnya (jika ada)
+            this.cart.push(itemTukar); // Masukkan saldo minus
+
+            // Set nama pelanggan agar struk baru menyambung dengan pelanggan yang sama
+            let cust = this.customers.find(c => c.name === this.activeInvoiceDetail.customer);
+            this.selectedCustomer = cust || null;
+
+            // 6. Tutup semua modal yang mungkin masih terbuka
+            let invModal = document.getElementById('invoiceDetailModal');
+            if(invModal) bootstrap.Modal.getInstance(invModal)?.hide();
+            
+            // 7. Lempar tampilan aplikasi ke layar Kasir (POS)
+            this.currentView = 'pos';
+            
+            // Beritahu Kasir Langkah Selanjutnya
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Pilih Barang Baru',
+                    text: `Saldo retur senilai (-Rp ${this.formatNumber(nominalSaldo)}) sudah dimasukkan ke keranjang. Silakan scan/pilih barang pengganti yang lebih mahal.`
+                });
+            }, 600);
+        }
+    });
 },
         
         testPrintReceipt() {
