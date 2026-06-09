@@ -5182,8 +5182,8 @@
                 <button type="button" class="btn btn-sm btn-danger fw-bold" @click="processReturn" :disabled="isProcessing || calculateRefundAmount() === 0">
                     <i class="bi bi-check-circle me-1"></i> Konfirmasi Retur
                 </button>
-                <button type="button" @click="prosesTukarTambah(returnForm.id, itemToReturn, returnQty, returnReason)" class="btn btn-warning text-dark">
-                <i class="fas fa-exchange-alt"></i> Tukar Tambah
+                <button type="button" @click="prosesTukarTambah()" class="btn btn-warning text-dark fw-bold">
+                Tukar Tambah
                 </button>
             </div>
         </div>
@@ -7042,13 +7042,14 @@
                     invItem.qty -= retItem.returnQty;
                     invItem.isReturned = true;
 
-                    // Catat ke memori struk
+                    let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
+
                     trx.returHistory.push({
-                        date: new Date().toLocaleString('id-ID'),
-                        productName: retItem.name,
-                        qtyRetur: retItem.returnQty,
-                        refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
-                        alasan: this.returnForm.reason || 'Retur Pelanggan'
+                    date: new Date().toLocaleString('id-ID'),
+                    productName: retItem.name + variantText, // <-- Sekarang akan menjadi: Baju (Merah - M)
+                    qtyRetur: retItem.returnQty,
+                    refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                    alasan: this.returnForm.reason || 'Retur Pelanggan'
                     });
                 }
             }
@@ -7110,68 +7111,184 @@
     }
 },
         
-        async prosesTukarTambah(trxId, itemToExchange, qtyTukar, alasan) {
-    // 1. Validasi Input
-    if (qtyTukar <= 0) return Swal.fire('Error', 'Qty harus lebih dari 0', 'error');
-    if (!itemToExchange) return Swal.fire('Error', 'Pilih barang yang ingin ditukar', 'error');
+        async prosesTukarTambah() {
+    // 1. Hitung total refund dari form retur
+    let refundTotal = this.calculateRefundAmount();
+    if (refundTotal <= 0) {
+        return Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin ditukar!', 'warning');
+    }
 
-    // Tanya konfirmasi
+    // 2. Konfirmasi ke Kasir
     Swal.fire({
         title: 'Tukar Tambah?',
-        text: 'Barang lama akan diretur (stok kembali) dan saldo akan dibawa ke layar Kasir untuk memotong harga barang pengganti.',
+        text: 'Barang ini akan diretur dan saldo uangnya akan dibawa ke layar Kasir untuk memotong harga barang baru.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#f59e0b',
-        confirmButtonText: 'Ya, Lanjut ke Kasir'
+        confirmButtonText: 'Ya, Bawa ke Kasir'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            
-            // 2. Hitung saldo uang yang bisa dipakai untuk beli barang baru
-            let nominalSaldo = itemToExchange.finalPrice * qtyTukar;
-            
-            // 3. Eksekusi fungsi Retur secara diam-diam (agar stok lama kembali gudang & tercatat)
-            await this.processReturn(trxId, itemToExchange, qtyTukar, alasan + ' (Tukar Tambah)');
-            
-            // 4. Buat Item Bayangan (Saldo Potongan) untuk keranjang Kasir
-            let itemTukar = {
-                cartId: 'EXC-' + Date.now(),
-                productId: 'EXCHANGE', // Pakai ID dummy agar sistem tidak mencari stoknya
-                name: `[SALDO TUKAR] ${itemToExchange.name}`,
-                sku: 'TUKAR-01',
-                uom: '-',
-                qty: 1,
-                basePrice: 0,
-                sellPrice: -nominalSaldo, // PERHATIKAN: HARGANYA MINUS (Untuk memotong total)
-                promoPrice: -nominalSaldo,
-                posDiscountType: 'none', 
-                posDiscountValue: 0,
-                note: `Saldo tukar dari Inv: ${trxId}`,
-                isSeparated: true
-            };
+            if (this.isProcessing) return;
+            this.isProcessing = true;
 
-            // 5. Bawa uang (saldo) ke layar POS
-            this.cart = []; // Kosongkan keranjang sebelumnya (jika ada)
-            this.cart.push(itemTukar); // Masukkan saldo minus
+            try {
+                let trxIdx = this.transactions.findIndex(t => t.id === this.returnForm.id);
+                if (trxIdx === -1) throw new Error("Transaksi tidak ditemukan");
+                let trx = JSON.parse(JSON.stringify(this.transactions[trxIdx]));
+                
+                if (!trx.returHistory) trx.returHistory = []; 
+                let daftarNamaBarangTukar = []; // Menyimpan nama barang untuk keranjang kasir
 
-            // Set nama pelanggan agar struk baru menyambung dengan pelanggan yang sama
-            let cust = this.customers.find(c => c.name === this.activeInvoiceDetail.customer);
-            this.selectedCustomer = cust || null;
+                // 3. LOOPING BARANG YANG DIKEMBALIKAN
+                for (let i = 0; i < this.returnForm.items.length; i++) {
+                    let retItem = this.returnForm.items[i];
+                    
+                    if (retItem.returnQty > 0) {
+                        // 🌟 GABUNGKAN NAMA & VARIAN AGAR MUNCUL DI STRUK 🌟
+                        let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
+                        let namaLengkap = retItem.name + variantText;
+                        daftarNamaBarangTukar.push(namaLengkap);
 
-            // 6. Tutup semua modal yang mungkin masih terbuka
-            let invModal = document.getElementById('invoiceDetailModal');
-            if(invModal) bootstrap.Modal.getInstance(invModal)?.hide();
-            
-            // 7. Lempar tampilan aplikasi ke layar Kasir (POS)
-            this.currentView = 'pos';
-            
-            // Beritahu Kasir Langkah Selanjutnya
-            setTimeout(() => {
+                        // A. Kembalikan Stok ke Gudang/Cabang
+                        let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                        if (prod) {
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            if (retItem.variantSku) {
+                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                                if (vIdx !== -1) {
+                                    if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                    prodCopy.variants[vIdx].outletStocks[trx.outletId] = (prodCopy.variants[vIdx].outletStocks[trx.outletId] || 0) + retItem.returnQty;
+                                }
+                            } else {
+                                if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                                prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + retItem.returnQty;
+                            }
+
+                            await updateDoc(doc(db, "products", prod.id), {
+                                variants: prodCopy.variants || [],
+                                baseOutletStocks: prodCopy.baseOutletStocks || {}
+                            });
+
+                            await this.logStock('IN', {
+                                productId: prod.id,
+                                sku: retItem.sku || prod.sku || '-',
+                                name: prod.name,
+                                variantSku: retItem.variantSku || null,
+                                variantName: retItem.variantName || '-',
+                                qty: retItem.returnQty,
+                                outletId: trx.outletId,
+                                refId: `TUKAR-${trx.id}`,
+                                note: `Tukar dari Inv: ${trx.id}`
+                            });
+                        }
+
+                        // B. Potong Invoice Lama & Masukkan ke History Struk
+                        let invItem = trx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+                        if (invItem) {
+                            invItem.qty -= retItem.returnQty;
+                            invItem.isReturned = true;
+
+                            // Simpan namaLengkap ke history agar Struk mencetak Variannya
+                            trx.returHistory.push({
+                                date: new Date().toLocaleString('id-ID'),
+                                productName: namaLengkap, // <--- VARIAN DISIMPAN DI SINI
+                                qtyRetur: retItem.returnQty,
+                                refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                                alasan: this.returnForm.reason || 'Tukar Tambah'
+                            });
+                        }
+                    }
+                }
+
+                // 4. Update Sisa Tagihan Invoice Lama
+                trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || 0)), 0);
+                trx.total -= refundTotal;
+                if (trx.total < 0) trx.total = 0;
+                trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
+
+                let isSisaBarangAda = trx.items.some(i => i.qty > 0);
+                trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+                trx.status = trx.paymentStatus; 
+
+                trx.paymentHistory = trx.paymentHistory || [];
+                trx.paymentHistory.push({
+                    date: new Date().toLocaleString('id-ID'),
+                    method: 'SALDO TUKAR',
+                    amount: -refundTotal,
+                    note: 'Potongan Tukar Tambah'
+                });
+
+                // Simpan ke Firebase
+                await updateDoc(doc(db, "transactions", trx.id), {
+                    items: trx.items,
+                    total: trx.total,
+                    subtotal: trx.subtotal,
+                    sisaTagihan: trx.sisaTagihan,
+                    paymentStatus: trx.paymentStatus,
+                    status: trx.status,
+                    paymentHistory: trx.paymentHistory,
+                    returHistory: trx.returHistory 
+                });
+
+                this.transactions[trxIdx] = trx;
+                if (this.activeInvoiceDetail && this.activeInvoiceDetail.id === trx.id) {
+                     this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx));
+                }
+
+                // =======================================================
+                // 5. BAWA SALDO MINUS KE KERANJANG KASIR SEBAGAI POTONGAN
+                // =======================================================
+                let itemTukar = {
+                    cartId: 'EXC-' + Date.now(),
+                    productId: 'EXCHANGE', 
+                    name: `[SALDO TUKAR] ${daftarNamaBarangTukar.join(', ')}`, // Nama item yang ditukar
+                    sku: 'TUKAR-01',
+                    uom: '-',
+                    qty: 1,
+                    basePrice: 0,
+                    sellPrice: -refundTotal, // NILAI MINUS UNTUK MEMOTONG TAGIHAN
+                    promoPrice: -refundTotal,
+                    posDiscountType: 'none', 
+                    posDiscountValue: 0,
+                    note: `Saldo tukar dari Inv: ${trx.id}`,
+                    isSeparated: true
+                };
+
+                this.cart = []; 
+                this.cart.push(itemTukar); // Masukkan saldo ke keranjang
+
+                // Sambungkan nama pelanggan ke Kasir
+                if (trx.customer) {
+                    let cust = this.customers.find(c => c.name === trx.customer);
+                    this.selectedCustomer = cust || { name: trx.customer };
+                }
+
+                // Tutup Modal Form Retur
+                let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
+                if (returnModal) returnModal.hide();
+
+                // Tutup Modal Invoice (Jika terbuka)
+                let invModal = document.getElementById('invoiceDetailModal');
+                if(invModal) {
+                    let im = bootstrap.Modal.getInstance(invModal);
+                    if (im) im.hide();
+                }
+                
+                // Lempar Aplikasi ke Halaman Kasir (POS)
+                this.currentView = 'pos';
+                
                 Swal.fire({
                     icon: 'info',
-                    title: 'Pilih Barang Baru',
-                    text: `Saldo retur senilai (-Rp ${this.formatNumber(nominalSaldo)}) sudah dimasukkan ke keranjang. Silakan scan/pilih barang pengganti yang lebih mahal.`
+                    title: 'Silakan Pilih Barang Baru',
+                    text: `Saldo senilai (-Rp ${this.formatNumber(refundTotal)}) telah masuk ke keranjang kasir untuk memotong harga barang baru.`
                 });
-            }, 600);
+
+            } catch (error) {
+                console.error("Gagal Tukar:", error);
+                Swal.fire('Error', 'Gagal memproses tukar tambah: ' + error.message, 'error');
+            } finally {
+                this.isProcessing = false;
+            }
         }
     });
 },
