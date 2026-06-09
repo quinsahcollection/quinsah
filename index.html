@@ -3170,26 +3170,35 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
-                                            <td class="ps-3 py-2">
-                                                <div class="fw-bold text-primary">{{ trx.id }}</div>
-                                                <div class="text-muted" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
-                                            </td>
-                                            <td><span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span></td>
-                                            <td class="text-end fw-semibold text-success">Rp {{ formatNumber(trx.total) }}</td>
-                                            <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
-                                            <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(trx.profit) }}</td>
-                                            <td class="text-center pe-3">
-                                                <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">{{ trx.margin.toFixed(1) }}%</span>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="processedReportData.length === 0">
-                                            <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
-                                                <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
-                                                <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+    <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
+        <td class="ps-3 py-2">
+            <!-- 🌟 PERBAIKAN: Invoice bisa diklik untuk buka modal detail -->
+            <!-- Pastikan nama fungsi "viewTransaction" sesuai dengan fungsi buka modal Anda (bisa jg showInvoiceDetail) -->
+            <a href="#" @click.prevent="viewTransaction(trx)" class="fw-bold text-primary text-decoration-none">
+                <i class="bi bi-box-arrow-up-right me-1 small"></i>{{ trx.id }}
+            </a>
+            <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
+        </td>
+        <td><span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span></td>
+        
+        <!-- 🌟 PERBAIKAN: Panggil omsetReport yang benar -->
+        <td class="text-end fw-semibold text-success">
+            Rp {{ formatNumber(trx.omsetReport !== undefined ? trx.omsetReport : trx.total) }}
+        </td>
+        
+        <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
+        <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(trx.profit) }}</td>
+        <td class="text-center pe-3">
+            <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">{{ trx.margin.toFixed(1) }}%</span>
+        </td>
+    </tr>
+    <tr v-if="processedReportData.length === 0">
+        <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
+            <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+            <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
+        </td>
+    </tr>
+</tbody>
                                 </table>
                             </div>
                         </div>
@@ -6460,30 +6469,48 @@
                 let omsetMurni = 0; // Omset bersih tanpa gangguan Tukar Tambah
 
                 if (trx.items && Array.isArray(trx.items)) {
-                    trx.items.forEach(item => {
+                  trx.items.forEach(item => {
     // 1. FILTER: Abaikan item bayangan Tukar Tambah
     if (item.productId !== 'EXCHANGE') {
         
-        // 2. STRATEGI MENCARI HPP (Coba dari yang paling spesifik ke umum)
-        // Cek: totalCogs (FEFO), lalu basePrice, lalu cost, lalu hppPrice, lalu harga beli (buyPrice)
-        let hppSatuan = item.totalCogs ? (item.totalCogs / item.qty) : 
-                        (item.basePrice || item.cost || item.hppPrice || item.buyPrice || 0);
+        let currentQty = item.qty || 0;
+        let originalQty = currentQty;
+        
+        // 2. CARI TAHU QTY ASLI (Sebelum Diretur)
+        if (trx.returHistory && Array.isArray(trx.returHistory)) {
+            trx.returHistory.forEach(retur => {
+                // Jika nama barang di history retur cocok dengan barang ini
+                if (retur.productName && retur.productName.includes(item.name)) {
+                    originalQty += (retur.qtyRetur || 0);
+                }
+            });
+        }
 
-        // Jika hppSatuan masih 0, coba cari di Master Produk (ini fitur tambahan agar lebih akurat)
+        let hppSatuan = 0;
+
+        // 3. CARI HPP SATUAN (Membongkar nilai totalCogs FEFO)
+        if (item.totalCogs && item.totalCogs > 0 && originalQty > 0) {
+            hppSatuan = item.totalCogs / originalQty; // Cogs dibagi total barang awal (contoh: 325rb / 5 = 65rb)
+        } 
+        // Fallback jika bukan barang FEFO
+        else {
+            hppSatuan = item.basePrice || item.cost || item.hppPrice || item.buyPrice || 0;
+        }
+
+        // Fallback terakhir ke Master Produk (Jika di nota benar-benar kosong)
         if (hppSatuan === 0 && this.products) {
             let masterProd = this.products.find(p => p.id === item.productId);
             if (masterProd) {
-                // Ambil harga beli dari master produk
                 hppSatuan = masterProd.basePrice || masterProd.cost || 0;
             }
         }
 
-        // 3. Hitung total HPP untuk item ini
-        let hppItem = hppSatuan * (item.qty || 0);
+        // 4. HITUNG TOTAL AKURAT (Hanya kalikan dengan sisa barang saat ini)
+        let hppItem = hppSatuan * currentQty;
         totalHppNota += hppItem;
 
-        // 4. Hitung Omset
-        omsetMurni += ((item.finalPrice || item.sellPrice || 0) * (item.qty || 0));
+        // Hitung Omset Murni
+        omsetMurni += ((item.finalPrice || item.sellPrice || 0) * currentQty);
     }
 });
                 }
