@@ -6455,180 +6455,206 @@
                 }
                 
                 // Hitung Omset, HPP, Laba, & Margin per Nota
-                return trxs.map(trx => {
-                    let totalHppNota = 0;
-                    
-                    if (trx.items && Array.isArray(trx.items)) {
-                        trx.items.forEach(item => {
-                            // --- PERBAIKAN FEFO ---
-                            // 1. Cek apakah ada HPP Dinamis dari FEFO (totalCogs)
-                            if (item.totalCogs && item.totalCogs > 0) {
-                                totalHppNota += item.totalCogs;
-                            } 
-                            // 2. Jika tidak ada (misal transaksi lama sebelum FEFO), pakai HPP Master
-                            else {
-                                let hppSatuan = item.basePrice || item.cost || item.hppPrice || 0; 
-                                totalHppNota += (hppSatuan * (item.qty || 0));
-                            }
-                        });
-                    }
-                    
-                    let omset = trx.total || 0;
-                    let profit = omset - totalHppNota;
-                    let margin = omset > 0 ? (profit / omset) * 100 : 0;
-                    
-                    return {
-                        ...trx,
-                        totalHppNota,
-                        profit,
-                        margin
-                    };
-                }).sort((a, b) => {
-                    // Urutkan dari transaksi paling gres/baru
-                    let timeA = (a.createdAt && typeof a.createdAt.toMillis === 'function') ? a.createdAt.toMillis() : (a.createdAt || 0);
-                    let timeB = (b.createdAt && typeof b.createdAt.toMillis === 'function') ? b.createdAt.toMillis() : (b.createdAt || 0);
-                    return timeB - timeA;
-                });
-            },
+            return trxs.map(trx => {
+                let totalHppNota = 0;
+                let omsetMurni = 0; // Omset bersih tanpa gangguan Tukar Tambah
 
-            // 2. AKUMULASI TOTAL BESAR UNTUK KARTU RINGKASAN ATAS
-            reportFinancialSummary() {
-                let totalOmset = 0;
-                let totalHpp = 0;
-                let totalDiskon = 0;
-                let totalTrx = this.processedReportData.length;
+                if (trx.items && Array.isArray(trx.items)) {
+                    trx.items.forEach(item => {
+    // 1. FILTER: Abaikan item bayangan Tukar Tambah
+    if (item.productId !== 'EXCHANGE') {
+        
+        // 2. STRATEGI MENCARI HPP (Coba dari yang paling spesifik ke umum)
+        // Cek: totalCogs (FEFO), lalu basePrice, lalu cost, lalu hppPrice, lalu harga beli (buyPrice)
+        let hppSatuan = item.totalCogs ? (item.totalCogs / item.qty) : 
+                        (item.basePrice || item.cost || item.hppPrice || item.buyPrice || 0);
 
-                this.processedReportData.forEach(t => {
-                    totalOmset += (t.total || 0);
-                    totalHpp += (t.totalHppNota || 0);
-                    totalDiskon += (t.discountAmt || 0) + (t.globalDiscountAmt || 0);
-                });
+        // Jika hppSatuan masih 0, coba cari di Master Produk (ini fitur tambahan agar lebih akurat)
+        if (hppSatuan === 0 && this.products) {
+            let masterProd = this.products.find(p => p.id === item.productId);
+            if (masterProd) {
+                // Ambil harga beli dari master produk
+                hppSatuan = masterProd.basePrice || masterProd.cost || 0;
+            }
+        }
 
-                let labaBersih = totalOmset - totalHpp;
-                let marginRataRata = totalOmset > 0 ? (labaBersih / totalOmset) * 100 : 0;
+        // 3. Hitung total HPP untuk item ini
+        let hppItem = hppSatuan * (item.qty || 0);
+        totalHppNota += hppItem;
 
-                return { totalOmset, totalHpp, labaBersih, totalDiskon, marginRataRata, totalTrx };
-            },
-
-            totalPotensiOmset() {
-                let total = 0;
-                this.filteredInventoryProducts.forEach(p => {
-                    if (p.variants && p.variants.length > 0) {
-                        p.variants.forEach(v => {
-                            let qty = this.invOutletFilter ? (v.outletStocks && v.outletStocks[this.invOutletFilter] ? v.outletStocks[this.invOutletFilter] : 0) : this.getVariantTotalStock(v);
-                            total += (qty * (this.getEffectiveVariantPrice(p, v) || 0));
-                        });
-                    } else {
-                        let qty = this.invOutletFilter ? this.getProductStockAtOutlet(p, this.invOutletFilter) : this.getBaseTotalStock(p);
-                        total += (qty * (this.getEffectiveBasePrice(p) || 0));
-                    }
-                });
-                return total;
-            },
-
-            // 3. MESIN ANALITIK UNTUK GRAFIK (PRODUK, KATEGORI, JAM SIBUK)
-            analyticsData() {
-                let products = {};
-                let categories = {};
-                // Siapkan array kosong untuk 24 jam (00:00 - 23:59)
-                let hours = Array(24).fill(0).map((_, i) => ({ jam: i, qty: 0, omset: 0, count: 0 }));
+        // 4. Hitung Omset
+        omsetMurni += ((item.finalPrice || item.sellPrice || 0) * (item.qty || 0));
+    }
+});
+                }
                 
-                // 🟢 TAMBAHAN 1: Wadah penampung untuk metode pembayaran
-                let payments = {}; 
+                // Kurangi diskon global/invoice jika ada
+                omsetMurni -= (trx.globalDiscountAmt || 0);
+                if (omsetMurni < 0) omsetMurni = 0; // Keamanan agar tidak minus
+                
+                let omset = omsetMurni; 
+                let profit = omset - totalHppNota;
+                let margin = omset > 0 ? (profit / omset) * 100 : 0;
+                
+                return {
+                    ...trx,
+                    totalHppNota,
+                    omsetReport: omset, 
+                    profit,
+                    margin
+                };
+            }).sort((a, b) => {
+                // Urutkan dari transaksi paling baru
+                let timeA = (a.createdAt && typeof a.createdAt.toMillis === 'function') ? a.createdAt.toMillis() : (a.createdAt || 0);
+                let timeB = (b.createdAt && typeof b.createdAt.toMillis === 'function') ? b.createdAt.toMillis() : (b.createdAt || 0);
+                return timeB - timeA;
+            });
+            },
 
-                this.processedReportData.forEach(trx => {
-                    // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
-                    let dateObj = null;
-                    if (trx.createdAt && typeof trx.createdAt.toMillis === 'function') {
-                        dateObj = new Date(trx.createdAt.toMillis());
-                    } else if (trx.createdAt) {
-                        dateObj = new Date(trx.createdAt);
-                    }
-                    
-                    if (dateObj && !isNaN(dateObj.getTime())) {
-                        let h = dateObj.getHours();
-                        hours[h].count += 1; 
-                        hours[h].omset += (trx.total || 0); 
-                    }
+        // 2. AKUMULASI TOTAL BESAR UNTUK KARTU RINGKASAN ATAS
+        reportFinancialSummary() {
+            let totalOmset = 0;
+            let totalHpp = 0;
+            let totalDiskon = 0;
+            let totalTrx = this.processedReportData.length;
 
-                    // --- B. ANALITIK PRODUK & KATEGORI ---
-                    if (trx.items && Array.isArray(trx.items)) {
-                        trx.items.forEach(item => {
-                            // 1. Deteksi Harga & Omset (Pencegah Kosong/Blank)
-                            let itemPrice = Number(item.price) || Number(item.sellPrice) || Number(item.basePrice) || 0;
-                            let itemQty = Number(item.qty) || 0;
-                            let itemSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : (itemPrice * itemQty);
-                            
-                            // Jika harga 0 tapi nota punya total (Kasus Diskon/Manual)
-                            if (itemSubtotal === 0 && trx.total > 0 && trx.items.length === 1) {
-                                itemSubtotal = trx.total;
-                            }
+            this.processedReportData.forEach(t => {
+                // 🌟 PENTING: Gunakan omsetReport (murni), bukan t.total (yang sudah terpotong tukar tambah)
+                totalOmset += (t.omsetReport !== undefined ? t.omsetReport : (t.total || 0));
+                totalHpp += (t.totalHppNota || 0);
+                totalDiskon += (t.discountAmt || 0) + (t.globalDiscountAmt || 0);
+            });
 
-                            // 2. Rekap Produk Terlaris
-                            let key = item.variantSku || item.productId || 'Item_Umum';
-                            let name = item.name || 'Produk Kustom';
-                            if (item.variantName && item.variantName !== '-') name += ' - ' + item.variantName;
-                            
-                            if (!products[key]) products[key] = { name: name, qty: 0, omset: 0 };
-                            products[key].qty += itemQty;
-                            products[key].omset += itemSubtotal;
+            let labaBersih = totalOmset - totalHpp;
+            let marginRataRata = totalOmset > 0 ? (labaBersih / totalOmset) * 100 : 0;
 
-                            // 3. Rekap Penjualan per Kategori (Mencocokkan dengan Master Produk)
-                            let catName = 'Kategori Umum / Lainnya';
-                            if (this.products && this.products.length > 0) {
-                                let prodMaster = this.products.find(p => p.id === item.productId);
-                                if (prodMaster) {
-                                    if (prodMaster.categoryId && this.categories && this.categories.length > 0) {
-                                        let cat = this.categories.find(c => c.id === prodMaster.categoryId);
-                                        if (cat && cat.name) catName = cat.name;
-                                    } else if (prodMaster.categoryName) {
-                                        catName = prodMaster.categoryName;
-                                    }
+            return { totalOmset, totalHpp, labaBersih, totalDiskon, marginRataRata, totalTrx };
+        },
+
+        totalPotensiOmset() {
+            let total = 0;
+            this.filteredInventoryProducts.forEach(p => {
+                if (p.variants && p.variants.length > 0) {
+                    p.variants.forEach(v => {
+                        let qty = this.invOutletFilter ? (v.outletStocks && v.outletStocks[this.invOutletFilter] ? v.outletStocks[this.invOutletFilter] : 0) : this.getVariantTotalStock(v);
+                        total += (qty * (this.getEffectiveVariantPrice(p, v) || 0));
+                    });
+                } else {
+                    let qty = this.invOutletFilter ? this.getProductStockAtOutlet(p, this.invOutletFilter) : this.getBaseTotalStock(p);
+                    total += (qty * (this.getEffectiveBasePrice(p) || 0));
+                }
+            });
+            return total;
+        },
+
+        // 3. MESIN ANALITIK UNTUK GRAFIK (PRODUK, KATEGORI, JAM SIBUK)
+        analyticsData() {
+            let products = {};
+            let categories = {};
+            // Siapkan array kosong untuk 24 jam (00:00 - 23:59)
+            let hours = Array(24).fill(0).map((_, i) => ({ jam: i, qty: 0, omset: 0, count: 0 }));
+            
+            // Wadah penampung untuk metode pembayaran
+            let payments = {}; 
+
+            this.processedReportData.forEach(trx => {
+                // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
+                let dateObj = null;
+                if (trx.createdAt && typeof trx.createdAt.toMillis === 'function') {
+                    dateObj = new Date(trx.createdAt.toMillis());
+                } else if (trx.createdAt) {
+                    dateObj = new Date(trx.createdAt);
+                }
+                
+                if (dateObj && !isNaN(dateObj.getTime())) {
+                    let h = dateObj.getHours();
+                    hours[h].count += 1; 
+                    // 🌟 Gunakan Omset Asli untuk Peak Hour, bukan total kasir
+                    hours[h].omset += (trx.omsetReport !== undefined ? trx.omsetReport : (trx.total || 0)); 
+                }
+
+                // --- B. ANALITIK PRODUK & KATEGORI ---
+                if (trx.items && Array.isArray(trx.items)) {
+                    // Filter lagi agar "Tukar Tambah" tidak masuk chart produk terlaris!
+                    let barangAsli = trx.items.filter(item => item.productId !== 'EXCHANGE');
+
+                    barangAsli.forEach(item => {
+                        // 1. Deteksi Harga & Omset (Pencegah Kosong/Blank)
+                        let itemPrice = Number(item.price) || Number(item.sellPrice) || Number(item.basePrice) || 0;
+                        let itemQty = Number(item.qty) || 0;
+                        let itemSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : (itemPrice * itemQty);
+                        
+                        // Jika harga 0 tapi nota punya total (Kasus Diskon/Manual)
+                        if (itemSubtotal === 0 && trx.omsetReport > 0 && barangAsli.length === 1) {
+                            itemSubtotal = trx.omsetReport;
+                        }
+
+                        // 2. Rekap Produk Terlaris
+                        let key = item.variantSku || item.productId || 'Item_Umum';
+                        let name = item.name || 'Produk Kustom';
+                        if (item.variantName && item.variantName !== '-') name += ' - ' + item.variantName;
+                        
+                        if (!products[key]) products[key] = { name: name, qty: 0, omset: 0 };
+                        products[key].qty += itemQty;
+                        products[key].omset += itemSubtotal;
+
+                        // 3. Rekap Penjualan per Kategori (Mencocokkan dengan Master Produk)
+                        let catName = 'Kategori Umum / Lainnya';
+                        if (this.products && this.products.length > 0) {
+                            let prodMaster = this.products.find(p => p.id === item.productId);
+                            if (prodMaster) {
+                                if (prodMaster.categoryId && this.categories && this.categories.length > 0) {
+                                    let cat = this.categories.find(c => c.id === prodMaster.categoryId);
+                                    if (cat && cat.name) catName = cat.name;
+                                } else if (prodMaster.categoryName) {
+                                    catName = prodMaster.categoryName;
                                 }
                             }
-                            
-                            if (!categories[catName]) categories[catName] = { name: catName, omset: 0, qty: 0 };
-                            categories[catName].qty += itemQty;
-                            categories[catName].omset += itemSubtotal;
-                        });
-                    }
+                        }
+                        
+                        if (!categories[catName]) categories[catName] = { name: catName, omset: 0, qty: 0 };
+                        categories[catName].qty += itemQty;
+                        categories[catName].omset += itemSubtotal;
+                    });
+                }
 
-                    // 🟢 TAMBAHAN 2: Menghitung Omset berdasarkan Metode Pembayaran
-                    let payMethod = trx.paymentMethod || 'Tunai / Cash'; 
-                    if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
-                    
-                    payments[payMethod].total += (trx.total || 0);
-                    payments[payMethod].count += 1;
-
-                });
-
-                // Urutkan Data (Sorting) dari yang Terlaris
-                let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10);
-                let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
+                // --- C. METODE PEMBAYARAN ---
+                let payMethod = trx.paymentMethod || 'Tunai / Cash'; 
+                if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
                 
-                // 🟢 TAMBAHAN 3: Sorting Metode Pembayaran
-                let topPayments = Object.values(payments).sort((a, b) => b.total - a.total);
-                
-                // Cari nilai skala maksimum untuk tinggi tiang animasi
-                let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
-                let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
-                let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
-                
-                // 🟢 TAMBAHAN 4: Mencari nilai omset pembayaran tertinggi untuk skala grafik
-                let maxPayment = topPayments.length > 0 ? topPayments[0].total : 1;
+                // Khusus Chart Payment Method, kita pakai trx.total (Kas Uang Riil yang dibayar Pelanggan)
+                payments[payMethod].total += (trx.total || 0);
+                payments[payMethod].count += 1;
 
-                // 🟢 TAMBAHAN 5: Memasukkan paymentMethods & maxPayment ke dalam Return
-                return { 
-                    topProducts, 
-                    topCategories, 
-                    peakHours: hours, 
-                    maxHourCount, 
-                    maxProdQty, 
-                    maxCatOmset,
-                    paymentMethods: topPayments, 
-                    maxPayment: maxPayment 
-                };
-            },
+            });
+
+            // Urutkan Data (Sorting) dari yang Terlaris
+            let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10);
+            let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
+            
+            // Sorting Metode Pembayaran
+            let topPayments = Object.values(payments).sort((a, b) => b.total - a.total);
+            
+            // Cari nilai skala maksimum untuk tinggi tiang animasi
+            let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
+            let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
+            let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
+            
+            // Mencari nilai omset pembayaran tertinggi untuk skala grafik
+            let maxPayment = topPayments.length > 0 ? topPayments[0].total : 1;
+
+            // Memasukkan paymentMethods & maxPayment ke dalam Return
+            return { 
+                topProducts, 
+                topCategories, 
+                peakHours: hours, 
+                maxHourCount, 
+                maxProdQty, 
+                maxCatOmset,
+                paymentMethods: topPayments, 
+                maxPayment: maxPayment 
+            };
+        },
 
             filteredStockLogs() {
                 let logs = this.stockLogs;
