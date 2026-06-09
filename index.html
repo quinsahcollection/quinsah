@@ -5192,234 +5192,276 @@
 
    <div id="print-section">
         
-        <!-- ========================================== -->
-        <!-- 1. CETAK THERMAL 80mm / 58mm               -->
-        <!-- ========================================== -->
-        <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt" 
-             :style="(appSettings.defaultPrintSize === '58mm') ? 'width: 220px; font-family: monospace; font-size: 10px; color: #000; margin: 0 auto;' : 'width: 320px; font-family: monospace; font-size: 13px; color: #000; margin: 0 auto;'">
-            
-            <div style="text-align: center; margin-bottom: 10px;">
-                <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 60%; max-height: 80px; margin-bottom: 8px; object-fit: contain;">
-                <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
-                <div style="margin-top: 4px; font-size: 0.9em; color: #444; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
-                <div v-if="appSettings && appSettings.storePhone" style="font-size: 0.9em; color: #444; margin-top: 2px;">Telp: {{ appSettings.storePhone }}</div>
+    <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt" 
+         :style="(appSettings.defaultPrintSize === '58mm') ? 'width: 220px; font-family: monospace; font-size: 10px; color: #000; margin: 0 auto;' : 'width: 320px; font-family: monospace; font-size: 13px; color: #000; margin: 0 auto;'">
+        
+        <div style="text-align: center; margin-bottom: 10px;">
+            <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 60%; max-height: 80px; margin-bottom: 8px; object-fit: contain;">
+            <div style="font-weight: 800; font-size: 1.3em; letter-spacing: 0.5px; font-family: sans-serif;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+            <div style="margin-top: 4px; font-size: 0.9em; color: #444; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
+            <div v-if="appSettings && appSettings.storePhone" style="font-size: 0.9em; color: #444; margin-top: 2px;">Telp: {{ appSettings.storePhone }}</div>
+        </div>
+        
+        <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 3px;">
+            <span>Inv: <b>{{ activePrintData.id }}</b></span>
+            <span>{{ activePrintData.dateStr }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.9em;">
+            <span>Kasir: {{ activePrintData.cashierName }}</span>
+            <span>Plg: {{ activePrintData.customer }}</span>
+        </div>
+        <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+        
+        <div v-for="i in activePrintData.items.filter(item => item.productId !== 'EXCHANGE')" :key="i.cartId" style="margin-bottom: 8px;">
+            <div style="font-weight: bold; font-size: 1.05em;">{{ i.name }}</div>
+            <div v-if="i.variantName" style="font-size: 0.85em; color: #555; margin-bottom: 2px;">Varian: {{ i.variantName }}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice || i.sellPrice) }}</span>
+                <span style="font-weight: bold;">{{ formatNumber(i.qty * (i.finalPrice || i.sellPrice)) }}</span>
             </div>
-            
-            <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 3px;">
-                <span>Inv: <b>{{ activePrintData.id }}</b></span>
-                <span>{{ activePrintData.dateStr }}</span>
+        </div>
+
+        <div v-if="activePrintData.items.some(item => item.productId === 'EXCHANGE')" style="margin-top: 8px; padding: 6px; border: 1px dashed #333; border-radius: 4px; background-color: #f4f4f5;">
+            <div style="font-weight: bold; font-size: 0.85em; text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 4px;">
+                POTONGAN TUKAR TAMBAH
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9em;">
-                <span>Kasir: {{ activePrintData.cashierName }}</span>
-                <span>Plg: {{ activePrintData.customer }}</span>
-            </div>
-            <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
-            
-            <div v-for="i in activePrintData.items" :key="i.cartId" style="margin-bottom: 8px;">
-                <div style="font-weight: bold; font-size: 1.05em;">{{ i.name }}</div>
-                <div v-if="i.variantName" style="font-size: 0.85em; color: #555; margin-bottom: 2px;">Varian: {{ i.variantName }}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice) }}</span>
-                    <span style="font-weight: bold;">{{ formatNumber(i.qty * i.finalPrice) }}</span>
+            <div v-for="i in activePrintData.items.filter(item => item.productId === 'EXCHANGE')" :key="i.cartId" style="font-size: 0.85em;">
+                <div style="font-weight: bold; color: #555;">Nilai Barang Lama:</div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="font-style: italic; max-width: 65%;">{{ i.name.replace('[SALDO TUKAR] ', '') }}</span>
+                    <span style="color: #dc3545; font-weight: bold;">-{{ formatNumber(Math.abs(i.qty * (i.finalPrice || i.sellPrice))) }}</span>
                 </div>
             </div>
-            
-            <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
-            
-            <!-- TOTALS THERMAL (KEMBALI NORMAL, RATA KANAN SAJA) -->
-            <div style="display: flex; justify-content: flex-end;">
-                <table style="width: 90%; font-size: 0.95em;">
-                    <tr v-if="activePrintData.subtotal > 0"><td style="padding-bottom:3px;">Subtotal</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.subtotal) }}</td></tr>
-                    <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0"><td style="padding-bottom:3px;">Diskon Item</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td></tr>
-                    <tr v-if="activePrintData.globalDiscountAmt > 0"><td style="padding-bottom:3px;">Diskon Invoice</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
-                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding-bottom:3px;">PPN</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
-                    <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
-                    <tr><td style="padding-top:5px; text-transform:uppercase;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align: right; padding-top:5px;">{{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
-                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="font-weight:bold;">KEMBALI</td><td style="text-align: right; font-weight:bold;">{{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
-                    <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
-                </table>
-            </div>
-            
-            <!-- MASUKKAN KE AREA PRINT ASLI -->
-            <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
+        </div>
+        
+        <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+        
+        <div style="display: flex; justify-content: flex-end;">
+            <table style="width: 90%; font-size: 0.95em;">
+                <tr>
+                    <td style="padding-bottom:3px;">Subtotal Baru</td>
+                    <td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.items.filter(item => item.productId !== 'EXCHANGE').reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice)), 0)) }}</td>
+                </tr>
+                
+                <tr v-if="activePrintData.items.some(item => item.productId === 'EXCHANGE')">
+                    <td style="padding-bottom:3px; color: #dc3545;">Potongan Tukar</td>
+                    <td style="text-align: right; padding-bottom:3px; color: #dc3545; font-weight:bold;">-{{ formatNumber(Math.abs(activePrintData.items.filter(item => item.productId === 'EXCHANGE').reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice)), 0))) }}</td>
+                </tr>
+
+                <tr v-if="(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) > 0"><td style="padding-bottom:3px;">Diskon Item</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.discountAmt - (activePrintData.globalDiscountAmt || 0)) }}</td></tr>
+                <tr v-if="activePrintData.globalDiscountAmt > 0"><td style="padding-bottom:3px;">Diskon Invoice</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
+                <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding-bottom:3px;">PPN</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
+                
+                <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
+                <tr><td style="padding-top:5px; text-transform:uppercase;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="text-align: right; padding-top:5px;">{{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
+                <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="font-weight:bold;">KEMBALI</td><td style="text-align: right; font-weight:bold;">{{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
+                <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
+            </table>
+        </div>
+        
+        <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
             <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
-            INFO RETUR / REFUND
+                INFO RETUR / REFUND
             </div>
     
             <div v-for="(retur, idx) in activePrintData.returHistory" :key="idx" style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 6px;">
-            <span style="width: 65%;">
-            <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
-            <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
-            </span>
-            <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
-            - Rp {{ formatNumber(retur.refundAmount) }}
-          </span>
-    </div>
+                <span style="width: 65%;">
+                    <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+                    <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
+                </span>
+                <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
+                    - Rp {{ formatNumber(retur.refundAmount) }}
+                </span>
+            </div>
     
-    <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
-        TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
-    </div>
-</div>
-
-            <div v-if="appSettings && appSettings.termsAndConditions" style="border-top: 1px dashed #000; margin: 15px 0 10px; padding-top: 10px;">
-                <div style="font-weight:bold; margin-bottom:3px; font-size:0.9em; text-transform:uppercase;">Syarat & Ketentuan:</div>
-                <div style="white-space: pre-wrap; line-height: 1.3; font-size: 0.85em;">{{ appSettings.termsAndConditions }}</div>
-            </div>
-
-            <div style="border-top: 1px dashed #000; margin: 15px 0 10px;"></div>
-
-            <div v-if="appSettings && appSettings.showQrCode" style="text-align: center; margin-bottom: 15px;">
-                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://quinsah.com/inv/' + activePrintData.id" style="width: 80px; height: 80px; margin-bottom: 4px;">
-                <div style="font-size: 0.85em; font-weight: bold;">Scan untuk e-Receipt</div>
-            </div>
-
-            <div style="text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; font-size:0.85em; font-family: sans-serif;">
-                    <div v-if="appSettings && appSettings.socialWa"><i class="bi bi-whatsapp"></i> {{ appSettings.socialWa }}</div>
-                    <div v-if="appSettings && appSettings.socialIg"><i class="bi bi-instagram"></i> {{ appSettings.socialIg }}</div>
-                    <div v-if="appSettings && appSettings.socialFb"><i class="bi bi-facebook"></i> {{ appSettings.socialFb }}</div>
-                    <div v-if="appSettings && appSettings.socialTiktok">TikTok: {{ appSettings.socialTiktok }}</div>
-                    <div v-if="appSettings && appSettings.socialShopee">Shopee: {{ appSettings.socialShopee }}</div>
-                    <div v-if="appSettings && appSettings.socialTokped">Tokped: {{ appSettings.socialTokped }}</div>
-                    <div v-if="appSettings && appSettings.socialLazada">Lazada: {{ appSettings.socialLazada }}</div>
-                    <div v-if="appSettings && appSettings.socialBlibli">Blibli: {{ appSettings.socialBlibli }}</div>
-                </div>
-                <div style="font-style: italic; font-size: 0.85em; white-space: pre-wrap;">{{ (appSettings && appSettings.receiptFooter) ? appSettings.receiptFooter : 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
+            <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
+                TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- 2. CETAK INVOICE A4 (INFO PEMBAYARAN DI SINI) -->
-        <!-- ========================================== -->
-        <div v-if="printMode === 'invoiceA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom: 30px;">
-                <div>
-                    <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 150px; max-height: 80px; margin-bottom: 10px; object-fit: contain;">
-                    <div style="color: #991b1b; font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
-                    <div style="color: #666; font-size: 14px; max-width: 300px; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
-                    <div v-if="appSettings && appSettings.storePhone" style="color: #666; font-size: 14px; margin-top: 4px;">Telp: {{ appSettings.storePhone }}</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="color: #d1d5db; font-size: 36px; font-weight: 800; letter-spacing: 3px; line-height: 1;">INVOICE</div>
-                    <div style="font-size: 16px; font-weight: 800; margin-top: 15px;"># {{ activePrintData.id }}</div>
-                    <div style="font-size: 14px; margin-top: 4px;">Tanggal: {{ activePrintData.dateStr }}</div>
-                </div>
-            </div>
+        <div v-if="appSettings && appSettings.termsAndConditions" style="border-top: 1px dashed #000; margin: 15px 0 10px; padding-top: 10px;">
+            <div style="font-weight:bold; margin-bottom:3px; font-size:0.9em; text-transform:uppercase;">Syarat & Ketentuan:</div>
+            <div style="white-space: pre-wrap; line-height: 1.3; font-size: 0.85em;">{{ appSettings.termsAndConditions }}</div>
+        </div>
 
-            <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; display: flex; margin-bottom: 30px; font-size: 14px;">
-                <div style="width: 50%;">
-                    <div style="color: #6b7280; font-weight: 800; font-size: 11px; margin-bottom: 8px;">DITERBITKAN OLEH:</div>
-                    <div style="font-size: 15px; font-weight: 800; margin-bottom: 5px;">Kasir: {{ activePrintData.cashierName }}</div>
-                    <div>Cabang: {{ getOutletName(activePrintData.outletId) }}</div>
-                </div>
-                <div style="width: 50%;">
-                    <div style="color: #6b7280; font-weight: 800; font-size: 11px; margin-bottom: 8px;">DITAGIHKAN KEPADA:</div>
-                    <div style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">{{ activePrintData.customer }}</div>
-                    <div style="margin-bottom: 2px;"><span style="font-weight:bold;">Telp:</span> {{ activePrintData.customerPhone || '-' }}</div>
-                    <div><span style="font-weight:bold;">Alamat:</span> {{ activePrintData.customerAddress || '-' }}</div>
-                </div>
-            </div>
+        <div style="border-top: 1px dashed #000; margin: 15px 0 10px;"></div>
 
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid #000; margin-bottom: 20px;">
-                <tr style="background-color: #f3f4f6; text-align: center; font-weight: bold;">
-                    <td style="border: 1px solid #000; padding: 12px; width: 5%;">No</td>
-                    <td style="border: 1px solid #000; padding: 12px; width: 40%;">Deskripsi Produk</td>
-                    <td style="border: 1px solid #000; padding: 12px; width: 15%;">SKU</td>
-                    <td style="border: 1px solid #000; padding: 12px; width: 10%;">Qty</td>
-                    <td style="border: 1px solid #000; padding: 12px; width: 15%;">Harga Satuan</td>
-                    <td style="border: 1px solid #000; padding: 12px; width: 15%;">Total</td>
+        <div v-if="appSettings && appSettings.showQrCode" style="text-align: center; margin-bottom: 15px;">
+            <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://quinsah.com/inv/' + activePrintData.id" style="width: 80px; height: 80px; margin-bottom: 4px;">
+            <div style="font-size: 0.85em; font-weight: bold;">Scan untuk e-Receipt</div>
+        </div>
+
+        <div style="text-align: center;">
+            <div style="font-weight: bold; margin-bottom: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; font-size:0.85em; font-family: sans-serif;">
+                <div v-if="appSettings && appSettings.socialWa"><i class="bi bi-whatsapp"></i> {{ appSettings.socialWa }}</div>
+                <div v-if="appSettings && appSettings.socialIg"><i class="bi bi-instagram"></i> {{ appSettings.socialIg }}</div>
+                <div v-if="appSettings && appSettings.socialFb"><i class="bi bi-facebook"></i> {{ appSettings.socialFb }}</div>
+                <div v-if="appSettings && appSettings.socialTiktok">TikTok: {{ appSettings.socialTiktok }}</div>
+                <div v-if="appSettings && appSettings.socialShopee">Shopee: {{ appSettings.socialShopee }}</div>
+                <div v-if="appSettings && appSettings.socialTokped">Tokped: {{ appSettings.socialTokped }}</div>
+                <div v-if="appSettings && appSettings.socialLazada">Lazada: {{ appSettings.socialLazada }}</div>
+                <div v-if="appSettings && appSettings.socialBlibli">Blibli: {{ appSettings.socialBlibli }}</div>
+            </div>
+            <div style="font-style: italic; font-size: 0.85em; white-space: pre-wrap;">{{ (appSettings && appSettings.receiptFooter) ? appSettings.receiptFooter : 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
+        </div>
+    </div>
+
+    <div v-if="printMode === 'invoiceA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 30px;">
+            <div>
+                <img v-if="appSettings && appSettings.receiptLogo" :src="appSettings.receiptLogo" style="max-width: 150px; max-height: 80px; margin-bottom: 10px; object-fit: contain;">
+                <div style="color: #991b1b; font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+                <div style="color: #666; font-size: 14px; max-width: 300px; white-space: pre-wrap;">{{ (appSettings && appSettings.storeAddress) ? appSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</div>
+                <div v-if="appSettings && appSettings.storePhone" style="color: #666; font-size: 14px; margin-top: 4px;">Telp: {{ appSettings.storePhone }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="color: #d1d5db; font-size: 36px; font-weight: 800; letter-spacing: 3px; line-height: 1;">INVOICE</div>
+                <div style="font-size: 16px; font-weight: 800; margin-top: 15px;"># {{ activePrintData.id }}</div>
+                <div style="font-size: 14px; margin-top: 4px;">Tanggal: {{ activePrintData.dateStr }}</div>
+            </div>
+        </div>
+
+        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; display: flex; margin-bottom: 30px; font-size: 14px;">
+            <div style="width: 50%;">
+                <div style="color: #6b7280; font-weight: 800; font-size: 11px; margin-bottom: 8px;">DITERBITKAN OLEH:</div>
+                <div style="font-size: 15px; font-weight: 800; margin-bottom: 5px;">Kasir: {{ activePrintData.cashierName }}</div>
+                <div>Cabang: {{ getOutletName(activePrintData.outletId) }}</div>
+            </div>
+            <div style="width: 50%;">
+                <div style="color: #6b7280; font-weight: 800; font-size: 11px; margin-bottom: 8px;">DITAGIHKAN KEPADA:</div>
+                <div style="font-size: 18px; font-weight: 800; margin-bottom: 5px;">{{ activePrintData.customer }}</div>
+                <div style="margin-bottom: 2px;"><span style="font-weight:bold;">Telp:</span> {{ activePrintData.customerPhone || '-' }}</div>
+                <div><span style="font-weight:bold;">Alamat:</span> {{ activePrintData.customerAddress || '-' }}</div>
+            </div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid #000; margin-bottom: 20px;">
+            <tr style="background-color: #f3f4f6; text-align: center; font-weight: bold;">
+                <td style="border: 1px solid #000; padding: 12px; width: 5%;">No</td>
+                <td style="border: 1px solid #000; padding: 12px; width: 40%;">Deskripsi Produk</td>
+                <td style="border: 1px solid #000; padding: 12px; width: 15%;">SKU</td>
+                <td style="border: 1px solid #000; padding: 12px; width: 10%;">Qty</td>
+                <td style="border: 1px solid #000; padding: 12px; width: 15%;">Harga Satuan</td>
+                <td style="border: 1px solid #000; padding: 12px; width: 15%;">Total</td>
+            </tr>
+            <tr v-for="(item, idx) in activePrintData.items" :key="idx" :style="item.productId === 'EXCHANGE' ? 'background-color: #fef2f2; color: #991b1b;' : ''">
+                <td style="border: 1px solid #000; padding: 12px; text-align: center;">{{ idx + 1 }}</td>
+                <td style="border: 1px solid #000; padding: 12px;">
+                    <div style="font-weight: bold; font-size: 14px;">
+                        <span v-if="item.productId === 'EXCHANGE'">TUKAR TAMBAH:</span>
+                        <span v-else>{{ item.name }}</span>
+                    </div>
+                    <div v-if="item.productId === 'EXCHANGE'" style="font-size: 12px; font-style: italic; margin-top: 3px;">
+                        {{ item.name.replace('[SALDO TUKAR] ', '') }}
+                    </div>
+                    <div v-else-if="item.variantName" style="color: #6b7280; font-size: 12px; margin-top: 3px;">
+                        Varian: {{ item.variantName }}
+                    </div>
+                </td>
+                <td style="border: 1px solid #000; padding: 12px; text-align: center; color: #1d4ed8; font-weight: 600;">{{ item.variantSku || item.sku || '-' }}</td>
+                <td style="border: 1px solid #000; padding: 12px; text-align: center; font-weight: bold;">{{ item.qty }} {{ item.uom || 'pcs' }}</td>
+                <td style="border: 1px solid #000; padding: 12px; text-align: right;">
+                    {{ item.productId === 'EXCHANGE' ? '- Rp ' + formatNumber(Math.abs(item.finalPrice || item.sellPrice)) : 'Rp ' + formatNumber(item.finalPrice || item.sellPrice) }}
+                </td>
+                <td style="border: 1px solid #000; padding: 12px; text-align: right; font-weight: bold;">
+                    {{ item.productId === 'EXCHANGE' ? '- Rp ' + formatNumber(Math.abs(item.qty * (item.finalPrice || item.sellPrice))) : 'Rp ' + formatNumber(item.qty * (item.finalPrice || item.sellPrice)) }}
+                </td>
+            </tr>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            
+            <div v-if="appSettings && appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; font-size: 12px;">
+                <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
+                <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
+            </div>
+            <div v-else style="width: 45%;"></div>
+
+            <table style="width: 50%; font-size: 14px;">
+                <tr>
+                    <td style="padding: 8px 10px;">Subtotal Produk</td>
+                    <td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.items.filter(i => i.productId !== 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0)) }}</td>
                 </tr>
-                <tr v-for="(item, idx) in activePrintData.items" :key="idx">
-                    <td style="border: 1px solid #000; padding: 12px; text-align: center;">{{ idx + 1 }}</td>
-                    <td style="border: 1px solid #000; padding: 12px;">
-                        <div style="font-weight: bold; font-size: 14px;">{{ item.name }}</div>
-                        <div v-if="item.variantName" style="color: #6b7280; font-size: 12px; margin-top: 3px;">Varian: {{ item.variantName }}</div>
-                    </td>
-                    <td style="border: 1px solid #000; padding: 12px; text-align: center; color: #1d4ed8; font-weight: 600;">{{ item.variantSku || item.sku || '-' }}</td>
-                    <td style="border: 1px solid #000; padding: 12px; text-align: center; font-weight: bold;">{{ item.qty }} {{ item.uom || 'pcs' }}</td>
-                    <td style="border: 1px solid #000; padding: 12px; text-align: right;">Rp {{ formatNumber(item.finalPrice) }}</td>
-                    <td style="border: 1px solid #000; padding: 12px; text-align: right; font-weight: bold;">Rp {{ formatNumber(item.qty * item.finalPrice) }}</td>
+                
+                <tr v-if="activePrintData.items.some(i => i.productId === 'EXCHANGE')">
+                    <td style="padding: 8px 10px; color: #991b1b;">Potongan Tukar Tambah</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #991b1b; font-weight: bold;">- Rp {{ formatNumber(Math.abs(activePrintData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</td>
                 </tr>
+
+                <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0">
+                    <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td>
+                    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td>
+                </tr>
+                <tr v-else>
+                    <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td>
+                    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp 0</td>
+                </tr>
+                
+                <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
+                <tr><td style="padding: 8px 10px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
+                <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Kembalian</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
+                <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
             </table>
+        </div>
 
-            <!-- INFO PEMBAYARAN DAN TOTAL A4 YANG BENAR -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                
-                <!-- Info Pembayaran (Print) -->
-                <div v-if="appSettings && appSettings.storePaymentInfo" style="width: 45%; background-color: #f9fafb; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; font-size: 12px;">
-                    <div style="font-weight:bold; margin-bottom:5px; color:#333; text-transform:uppercase;">Info Pembayaran:</div>
-                    <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.storePaymentInfo }}</div>
-                </div>
-                <div v-else style="width: 45%;"></div>
-
-                <table style="width: 50%; font-size: 14px;">
-                    <tr><td style="padding: 8px 10px;">Subtotal Produk</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.subtotal) }}</td></tr>
-                    <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
-                    <tr v-else><td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td><td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp 0</td></tr>
-                    <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
-                    <tr><td style="padding: 8px 10px;">DIBAYAR ({{ activePrintData.paymentMethod }})</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) }}</td></tr>
-                    <tr v-if="(activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) >= activePrintData.total"><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Kembalian</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber((activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived) - activePrintData.total) }}</td></tr>
-                    <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - (activePrintData.firstPayment !== undefined ? activePrintData.firstPayment : activePrintData.amountReceived)) }}</td></tr>
-                </table>
+        <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
+            <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
+                INFO RETUR / REFUND
             </div>
-
-            <div v-if="activePrintData && activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 10px; border-top: 2px dashed #333; padding-top: 10px; margin-bottom: 10px;">
-    <div style="background-color: #111; color: #fff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-radius: 4px; margin-bottom: 8px;">
-        INFO RETUR / REFUND
-    </div>
     
-    <div v-for="(retur, idx) in activePrintData.returHistory" :key="idx" style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 6px;">
-        <span style="width: 65%;">
-            <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
-            <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
-        </span>
-        <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
-            - Rp {{ formatNumber(retur.refundAmount) }}
-        </span>
-    </div>
+            <div v-for="(retur, idx) in activePrintData.returHistory" :key="idx" style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 6px;">
+                <span style="width: 65%;">
+                    <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+                    <span style="font-size: 0.85em; color: #555;">Ket: {{ retur.alasan }}</span>
+                </span>
+                <span style="width: 35%; text-align: right; color: #dc3545; font-weight: bold;">
+                    - Rp {{ formatNumber(retur.refundAmount) }}
+                </span>
+            </div>
     
-    <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
-        TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
-    </div>
-</div>
-
-            <div v-if="appSettings && appSettings.termsAndConditions" style="margin-top: 30px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 6px; font-size: 12px;">
-                <div style="font-weight:bold; margin-bottom:8px; color:#333; text-transform:uppercase;">Syarat & Ketentuan:</div>
-                <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.termsAndConditions }}</div>
-            </div>
-
-            <div style="margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; text-align: center; font-size: 13px;">
-                <div style="width: 30%;">
-                    <p style="margin-bottom: 60px;">Penerima / Pelanggan,</p>
-                    <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">{{ activePrintData.customer }}</div>
-                </div>
-                
-                <div v-if="appSettings && appSettings.showQrCode" style="width: 30%; text-align: center;">
-                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://quinsah.com/inv/' + activePrintData.id" style="width: 80px; height: 80px;">
-                    <div style="font-size: 11px; margin-top: 5px; color: #666; font-weight: bold;">Scan untuk e-Receipt</div>
-                </div>
-
-                <div style="width: 30%;">
-                    <p style="margin-bottom: 60px;">Hormat Kami,</p>
-                    <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
-                </div>
-            </div>
-
-            <div style="margin-top: 40px; border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 11px; color: #666;">
-                <div style="font-size: 13px; margin-bottom: 10px; color:#000; font-weight:bold; white-space: pre-wrap;">{{ (appSettings && appSettings.receiptFooter) ? appSettings.receiptFooter : 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
-                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; font-weight: bold; color: #000;">
-                    <span v-if="appSettings && appSettings.socialWa">WA: {{appSettings.socialWa}}</span>
-                    <span v-if="appSettings && appSettings.socialIg">IG: {{appSettings.socialIg}}</span>
-                    <span v-if="appSettings && appSettings.socialFb">FB: {{appSettings.socialFb}}</span>
-                    <span v-if="appSettings && appSettings.socialTiktok">TikTok: {{appSettings.socialTiktok}}</span>
-                    <span v-if="appSettings && appSettings.socialShopee">Shopee: {{appSettings.socialShopee}}</span>
-                    <span v-if="appSettings && appSettings.socialTokped">Tokopedia: {{appSettings.socialTokped}}</span>
-                    <span v-if="appSettings && appSettings.socialLazada">Lazada: {{appSettings.socialLazada}}</span>
-                    <span v-if="appSettings && appSettings.socialBlibli">Blibli: {{appSettings.socialBlibli}}</span>
-                </div>
+            <div style="text-align: right; margin-top: 8px; border-top: 1px solid #ccc; padding-top: 5px; font-weight: bold; font-size: 1em;">
+                TOTAL REFUND: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
             </div>
         </div>
+
+        <div v-if="appSettings && appSettings.termsAndConditions" style="margin-top: 30px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 6px; font-size: 12px;">
+            <div style="font-weight:bold; margin-bottom:8px; color:#333; text-transform:uppercase;">Syarat & Ketentuan:</div>
+            <div style="white-space: pre-wrap; line-height: 1.4; color:#555;">{{ appSettings.termsAndConditions }}</div>
+        </div>
+
+        <div style="margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; text-align: center; font-size: 13px;">
+            <div style="width: 30%;">
+                <p style="margin-bottom: 60px;">Penerima / Pelanggan,</p>
+                <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">{{ activePrintData.customer }}</div>
+            </div>
+            
+            <div v-if="appSettings && appSettings.showQrCode" style="width: 30%; text-align: center;">
+                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://quinsah.com/inv/' + activePrintData.id" style="width: 80px; height: 80px;">
+                <div style="font-size: 11px; margin-top: 5px; color: #666; font-weight: bold;">Scan untuk e-Receipt</div>
+            </div>
+
+            <div style="width: 30%;">
+                <p style="margin-bottom: 60px;">Hormat Kami,</p>
+                <div style="border-top: 1px solid #000; padding-top: 5px; margin: 0 auto; width: 80%;">{{ (appSettings && appSettings.storeName) ? appSettings.storeName : 'QUINSAH COLLECTION' }}</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; border-top: 2px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 11px; color: #666;">
+            <div style="font-size: 13px; margin-bottom: 10px; color:#000; font-weight:bold; white-space: pre-wrap;">{{ (appSettings && appSettings.receiptFooter) ? appSettings.receiptFooter : 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; font-weight: bold; color: #000;">
+                <span v-if="appSettings && appSettings.socialWa">WA: {{appSettings.socialWa}}</span>
+                <span v-if="appSettings && appSettings.socialIg">IG: {{appSettings.socialIg}}</span>
+                <span v-if="appSettings && appSettings.socialFb">FB: {{appSettings.socialFb}}</span>
+                <span v-if="appSettings && appSettings.socialTiktok">TikTok: {{appSettings.socialTiktok}}</span>
+                <span v-if="appSettings && appSettings.socialShopee">Shopee: {{appSettings.socialShopee}}</span>
+                <span v-if="appSettings && appSettings.socialTokped">Tokopedia: {{appSettings.socialTokped}}</span>
+                <span v-if="appSettings && appSettings.socialLazada">Lazada: {{appSettings.socialLazada}}</span>
+                <span v-if="appSettings && appSettings.socialBlibli">Blibli: {{appSettings.socialBlibli}}</span>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- ========================================== -->
         <!-- 3. CETAK LABEL / PACKING SLIP              -->
