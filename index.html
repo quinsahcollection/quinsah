@@ -3556,10 +3556,18 @@
                     </div>
                 </div>
             </div>
+            
             <div class="modal-footer bg-light p-2 d-flex justify-content-between">
-                <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" @click="openReturnModal(activeInvoiceDetail)" v-if="activeInvoiceDetail && activeInvoiceDetail.paymentStatus !== 'DIRETUR'">
+                
+                <!-- 🌟 PERUBAHAN DI SINI: Tombol disembunyikan saat di Laporan, dan ditambahkan cek keamanan -->
+                <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" 
+                        v-if="currentView !== 'reports' && currentView !== 'analytics' && activeInvoiceDetail && activeInvoiceDetail.paymentStatus !== 'DIRETUR'"
+                        @click="cekDanBukaModalRetur(activeInvoiceDetail)">
                     <i class="bi bi-arrow-return-left me-1"></i> Retur / Kembalikan Barang
                 </button>
+                
+                <!-- Spacer untuk mendorong tombol Tutup ke kanan jika tombol retur hilang -->
+                <div v-else></div> 
                 
                 <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
             </div>
@@ -7386,6 +7394,26 @@
             }
         }
     });
+},
+        
+        cekDanBukaModalRetur(trx) {
+    // Mengecek apakah ada potongan TUKAR TAMBAH di invoice ini
+    let isHasilTukar = trx.items.some(item => item.productId === 'EXCHANGE');
+    
+    // Jika YA (ini adalah invoice hasil tukar tambah), tolak!
+    if (isHasilTukar) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Terkunci Sistem',
+            text: 'Barang ini dibeli menggunakan potongan Tukar Tambah. Sesuai kebijakan operasional toko, barang tersebut tidak dapat diretur kembali.',
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Mengerti'
+        });
+        return; // Hentikan di sini, jangan buka modal
+    }
+    
+    // Jika BUKAN, silakan buka modal returnya seperti biasa
+    this.openReturnModal(trx);
 },
         
         testPrintReceipt() {
