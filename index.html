@@ -4600,6 +4600,44 @@
                             </table>
                         </div>
 
+                        <div class="card border-danger shadow-sm mb-3" v-if="activePurchaseDetail?.returHistory && activePurchaseDetail.returHistory.length > 0">
+    <div class="card-header bg-danger text-white fw-bold small">
+        <i class="bi bi-arrow-return-left me-1"></i> Histori Retur Barang ke Supplier
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tanggal Retur</th>
+                        <th>Nama Produk</th>
+                        <th class="text-center">Qty Diretur</th>
+                        <th>Alasan</th>
+                        <th class="text-end">Nominal Potongan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(ret, idx) in activePurchaseDetail.returHistory" :key="idx">
+                        <td>{{ ret.date }}</td>
+                        <td class="fw-bold">{{ ret.productName }}</td>
+                        <td class="text-center text-danger fw-bold">{{ ret.qtyRetur }}</td>
+                        <td class="text-muted">{{ ret.alasan }}</td>
+                        <td class="text-end text-danger fw-bold">- Rp {{ formatNumber(ret.refundAmount) }}</td>
+                    </tr>
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold small text-danger">Total Nilai Retur:</td>
+                        <td class="text-end fw-bold text-danger">
+                            - Rp {{ formatNumber(activePurchaseDetail.returHistory.reduce((sum, item) => sum + item.refundAmount, 0)) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
                         <!-- Form Bayar Hutang Jika Belum Lunas -->
                         <div v-if="activePurchaseDetail.paymentStatus !== 'LUNAS'" class="border border-danger rounded p-3 bg-danger bg-opacity-10 mb-3">
                             <h6 class="fw-bold text-danger mb-3"><i class="bi bi-cash-coin me-2"></i>Form Pembayaran Hutang Supplier</h6>
