@@ -4453,74 +4453,91 @@
 
         <div class="modal fade" id="returnPoModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i> Retur Barang ke Supplier</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            
-            <div class="modal-body bg-light" v-if="returnPoForm">
-                <div class="alert alert-warning small fw-bold">
-                    <i class="fas fa-exclamation-triangle me-1"></i> Perhatian: Retur akan mengurangi stok di gudang dan memotong total tagihan PO ini.
+    <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i> Retur Barang ke Supplier</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body bg-light" v-if="returnPoForm">
+            <div class="mb-3 border border-2 border-danger p-3 bg-white rounded shadow-sm">
+                <label class="form-label fw-bold small text-danger"><i class="bi bi-gear-fill me-1"></i>Tindakan Retur</label>
+                <select class="form-select border-danger fw-bold" v-model="returnPoForm.actionType">
+                    <option value="REFUND">1. Potong Tagihan / Kembalikan Uang (Refund)</option>
+                    <option value="EXCHANGE">2. Tukar Barang / Ganti Baru (Replacement)</option>
+                </select>
+                
+                <div class="form-check mt-3" v-if="returnPoForm.actionType === 'EXCHANGE'">
+                    <input class="form-check-input" type="checkbox" v-model="returnPoForm.isReplacementReceived" id="checkReplacement">
+                    <label class="form-check-label small fw-bold text-success" for="checkReplacement">
+                        <i class="bi bi-box-seam me-1"></i>Barang Pengganti Sudah Langsung Diterima (Tukar Guling)
+                    </label>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Alasan Retur</label>
-                    <select class="form-select" v-model="returnPoForm.reason">
-                        <option value="Barang Cacat / Rusak">Barang Cacat / Rusak</option>
-                        <option value="Barang Tidak Sesuai Pesanan">Barang Tidak Sesuai Pesanan</option>
-                        <option value="Expired / Mendekati Expired">Expired / Mendekati Expired</option>
-                        <option value="Lainnya">Lainnya...</option>
-                    </select>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered bg-white">
-                        <thead class="table-light text-center">
-                            <tr>
-                                <th>Produk</th>
-                                <th width="15%">Harga Beli</th>
-                                <th width="15%">Qty PO</th>
-                                <th width="20%">Qty Diretur</th>
-                                <th width="20%">Total Refund</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, idx) in returnPoForm.items" :key="idx">
-                                <td class="align-middle">
-                                    <div class="fw-bold">{{ item.name }}</div>
-                                    <div class="small text-muted" v-if="item.variantName">Varian: {{ item.variantName }}</div>
-                                </td>
-                                <td class="align-middle text-end">Rp {{ formatNumber(item.basePrice || item.cost || item.price || 0) }}</td>
-                                <td class="align-middle text-center">{{ item.qty }}</td>
-                                <td class="align-middle">
-                                    <input type="number" class="form-control form-control-sm text-center" 
-                                           v-model.number="item.returnQty" min="0" :max="item.qty">
-                                </td>
-                                <td class="align-middle text-end fw-bold text-danger">
-                                    Rp {{ formatNumber((item.returnQty || 0) * (item.basePrice || item.cost || item.price || 0)) }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="text-end mt-3">
-                    <h6 class="fw-bold">Total Nilai Retur: <span class="text-danger">Rp {{ typeof calculatePoReturnTotal === 'function' ? formatNumber(calculatePoReturnTotal()) : 0 }}</span></h6>
+                
+                <div class="alert alert-info small mt-2 mb-0 py-2" v-if="returnPoForm.actionType === 'EXCHANGE'">
+                    <i class="bi bi-info-circle me-1"></i> <b>Info Tukar Barang:</b> Tagihan PO tidak akan dipotong. 
+                    <span v-if="!returnPoForm.isReplacementReceived">Stok akan dikurangi sementara. Silakan input Manual (Stok Opname) saat barang pengganti dari pabrik tiba nanti.</span>
+                    <span v-else>Stok gudang akan tetap utuh (Otomatis mencatat barang keluar & masuk).</span>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-danger fw-bold" 
-                        @click="typeof processPoReturn === 'function' ? processPoReturn() : null" 
-                        :disabled="isProcessing || (typeof calculatePoReturnTotal === 'function' ? calculatePoReturnTotal() <= 0 : true)">
-                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-                    <span v-else><i class="fas fa-check-circle me-1"></i> Proses Retur PO</span>
-                </button>
+            <div class="mb-3">
+                <label class="form-label fw-bold small">Alasan Retur</label>
+                <select class="form-select" v-model="returnPoForm.reason">
+                    <option value="Barang Cacat / Rusak">Barang Cacat / Rusak</option>
+                    <option value="Barang Tidak Sesuai Pesanan">Barang Tidak Sesuai Pesanan</option>
+                    <option value="Expired / Mendekati Expired">Expired / Mendekati Expired</option>
+                    <option value="Lainnya">Lainnya...</option>
+                </select>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered bg-white">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>Produk</th>
+                            <th width="15%">Harga Beli</th>
+                            <th width="15%">Qty PO</th>
+                            <th width="20%">Qty Diretur</th>
+                            <th width="20%" v-if="returnPoForm.actionType === 'REFUND'">Total Refund</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, idx) in returnPoForm.items" :key="idx">
+                            <td class="align-middle">
+                                <div class="fw-bold">{{ item.productName || item.name || 'Produk Tidak Diketahui' }}</div>
+                                <div class="small text-muted" v-if="item.variantName">Varian: {{ item.variantName }}</div>
+                            </td>
+                            <td class="align-middle text-end">Rp {{ formatNumber(item.basePrice || item.cost || item.price || 0) }}</td>
+                            <td class="align-middle text-center">{{ item.qty }}</td>
+                            <td class="align-middle">
+                                <input type="number" class="form-control form-control-sm text-center" 
+                                       v-model.number="item.returnQty" min="0" :max="item.qty">
+                            </td>
+                            <td class="align-middle text-end fw-bold text-danger" v-if="returnPoForm.actionType === 'REFUND'">
+                                Rp {{ formatNumber((item.returnQty || 0) * (item.basePrice || item.cost || item.price || 0)) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-end mt-3" v-if="returnPoForm.actionType === 'REFUND'">
+                <h6 class="fw-bold">Total Nilai Dipotong: <span class="text-danger">Rp {{ typeof calculatePoReturnTotal === 'function' ? formatNumber(calculatePoReturnTotal()) : 0 }}</span></h6>
             </div>
         </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-danger fw-bold" 
+                    @click="typeof processPoReturn === 'function' ? processPoReturn() : null" 
+                    :disabled="isProcessing || (typeof calculatePoReturnTotal === 'function' ? calculatePoReturnTotal() <= 0 : true)">
+                <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                <span v-else><i class="fas fa-check-circle me-1"></i> Eksekusi Retur</span>
+            </button>
+        </div>
     </div>
+</div>
 </div>
 
         <!-- MODAL CRM... -->
@@ -4602,37 +4619,36 @@
 
                         <div class="card border-danger shadow-sm mb-3" v-if="activePurchaseDetail?.returHistory && activePurchaseDetail.returHistory.length > 0">
     <div class="card-header bg-danger text-white fw-bold small">
-        <i class="bi bi-arrow-return-left me-1"></i> Histori Retur Barang ke Supplier
+        <i class="bi bi-arrow-return-left me-1"></i> Histori Retur & Tukar Barang
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
                 <thead class="table-light">
                     <tr>
-                        <th>Tanggal Retur</th>
+                        <th>Tanggal</th>
                         <th>Nama Produk</th>
-                        <th class="text-center">Qty Diretur</th>
-                        <th>Alasan</th>
+                        <th class="text-center">Qty</th>
+                        <th>Status Retur</th>
                         <th class="text-end">Nominal Potongan</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(ret, idx) in activePurchaseDetail.returHistory" :key="idx">
                         <td>{{ ret.date }}</td>
-                        <td class="fw-bold">{{ ret.productName }}</td>
-                        <td class="text-center text-danger fw-bold">{{ ret.qtyRetur }}</td>
-                        <td class="text-muted">{{ ret.alasan }}</td>
-                        <td class="text-end text-danger fw-bold">- Rp {{ formatNumber(ret.refundAmount) }}</td>
-                    </tr>
-                </tbody>
-                <tfoot class="table-light">
-                    <tr>
-                        <td colspan="4" class="text-end fw-bold small text-danger">Total Nilai Retur:</td>
-                        <td class="text-end fw-bold text-danger">
-                            - Rp {{ formatNumber(activePurchaseDetail.returHistory.reduce((sum, item) => sum + item.refundAmount, 0)) }}
+                        <td class="fw-bold">{{ ret.productName || 'Produk Lama' }}</td>
+                        <td class="text-center fw-bold">{{ ret.qtyRetur }}</td>
+                        <td>
+                            <span class="badge" :class="ret.action === 'Refund' ? 'bg-danger' : 'bg-primary'">
+                                {{ ret.action || 'Refund' }}
+                            </span>
+                            <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ ret.alasan }}</div>
+                        </td>
+                        <td class="text-end fw-bold" :class="ret.refundAmount > 0 ? 'text-danger' : 'text-muted'">
+                            {{ ret.refundAmount > 0 ? '- Rp ' + formatNumber(ret.refundAmount) : 'Rp 0 (Tukar)' }}
                         </td>
                     </tr>
-                </tfoot>
+                </tbody>
             </table>
         </div>
     </div>
@@ -7181,11 +7197,12 @@ calculatePoReturnTotal() {
 
 openReturnPoModal(po) {
     if (!po || !po.items) return;
-    // Duplikasi data PO agar ketikan form tidak merusak data asli sebelum disimpan
     this.returnPoForm = {
         id: po.id,
         outletId: po.outletId,
         supplierId: po.supplierId || '',
+        actionType: 'REFUND', // Default: Potong Uang
+        isReplacementReceived: false, // Default: Barang pengganti belum datang
         reason: 'Barang Cacat / Rusak',
         items: po.items.map(i => ({
             ...i,
@@ -7203,104 +7220,128 @@ async processPoReturn() {
         return Swal.fire('Perhatian', 'Masukkan minimal 1 barang yang ingin diretur.', 'warning');
     }
 
+    let isRefund = this.returnPoForm.actionType === 'REFUND';
+    let isExchange = this.returnPoForm.actionType === 'EXCHANGE';
+    let isReceived = this.returnPoForm.isReplacementReceived;
+
+    let textConfirm = isRefund 
+        ? `Stok akan dikurangi dan nilai PO dipotong sebesar Rp ${this.formatNumber(refundTotal)}.` 
+        : `Barang akan ditukar. Tagihan PO TIDAK akan dipotong.`;
+
     const confirm = await Swal.fire({
         title: 'Proses Retur PO?',
-        text: `Stok akan dikurangi dari gudang dan nilai PO akan dipotong sebesar Rp ${this.formatNumber(refundTotal)}.`,
+        text: textConfirm,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
-        confirmButtonText: 'Ya, Proses Retur!'
+        confirmButtonText: 'Ya, Eksekusi!'
     });
 
     if (confirm.isConfirmed) {
         this.isProcessing = true;
         try {
-            // 1. Ganti purchaseOrders menjadi purchases agar tidak error findIndex
             let poIdx = this.purchases.findIndex(p => p.id === this.returnPoForm.id);
             if (poIdx === -1) throw new Error("Dokumen PO tidak ditemukan");
             
             let po = JSON.parse(JSON.stringify(this.purchases[poIdx]));
             if (!po.returHistory) po.returHistory = [];
 
-            // 2. Looping untuk mengurangi stok dan update data PO
             for (let i = 0; i < this.returnPoForm.items.length; i++) {
                 let retItem = this.returnPoForm.items[i];
                 
                 if (retItem.returnQty > 0) {
                     let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
-                    let namaLengkap = retItem.name + variantText;
+                    // PERBAIKAN BUG NAMA UNDEFINED
+                    let namaLengkap = (retItem.productName || retItem.name || 'Produk') + variantText;
 
-                    // Cari produk di master produk Anda
                     let prod = this.products.find(p => p.sku === retItem.sku || p.id === retItem.productId);
                     if (prod) {
                         let prodCopy = JSON.parse(JSON.stringify(prod));
                         
-                        // A. Kurangi stok fisik di database
-                        if (retItem.variantSku) {
-                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
-                            if (vIdx !== -1 && prodCopy.variants[vIdx].outletStocks) {
-                                prodCopy.variants[vIdx].outletStocks[po.outletId] -= retItem.returnQty;
-                                if (prodCopy.variants[vIdx].outletStocks[po.outletId] < 0) prodCopy.variants[vIdx].outletStocks[po.outletId] = 0;
+                        // JIKA BUKAN TUKAR GULING (Stok harus dipotong karena barang kembali ke pabrik)
+                        if (isRefund || (isExchange && !isReceived)) {
+                            if (retItem.variantSku) {
+                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                                if (vIdx !== -1 && prodCopy.variants[vIdx].outletStocks) {
+                                    prodCopy.variants[vIdx].outletStocks[po.outletId] -= retItem.returnQty;
+                                    if (prodCopy.variants[vIdx].outletStocks[po.outletId] < 0) prodCopy.variants[vIdx].outletStocks[po.outletId] = 0;
+                                }
+                            } else {
+                                if (prodCopy.baseOutletStocks) {
+                                    prodCopy.baseOutletStocks[po.outletId] -= retItem.returnQty;
+                                    if (prodCopy.baseOutletStocks[po.outletId] < 0) prodCopy.baseOutletStocks[po.outletId] = 0;
+                                }
                             }
-                        } else {
-                            if (prodCopy.baseOutletStocks) {
-                                prodCopy.baseOutletStocks[po.outletId] -= retItem.returnQty;
-                                if (prodCopy.baseOutletStocks[po.outletId] < 0) prodCopy.baseOutletStocks[po.outletId] = 0;
-                            }
+
+                            await updateDoc(doc(db, "products", prod.id), {
+                                variants: prodCopy.variants || [],
+                                baseOutletStocks: prodCopy.baseOutletStocks || {}
+                            });
+
+                            // Catat Minus
+                            await this.logStock('OUT', {
+                                productId: prod.id,
+                                sku: retItem.sku || prod.sku || '-',
+                                name: prod.name,
+                                variantSku: retItem.variantSku || null,
+                                variantName: retItem.variantName || '-',
+                                qty: -Math.abs(retItem.returnQty), 
+                                outletId: po.outletId,
+                                refId: `RETUR-PO-${po.id}`,
+                                note: `Retur ke Supplier: ${this.returnPoForm.reason}`
+                            });
                         }
-
-                        // Update stok produk ke Firebase
-                        await updateDoc(doc(db, "products", prod.id), {
-                            variants: prodCopy.variants || [],
-                            baseOutletStocks: prodCopy.baseOutletStocks || {}
-                        });
-
-                        // B. Catat Mutasi Log Stok (Stok OUT)
-                        // 🌟 PERHATIKAN: Saya tambahkan -Math.abs agar kartu stok mencatat MINUS, bukan PLUS
-                        await this.logStock('OUT', {
-                            productId: prod.id,
-                            sku: retItem.sku || prod.sku || '-',
-                            name: prod.name,
-                            variantSku: retItem.variantSku || null,
-                            variantName: retItem.variantName || '-',
-                            qty: -Math.abs(retItem.returnQty), // <--- INI KUNCI AGAR STOK BERKURANG
-                            outletId: po.outletId,
-                            refId: `RETUR-PO-${po.id}`,
-                            note: `Retur ke Supplier: ${this.returnPoForm.reason}`
-                        });
+                        
+                        // JIKA TUKAR GULING LANSUNG: Stok Tetap. Kita catat histori In & Out sebagai formalitas pembukuan.
+                        if (isExchange && isReceived) {
+                             await this.logStock('OUT', {
+                                productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
+                                qty: -Math.abs(retItem.returnQty), outletId: po.outletId, refId: `RETUR-PO-${po.id}`, note: `Retur Keluar (Tukar)`
+                            });
+                             await this.logStock('IN', {
+                                productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
+                                qty: Math.abs(retItem.returnQty), outletId: po.outletId, refId: `RETUR-PO-${po.id}`, note: `Retur Masuk (Pengganti)`
+                            });
+                        }
                     }
 
-                    // C. Update qty barang di dalam invoice PO
-                    let poItem = po.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
-                    if (poItem) {
+                    // UPDATE INVOICE
+                    let poItem = po.items.find(item => (item.productName || item.name) === (retItem.productName || retItem.name) && (item.variantSku || null) === (retItem.variantSku || null));
+                    if (poItem && isRefund) {
                         poItem.qty -= retItem.returnQty;
                         poItem.isReturned = true;
-
-                        let hargaBeli = retItem.basePrice || retItem.cost || retItem.price || 0;
-                        po.returHistory.push({
-                            date: new Date().toLocaleString('id-ID'),
-                            productName: namaLengkap,
-                            qtyRetur: retItem.returnQty,
-                            refundAmount: retItem.returnQty * hargaBeli,
-                            alasan: this.returnPoForm.reason
-                        });
                     }
+
+                    let hargaBeli = retItem.basePrice || retItem.cost || retItem.price || 0;
+                    
+                    // Rekam jejak retur di dalam PO
+                    po.returHistory.push({
+                        date: new Date().toLocaleString('id-ID'),
+                        productName: namaLengkap,
+                        qtyRetur: retItem.returnQty,
+                        refundAmount: isRefund ? (retItem.returnQty * hargaBeli) : 0,
+                        action: isRefund ? 'Refund' : (isReceived ? 'Tukar Barang (Langsung)' : 'Tukar Barang (Menyusul)'),
+                        alasan: this.returnPoForm.reason
+                    });
                 }
             }
 
-            // 3. Update Keuangan PO (Tagihan turun karena barang dikembalikan)
-            po.subtotal = po.items.reduce((sum, item) => sum + (item.qty * (item.basePrice || item.cost || item.price || 0)), 0);
-            po.total -= refundTotal;
-            if (po.total < 0) po.total = 0;
-            
-            // Potong sisa hutang (jika status bayar adalah NGUTANG/TEMPO)
-            po.sisaTagihan = (po.sisaTagihan - refundTotal > 0) ? (po.sisaTagihan - refundTotal) : 0;
-            
-            // Set status baru
-            let isSisaBarangAda = po.items.some(i => i.qty > 0);
-            po.poStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+            // HANYA POTONG TAGIHAN JIKA MODE REFUND
+            if (isRefund) {
+                po.subtotal = po.items.reduce((sum, item) => sum + (item.qty * (item.basePrice || item.cost || item.price || 0)), 0);
+                po.total -= refundTotal;
+                if (po.total < 0) po.total = 0;
+                po.sisaTagihan = (po.sisaTagihan - refundTotal > 0) ? (po.sisaTagihan - refundTotal) : 0;
+                
+                let isSisaBarangAda = po.items.some(i => i.qty > 0);
+                po.poStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+            } 
+            // JIKA TUKAR BARANG: Berikan status khusus tanpa merubah uang
+            else {
+                po.poStatus = isReceived ? 'SELESAI' : 'RETUR TUKAR';
+            }
 
-            // 4. Simpan perubahan dokumen PO ke Firebase
+            // SIMPAN KE FIREBASE
             await updateDoc(doc(db, "purchases", po.id), {
                 items: po.items,
                 total: po.total,
@@ -7310,12 +7351,9 @@ async processPoReturn() {
                 returHistory: po.returHistory
             });
 
-            // 5. Update array di tampilan tabel layar Anda
             this.purchases[poIdx] = po;
 
-            Swal.fire('Berhasil', 'Retur PO berhasil diproses. Stok dan Laporan Keuangan sudah diperbarui.', 'success');
-            
-            // Tutup Modal
+            Swal.fire('Berhasil', 'Proses retur tersimpan sukses!', 'success');
             let modalInstance = bootstrap.Modal.getInstance(document.getElementById('returnPoModal'));
             if (modalInstance) modalInstance.hide();
             
