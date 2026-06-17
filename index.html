@@ -610,89 +610,95 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="po in filteredPurchases" :key="po.id">
-                            <td class="fw-bold small">
-                                <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
-                            </td>
-                            <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
-                            <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
-                                {{ getSupplierName(po.supplierId) }}
-                            </td>
-                            <td>
-                                <span class="badge" :class="po.poStatus === 'SELESAI' ? 'bg-info text-dark' : 'bg-warning text-dark'">
-                                    <i class="bi" :class="po.poStatus === 'SELESAI' ? 'bi-box-seam-fill' : 'bi-truck'"></i>
-                                    {{ po.poStatus === 'SELESAI' ? 'Telah Diterima' : 'Menunggu Kedatangan' }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge" :class="po.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
-                                    {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
-                                </span>
-                            </td>
-                            <td class="small">
-                                <!-- JIKA PUNYA RIWAYAT CICILAN / MULTIPAYMENT -->
-                                <template v-if="po.paymentHistory && po.paymentHistory.length > 0">
-                                    <!-- Pembayaran Pertama (Header) -->
-                                    <div class="fw-semibold text-dark mb-1">
-                                        <i class="bi bi-wallet2 text-muted me-1"></i> 
-                                        {{ po.paymentHistory[0].method || 'CASH' }}: 
-                                        <span class="text-success">Rp {{ formatNumber(po.paymentHistory[0].amount) }}</span>
-                                    </div>
-                                    
-                                    <!-- Pembayaran Selanjutnya (Pohon Breakdown / Slice dari index 1) -->
-                                    <div v-for="(hist, idx) in po.paymentHistory.slice(1)" :key="'hist-'+idx" class="text-muted" style="font-size: 0.75rem;">
-                                        <span class="ms-1 me-1 text-black-50">|</span> 
-                                        <i class="bi bi-arrow-return-right me-1"></i> 
-                                        {{ hist.method || 'CASH' }}: Rp {{ formatNumber(hist.amount) }}
-                                    </div>
-                                </template>
-                                
-                                <!-- JIKA DATA LAMA / TIDAK PUNYA RIWAYAT (Fallback) -->
-                                <template v-else>
-                                    <div class="fw-semibold text-dark">
-                                        <i class="bi bi-wallet2 text-muted me-1"></i> 
-                                        {{ po.paymentMethod || 'CASH' }}: 
-                                        <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
-                                    </div>
-                                </template>
-
-                                <!-- STATUS SISA HUTANG (Berlaku untuk semuanya) -->
-                                <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.75rem;">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
-                                </div>
-                            </td>
-                            <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
-                            <td class="text-center">
-    <div class="btn-group btn-group-sm">
-        <button v-if="po.poStatus !== 'SELESAI'" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
-            <i class="bi bi-check2-square me-1"></i> Terima Stok
-        </button>
-
-        <button class="btn btn-danger fw-bold text-white" 
-                @click="openReturnPoModal(po)" 
-                title="Retur Barang ke Supplier" 
-                :disabled="po.poStatus !== 'SELESAI'">
-            <i class="bi bi-arrow-return-left"></i> Retur
-        </button>
-
-        <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
-            <i class="bi bi-printer"></i>
-        </button>
+    <tr v-for="po in filteredPurchases" :key="po.id">
+        <td class="fw-bold small">
+            <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
+        </td>
+        <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+        <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
+            {{ getSupplierName(po.supplierId) }}
+        </td>
         
-        <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
-            <i class="bi bi-pencil"></i>
-        </button>
+        <td>
+            <span v-if="po.poStatus === 'SELESAI'" class="badge bg-info text-dark">
+                <i class="bi bi-box-seam-fill me-1"></i> Telah Diterima
+            </span>
+            <span v-else-if="po.poStatus === 'RETUR SEBAGIAN'" class="badge bg-danger text-white">
+                <i class="bi bi-arrow-return-left me-1"></i> Retur Sebagian
+            </span>
+            <span v-else-if="po.poStatus === 'RETUR FULL'" class="badge bg-danger text-white">
+                <i class="bi bi-arrow-return-left me-1"></i> Retur Full
+            </span>
+            <span v-else class="badge bg-warning text-dark">
+                <i class="bi bi-truck me-1"></i> Menunggu Kedatangan
+            </span>
+        </td>
+
+        <td>
+            <span class="badge" :class="po.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
+                {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
+            </span>
+        </td>
+        <td class="small">
+            <template v-if="po.paymentHistory && po.paymentHistory.length > 0">
+                <div class="fw-semibold text-dark mb-1">
+                    <i class="bi bi-wallet2 text-muted me-1"></i> 
+                    {{ po.paymentHistory[0].method || 'CASH' }}: 
+                    <span class="text-success">Rp {{ formatNumber(po.paymentHistory[0].amount) }}</span>
+                </div>
+                
+                <div v-for="(hist, idx) in po.paymentHistory.slice(1)" :key="'hist-'+idx" class="text-muted" style="font-size: 0.75rem;">
+                    <span class="ms-1 me-1 text-black-50">|</span> 
+                    <i class="bi bi-arrow-return-right me-1"></i> 
+                    {{ hist.method || 'CASH' }}: Rp {{ formatNumber(hist.amount) }}
+                </div>
+            </template>
+            
+            <template v-else>
+                <div class="fw-semibold text-dark">
+                    <i class="bi bi-wallet2 text-muted me-1"></i> 
+                    {{ po.paymentMethod || 'CASH' }}: 
+                    <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
+                </div>
+            </template>
+
+            <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.75rem;">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
+            </div>
+        </td>
+        <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
         
-        <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
-            <i class="bi bi-trash"></i>
-        </button>
-    </div>
-</td>
-                        </tr>
-                        <tr v-if="filteredPurchases.length === 0">
-                            <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
-                        </tr>
-                    </tbody>
+        <td class="text-center">
+            <div class="btn-group btn-group-sm">
+                <button v-if="po.poStatus === 'PENDING' || !po.poStatus" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
+                    <i class="bi bi-check2-square me-1"></i> Terima Stok
+                </button>
+
+                <button class="btn btn-danger fw-bold text-white" 
+                        @click="openReturnPoModal(po)" 
+                        title="Retur Barang ke Supplier" 
+                        :disabled="po.poStatus === 'PENDING' || po.poStatus === 'RETUR FULL' || !po.poStatus">
+                    <i class="bi bi-arrow-return-left"></i> Retur
+                </button>
+
+                <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
+                    <i class="bi bi-printer"></i>
+                </button>
+                
+                <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                
+                <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+    <tr v-if="filteredPurchases.length === 0">
+        <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
+    </tr>
+</tbody>
                 </table>
             </div>
         </div>
@@ -7171,19 +7177,110 @@ async processPoReturn() {
     if (confirm.isConfirmed) {
         this.isProcessing = true;
         try {
-            // Logika pencarian index PO di array lokal Anda
-            let poIdx = this.purchaseOrders.findIndex(p => p.id === this.returnPoForm.id);
+            // 1. Ganti purchaseOrders menjadi purchases agar tidak error findIndex
+            let poIdx = this.purchases.findIndex(p => p.id === this.returnPoForm.id);
             if (poIdx === -1) throw new Error("Dokumen PO tidak ditemukan");
             
-            let po = JSON.parse(JSON.stringify(this.purchaseOrders[poIdx]));
+            let po = JSON.parse(JSON.stringify(this.purchases[poIdx]));
             if (!po.returHistory) po.returHistory = [];
 
-            // Proses pemotongan stok dan update item PO dilakukan di sini...
-            // (Skrip Firebase update Anda seperti yang diinstruksikan sebelumnya)
+            // 2. Looping untuk mengurangi stok dan update data PO
+            for (let i = 0; i < this.returnPoForm.items.length; i++) {
+                let retItem = this.returnPoForm.items[i];
+                
+                if (retItem.returnQty > 0) {
+                    let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
+                    let namaLengkap = retItem.name + variantText;
 
-            Swal.fire('Berhasil', 'Retur PO berhasil diproses.', 'success');
+                    // Cari produk di master produk Anda
+                    let prod = this.products.find(p => p.sku === retItem.sku || p.id === retItem.productId);
+                    if (prod) {
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        
+                        // A. Kurangi stok fisik di database
+                        if (retItem.variantSku) {
+                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                            if (vIdx !== -1 && prodCopy.variants[vIdx].outletStocks) {
+                                prodCopy.variants[vIdx].outletStocks[po.outletId] -= retItem.returnQty;
+                                if (prodCopy.variants[vIdx].outletStocks[po.outletId] < 0) prodCopy.variants[vIdx].outletStocks[po.outletId] = 0;
+                            }
+                        } else {
+                            if (prodCopy.baseOutletStocks) {
+                                prodCopy.baseOutletStocks[po.outletId] -= retItem.returnQty;
+                                if (prodCopy.baseOutletStocks[po.outletId] < 0) prodCopy.baseOutletStocks[po.outletId] = 0;
+                            }
+                        }
+
+                        // Update stok produk ke Firebase
+                        await updateDoc(doc(db, "products", prod.id), {
+                            variants: prodCopy.variants || [],
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}
+                        });
+
+                        // B. Catat Mutasi Log Stok (Stok OUT)
+                        // 🌟 PERHATIKAN: Saya tambahkan -Math.abs agar kartu stok mencatat MINUS, bukan PLUS
+                        await this.logStock('OUT', {
+                            productId: prod.id,
+                            sku: retItem.sku || prod.sku || '-',
+                            name: prod.name,
+                            variantSku: retItem.variantSku || null,
+                            variantName: retItem.variantName || '-',
+                            qty: -Math.abs(retItem.returnQty), // <--- INI KUNCI AGAR STOK BERKURANG
+                            outletId: po.outletId,
+                            refId: `RETUR-PO-${po.id}`,
+                            note: `Retur ke Supplier: ${this.returnPoForm.reason}`
+                        });
+                    }
+
+                    // C. Update qty barang di dalam invoice PO
+                    let poItem = po.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+                    if (poItem) {
+                        poItem.qty -= retItem.returnQty;
+                        poItem.isReturned = true;
+
+                        let hargaBeli = retItem.basePrice || retItem.cost || retItem.price || 0;
+                        po.returHistory.push({
+                            date: new Date().toLocaleString('id-ID'),
+                            productName: namaLengkap,
+                            qtyRetur: retItem.returnQty,
+                            refundAmount: retItem.returnQty * hargaBeli,
+                            alasan: this.returnPoForm.reason
+                        });
+                    }
+                }
+            }
+
+            // 3. Update Keuangan PO (Tagihan turun karena barang dikembalikan)
+            po.subtotal = po.items.reduce((sum, item) => sum + (item.qty * (item.basePrice || item.cost || item.price || 0)), 0);
+            po.total -= refundTotal;
+            if (po.total < 0) po.total = 0;
+            
+            // Potong sisa hutang (jika status bayar adalah NGUTANG/TEMPO)
+            po.sisaTagihan = (po.sisaTagihan - refundTotal > 0) ? (po.sisaTagihan - refundTotal) : 0;
+            
+            // Set status baru
+            let isSisaBarangAda = po.items.some(i => i.qty > 0);
+            po.poStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+
+            // 4. Simpan perubahan dokumen PO ke Firebase
+            await updateDoc(doc(db, "purchases", po.id), {
+                items: po.items,
+                total: po.total,
+                subtotal: po.subtotal,
+                sisaTagihan: po.sisaTagihan,
+                poStatus: po.poStatus,
+                returHistory: po.returHistory
+            });
+
+            // 5. Update array di tampilan tabel layar Anda
+            this.purchases[poIdx] = po;
+
+            Swal.fire('Berhasil', 'Retur PO berhasil diproses. Stok dan Laporan Keuangan sudah diperbarui.', 'success');
+            
+            // Tutup Modal
             let modalInstance = bootstrap.Modal.getInstance(document.getElementById('returnPoModal'));
             if (modalInstance) modalInstance.hide();
+            
         } catch (error) {
             console.error(error);
             Swal.fire('Error', error.message, 'error');
