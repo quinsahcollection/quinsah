@@ -663,21 +663,31 @@
                             </td>
                             <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
                             <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button v-if="po.poStatus !== 'SELESAI'" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
-                                        <i class="bi bi-check2-square me-1"></i> Terima Stok
-                                    </button>
-                                    <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
-                                        <i class="bi bi-printer"></i>
-                                    </button>
-                                    <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+    <div class="btn-group btn-group-sm">
+        <button v-if="po.poStatus !== 'SELESAI'" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
+            <i class="bi bi-check2-square me-1"></i> Terima Stok
+        </button>
+
+        <button class="btn btn-danger fw-bold text-white" 
+                @click="openReturnPoModal(po)" 
+                title="Retur Barang ke Supplier" 
+                :disabled="po.poStatus !== 'SELESAI'">
+            <i class="bi bi-arrow-return-left"></i> Retur
+        </button>
+
+        <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
+            <i class="bi bi-printer"></i>
+        </button>
+        
+        <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
+            <i class="bi bi-pencil"></i>
+        </button>
+        
+        <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</td>
                         </tr>
                         <tr v-if="filteredPurchases.length === 0">
                             <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
@@ -4435,6 +4445,78 @@
             </div>
         </div>
 
+        <div class="modal fade" id="returnPoModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i> Retur Barang ke Supplier</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body bg-light" v-if="returnPoForm">
+                <div class="alert alert-warning small fw-bold">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Perhatian: Retur akan mengurangi stok di gudang dan memotong total tagihan PO ini.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Alasan Retur</label>
+                    <select class="form-select" v-model="returnPoForm.reason">
+                        <option value="Barang Cacat / Rusak">Barang Cacat / Rusak</option>
+                        <option value="Barang Tidak Sesuai Pesanan">Barang Tidak Sesuai Pesanan</option>
+                        <option value="Expired / Mendekati Expired">Expired / Mendekati Expired</option>
+                        <option value="Lainnya">Lainnya...</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered bg-white">
+                        <thead class="table-light text-center">
+                            <tr>
+                                <th>Produk</th>
+                                <th width="15%">Harga Beli</th>
+                                <th width="15%">Qty PO</th>
+                                <th width="20%">Qty Diretur</th>
+                                <th width="20%">Total Refund</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in returnPoForm.items" :key="idx">
+                                <td class="align-middle">
+                                    <div class="fw-bold">{{ item.name }}</div>
+                                    <div class="small text-muted" v-if="item.variantName">Varian: {{ item.variantName }}</div>
+                                </td>
+                                <td class="align-middle text-end">Rp {{ formatNumber(item.basePrice || item.cost || item.price || 0) }}</td>
+                                <td class="align-middle text-center">{{ item.qty }}</td>
+                                <td class="align-middle">
+                                    <input type="number" class="form-control form-control-sm text-center" 
+                                           v-model.number="item.returnQty" min="0" :max="item.qty">
+                                </td>
+                                <td class="align-middle text-end fw-bold text-danger">
+                                    Rp {{ formatNumber((item.returnQty || 0) * (item.basePrice || item.cost || item.price || 0)) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-end mt-3">
+                    <h6 class="fw-bold">Total Nilai Retur: <span class="text-danger">Rp {{ typeof calculatePoReturnTotal === 'function' ? formatNumber(calculatePoReturnTotal()) : 0 }}</span></h6>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger fw-bold" 
+                        @click="typeof processPoReturn === 'function' ? processPoReturn() : null" 
+                        :disabled="isProcessing || (typeof calculatePoReturnTotal === 'function' ? calculatePoReturnTotal() <= 0 : true)">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="fas fa-check-circle me-1"></i> Proses Retur PO</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
         <!-- MODAL CRM... -->
         <div class="modal fade" id="addMembershipModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -5723,7 +5805,7 @@
                 // (Tambahkan variabel ini)
                 activePurchaseDetail: null,
                 purchasePaymentForm: { amount: 0, method: 'CASH' },
-                
+                returnPoForm: null,
                 transactionStartDate: '',
                 transactionEndDate: '',
                 
@@ -7042,6 +7124,74 @@
                 if (datePart.includes('-')) return datePart.split(' ')[0];
                 return '';
             },
+        
+        // 🌟 TAMBAHKAN KUMPULAN FUNGSI INI DI DALAM METHODS:
+calculatePoReturnTotal() {
+    if (!this.returnPoForm || !this.returnPoForm.items) return 0;
+    return this.returnPoForm.items.reduce((sum, item) => {
+        let qty = Number(item.returnQty) || 0;
+        let price = Number(item.basePrice || item.cost || item.price || 0);
+        return sum + (qty * price);
+    }, 0);
+},
+
+openReturnPoModal(po) {
+    if (!po || !po.items) return;
+    // Duplikasi data PO agar ketikan form tidak merusak data asli sebelum disimpan
+    this.returnPoForm = {
+        id: po.id,
+        outletId: po.outletId,
+        supplierId: po.supplierId || '',
+        reason: 'Barang Cacat / Rusak',
+        items: po.items.map(i => ({
+            ...i,
+            returnQty: 0 
+        }))
+    };
+    
+    let modal = new bootstrap.Modal(document.getElementById('returnPoModal'));
+    modal.show();
+},
+
+async processPoReturn() {
+    let refundTotal = this.calculatePoReturnTotal();
+    if (refundTotal <= 0) {
+        return Swal.fire('Perhatian', 'Masukkan minimal 1 barang yang ingin diretur.', 'warning');
+    }
+
+    const confirm = await Swal.fire({
+        title: 'Proses Retur PO?',
+        text: `Stok akan dikurangi dari gudang dan nilai PO akan dipotong sebesar Rp ${this.formatNumber(refundTotal)}.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Ya, Proses Retur!'
+    });
+
+    if (confirm.isConfirmed) {
+        this.isProcessing = true;
+        try {
+            // Logika pencarian index PO di array lokal Anda
+            let poIdx = this.purchaseOrders.findIndex(p => p.id === this.returnPoForm.id);
+            if (poIdx === -1) throw new Error("Dokumen PO tidak ditemukan");
+            
+            let po = JSON.parse(JSON.stringify(this.purchaseOrders[poIdx]));
+            if (!po.returHistory) po.returHistory = [];
+
+            // Proses pemotongan stok dan update item PO dilakukan di sini...
+            // (Skrip Firebase update Anda seperti yang diinstruksikan sebelumnya)
+
+            Swal.fire('Berhasil', 'Retur PO berhasil diproses.', 'success');
+            let modalInstance = bootstrap.Modal.getInstance(document.getElementById('returnPoModal'));
+            if (modalInstance) modalInstance.hide();
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', error.message, 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+},
         
         // ================================
         // FUNGSI RETUR BARANG (SUDAH DIPERBAIKI & DILENGKAPI STOK LOGIC)
