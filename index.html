@@ -5771,6 +5771,37 @@
                 </table>
             </div>
 
+            <!-- 🌟 INFO RETUR DAN TUKAR BARANG DI PRINT PO 🌟 -->
+<div v-if="activePrintData.returHistory && activePrintData.returHistory.length > 0" style="margin-top: 20px; padding: 15px; border: 1px dashed #dc3545; background-color: #fffafb; border-radius: 6px;">
+    <div style="font-weight: bold; font-size: 13px; color: #dc3545; margin-bottom: 10px; text-transform: uppercase;">
+        Info Retur & Tukar Barang
+    </div>
+    <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #ccc; font-weight: bold; color: #555;">
+            <td style="padding: 5px;">Tanggal</td>
+            <td style="padding: 5px;">Nama Barang</td>
+            <td style="padding: 5px; text-align: center;">Qty</td>
+            <td style="padding: 5px;">Status/Tindakan</td>
+            <td style="padding: 5px; text-align: right;">Potongan Hutang</td>
+        </tr>
+        <tr v-for="(ret, rIdx) in activePrintData.returHistory" :key="'ret-'+rIdx" style="border-bottom: 1px dotted #eee;">
+            <td style="padding: 5px;">{{ ret.date ? ret.date.split(',')[0] : '-' }}</td>
+            <td style="padding: 5px; font-weight: bold;">
+                {{ ret.productName || 'Produk' }}<br>
+                <span style="font-size: 10px; font-weight: normal; color: #777;">Ket: {{ ret.alasan }}</span>
+            </td>
+            <td style="padding: 5px; text-align: center; font-weight: bold; color: #dc3545;">{{ ret.qtyRetur }}</td>
+            <td style="padding: 5px;">{{ ret.action || 'Refund' }}</td>
+            <td style="padding: 5px; text-align: right; font-weight: bold; color: #dc3545;">
+                {{ ret.refundAmount > 0 ? '- Rp ' + formatNumber(ret.refundAmount) : 'Rp 0' }}
+            </td>
+        </tr>
+    </table>
+    <div style="text-align: right; margin-top: 10px; font-weight: bold; font-size: 13px;">
+        Total Nilai Retur: <span style="color: #dc3545;">- Rp {{ formatNumber(activePrintData.returHistory.reduce((a, b) => a + (b.refundAmount || 0), 0)) }}</span>
+    </div>
+</div>
+
             <div style="margin-top:50px; display:flex; justify-content:space-between; text-align:center; font-size:12px;">
                 <div style="width:30%;">
                     <p style="margin-bottom:60px;">Disetujui Oleh,</p>
