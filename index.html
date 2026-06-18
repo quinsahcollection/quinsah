@@ -562,146 +562,152 @@
     </div>
 </div>
 
-            <!-- PURCHASE VIEW -->
             <div v-if="currentView === 'purchase'" class="dashboard-card">
-            
-            <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & PO</h6>
-            
-            <div class="row mb-3 align-items-end">
-                <div class="col-12 col-md-3 mb-2">
-                    <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Ketik pencarian...">
-                    </div>
-                </div>
-                <div class="col-12 col-md-3 mb-2">
-                    <button class="btn btn-primary-custom w-100 fw-bold" @click="openModal('addPurchaseModal')">
-                        <i class="bi bi-plus-lg me-1"></i> Buat PO Baru
-                    </button>
-                </div>
-                <div class="col-6 col-md-2 mb-2">
-                    <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
-                    <input type="date" class="form-control" v-model="purchaseStartDate">
-                </div>
-                <div class="col-6 col-md-2 mb-2">
-                    <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
-                    <input type="date" class="form-control" v-model="purchaseEndDate">
-                </div>
-                <div class="col-12 col-md-2 mb-2">
-                    <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-custom align-middle text-nowrap">
-                    <thead>
-                        <tr>
-                            <th>No. Invoice / PO</th>
-                            <th>Tanggal</th>
-                            <th>Supplier</th>
-                            <th>Status Barang</th>
-                            <th>Status Bayar</th>
-                            <th>Pembayaran</th>
-                            <th>Total Pembelian</th>
-                            <th class="text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-    <tr v-for="po in filteredPurchases" :key="po.id">
-        <td class="fw-bold small">
-            <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
-        </td>
-        <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
-        <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
-            {{ getSupplierName(po.supplierId) }}
-        </td>
-        
-        <td>
-            <span v-if="po.poStatus === 'SELESAI'" class="badge bg-info text-dark">
-                <i class="bi bi-box-seam-fill me-1"></i> Telah Diterima
-            </span>
-            <span v-else-if="po.poStatus === 'RETUR SEBAGIAN'" class="badge bg-danger text-white">
-                <i class="bi bi-arrow-return-left me-1"></i> Retur Sebagian
-            </span>
-            <span v-else-if="po.poStatus === 'RETUR FULL'" class="badge bg-danger text-white">
-                <i class="bi bi-arrow-return-left me-1"></i> Retur Full
-            </span>
-            <span v-else class="badge bg-warning text-dark">
-                <i class="bi bi-truck me-1"></i> Menunggu Kedatangan
-            </span>
-        </td>
-
-        <td>
-            <span class="badge" :class="po.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
-                {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
-            </span>
-        </td>
-        <td class="small">
-            <template v-if="po.paymentHistory && po.paymentHistory.length > 0">
-                <div class="fw-semibold text-dark mb-1">
-                    <i class="bi bi-wallet2 text-muted me-1"></i> 
-                    {{ po.paymentHistory[0].method || 'CASH' }}: 
-                    <span class="text-success">Rp {{ formatNumber(po.paymentHistory[0].amount) }}</span>
-                </div>
-                
-                <div v-for="(hist, idx) in po.paymentHistory.slice(1)" :key="'hist-'+idx" class="text-muted" style="font-size: 0.75rem;">
-                    <span class="ms-1 me-1 text-black-50">|</span> 
-                    <i class="bi bi-arrow-return-right me-1"></i> 
-                    {{ hist.method || 'CASH' }}: Rp {{ formatNumber(hist.amount) }}
-                </div>
-            </template>
-            
-            <template v-else>
-                <div class="fw-semibold text-dark">
-                    <i class="bi bi-wallet2 text-muted me-1"></i> 
-                    {{ po.paymentMethod || 'CASH' }}: 
-                    <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
-                </div>
-            </template>
-
-            <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.75rem;">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
-            </div>
-        </td>
-        <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
-        
-        <td class="text-center">
-            <div class="btn-group btn-group-sm">
-                <button v-if="po.poStatus === 'PENDING' || !po.poStatus" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
-                    <i class="bi bi-check2-square me-1"></i> Terima Stok
-                </button>
-
-                <button class="btn btn-danger fw-bold text-white" 
-                        @click="openReturnPoModal(po)" 
-                        title="Retur Barang ke Supplier" 
-                        :disabled="po.poStatus === 'PENDING' || po.poStatus === 'RETUR FULL' || !po.poStatus">
-                    <i class="bi bi-arrow-return-left"></i> Retur
-                </button>
-
-                <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
-                    <i class="bi bi-printer"></i>
-                </button>
-                
-                <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                
-                <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        </td>
-    </tr>
-    <tr v-if="filteredPurchases.length === 0">
-        <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
-    </tr>
-</tbody>
-                </table>
+    
+    <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Pembelian & PO</h6>
+    
+    <div class="row mb-3 align-items-end">
+        <div class="col-12 col-md-3 mb-2">
+            <label class="form-label small fw-bold text-muted">Cari PO / Supplier</label>
+            <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" v-model="purchaseSearchQuery" placeholder="Ketik pencarian...">
             </div>
         </div>
+        <div class="col-12 col-md-3 mb-2">
+            <button class="btn btn-primary-custom w-100 fw-bold" @click="openModal('addPurchaseModal')">
+                <i class="bi bi-plus-lg me-1"></i> Buat PO Baru
+            </button>
+        </div>
+        <div class="col-6 col-md-2 mb-2">
+            <label class="form-label small fw-bold text-muted">Dari Tanggal</label>
+            <input type="date" class="form-control" v-model="purchaseStartDate">
+        </div>
+        <div class="col-6 col-md-2 mb-2">
+            <label class="form-label small fw-bold text-muted">Sampai Tanggal</label>
+            <input type="date" class="form-control" v-model="purchaseEndDate">
+        </div>
+        <div class="col-12 col-md-2 mb-2">
+            <button class="btn btn-outline-danger w-100" @click="purchaseStartDate = ''; purchaseEndDate = ''; purchaseSearchQuery = '';">
+                <i class="bi bi-arrow-clockwise me-1"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-custom align-middle text-nowrap">
+            <thead>
+                <tr>
+                    <th>No. Invoice / PO</th>
+                    <th>Tanggal</th>
+                    <th>Supplier</th>
+                    <th>Status Barang</th>
+                    <th>Status Bayar</th>
+                    <th>Pembayaran</th>
+                    <th>Total Pembelian</th>
+                    <th class="text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="po in filteredPurchases" :key="po.id">
+                    <td class="fw-bold small">
+                        <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
+                    </td>
+                    <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+                    <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
+                        {{ getSupplierName(po.supplierId) }}
+                    </td>
+                    
+                    <td>
+                        <span v-if="po.poStatus === 'SELESAI'" class="badge bg-info text-dark">
+                            <i class="bi bi-box-seam-fill me-1"></i> Telah Diterima
+                        </span>
+                        <span v-else-if="po.poStatus === 'RETUR SEBAGIAN'" class="badge bg-danger text-white">
+                            <i class="bi bi-arrow-return-left me-1"></i> Retur Sebagian
+                        </span>
+                        <span v-else-if="po.poStatus === 'RETUR FULL'" class="badge bg-danger text-white">
+                            <i class="bi bi-arrow-return-left me-1"></i> Retur Full
+                        </span>
+                        <span v-else-if="po.poStatus === 'RETUR TUKAR'" class="badge bg-warning text-dark">
+                            <i class="bi bi-arrow-repeat me-1"></i> Menunggu Brg Tukar
+                        </span>
+                        <span v-else class="badge bg-warning text-dark">
+                            <i class="bi bi-truck me-1"></i> Menunggu Kedatangan
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge" :class="po.paymentStatus === 'LUNAS' ? 'bg-success' : 'bg-danger'">
+                            {{ po.paymentStatus === 'LUNAS' ? 'Lunas' : 'Hutang / Belum Lunas' }}
+                        </span>
+                    </td>
+                    <td class="small">
+                        <template v-if="po.paymentHistory && po.paymentHistory.length > 0">
+                            <div class="fw-semibold text-dark mb-1">
+                                <i class="bi bi-wallet2 text-muted me-1"></i> 
+                                {{ po.paymentHistory[0].method || 'CASH' }}: 
+                                <span class="text-success">Rp {{ formatNumber(po.paymentHistory[0].amount) }}</span>
+                            </div>
+                            
+                            <div v-for="(hist, idx) in po.paymentHistory.slice(1)" :key="'hist-'+idx" class="text-muted" style="font-size: 0.75rem;">
+                                <span class="ms-1 me-1 text-black-50">|</span> 
+                                <i class="bi bi-arrow-return-right me-1"></i> 
+                                {{ hist.method || 'CASH' }}: Rp {{ formatNumber(hist.amount) }}
+                            </div>
+                        </template>
+                        
+                        <template v-else>
+                            <div class="fw-semibold text-dark">
+                                <i class="bi bi-wallet2 text-muted me-1"></i> 
+                                {{ po.paymentMethod || 'CASH' }}: 
+                                <span class="text-success">Rp {{ formatNumber(po.paymentStatus === 'LUNAS' ? po.total : (po.paidAmount || 0)) }}</span>
+                            </div>
+                        </template>
+
+                        <div v-if="po.paymentStatus !== 'LUNAS' && (po.total - (po.paidAmount || 0)) > 0" class="text-danger mt-1 fw-bold" style="font-size: 0.75rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Sisa: Rp {{ formatNumber(po.total - (po.paidAmount || 0)) }}
+                        </div>
+                    </td>
+                    <td class="fw-bold text-success small">Rp {{ formatNumber(po.total) }}</td>
+                    
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button v-if="po.poStatus === 'PENDING' || !po.poStatus" class="btn btn-success fw-bold text-white" @click="receivePurchase(po)" title="Terima Barang & Masukkan Stok" :disabled="isProcessing">
+                                <i class="bi bi-check2-square me-1"></i> Terima Stok
+                            </button>
+
+                            <button v-if="po.poStatus === 'RETUR TUKAR'" class="btn btn-warning fw-bold text-dark" @click="receiveExchange(po)" title="Terima Barang Pengganti dari Pabrik" :disabled="isProcessing">
+                                <i class="bi bi-box-seam-fill me-1"></i> Terima Brg Tukar
+                            </button>
+
+                            <button class="btn btn-danger fw-bold text-white" 
+                                    @click="openReturnPoModal(po)" 
+                                    title="Retur Barang ke Supplier" 
+                                    :disabled="po.poStatus === 'PENDING' || po.poStatus === 'RETUR FULL' || !po.poStatus">
+                                <i class="bi bi-arrow-return-left"></i> Retur
+                            </button>
+
+                            <button class="btn btn-outline-secondary" @click="triggerPrint(po, 'poA4')" title="Cetak PO (A4)">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                            
+                            <button class="btn btn-outline-primary" @click="editPurchase(po)" title="Edit PO (Retur Stok Otomatis)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            
+                            <button class="btn btn-outline-danger" @click="deletePurchase(po)" title="Hapus Permanen PO & Tarik Stok" :disabled="isProcessing">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr v-if="filteredPurchases.length === 0">
+                    <td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat pembelian sesuai filter.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
         
         
           <div v-if="currentView === 'payment'" class="dashboard-card">
@@ -4470,7 +4476,7 @@
                 <div class="form-check mt-3" v-if="returnPoForm.actionType === 'EXCHANGE'">
                     <input class="form-check-input" type="checkbox" v-model="returnPoForm.isReplacementReceived" id="checkReplacement">
                     <label class="form-check-label small fw-bold text-success" for="checkReplacement">
-                        <i class="bi bi-box-seam me-1"></i>Barang Pengganti Sudah Langsung Diterima (Tukar Guling)
+                        <i class="bi bi-box-seam me-1"></i>Barang Pengganti Sudah Langsung Diterima (Tukar Barang)
                     </label>
                 </div>
                 
@@ -7289,7 +7295,7 @@ async processPoReturn() {
                     if (prod) {
                         let prodCopy = JSON.parse(JSON.stringify(prod));
                         
-                        // JIKA BUKAN TUKAR GULING (Stok harus dipotong karena barang kembali ke pabrik)
+                        // JIKA BUKAN TUKAR BARANG (Stok harus dipotong karena barang kembali ke pabrik)
                         if (isRefund || (isExchange && !isReceived)) {
                             if (retItem.variantSku) {
                                 let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
@@ -7323,7 +7329,7 @@ async processPoReturn() {
                             });
                         }
                         
-                        // JIKA TUKAR GULING LANSUNG: Stok Tetap. Kita catat histori In & Out sebagai formalitas pembukuan.
+                        // JIKA TUKAR BARANG LANSUNG: Stok Tetap. Kita catat histori In & Out sebagai formalitas pembukuan.
                         if (isExchange && isReceived) {
                              await this.logStock('OUT', {
                                 productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
@@ -7388,6 +7394,107 @@ async processPoReturn() {
             let modalInstance = bootstrap.Modal.getInstance(document.getElementById('returnPoModal'));
             if (modalInstance) modalInstance.hide();
             
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', error.message, 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    }
+},
+        
+        async receiveExchange(po) {
+    const confirm = await Swal.fire({
+        title: 'Terima Barang Pengganti?',
+        text: 'Barang yang sebelumnya ditukar (Menyusul) sudah tiba dan stok akan ditambahkan kembali ke gudang Anda?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Terima Stok',
+        confirmButtonColor: '#198754'
+    });
+
+    if (confirm.isConfirmed) {
+        this.isProcessing = true;
+        try {
+            // 1. Cari PO di database lokal
+            let poIdx = this.purchases.findIndex(p => p.id === po.id);
+            if (poIdx === -1) throw new Error("PO tidak ditemukan");
+            
+            let updatedPo = JSON.parse(JSON.stringify(this.purchases[poIdx]));
+            let hasProcessed = false;
+
+            // 2. Cari riwayat retur mana yang statusnya "Menyusul"
+            for (let i = 0; i < updatedPo.returHistory.length; i++) {
+                let ret = updatedPo.returHistory[i];
+                
+                if (ret.action === 'Tukar Barang (Menyusul)') {
+                    // Cari item aslinya di dalam rincian PO
+                    let poItem = updatedPo.items.find(item => {
+                        let vName = item.variantName && item.variantName !== '-' ? ` (${item.variantName})` : '';
+                        let fName = (item.productName || item.name || 'Produk') + vName;
+                        return fName === ret.productName;
+                    });
+
+                    if (poItem) {
+                        // Cari produk di master produk Anda
+                        let prod = this.products.find(p => p.sku === poItem.sku || p.id === poItem.productId);
+                        if (prod) {
+                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            
+                            // 3. Tambahkan Stok Kembali ke Outlet
+                            if (poItem.variantSku) {
+                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === poItem.variantSku);
+                                if (vIdx !== -1 && prodCopy.variants[vIdx].outletStocks) {
+                                    prodCopy.variants[vIdx].outletStocks[updatedPo.outletId] = (prodCopy.variants[vIdx].outletStocks[updatedPo.outletId] || 0) + ret.qtyRetur;
+                                }
+                            } else {
+                                if (prodCopy.baseOutletStocks) {
+                                    prodCopy.baseOutletStocks[updatedPo.outletId] = (prodCopy.baseOutletStocks[updatedPo.outletId] || 0) + ret.qtyRetur;
+                                }
+                            }
+
+                            // 4. Simpan Stok Produk ke Firebase
+                            await updateDoc(doc(db, "products", prod.id), {
+                                variants: prodCopy.variants || [],
+                                baseOutletStocks: prodCopy.baseOutletStocks || {}
+                            });
+
+                            // 5. Catat Log Stok (Barang Masuk)
+                            await this.logStock('IN', {
+                                productId: prod.id, 
+                                name: prod.name, 
+                                variantSku: poItem.variantSku || null, 
+                                variantName: poItem.variantName || '-',
+                                qty: Math.abs(ret.qtyRetur), 
+                                outletId: updatedPo.outletId, 
+                                refId: `TUKAR-PO-${updatedPo.id}`, 
+                                note: `Terima Barang Pengganti`
+                            });
+                            
+                            hasProcessed = true;
+                            // Ubah status di histori menjadi selesai
+                            updatedPo.returHistory[i].action = 'Tukar Barang (Selesai Diterima)'; 
+                        }
+                    }
+                }
+            }
+
+            // 6. Simpan Status PO yang Baru
+            if (hasProcessed) {
+                updatedPo.poStatus = 'SELESAI'; // Ubah status PO jadi selesai
+                
+                await updateDoc(doc(db, "purchases", updatedPo.id), {
+                    poStatus: updatedPo.poStatus,
+                    returHistory: updatedPo.returHistory
+                });
+                
+                // Update tampilan layar
+                this.purchases[poIdx] = updatedPo;
+                Swal.fire('Berhasil', 'Stok barang pengganti berhasil masuk ke gudang!', 'success');
+            } else {
+                Swal.fire('Info', 'Sistem tidak menemukan barang tukar yang statusnya menyusul.', 'info');
+            }
+
         } catch (error) {
             console.error(error);
             Swal.fire('Error', error.message, 'error');
