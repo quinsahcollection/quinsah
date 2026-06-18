@@ -5424,11 +5424,14 @@
             <div style="font-weight: bold; font-size: 0.85em; text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 4px;">
                 POTONGAN TUKAR TAMBAH
             </div>
-            <div v-for="i in activePrintData.items.filter(item => item.productId === 'EXCHANGE')" :key="i.cartId" style="font-size: 0.85em;">
+            <div v-for="i in activePrintData.items.filter(item => item.productId === 'EXCHANGE')" :key="i.cartId" style="font-size: 0.85em; margin-bottom: 4px;">
                 <div style="font-weight: bold; color: #555;">Nilai Barang Lama:</div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="font-style: italic; max-width: 65%;">{{ i.name.replace('[SALDO TUKAR] ', '') }}</span>
                     <span style="color: #dc3545; font-weight: bold;">-{{ formatNumber(Math.abs(i.qty * (i.finalPrice || i.sellPrice))) }}</span>
+                </div>
+                <div v-if="i.note" style="font-size: 0.9em; font-style: italic; color: #666; margin-top: 2px;">
+                    ({{ i.note }})
                 </div>
             </div>
         </div>
@@ -5550,9 +5553,14 @@
                         <span v-if="item.productId === 'EXCHANGE'">TUKAR TAMBAH:</span>
                         <span v-else>{{ item.name }}</span>
                     </div>
-                    <div v-if="item.productId === 'EXCHANGE'" style="font-size: 12px; font-style: italic; margin-top: 3px;">
-                        {{ item.name.replace('[SALDO TUKAR] ', '') }}
+                    
+                    <div v-if="item.productId === 'EXCHANGE'" style="font-size: 12px; margin-top: 3px;">
+                        <span style="font-style: italic;">{{ item.name.replace('[SALDO TUKAR] ', '') }}</span>
+                        <div v-if="item.note" style="font-weight: bold; color: #555; margin-top: 3px;">
+                            Ref: {{ item.note }}
+                        </div>
                     </div>
+                    
                     <div v-else-if="item.variantName" style="color: #6b7280; font-size: 12px; margin-top: 3px;">
                         Varian: {{ item.variantName }}
                     </div>
