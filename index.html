@@ -3577,18 +3577,51 @@
                         </div>
                     </div>
                 </div>
+
+                <div v-if="activeInvoiceDetail.returHistory && activeInvoiceDetail.returHistory.length > 0" class="mt-4 pt-3 border-top">
+                    <h6 class="fw-bold mb-3 text-danger">
+                        <i class="bi bi-arrow-return-left me-1"></i> Histori Retur / Refund
+                    </h6>
+                    <div class="table-responsive shadow-sm rounded">
+                        <table class="table table-sm table-bordered align-middle mb-0" style="font-size: 0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tanggal Retur</th>
+                                    <th>Nama Produk</th>
+                                    <th class="text-center">Qty</th>
+                                    <th>Alasan</th>
+                                    <th class="text-end">Total Refund</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(ret, idx) in activeInvoiceDetail.returHistory" :key="'retur-'+idx">
+                                    <td class="text-muted">{{ ret.date ? ret.date.split(',')[0] : '-' }}</td>
+                                    <td class="fw-bold text-dark">{{ ret.productName || 'Produk' }}</td>
+                                    <td class="text-center text-danger fw-bold">{{ ret.qtyRetur }}</td>
+                                    <td class="text-muted">{{ ret.alasan || '-' }}</td>
+                                    <td class="text-end text-danger fw-bold">- Rp {{ formatNumber(ret.refundAmount || 0) }}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-light">
+                                    <td colspan="4" class="text-end fw-bold text-dark">Total Nilai Retur:</td>
+                                    <td class="text-end text-danger fw-bold">- Rp {{ formatNumber(activeInvoiceDetail.returHistory.reduce((a, b) => a + (b.refundAmount || 0), 0)) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
             </div>
             
             <div class="modal-footer bg-light p-2 d-flex justify-content-between">
                 
-                <!-- 🌟 PERUBAHAN DI SINI: Tombol disembunyikan saat di Laporan, dan ditambahkan cek keamanan -->
                 <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" 
                         v-if="currentView !== 'reports' && currentView !== 'analytics' && activeInvoiceDetail && activeInvoiceDetail.paymentStatus !== 'DIRETUR'"
                         @click="cekDanBukaModalRetur(activeInvoiceDetail)">
                     <i class="bi bi-arrow-return-left me-1"></i> Retur / Kembalikan Barang
                 </button>
                 
-                <!-- Spacer untuk mendorong tombol Tutup ke kanan jika tombol retur hilang -->
                 <div v-else></div> 
                 
                 <button type="button" class="btn btn-sm btn-white border fw-bold" data-bs-dismiss="modal">Tutup</button>
