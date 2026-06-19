@@ -297,36 +297,33 @@
             },
             
             downloadPDF() {
-    // 1. KUNCI PERBAIKAN: Paksa layar kembali ke titik 0 (paling atas) secara instan
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    // Paksa layar ke atas untuk menghindari bug "blank area" saat posisi di-scroll
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
     const element = document.getElementById('receipt-content');
     
-    // 2. Simpan style bawaan agar tidak hilang setelah cetak
+    // Simpan style bawaan agar tampilan layar tidak rusak setelah download
     const originalStyle = {
         boxShadow: element.style.boxShadow,
-        border: element.style.border,
         borderRadius: element.style.borderRadius,
         margin: element.style.margin
     };
 
-    // 3. Hilangkan sementara efek visual yang sering merusak hasil render PDF
+    // Buat elemen rata, tanpa bayangan dan tanpa lengkungan (mencegah glitch merah ganda)
     element.style.boxShadow = 'none';
-    element.style.border = '1px solid #dee2e6';
     element.style.borderRadius = '0px';
-    element.style.margin = '0'; // Buang margin agar nempel presisi di atas
+    element.style.margin = '0';
 
     const opt = {
-        margin:       0.3, 
+        margin:       0, // Set 0 agar warna merah header menempel rapi di ujung atas PDF
         filename:     `Invoice-${this.ereceiptData.id}.pdf`,
         image:        { type: 'jpeg', quality: 1 },
         html2canvas:  { 
-            scale: 2, // Ketajaman
+            scale: 2, 
             useCORS: true,
-            scrollY: 0, // Reset sistem koordinat scroll
-            scrollX: 0,
-            y: 0, // Paksa mulai tangkapan gambar persis dari ujung atas elemen (bukan layar)
-            windowWidth: 600 // Kunci ukuran lebar agar susunan logo & teks tidak melar/berubah
+            scrollY: 0, // Tetap gunakan ini untuk memperbaiki bug ruang putih
+            // y: 0 <--- Telah dihapus agar kamera fokus ke elemen, bukan ke layar
+            windowWidth: 500 // Dikunci di 500px menyesuaikan max-width container HTML Anda
         }, 
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
     };
@@ -338,16 +335,15 @@
         didOpen: () => { Swal.showLoading() }
     });
 
-    // 4. Jeda waktu 600ms SANGAT KRUSIAL di HP agar browser benar-benar stabil 
-    // setelah scroll otomatis ke atas sebelum mulai memotret
+    // Jeda waktu untuk memastikan halaman stabil di atas sebelum difoto
     setTimeout(() => {
         html2pdf().set(opt).from(element).save().then(() => {
-            // Kembalikan tampilan web menjadi normal lagi
+            // Kembalikan desain lengkung dan bayangan ke layar
             Object.assign(element.style, originalStyle);
             Swal.close();
         }).catch(err => {
             console.error("Gagal membuat PDF:", err);
-            Object.assign(element.style, originalStyle); // Tetap dikembalikan jika error
+            Object.assign(element.style, originalStyle);
             Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
         });
     }, 600);
