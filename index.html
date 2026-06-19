@@ -5903,14 +5903,30 @@
                 return d.toISOString().slice(0, 10);
             };
             
+            // 🌟 TANGKAP URL DI DETIK KE-0 SEBELUM VUE RENDER (Mencegah Layar Lompat)
+            const searchParams = new URLSearchParams(window.location.search);
+            let invoiceId = searchParams.get('inv');
+            if (!invoiceId) {
+                // Fallback khusus jika GitHub Pages menggunakan hash/routing tertentu
+                const match = window.location.href.match(/[?&]inv=([^&#/]+)/);
+                if (match) invoiceId = match[1];
+            }
+            const hasInv = invoiceId ? true : false;
+            
             return {
-                isAppReady: false, isLoggedIn: false, userRole: 'Karyawan', userProfile: {},
+                // 🌟 JIKA ADA PARAMETER ?inv= MAKA LAYAR MEMERIKSA AKSES LANGSUNG DIMATIKAN (TRUE)
+                isAppReady: hasInv ? true : false, 
+                isLoggedIn: false, 
+                userRole: 'Karyawan', 
+                userProfile: {},
                 
                 authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '', companyName: '' },
                 isRegistering: false,
 
-                currentView: 'pos', catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
-                userRole: 'Admin',
+                // 🌟 JIKA ADA PARAMETER ?inv= MAKA VIEW LANGSUNG DIKUNCI KE 'ereceipt'
+                currentView: hasInv ? 'ereceipt' : 'pos', 
+                catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
+                userRole: 'Admin', // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
                 
                 // viewTitles diperbarui agar sinkron dengan menu baru
                 viewTitles: { 
@@ -5965,8 +5981,8 @@
                 returnForm: null,
                 
                 // Tambahkan di dalam data()
-                activeInvoiceDetail: null,
-                installmentForm: { amount: 0, method: 'CASH', note: '' },
+                activeInvoiceDetail: null, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
+                installmentForm: { amount: 0, method: 'CASH', note: '' }, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
 
                 posViewMode: 'grid',       // Untuk kontrol tombol Grid/List
                 isSearchFocused: false,    // Untuk kontrol popup search otomatis
@@ -6084,7 +6100,7 @@
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
                 invSearchQuery: '', invCategoryFilter: '', invProductFilter: '', invOutletFilter: '',
                 logStartDate: '', logEndDate: '',
-                opnameFisik: {}, opnameNote: {},
+                opnameFisik: {}, opnameNote: {}, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
                 formCategory: { id: null, name: '', parentId: '' },
                 formUom: { id: null, name: '' },
                 formTag: { id: null, name: '' },
@@ -6110,7 +6126,13 @@
                 activeStockDetail: null,
 
                 isSaving: false, activeProduct: null, printMode: 'receipt', activePrintData: null,
-                isProcessing: false, isMobileCartOpen: false, heldTransactions: []
+                isProcessing: false, isMobileCartOpen: false, heldTransactions: [],
+                
+                // 🌟 PENTING: Variabel untuk E-Receipt (Jangan Dihapus)
+                ereceiptData: null,
+                ereceiptRating: 0,
+                ereceiptReview: '',
+                isPublicReceipt: hasInv
             }
         },
 
