@@ -30,23 +30,105 @@
     </div>
 
     <div v-else>
-        <div class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden">
+        <div class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden text-start">
             <div class="bg-primary text-white text-center p-4">
                 <h4 class="fw-bold mb-0">E-Receipt</h4>
                 <div class="small opacity-75">{{ ereceiptData.id }}</div>
             </div>
-            <div class="card-body p-4 text-center">
-                <h1 class="fw-bold text-success mb-0">Rp {{ formatNumber(ereceiptData.total) }}</h1>
-                <p class="text-muted small">Total Belanja</p>
+            <div class="card-body p-4">
                 
-                <div class="d-flex justify-content-between border-bottom pb-2 mb-2 text-start small">
+                <div class="d-flex justify-content-between border-bottom pb-2 mb-2 small">
                     <span class="text-muted">Tanggal:</span><span class="fw-bold">{{ ereceiptData.dateStr }}</span>
                 </div>
-                <div class="d-flex justify-content-between border-bottom pb-2 mb-4 text-start small">
+                <div class="d-flex justify-content-between border-bottom pb-3 mb-4 small">
                     <span class="text-muted">Pelanggan:</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
                 </div>
 
-                <div class="row g-2">
+                <h6 class="fw-bold mb-3 text-dark">Daftar Pesanan:</h6>
+                <div v-for="(item, idx) in ereceiptData.items" :key="idx" class="d-flex justify-content-between mb-3 pb-2 border-bottom border-light">
+                    <div style="width: 70%; line-height: 1.3;">
+                        <div class="fw-bold text-dark" style="font-size: 0.9em;">
+                            <span v-if="item.productId === 'EXCHANGE'" class="text-danger">TUKAR TAMBAH: </span>
+                            {{ item.name }}
+                        </div>
+                        
+                        <div v-if="item.variantName && item.productId !== 'EXCHANGE'" class="text-muted" style="font-size: 0.8em;">Varian: {{ item.variantName }}</div>
+                        <div v-if="item.productId === 'EXCHANGE'" class="text-muted fst-italic" style="font-size: 0.8em;">{{ item.name.replace('[SALDO TUKAR] ', '') }}</div>
+                        
+                        <div class="mt-1" style="font-size: 0.85em; color: #555;">
+                            {{ item.qty }} {{ item.uom || 'pcs' }} x Rp {{ formatNumber(item.finalPrice || item.sellPrice) }}
+                        </div>
+                    </div>
+                    <div class="text-end fw-bold" style="width: 30%; font-size: 0.95em;" :class="{'text-danger': item.productId === 'EXCHANGE'}">
+                        {{ item.productId === 'EXCHANGE' ? '-' : '' }}Rp {{ formatNumber(Math.abs(item.qty * (item.finalPrice || item.sellPrice))) }}
+                    </div>
+                </div>
+
+                <div class="mt-4" style="font-size: 0.9em;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal Produk</span>
+                        <span>Rp {{ formatNumber(ereceiptData.items.filter(i => i.productId !== 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0)) }}</span>
+                    </div>
+                    
+                    <div v-if="ereceiptData.items.some(i => i.productId === 'EXCHANGE')" class="d-flex justify-content-between mb-2 text-danger">
+                        <span>Potongan Tukar Tambah</span>
+                        <span class="fw-bold">- Rp {{ formatNumber(Math.abs(ereceiptData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</span>
+                    </div>
+
+                    <div v-if="(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) > 0" class="d-flex justify-content-between mb-2 text-danger">
+                        <span>Diskon Item</span>
+                        <span>- Rp {{ formatNumber(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) }}</span>
+                    </div>
+
+                    <div v-if="ereceiptData.globalDiscountAmt > 0" class="d-flex justify-content-between mb-2 text-danger">
+                        <span>Diskon Invoice</span>
+                        <span>- Rp {{ formatNumber(ereceiptData.globalDiscountAmt) }}</span>
+                    </div>
+                    
+                    <div v-if="(ereceiptData.taxAmt || ereceiptData.taxAmount || 0) > 0" class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">PPN (Tax)</span>
+                        <span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
+                    </div>
+                    
+                    <hr class="my-3 border-dark" style="opacity: 0.2;">
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-3 text-dark">
+                        <span>TOTAL BELANJA</span>
+                        <span class="text-success">Rp {{ formatNumber(ereceiptData.total) }}</span>
+                    </div>
+
+                    <div class="bg-light p-3 rounded-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Dibayar ({{ ereceiptData.paymentMethod }})</span>
+                            <span class="fw-bold">Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) }}</span>
+                        </div>
+                        <div v-if="(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) >= ereceiptData.total" class="d-flex justify-content-between mt-2 pt-2 border-top border-light">
+                            <span class="text-muted">Kembalian</span>
+                            <span class="fw-bold">Rp {{ formatNumber((ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) - ereceiptData.total) }}</span>
+                        </div>
+                        <div v-else class="d-flex justify-content-between mt-2 pt-2 border-top border-danger text-danger fw-bold">
+                            <span>Sisa Hutang</span>
+                            <span>Rp {{ formatNumber(ereceiptData.total - (ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived)) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="ereceiptData.returHistory && ereceiptData.returHistory.length > 0" class="mt-4 p-3 bg-white border border-danger rounded-3 shadow-sm" style="font-size: 0.85em;">
+                    <div class="fw-bold text-center text-white bg-danger rounded-2 py-1 mb-3"><i class="bi bi-arrow-return-left me-1"></i> INFO RETUR / REFUND</div>
+                    <div v-for="(retur, idx) in ereceiptData.returHistory" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+                        <div style="width: 65%;">
+                            <strong>{{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+                            <span class="text-muted fst-italic">Ket: {{ retur.alasan }}</span>
+                        </div>
+                        <div class="text-end text-danger fw-bold" style="width: 35%;">
+                            - Rp {{ formatNumber(retur.refundAmount) }}
+                        </div>
+                    </div>
+                    <div class="text-end mt-2 fw-bold text-danger">
+                        TOTAL REFUND: <span>- Rp {{ formatNumber(ereceiptData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
+                    </div>
+                </div>
+
+                <div class="row g-2 mt-4 pt-3 border-top">
                     <div class="col-6">
                         <button class="btn btn-success w-100 fw-bold shadow-sm" @click="shareToWA(ereceiptData.id)"><i class="bi bi-whatsapp me-1"></i> WhatsApp</button>
                     </div>
