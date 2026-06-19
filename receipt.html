@@ -9,6 +9,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        /* KUNCI PERBAIKAN: Menyembunyikan mentahan HTML agar tidak berkedip (flicker) sebelum Vue memuat data */
+        [v-cloak] { display: none !important; }
+        
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .bg-primary { background-color: #991b1b !important; } /* Sesuaikan warna tema Anda */
         .btn-primary-custom { background-color: #991b1b; color: white; }
@@ -31,7 +34,6 @@
     </div>
 
     <div v-else>
-        <!-- BINGKAI E-RECEIPT UTAMA (ID receipt-content diletakkan di SINI) -->
         <div id="receipt-content" class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden text-start bg-white">
             
             <div class="bg-primary text-white text-center p-4">
@@ -149,10 +151,7 @@
                 </div>
             </div>
             
-        </div> <!-- Penutup Bingkai Receipt Utama -->
-
-        <!-- BLOK TOMBOL SHARE & DOWNLOAD -->
-        <div class="mb-4">
+        </div> <div class="mb-4">
             <div class="text-center text-muted fw-bold small text-uppercase mb-3" style="letter-spacing: 1px;">Bagikan :</div>
             <div class="row g-2">
                 <div class="col-6">
@@ -169,7 +168,6 @@
             </div>
         </div>
 
-        <!-- BINGKAI PROMO BANNER -->
         <div v-if="appSettings && (appSettings.promoImage || appSettings.promoText)" class="mb-4 p-3 bg-light border rounded-4 text-center shadow-sm" style="border-color: #ffc107 !important;">
             <h6 class="fw-bold text-warning mb-2"><i class="bi bi-stars"></i> Promo Spesial!</h6>
             <img v-if="appSettings.promoImage" :src="appSettings.promoImage" class="img-fluid rounded mb-2" style="max-height: 120px; object-fit: cover;">
@@ -180,7 +178,6 @@
             <div v-if="appSettings.voucherCode" class="small text-muted mt-1" style="font-size: 0.75em;">Gunakan kode di atas pada pesanan berikutnya!</div>
         </div>
         
-        <!-- BINGKAI RATING -->
         <div class="card shadow-sm border-0 rounded-4" v-if="!ereceiptData.hasRated">
             <div class="card-body p-4 text-center">
                 <h6 class="fw-bold text-dark mb-1">Bagaimana Pengalaman Belanja Anda?</h6>
@@ -322,7 +319,6 @@
             scale: 2, 
             useCORS: true,
             scrollY: 0, // Tetap gunakan ini untuk memperbaiki bug ruang putih
-            // y: 0 <--- Telah dihapus agar kamera fokus ke elemen, bukan ke layar
             windowWidth: 500 // Dikunci di 500px menyesuaikan max-width container HTML Anda
         }, 
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
