@@ -157,14 +157,15 @@
                 
                 this.isProcessing = true;
                 try {
-                    // Simpan Rating
-                    await addDoc(collection(db, "ratings"), {
-                        invoiceId: this.ereceiptData.id,
-                        customerName: this.ereceiptData.customer || 'Umum',
-                        rating: this.ereceiptRating,
-                        review: this.ereceiptReview,
-                        date: new Date().toLocaleString('id-ID')
-                    });
+                    // Di dalam fungsi submitRating() pada file receipt.html
+                await addDoc(collection(db, "ratings"), {
+                invoiceId: this.ereceiptData.id,
+                companyId: this.ereceiptData.companyId, // 🌟 Wajib disertakan agar admin tenant bisa melihat data ini di dashboard mereka
+                customerName: this.ereceiptData.customer || 'Umum',
+                rating: this.ereceiptRating,
+                review: this.ereceiptReview,
+                date: new Date().toLocaleString('id-ID')
+});
 
                     // Update Status Transaksi
                     if(this.ereceiptData.docId) {
