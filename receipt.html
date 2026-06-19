@@ -223,18 +223,21 @@
             formatNumber(num) {
                 return new Intl.NumberFormat('id-ID').format(num || 0);
             },
-            // Ambil library getDoc dan doc dari Firebase Firestore di bagian atas import Anda jika belum ada
-            // import { getFirestore, doc, getDoc, ... } from "..."
 
             async fetchReceipt(invId) {
                 try {
-                    // 🌟 PERBAIKAN: Ambil dokumen langsung secara spesifik berdasarkan ID Invoice (Metode GET)
                     const docRef = doc(db, "transactions", invId);
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists()) {
                         this.ereceiptData = docSnap.data();
-                        this.ereceiptData.docId = docSnap.id; // Simpan ID Dokumen untuk kebutuhan rating nanti
+                        this.ereceiptData.docId = docSnap.id; 
+                        
+                        // 🌟 TAMBAHAN: Setelah data transaksi dapat, langsung download profil toko!
+                        if (this.ereceiptData.companyId) {
+                            await this.fetchStoreSettings(this.ereceiptData.companyId);
+                        }
+                        
                     } else {
                         console.log("Dokumen tidak ditemukan di database.");
                         this.ereceiptData = null;
@@ -246,6 +249,22 @@
                     this.isLoading = false;
                 }
             },
+
+            // 🌟 FUNGSI BARU: Mengambil profil toko dari database berdasarkan ID Perusahaan
+            async fetchStoreSettings(companyId) {
+                try {
+                    const q = query(collection(db, "settings"), where("companyId", "==", companyId));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (!querySnapshot.empty) {
+                        this.appSettings = querySnapshot.docs[0].data();
+                    }
+                } catch (error) {
+                    console.error("Gagal memuat profil toko untuk E-Receipt:", error);
+                }
+            },
+
+            // ... (fungsi shareToWA, shareToEmail, dan submitRating di bawah ini biarkan tetap utuh seperti milik Anda) ...
             shareToWA(invId) {
                 const url = window.location.href;
                 const text = `Halo! Terima kasih telah berbelanja di Quinsah Collection. Berikut E-Receipt Anda:\n\n${url}`;
