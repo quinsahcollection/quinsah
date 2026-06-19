@@ -297,48 +297,63 @@
             },
             
             downloadPDF() {
-                const element = document.getElementById('receipt-content');
-                
-                // Simpan style shadow asli
-                const originalBoxShadow = element.style.boxShadow;
-                const originalBorder = element.style.border;
-                
-                // Matikan bayangan sementara agar tidak menjadi bercak kotor di PDF
-                element.style.boxShadow = 'none';
-                element.style.border = '1px solid #dee2e6';
+    const element = document.getElementById('receipt-content');
+    
+    // 1. Simpan style asli sebelum diubah
+    const originalStyle = {
+        boxShadow: element.style.boxShadow,
+        border: element.style.border,
+        borderRadius: element.style.borderRadius,
+        width: element.style.width,
+        margin: element.style.margin,
+        maxWidth: element.style.maxWidth
+    };
 
-                const opt = {
-                    margin:       0.2, 
-                    filename:     `Invoice-${this.ereceiptData.id}.pdf`,
-                    image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { 
-                        scale: 3, // Skala dinaikkan agar lebih tajam
-                        useCORS: true,
-                        backgroundColor: '#ffffff', // Pastikan background murni putih
-                        windowWidth: 500 // Kunci ukuran layar agar desain tetap rapi
-                    }, 
-                    jsPDF:        { unit: 'in', format: 'a5', orientation: 'portrait' } // Ubah ke A5 agar bentuknya presisi seperti HP
-                };
+    // 2. Terapkan style khusus PRINT agar tidak melar dan rapi
+    element.style.boxShadow = 'none';
+    element.style.border = '1px solid #dee2e6';
+    element.style.borderRadius = '0px'; // Hilangkan lengkungan sementara agar rapi di PDF
+    element.style.width = '550px';      // Paksa lebar agar proposional (tidak melebar di A4)
+    element.style.maxWidth = 'none';
+    element.style.margin = '0 auto';    // Posisi di tengah
 
-                Swal.fire({
-                    title: 'Menyiapkan PDF...',
-                    text: 'Mohon tunggu sebentar',
-                    allowOutsideClick: false,
-                    didOpen: () => { Swal.showLoading() }
-                });
+    const opt = {
+        margin:       [0.3, 0], // Margin atas-bawah 0.3 inch, kiri-kanan 0
+        filename:     `Invoice-${this.ereceiptData.id}.pdf`,
+        image:        { type: 'jpeg', quality: 1 },
+        html2canvas:  { 
+            scale: 2, // Ketajaman standar tinggi
+            useCORS: true,
+            scrollY: 0, // KUNCI FIX: Mengatasi bug blank putih saat layar di-scroll
+            scrollX: 0
+        }, 
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' } // Kembalikan ke A4 agar tidak terpotong
+    };
 
-                html2pdf().set(opt).from(element).save().then(() => {
-                    // Kembalikan style seperti semula
-                    element.style.boxShadow = originalBoxShadow;
-                    element.style.border = originalBorder;
-                    Swal.close();
-                }).catch(err => {
-                    console.error("Gagal membuat PDF:", err);
-                    element.style.boxShadow = originalBoxShadow;
-                    element.style.border = originalBorder;
-                    Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
-                });
-            },
+    Swal.fire({
+        title: 'Menyiapkan PDF...',
+        text: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading() }
+    });
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        // 3. Kembalikan tampilan struk di layar HP seperti semula
+        element.style.boxShadow = originalStyle.boxShadow;
+        element.style.border = originalStyle.border;
+        element.style.borderRadius = originalStyle.borderRadius;
+        element.style.width = originalStyle.width;
+        element.style.maxWidth = originalStyle.maxWidth;
+        element.style.margin = originalStyle.margin;
+        Swal.close();
+    }).catch(err => {
+        console.error("Gagal membuat PDF:", err);
+        // Tetap kembalikan style jika gagal/error
+        Object.assign(element.style, originalStyle);
+        Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
+    });
+}
+
             
             async submitRating() {
                 if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Silakan pilih minimal 1 bintang terlebih dahulu.', 'warning');
