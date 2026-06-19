@@ -215,6 +215,7 @@
                 ereceiptReview: '',
             }
         },
+        
         async mounted() {
             // Tangkap ID dari URL (contoh: receipt.html?inv=INV-123)
             const urlParams = new URLSearchParams(window.location.search);
@@ -226,6 +227,7 @@
                 this.isLoading = false;
             }
         },
+        
         methods: {
             formatNumber(num) {
                 return new Intl.NumberFormat('id-ID').format(num || 0);
@@ -277,12 +279,44 @@
                 const text = `Halo! Terima kasih telah berbelanja di Quinsah Collection. Berikut E-Receipt Anda:\n\n${url}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
             },
+            
             shareToEmail(invId) {
                 const url = window.location.href;
                 const subject = `E-Receipt Quinsah Collection - ${invId}`;
                 const body = `Terima kasih telah berbelanja. Berikut link E-Receipt Anda:\n\n${url}`;
                 window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
             },
+            
+            // 🌟 FUNGSI BARU: Download Struk Jadi PDF
+            downloadPDF() {
+                const element = document.getElementById('receipt-content');
+                
+                // Konfigurasi Kualitas PDF
+                const opt = {
+                    margin:       0.2, // Margin kecil agar hemat kertas jika di-print
+                    filename:     `Invoice-${this.ereceiptData.id}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true }, // scale 2 untuk resolusi tinggi
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+
+                // Tampilkan loading sebentar
+                Swal.fire({
+                    title: 'Menyiapkan PDF...',
+                    text: 'Mohon tunggu sebentar',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading() }
+                });
+
+                // Proses Generate PDF
+                html2pdf().set(opt).from(element).save().then(() => {
+                    Swal.close();
+                }).catch(err => {
+                    console.error("Gagal membuat PDF:", err);
+                    Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
+                });
+            },
+            
             async submitRating() {
                 if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Silakan pilih minimal 1 bintang terlebih dahulu.', 'warning');
                 
