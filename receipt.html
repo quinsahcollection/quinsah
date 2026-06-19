@@ -235,21 +235,24 @@
                 window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
             },
             async submitRating() {
-                if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Pilih minimal 1 bintang.', 'warning');
+                if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Silakan pilih minimal 1 bintang terlebih dahulu.', 'warning');
                 
                 this.isProcessing = true;
                 try {
-                    // Di dalam fungsi submitRating() pada file receipt.html
-                await addDoc(collection(db, "ratings"), {
-                invoiceId: this.ereceiptData.id,
-                companyId: this.ereceiptData.companyId, // 🌟 Wajib disertakan agar admin tenant bisa melihat data ini di dashboard mereka
-                customerName: this.ereceiptData.customer || 'Umum',
-                rating: this.ereceiptRating,
-                review: this.ereceiptReview,
-                date: new Date().toLocaleString('id-ID')
-});
+                    // 1. SIMPAN RATING KE DATABASE (Lengkap dengan ID Tenant & Pelanggan)
+                    await addDoc(collection(db, "ratings"), {
+                        invoiceId: this.ereceiptData.id,
+                        companyId: this.ereceiptData.companyId || '', // 🌟 PENTING: Untuk Laporan Multi-Tenant
+                        customerName: this.ereceiptData.customer || 'Umum',
+                        customerId: this.ereceiptData.customerId || null, // 🌟 PENTING: Untuk Riwayat CRM Pelanggan
+                        totalBelanja: this.ereceiptData.total,
+                        rating: this.ereceiptRating,
+                        review: this.ereceiptReview,
+                        date: new Date().toLocaleString('id-ID'),
+                        timestamp: new Date() // Waktu baku untuk diurutkan
+                    });
 
-                    // Update Status Transaksi
+                    // 2. UPDATE STATUS TRANSAKSI BAHWA SUDAH DI-RATING
                     if(this.ereceiptData.docId) {
                         await updateDoc(doc(db, "transactions", this.ereceiptData.docId), {
                             hasRated: true,
@@ -258,9 +261,16 @@
                     }
 
                     this.ereceiptData.hasRated = true;
-                    Swal.fire('Berhasil!', 'Penilaian terkirim.', 'success');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Penilaian Anda berhasil disimpan. Terima kasih atas masukannya!',
+                        confirmButtonColor: '#991b1b'
+                    });
+
                 } catch (error) {
-                    Swal.fire('Error', 'Gagal mengirim penilaian.', 'error');
+                    console.error("Gagal rating:", error);
+                    Swal.fire('Error', 'Gagal mengirim penilaian: ' + error.message, 'error');
                 } finally {
                     this.isProcessing = false;
                 }
