@@ -57,13 +57,13 @@
                         <span class="text-muted">Pelanggan:</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
                     </div>
 
-                    <h6 class="fw-bold mb-3 text-dark">Daftar Pesanan:</h6>
+                    <h6 class="fw-bold mb-3 text-dark">Daftar Pesanan :</h6>
                     <div v-for="(item, idx) in ereceiptData.items" :key="idx" class="d-flex justify-content-between mb-3 pb-2 border-bottom border-light">
                         <div style="width: 70%; line-height: 1.3;">
                             <div class="fw-bold text-dark" style="font-size: 0.9em;">
-                                <span v-if="item.productId === 'EXCHANGE'" class="text-danger">TUKAR TAMBAH: </span>{{ item.name }}
+                                <span v-if="item.productId === 'EXCHANGE'" class="text-danger">TUKAR TAMBAH : </span>{{ item.name }}
                             </div>
-                            <div v-if="item.variantName && item.productId !== 'EXCHANGE'" class="text-muted" style="font-size: 0.8em;">Varian: {{ item.variantName }}</div>
+                            <div v-if="item.variantName && item.productId !== 'EXCHANGE'" class="text-muted" style="font-size: 0.8em;">Varian : {{ item.variantName }}</div>
                             <div v-if="item.productId === 'EXCHANGE'" class="text-muted fst-italic" style="font-size: 0.8em;">{{ item.name.replace('[SALDO TUKAR] ', '') }}</div>
                             <div class="mt-1" style="font-size: 0.85em; color: #555;">{{ item.qty }} {{ item.uom || 'pcs' }} x Rp {{ formatNumber(item.finalPrice || item.sellPrice) }}</div>
                         </div>
@@ -130,12 +130,12 @@
                     </div>
 
                     <div class="mt-4 pt-4 border-top text-center">
-                        <div class="small fw-bold text-muted mb-2 text-uppercase">Scan Untuk Garansi / Retur:</div>
+                        <div class="small fw-bold text-muted mb-2 text-uppercase">QR Code Invoice :</div>
                         <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + ereceiptData.id" alt="QR Code Invoice" class="border p-2 rounded bg-white shadow-sm" style="width: 90px; height: 90px;">
                     </div>
 
                     <div v-if="appSettings && appSettings.termsAndConditions" class="mt-4 pt-3 border-top" style="font-size: 0.8em; text-align: left;">
-                        <div class="fw-bold text-dark text-uppercase mb-1">Syarat & Ketentuan:</div>
+                        <div class="fw-bold text-dark text-uppercase mb-1">Syarat & Ketentuan :</div>
                         <div class="text-muted" style="white-space: pre-wrap; line-height: 1.4;">{{ appSettings.termsAndConditions }}</div>
                     </div>
                     <div v-if="appSettings && appSettings.receiptFooter" class="mt-3 text-center text-muted fst-italic mb-2" style="font-size: 0.82em; white-space: pre-wrap; line-height: 1.4;">{{ appSettings.receiptFooter }}</div>
@@ -177,7 +177,7 @@
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <i v-for="star in 5" :key="star" class="bi fs-2" style="cursor: pointer;" :class="star <= ereceiptRating ? 'bi-star-fill text-warning' : 'bi-star text-muted'" @click="ereceiptRating = star"></i>
                 </div>
-                <textarea class="form-control mb-3" rows="3" v-model="ereceiptReview" placeholder="Tuliskan masukan atau kepuasan Anda di sini... (Opsional)"></textarea>
+                <textarea class="form-control mb-3" rows="3" v-model="ereceiptReview" placeholder="Silahkan masukan saran atau keluhan Anda di sini... (Opsional)"></textarea>
                 <button class="btn btn-primary-custom w-100 fw-bold" @click="submitRating" :disabled="isProcessing">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                     <span v-else><i class="bi bi-send-fill me-1"></i> Kirim Penilaian</span>
