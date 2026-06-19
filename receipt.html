@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Receipt - Quinsah Collection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .bg-primary { background-color: #991b1b !important; } /* Sesuaikan warna tema Anda */
+        .btn-primary-custom { background-color: #991b1b; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="receiptApp" class="container mt-4 pb-5" style="max-width: 500px;" v-cloak>
+    
+    <div v-if="isLoading" class="text-center mt-5 pt-5">
+        <div class="spinner-border text-danger mb-3" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold text-muted">Mencari Data Resi...</h5>
+    </div>
+
+    <div v-else-if="!ereceiptData" class="text-center mt-5 pt-5">
+        <i class="bi bi-x-circle text-danger" style="font-size: 4rem;"></i>
+        <h4 class="fw-bold text-dark mt-3">Resi Tidak Ditemukan</h4>
+        <p class="text-muted">Pastikan URL yang Anda scan sudah benar.</p>
+    </div>
+
+    <div v-else>
+        <div class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden">
+            <div class="bg-primary text-white text-center p-4">
+                <h4 class="fw-bold mb-0">E-Receipt</h4>
+                <div class="small opacity-75">{{ ereceiptData.id }}</div>
+            </div>
+            <div class="card-body p-4 text-center">
+                <h1 class="fw-bold text-success mb-0">Rp {{ formatNumber(ereceiptData.total) }}</h1>
+                <p class="text-muted small">Total Belanja</p>
+                
+                <div class="d-flex justify-content-between border-bottom pb-2 mb-2 text-start small">
+                    <span class="text-muted">Tanggal:</span><span class="fw-bold">{{ ereceiptData.dateStr }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-bottom pb-2 mb-4 text-start small">
+                    <span class="text-muted">Pelanggan:</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-success w-100 fw-bold shadow-sm" @click="shareToWA(ereceiptData.id)"><i class="bi bi-whatsapp me-1"></i> WhatsApp</button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-secondary w-100 fw-bold bg-light shadow-sm" @click="shareToEmail(ereceiptData.id)"><i class="bi bi-envelope me-1"></i> Email</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4" v-if="!ereceiptData.hasRated">
+            <div class="card-body p-4 text-center">
+                <h6 class="fw-bold text-dark mb-1">Bagaimana Pengalaman Belanja Anda?</h6>
+                <p class="text-muted small mb-3">Berikan rating untuk Quinsah Collection</p>
+                
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <i v-for="star in 5" :key="star" class="bi fs-2" style="cursor: pointer;" :class="star <= ereceiptRating ? 'bi-star-fill text-warning' : 'bi-star text-muted'" @click="ereceiptRating = star"></i>
+                </div>
+                <textarea class="form-control mb-3" rows="3" v-model="ereceiptReview" placeholder="Tuliskan masukan atau kepuasan Anda di sini... (Opsional)"></textarea>
+                <button class="btn btn-primary-custom w-100 fw-bold" @click="submitRating" :disabled="isProcessing">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="bi bi-send-fill me-1"></i> Kirim Penilaian</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="alert alert-success text-center rounded-4 border-0 shadow-sm p-4" v-else>
+            <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-2"></i>
+            <h6 class="fw-bold mb-1">Terima Kasih!</h6>
+            <p class="mb-0 small">Anda telah memberikan penilaian. Masukan Anda sangat berarti bagi kami.</p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 🌟 MASUKKAN KONFIGURASI FIREBASE ANDA DI SINI 🌟
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                isLoading: true,
+                isProcessing: false,
+                ereceiptData: null,
+                ereceiptRating: 0,
+                ereceiptReview: '',
+            }
+        },
+        async mounted() {
+            // Tangkap ID dari URL (contoh: receipt.html?inv=INV-123)
+            const urlParams = new URLSearchParams(window.location.search);
+            const invId = urlParams.get('inv');
+
+            if (invId) {
+                await this.fetchReceipt(invId);
+            } else {
+                this.isLoading = false;
+            }
+        },
+        methods: {
+            formatNumber(num) {
+                return new Intl.NumberFormat('id-ID').format(num || 0);
+            },
+            async fetchReceipt(invId) {
+                try {
+                    const q = query(collection(db, "transactions"), where("id", "==", invId));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        this.ereceiptData = querySnapshot.docs[0].data();
+                        this.ereceiptData.docId = querySnapshot.docs[0].id; // Simpan ID Dokumen Firestore untuk update
+                    }
+                } catch (error) {
+                    console.error("Gagal menarik data:", error);
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            shareToWA(invId) {
+                const url = window.location.href;
+                const text = `Halo! Terima kasih telah berbelanja di Quinsah Collection. Berikut E-Receipt Anda:\n\n${url}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            },
+            shareToEmail(invId) {
+                const url = window.location.href;
+                const subject = `E-Receipt Quinsah Collection - ${invId}`;
+                const body = `Terima kasih telah berbelanja. Berikut link E-Receipt Anda:\n\n${url}`;
+                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+            },
+            async submitRating() {
+                if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Pilih minimal 1 bintang.', 'warning');
+                
+                this.isProcessing = true;
+                try {
+                    // Simpan Rating
+                    await addDoc(collection(db, "ratings"), {
+                        invoiceId: this.ereceiptData.id,
+                        customerName: this.ereceiptData.customer || 'Umum',
+                        rating: this.ereceiptRating,
+                        review: this.ereceiptReview,
+                        date: new Date().toLocaleString('id-ID')
+                    });
+
+                    // Update Status Transaksi
+                    if(this.ereceiptData.docId) {
+                        await updateDoc(doc(db, "transactions", this.ereceiptData.docId), {
+                            hasRated: true,
+                            ratingValue: this.ereceiptRating
+                        });
+                    }
+
+                    this.ereceiptData.hasRated = true;
+                    Swal.fire('Berhasil!', 'Penilaian terkirim.', 'success');
+                } catch (error) {
+                    Swal.fire('Error', 'Gagal mengirim penilaian.', 'error');
+                } finally {
+                    this.isProcessing = false;
+                }
+            }
+        }
+    }).mount('#receiptApp');
+</script>
+</body>
+</html>
