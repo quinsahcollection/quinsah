@@ -118,17 +118,25 @@
             formatNumber(num) {
                 return new Intl.NumberFormat('id-ID').format(num || 0);
             },
+            // Ambil library getDoc dan doc dari Firebase Firestore di bagian atas import Anda jika belum ada
+            // import { getFirestore, doc, getDoc, ... } from "..."
+
             async fetchReceipt(invId) {
                 try {
-                    const q = query(collection(db, "transactions"), where("id", "==", invId));
-                    const querySnapshot = await getDocs(q);
+                    // 🌟 PERBAIKAN: Ambil dokumen langsung secara spesifik berdasarkan ID Invoice (Metode GET)
+                    const docRef = doc(db, "transactions", invId);
+                    const docSnap = await getDoc(docRef);
 
-                    if (!querySnapshot.empty) {
-                        this.ereceiptData = querySnapshot.docs[0].data();
-                        this.ereceiptData.docId = querySnapshot.docs[0].id; // Simpan ID Dokumen Firestore untuk update
+                    if (docSnap.exists()) {
+                        this.ereceiptData = docSnap.data();
+                        this.ereceiptData.docId = docSnap.id; // Simpan ID Dokumen untuk kebutuhan rating nanti
+                    } else {
+                        console.log("Dokumen tidak ditemukan di database.");
+                        this.ereceiptData = null;
                     }
                 } catch (error) {
-                    console.error("Gagal menarik data:", error);
+                    console.error("Gagal menarik data resi dari Firebase:", error);
+                    this.ereceiptData = null;
                 } finally {
                     this.isLoading = false;
                 }
