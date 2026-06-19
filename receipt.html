@@ -51,10 +51,10 @@
                     </div>
 
                     <div class="d-flex justify-content-between border-bottom pb-2 mb-2 small">
-                        <span class="text-muted">Tanggal:</span><span class="fw-bold">{{ ereceiptData.dateStr }}</span>
+                        <span class="text-muted">Tanggal :</span><span class="fw-bold">{{ ereceiptData.dateStr }}</span>
                     </div>
                     <div class="d-flex justify-content-between border-bottom pb-3 mb-4 small">
-                        <span class="text-muted">Pelanggan:</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
+                        <span class="text-muted">Pelanggan :</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
                     </div>
 
                     <h6 class="fw-bold mb-3 text-dark">Daftar Pesanan :</h6>
@@ -74,37 +74,37 @@
 
                     <div class="mt-4" style="font-size: 0.9em;">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Subtotal Produk</span>
+                            <span class="text-muted">Subtotal Produk :</span>
                             <span>Rp {{ formatNumber(ereceiptData.items.filter(i => i.productId !== 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0)) }}</span>
                         </div>
                         <div v-if="ereceiptData.items.some(i => i.productId === 'EXCHANGE')" class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Potongan Tukar Tambah</span>
+                            <span>Potongan Tukar Tambah :</span>
                             <span class="fw-bold">- Rp {{ formatNumber(Math.abs(ereceiptData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</span>
                         </div>
                         <div v-if="(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) > 0" class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Diskon Item</span><span>- Rp {{ formatNumber(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) }}</span>
+                            <span>Diskon Item :</span><span>- Rp {{ formatNumber(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) }}</span>
                         </div>
                         <div v-if="ereceiptData.globalDiscountAmt > 0" class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Diskon Invoice</span><span>- Rp {{ formatNumber(ereceiptData.globalDiscountAmt) }}</span>
+                            <span>Diskon Invoice :</span><span>- Rp {{ formatNumber(ereceiptData.globalDiscountAmt) }}</span>
                         </div>
                         <div v-if="(ereceiptData.taxAmt || ereceiptData.taxAmount || 0) > 0" class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">PPN (Tax)</span><span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
+                            <span class="text-muted">PPN (Tax) :</span><span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
                         </div>
                         <hr class="my-3 border-dark" style="opacity: 0.2;">
                         <div class="d-flex justify-content-between fw-bold fs-5 mb-3 text-dark">
-                            <span>TOTAL BELANJA</span><span class="text-success">Rp {{ formatNumber(ereceiptData.total) }}</span>
+                            <span>TOTAL BELANJA :</span><span class="text-success">Rp {{ formatNumber(ereceiptData.total) }}</span>
                         </div>
                         <div class="bg-light p-3 rounded-3">
                             <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Dibayar ({{ ereceiptData.paymentMethod }})</span>
+                                <span class="text-muted">Dibayar ({{ ereceiptData.paymentMethod }}) :</span>
                                 <span class="fw-bold">Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) }}</span>
                             </div>
                             <div v-if="(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) >= ereceiptData.total" class="d-flex justify-content-between mt-2 pt-2 border-top border-light">
-                                <span class="text-muted">Kembalian</span>
+                                <span class="text-muted">Kembalian :</span>
                                 <span class="fw-bold">Rp {{ formatNumber((ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) - ereceiptData.total) }}</span>
                             </div>
                             <div v-else class="d-flex justify-content-between mt-2 pt-2 border-top border-danger text-danger fw-bold">
-                                <span>Sisa Hutang</span>
+                                <span>Sisa Hutang :</span>
                                 <span>Rp {{ formatNumber(ereceiptData.total - (ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived)) }}</span>
                             </div>
                         </div>
@@ -116,7 +116,7 @@
                             <div style="width: 65%;"><strong>{{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br><span class="text-muted fst-italic">Ket: {{ retur.alasan }}</span></div>
                             <div class="text-end text-danger fw-bold" style="width: 35%;">- Rp {{ formatNumber(retur.refundAmount) }}</div>
                         </div>
-                        <div class="text-end mt-2 fw-bold text-danger">TOTAL REFUND: <span>- Rp {{ formatNumber(ereceiptData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span></div>
+                        <div class="text-end mt-2 fw-bold text-danger">TOTAL REFUND : <span>- Rp {{ formatNumber(ereceiptData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span></div>
                     </div>
 
                     <div v-if="appSettings && (appSettings.promoImage || appSettings.promoText)" class="mt-4 p-3 bg-light border rounded-3 text-center" style="border-color: #ffc107 !important;">
@@ -172,12 +172,12 @@
         <div class="card shadow-sm border-0 rounded-4" v-if="!ereceiptData.hasRated">
             <div class="card-body p-4 text-center">
                 <h6 class="fw-bold text-dark mb-1">Bagaimana Pengalaman Belanja Anda?</h6>
-                <p class="text-muted small mb-3">Berikan rating untuk Quinsah Collection</p>
+                <p class="text-muted small mb-3">Berikan rating bintang 5 untuk kami</p>
                 
                 <div class="d-flex justify-content-center gap-2 mb-3">
                     <i v-for="star in 5" :key="star" class="bi fs-2" style="cursor: pointer;" :class="star <= ereceiptRating ? 'bi-star-fill text-warning' : 'bi-star text-muted'" @click="ereceiptRating = star"></i>
                 </div>
-                <textarea class="form-control mb-3" rows="3" v-model="ereceiptReview" placeholder="Silahkan masukan saran atau keluhan Anda di sini... (Opsional)"></textarea>
+                <textarea class="form-control mb-3" rows="3" v-model="ereceiptReview" placeholder="silahkan masukan saran atau keluhan anda di sini (opsional)"></textarea>
                 <button class="btn btn-primary-custom w-100 fw-bold" @click="submitRating" :disabled="isProcessing">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                     <span v-else><i class="bi bi-send-fill me-1"></i> Kirim Penilaian</span>
@@ -188,7 +188,7 @@
         <div class="alert alert-success text-center rounded-4 border-0 shadow-sm p-4" v-else>
             <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-2"></i>
             <h6 class="fw-bold mb-1">Terima Kasih!</h6>
-            <p class="mb-0 small">Anda telah memberikan penilaian. Masukan Anda sangat berarti bagi kami.</p>
+            <p class="mb-0 small">Anda telah memberikan penilaian. Kepedulian Anda sangat berarti bagi kami.</p>
         </div>
     </div>
 </div>
