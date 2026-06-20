@@ -6500,9 +6500,29 @@
             },
 
             activeCustomerTransactions() {
-                if(!this.activeCustomerDetail) return [];
-                return this.transactions.filter(t => t.customerId === this.activeCustomerDetail.id || t.customer === this.activeCustomerDetail.name);
-            },
+    // Jika tidak ada pelanggan yang dipilih, kembalikan array kosong
+    if (!this.activeCustomerDetail) return [];
+
+    // Siapkan data pelanggan dari master CRM (Ubah ke huruf kecil dan hilangkan spasi ujung)
+    const detailId = this.activeCustomerDetail.id;
+    const detailName = (this.activeCustomerDetail.name || '').toLowerCase().trim();
+    const detailPhone = (this.activeCustomerDetail.phone || '').trim();
+
+    return this.transactions.filter(t => {
+        // Siapkan data pelanggan dari riwayat transaksi
+        const trxCustomerId = t.customerId;
+        const trxCustomerName = (t.customer || '').toLowerCase().trim();
+        const trxCustomerPhone = (t.customerPhone || t.phone || '').trim();
+
+        // Cek kecocokan berdasarkan ID, Nama, ATAU Nomor HP
+        const matchId = detailId && trxCustomerId === detailId;
+        const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
+        const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
+
+        // Jika salah satu cocok, masukkan ke dalam riwayat
+        return matchId || matchName || matchPhone;
+    });
+},
 
             activeSupplierPurchases() {
                 if(!this.activeSupplierDetail) return [];
