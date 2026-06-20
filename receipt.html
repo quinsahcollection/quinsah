@@ -339,72 +339,89 @@
                 }
             },
 
-            // LOGIKA PENCARIAN RIWAYAT DIPERBARUI
-            async fetchCustomerHistory() {
-                this.showHistory = !this.showHistory;
-                if (!this.showHistory || this.customerHistory.length > 0) return; 
+            // LOGIKA PENCARIAN RIWAYAT DIPERBARUI (BYPASS FIREBASE INDEX & ANTI HURUF KECIL/BESAR)
+async fetchCustomerHistory() {
+    this.showHistory = !this.showHistory;
+    if (!this.showHistory || this.customerHistory.length > 0) return; 
+    
+    this.isLoadingHistory = true;
+    try {
+        // Menentukan prioritas Field yang digunakan sistem POS/CRM Anda
+        let searchField = null;
+        let searchValue = null;
+
+        if (this.ereceiptData.customerId) {
+            searchField = "customerId";
+            searchValue = this.ereceiptData.customerId;
+        } else if (this.ereceiptData.customerPhone) {
+            searchField = "customerPhone";
+            searchValue = this.ereceiptData.customerPhone;
+        } else if (this.ereceiptData.phone) {
+            searchField = "phone";
+            searchValue = this.ereceiptData.phone;
+        } else if (this.ereceiptData.customer && this.ereceiptData.customer.toLowerCase() !== 'umum') {
+            searchField = "customer";
+            searchValue = this.ereceiptData.customer;
+        }
+
+        // Jika tetap tidak ditemukan identifier yang valid
+        if (!searchField || !searchValue) {
+            this.customerHistory = [];
+            this.isLoadingHistory = false;
+            return;
+        }
+
+        // 🌟 TRIK JITU: Query 1 parameter saja ke Firebase agar terhindar dari Error Index
+        const q = query(
+            collection(db, "transactions"), 
+            where(searchField, "==", searchValue)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const history = [];
+        
+        // Siapkan data pembanding (Abaikan huruf besar/kecil & spasi ekstra)
+        const detailName = (this.ereceiptData.customer || '').toLowerCase().trim();
+        const detailPhone = (this.ereceiptData.customerPhone || this.ereceiptData.phone || '').trim();
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            
+            // 🌟 FILTER LAPIS 2: Lakukan pengecekan ID Toko di sini
+            // Jangan masukkan nota yang sedang dibuka ke dalam daftar riwayat
+            if (data.companyId === this.ereceiptData.companyId && data.id !== this.ereceiptData.id) {
                 
-                this.isLoadingHistory = true;
-                try {
-                    // Menentukan prioritas Field yang digunakan sistem POS/CRM Anda
-                    let searchField = null;
-                    let searchValue = null;
-
-                    if (this.ereceiptData.customerId) {
-                        searchField = "customerId";
-                        searchValue = this.ereceiptData.customerId;
-                    } else if (this.ereceiptData.customerPhone) {
-                        searchField = "customerPhone";
-                        searchValue = this.ereceiptData.customerPhone;
-                    } else if (this.ereceiptData.phone) {
-                        searchField = "phone";
-                        searchValue = this.ereceiptData.phone;
-                    } else if (this.ereceiptData.customer && this.ereceiptData.customer.toLowerCase() !== 'umum') {
-                        searchField = "customer";
-                        searchValue = this.ereceiptData.customer;
-                    }
-
-                    // Jika tetap tidak ditemukan identifier yang valid
-                    if (!searchField || !searchValue) {
-                        this.customerHistory = [];
-                        this.isLoadingHistory = false;
-                        return;
-                    }
-
-                    const q = query(
-                        collection(db, "transactions"), 
-                        where("companyId", "==", this.ereceiptData.companyId),
-                        where(searchField, "==", searchValue)
-                    );
-                    
-                    const querySnapshot = await getDocs(q);
-                    const history = [];
-                    
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        if (data.id !== this.ereceiptData.id) {
-                            history.push(data);
-                        }
-                    });
-                    
-                    // Urutkan riwayat berdasarkan waktu (jika ada timestamp) atau balik urutan standar
-                    history.sort((a, b) => {
-                        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-                        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-                        return timeB - timeA; 
-                    });
-
-                    this.customerHistory = history; 
-
-                } catch (error) {
-                    console.error("Gagal menarik riwayat belanja:", error);
-                    if(error.message.includes("index")) {
-                         Swal.fire('Info', 'Database E-Receipt sedang mengoptimalkan pencarian riwayat. Silakan coba lagi nanti.', 'info');
-                    }
-                } finally {
-                    this.isLoadingHistory = false;
+                // Pastikan kekuatan pengecekannya sama dengan di tabel CRM Admin
+                const trxCustomerName = (data.customer || '').toLowerCase().trim();
+                const trxCustomerPhone = (data.customerPhone || data.phone || '').trim();
+                
+                // Cek kecocokan akhir
+                const matchId = data.customerId === searchValue;
+                const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
+                const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
+                
+                if (matchId || matchPhone || matchName) {
+                    history.push(data);
                 }
-            },
+            }
+        });
+        
+        // Urutkan riwayat berdasarkan waktu (terbaru di atas)
+        history.sort((a, b) => {
+            const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+            const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+            return timeB - timeA; 
+        });
+
+        this.customerHistory = history; 
+
+    } catch (error) {
+        console.error("Gagal menarik riwayat belanja:", error);
+        Swal.fire('Error', 'Gagal memuat riwayat. Silakan coba lagi nanti.', 'error');
+    } finally {
+        this.isLoadingHistory = false;
+    }
+},
 
             shareToWA(invId) {
                 const url = window.location.href;
