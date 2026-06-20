@@ -3551,19 +3551,21 @@
                     <div class="card-body p-0">
                         <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
                             <thead class="table-light">
-                                <tr><th>Tanggal</th><th>Metode</th><th>Nominal</th><th>Catatan</th></tr>
+                                <tr><th>Tanggal</th><th>Metode</th><th class="text-end">Nominal</th><th>Catatan</th></tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>{{ activeInvoiceDetail.dateStr }}</td>
                                     <td>{{ activeInvoiceDetail.paymentMethod }}</td>
-                                    <td class="text-success fw-bold">Rp {{ formatNumber(activeInvoiceDetail.firstPayment || activeInvoiceDetail.amountReceived) }}</td>
+                                    <td class="text-success text-end fw-bold">
+                                        Rp {{ formatNumber(activeInvoiceDetail.firstPayment !== undefined ? activeInvoiceDetail.firstPayment : (activeInvoiceDetail.amountReceived - (activeInvoiceDetail.paymentHistory ? activeInvoiceDetail.paymentHistory.reduce((sum, p) => sum + Number(p.amount), 0) : 0))) }}
+                                    </td>
                                     <td class="text-muted">Pembayaran Awal (Kasir)</td>
                                 </tr>
                                 <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
-                                    <td>{{ pay.date }}</td>
+                                    <td>{{ pay.date || pay.dateStr }}</td>
                                     <td>{{ pay.method }}</td>
-                                    <td class="text-success fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
+                                    <td class="text-success text-end fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
                                     <td class="text-muted">{{ pay.note || '-' }}</td>
                                 </tr>
                             </tbody>
