@@ -32,14 +32,12 @@
     </div>
 
     <div v-else>
-        <!-- BINGKAI E-RECEIPT UTAMA -->
         <div id="receipt-content" class="card shadow-sm border-0 mb-4 rounded-4 overflow-hidden text-start bg-white">
             
             <div class="bg-primary text-white text-center p-4">
                 <h4 class="fw-bold mb-0">E-Receipt</h4>
                 <div class="small opacity-75 mb-1">{{ ereceiptData.id }}</div>
 
-                <!-- LABEL STATUS LUNAS / BELUM LUNAS -->
                 <div class="mt-2 mb-2">
                     <span v-if="(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) >= ereceiptData.total" 
                           class="badge bg-success text-white px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
@@ -74,7 +72,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between mb-2 small">
-                    <span class="text-muted">Tanggal :</span><span class="fw-bold">{{ ereceiptData.dateStr }}</span>
+                    <span class="text-muted">Tanggal :</span><span class="fw-bold">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
                 </div>
                 <div class="d-flex justify-content-between border-bottom pb-3 mb-4 small">
                     <span class="text-muted">Pelanggan :</span><span class="fw-bold">{{ ereceiptData.customer || 'Umum' }}</span>
@@ -139,7 +137,7 @@
                         <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
                             <div style="width: 60%;">
                                 <strong>Pembayaran Awal :</strong><br>
-                                <span class="text-muted fst-italic">{{ ereceiptData.dateStr }}</span>
+                                <span class="text-muted fst-italic">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
                             </div>
                             <div class="text-end text-success fw-bold" style="width: 40%;">
                                 Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0))) }}
@@ -149,7 +147,7 @@
                         <div v-for="(pay, idx) in ereceiptData.paymentHistory" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
                             <div style="width: 60%;">
                                 <strong>Cicilan Ke-{{ idx + 1 }}</strong> ({{ pay.method }})<br>
-                                <span class="text-muted fst-italic">{{ pay.dateStr }}</span>
+                                <span class="text-muted fst-italic">{{ pay.dateStr || pay.date }}</span>
                                 <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
                             </div>
                             <div class="text-end text-success fw-bold" style="width: 40%;">
@@ -186,10 +184,7 @@
                     </div>
                 </div>
             </div>
-        </div> <!-- Penutup Bingkai Receipt Utama -->
-
-        <!-- BLOK TOMBOL SHARE & DOWNLOAD (Posisi Di Atas Riwayat Belanja) -->
-        <div class="mb-4">
+        </div> <div class="mb-4">
             <div class="text-center text-muted fw-bold small text-uppercase mb-3" style="letter-spacing: 1px;">Bagikan :</div>
             <div class="row g-2">
                 <div class="col-6">
@@ -206,7 +201,6 @@
             </div>
         </div>
 
-        <!-- FITUR TOMBOL RIWAYAT BELANJA (Dipindah ke Bawah Download Struk) -->
         <div v-if="hasValidCustomerData" class="mb-4">
             <button class="btn btn-outline-secondary bg-white w-100 fw-bold shadow-sm text-dark" @click="fetchCustomerHistory()" style="border: 2px solid #dee2e6; border-radius: 12px;">
                 <i class="bi bi-clock-history text-danger me-1"></i> Lihat Riwayat Belanja Saya
@@ -224,7 +218,7 @@
                     <a v-for="hist in customerHistory" :key="hist.id" :href="'?inv=' + hist.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-bottom border-light">
                         <div>
                             <div class="fw-bold text-dark" style="font-size: 0.9em;">{{ hist.id }}</div>
-                            <div class="text-muted mt-1" style="font-size: 0.75em;"><i class="bi bi-calendar2-event me-1"></i>{{ hist.dateStr }}</div>
+                            <div class="text-muted mt-1" style="font-size: 0.75em;"><i class="bi bi-calendar2-event me-1"></i>{{ hist.dateStr || hist.date }}</div>
                         </div>
                         <div class="text-end">
                             <div class="text-success fw-bold mb-1" style="font-size: 0.95em;">Rp {{ formatNumber(hist.total) }}</div>
@@ -236,7 +230,6 @@
             </div>
         </div>
 
-        <!-- BINGKAI PROMO BANNER -->
         <div v-if="appSettings && (appSettings.promoImage || appSettings.promoText)" class="mb-4 p-3 bg-light border rounded-4 text-center shadow-sm" style="border-color: #ffc107 !important;">
             <h6 class="fw-bold text-warning mb-2"><i class="bi bi-stars"></i> Promo Spesial!</h6>
             <img v-if="appSettings.promoImage" :src="appSettings.promoImage" class="img-fluid rounded mb-2" style="max-height: 120px; object-fit: cover;">
@@ -247,7 +240,6 @@
             <div v-if="appSettings.voucherCode" class="small text-muted mt-1" style="font-size: 0.75em;">Gunakan kode di atas pada pesanan berikutnya!</div>
         </div>
         
-        <!-- BINGKAI RATING -->
         <div class="card shadow-sm border-0 rounded-4" v-if="!ereceiptData.hasRated">
             <div class="card-body p-4 text-center">
                 <h6 class="fw-bold text-dark mb-1">Bagaimana Pengalaman Belanja Anda?</h6>
@@ -365,88 +357,88 @@
             },
 
             // LOGIKA PENCARIAN RIWAYAT DIPERBARUI (BYPASS FIREBASE INDEX & ANTI HURUF KECIL/BESAR)
-async fetchCustomerHistory() {
-    this.showHistory = !this.showHistory;
-    if (!this.showHistory || this.customerHistory.length > 0) return; 
-    
-    this.isLoadingHistory = true;
-    try {
-        // Menentukan prioritas Field yang digunakan sistem POS/CRM Anda
-        let searchField = null;
-        let searchValue = null;
-
-        if (this.ereceiptData.customerId) {
-            searchField = "customerId";
-            searchValue = this.ereceiptData.customerId;
-        } else if (this.ereceiptData.customerPhone) {
-            searchField = "customerPhone";
-            searchValue = this.ereceiptData.customerPhone;
-        } else if (this.ereceiptData.phone) {
-            searchField = "phone";
-            searchValue = this.ereceiptData.phone;
-        } else if (this.ereceiptData.customer && this.ereceiptData.customer.toLowerCase() !== 'umum') {
-            searchField = "customer";
-            searchValue = this.ereceiptData.customer;
-        }
-
-        // Jika tetap tidak ditemukan identifier yang valid
-        if (!searchField || !searchValue) {
-            this.customerHistory = [];
-            this.isLoadingHistory = false;
-            return;
-        }
-
-        // 🌟 TRIK JITU: Query 1 parameter saja ke Firebase agar terhindar dari Error Index
-        const q = query(
-            collection(db, "transactions"), 
-            where(searchField, "==", searchValue)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const history = [];
-        
-        // Siapkan data pembanding (Abaikan huruf besar/kecil & spasi ekstra)
-        const detailName = (this.ereceiptData.customer || '').toLowerCase().trim();
-        const detailPhone = (this.ereceiptData.customerPhone || this.ereceiptData.phone || '').trim();
-        
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            
-            // 🌟 FILTER LAPIS 2: Lakukan pengecekan ID Toko di sini
-            // Jangan masukkan nota yang sedang dibuka ke dalam daftar riwayat
-            if (data.companyId === this.ereceiptData.companyId && data.id !== this.ereceiptData.id) {
+            async fetchCustomerHistory() {
+                this.showHistory = !this.showHistory;
+                if (!this.showHistory || this.customerHistory.length > 0) return; 
                 
-                // Pastikan kekuatan pengecekannya sama dengan di tabel CRM Admin
-                const trxCustomerName = (data.customer || '').toLowerCase().trim();
-                const trxCustomerPhone = (data.customerPhone || data.phone || '').trim();
-                
-                // Cek kecocokan akhir
-                const matchId = data.customerId === searchValue;
-                const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
-                const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
-                
-                if (matchId || matchPhone || matchName) {
-                    history.push(data);
+                this.isLoadingHistory = true;
+                try {
+                    // Menentukan prioritas Field yang digunakan sistem POS/CRM Anda
+                    let searchField = null;
+                    let searchValue = null;
+
+                    if (this.ereceiptData.customerId) {
+                        searchField = "customerId";
+                        searchValue = this.ereceiptData.customerId;
+                    } else if (this.ereceiptData.customerPhone) {
+                        searchField = "customerPhone";
+                        searchValue = this.ereceiptData.customerPhone;
+                    } else if (this.ereceiptData.phone) {
+                        searchField = "phone";
+                        searchValue = this.ereceiptData.phone;
+                    } else if (this.ereceiptData.customer && this.ereceiptData.customer.toLowerCase() !== 'umum') {
+                        searchField = "customer";
+                        searchValue = this.ereceiptData.customer;
+                    }
+
+                    // Jika tetap tidak ditemukan identifier yang valid
+                    if (!searchField || !searchValue) {
+                        this.customerHistory = [];
+                        this.isLoadingHistory = false;
+                        return;
+                    }
+
+                    // 🌟 TRIK JITU: Query 1 parameter saja ke Firebase agar terhindar dari Error Index
+                    const q = query(
+                        collection(db, "transactions"), 
+                        where(searchField, "==", searchValue)
+                    );
+                    
+                    const querySnapshot = await getDocs(q);
+                    const history = [];
+                    
+                    // Siapkan data pembanding (Abaikan huruf besar/kecil & spasi ekstra)
+                    const detailName = (this.ereceiptData.customer || '').toLowerCase().trim();
+                    const detailPhone = (this.ereceiptData.customerPhone || this.ereceiptData.phone || '').trim();
+                    
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        
+                        // 🌟 FILTER LAPIS 2: Lakukan pengecekan ID Toko di sini
+                        // Jangan masukkan nota yang sedang dibuka ke dalam daftar riwayat
+                        if (data.companyId === this.ereceiptData.companyId && data.id !== this.ereceiptData.id) {
+                            
+                            // Pastikan kekuatan pengecekannya sama dengan di tabel CRM Admin
+                            const trxCustomerName = (data.customer || '').toLowerCase().trim();
+                            const trxCustomerPhone = (data.customerPhone || data.phone || '').trim();
+                            
+                            // Cek kecocokan akhir
+                            const matchId = data.customerId === searchValue;
+                            const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
+                            const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
+                            
+                            if (matchId || matchPhone || matchName) {
+                                history.push(data);
+                            }
+                        }
+                    });
+                    
+                    // Urutkan riwayat berdasarkan waktu (terbaru di atas)
+                    history.sort((a, b) => {
+                        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                        return timeB - timeA; 
+                    });
+
+                    this.customerHistory = history; 
+
+                } catch (error) {
+                    console.error("Gagal menarik riwayat belanja:", error);
+                    Swal.fire('Error', 'Gagal memuat riwayat. Silakan coba lagi nanti.', 'error');
+                } finally {
+                    this.isLoadingHistory = false;
                 }
-            }
-        });
-        
-        // Urutkan riwayat berdasarkan waktu (terbaru di atas)
-        history.sort((a, b) => {
-            const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-            const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-            return timeB - timeA; 
-        });
-
-        this.customerHistory = history; 
-
-    } catch (error) {
-        console.error("Gagal menarik riwayat belanja:", error);
-        Swal.fire('Error', 'Gagal memuat riwayat. Silakan coba lagi nanti.', 'error');
-    } finally {
-        this.isLoadingHistory = false;
-    }
-},
+            },
 
             shareToWA(invId) {
                 const url = window.location.href;
