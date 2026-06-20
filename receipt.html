@@ -9,11 +9,9 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* KUNCI PERBAIKAN: Menyembunyikan mentahan HTML agar tidak berkedip (flicker) sebelum Vue memuat data */
         [v-cloak] { display: none !important; }
-        
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .bg-primary { background-color: #991b1b !important; } /* Sesuaikan warna tema Anda */
+        .bg-primary { background-color: #991b1b !important; } 
         .btn-primary-custom { background-color: #991b1b; color: white; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -39,8 +37,19 @@
             <div class="bg-primary text-white text-center p-4">
                 <h4 class="fw-bold mb-0">E-Receipt</h4>
                 <div class="small opacity-75 mb-1">{{ ereceiptData.id }}</div>
+
+                <div class="mt-2 mb-2">
+                    <span v-if="(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) >= ereceiptData.total" 
+                          class="badge bg-success text-white px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
+                        <i class="bi bi-check-circle-fill me-1"></i> LUNAS
+                    </span>
+                    <span v-else 
+                          class="badge bg-warning text-dark px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> BELUM LUNAS
+                    </span>
+                </div>
                 
-                <div class="mt-2">
+                <div class="mt-3">
                     <span @click="showQr = !showQr" style="cursor: pointer; user-select: none;" class="small fw-semibold text-white-50 d-inline-flex align-items-center gap-1">
                         QR Code Invoice <i class="bi" :class="showQr ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                     </span>
@@ -151,7 +160,35 @@
                 </div>
             </div>
             
-        </div> <div class="mb-4">
+        </div> <div v-if="ereceiptData.customerPhone || ereceiptData.phone || ereceiptData.customerId" class="mb-4">
+            <button class="btn btn-outline-secondary bg-white w-100 fw-bold shadow-sm text-dark" @click="fetchCustomerHistory()" style="border: 2px solid #dee2e6; border-radius: 12px;">
+                <i class="bi bi-clock-history text-danger me-1"></i> Lihat Riwayat Belanja Saya
+            </button>
+            
+            <div v-if="showHistory" class="mt-3">
+                <div v-if="isLoadingHistory" class="text-center text-muted small py-2">
+                    <span class="spinner-border spinner-border-sm text-danger align-middle me-1"></span> Mencari data riwayat...
+                </div>
+                <div v-else-if="customerHistory.length === 0" class="text-center text-muted small p-3 bg-white rounded-3 shadow-sm border-0">
+                    Belum ada riwayat belanja lainnya.
+                </div>
+                <div v-else class="list-group shadow-sm border-0 rounded-4 overflow-hidden">
+                    <a v-for="hist in customerHistory" :key="hist.id" :href="'?inv=' + hist.id" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-bottom border-light">
+                        <div>
+                            <div class="fw-bold text-dark" style="font-size: 0.9em;">{{ hist.id }}</div>
+                            <div class="text-muted mt-1" style="font-size: 0.75em;"><i class="bi bi-calendar2-event me-1"></i>{{ hist.dateStr }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-success fw-bold mb-1" style="font-size: 0.95em;">Rp {{ formatNumber(hist.total) }}</div>
+                            <span v-if="(hist.firstPayment !== undefined ? hist.firstPayment : hist.amountReceived) >= hist.total" class="badge bg-success" style="font-size: 0.65em;">Lunas</span>
+                            <span v-else class="badge bg-warning text-dark" style="font-size: 0.65em;">Belum Lunas</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
             <div class="text-center text-muted fw-bold small text-uppercase mb-3" style="letter-spacing: 1px;">Bagikan :</div>
             <div class="row g-2">
                 <div class="col-6">
@@ -223,6 +260,10 @@
                 ereceiptReview: '',
                 appSettings: null,
                 showQr: false, 
+                // State baru untuk fitur riwayat belanja
+                customerHistory: [],
+                showHistory: false,
+                isLoadingHistory: false
             }
         },
         
@@ -280,6 +321,50 @@
                 }
             },
 
+            // Fungsi baru untuk menarik riwayat pelanggan
+            async fetchCustomerHistory() {
+                this.showHistory = !this.showHistory;
+                if (!this.showHistory || this.customerHistory.length > 0) return; 
+                
+                this.isLoadingHistory = true;
+                try {
+                    // Deteksi otomatis field HP pelanggan di database Anda (bisa customerPhone, phone, atau fallback ke customerId)
+                    const searchField = this.ereceiptData.customerPhone ? "customerPhone" : (this.ereceiptData.phone ? "phone" : "customerId");
+                    const searchValue = this.ereceiptData[searchField];
+
+                    const q = query(
+                        collection(db, "transactions"), 
+                        where("companyId", "==", this.ereceiptData.companyId),
+                        where(searchField, "==", searchValue)
+                    );
+                    
+                    const querySnapshot = await getDocs(q);
+                    const history = [];
+                    
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        // Filter agar invoice yang sedang dibuka tidak masuk lagi ke daftar riwayat
+                        if (data.id !== this.ereceiptData.id) {
+                            history.push(data);
+                        }
+                    });
+                    
+                    // Balik urutan agar yang terbaru ada di atas
+                    this.customerHistory = history.reverse(); 
+
+                } catch (error) {
+                    console.error("Gagal menarik riwayat belanja:", error);
+                    // Peringatan jika Firebase Index belum dibuat
+                    if(error.message.includes("index")) {
+                         Swal.fire('Info', 'Sistem sedang mengoptimalkan pencarian riwayat, cobalah beberapa saat lagi.', 'info');
+                    } else {
+                         Swal.fire('Error', 'Gagal memuat riwayat belanja.', 'error');
+                    }
+                } finally {
+                    this.isLoadingHistory = false;
+                }
+            },
+
             shareToWA(invId) {
                 const url = window.location.href;
                 const text = `Halo! Terima kasih telah berbelanja di Quinsah Collection. Berikut E-Receipt Anda:\n\n${url}`;
@@ -294,57 +379,51 @@
             },
             
             downloadPDF() {
-    // Paksa layar ke atas untuk menghindari bug "blank area" saat posisi di-scroll
-    window.scrollTo({ top: 0, behavior: 'instant' });
+                window.scrollTo({ top: 0, behavior: 'instant' });
 
-    const element = document.getElementById('receipt-content');
-    
-    // Simpan style bawaan agar tampilan layar tidak rusak setelah download
-    const originalStyle = {
-        boxShadow: element.style.boxShadow,
-        borderRadius: element.style.borderRadius,
-        margin: element.style.margin
-    };
+                const element = document.getElementById('receipt-content');
+                
+                const originalStyle = {
+                    boxShadow: element.style.boxShadow,
+                    borderRadius: element.style.borderRadius,
+                    margin: element.style.margin
+                };
 
-    // Buat elemen rata, tanpa bayangan dan tanpa lengkungan (mencegah glitch merah ganda)
-    element.style.boxShadow = 'none';
-    element.style.borderRadius = '0px';
-    element.style.margin = '0';
+                element.style.boxShadow = 'none';
+                element.style.borderRadius = '0px';
+                element.style.margin = '0';
 
-    const opt = {
-        margin:       0, // Set 0 agar warna merah header menempel rapi di ujung atas PDF
-        filename:     `Invoice-${this.ereceiptData.id}.pdf`,
-        image:        { type: 'jpeg', quality: 1 },
-        html2canvas:  { 
-            scale: 2, 
-            useCORS: true,
-            scrollY: 0, // Tetap gunakan ini untuk memperbaiki bug ruang putih
-            windowWidth: 500 // Dikunci di 500px menyesuaikan max-width container HTML Anda
-        }, 
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
+                const opt = {
+                    margin:       0,
+                    filename:     `Invoice-${this.ereceiptData.id}.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true,
+                        scrollY: 0,
+                        windowWidth: 500
+                    }, 
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
 
-    Swal.fire({
-        title: 'Menyiapkan PDF...',
-        text: 'Mohon tunggu sebentar',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading() }
-    });
+                Swal.fire({
+                    title: 'Menyiapkan PDF...',
+                    text: 'Mohon tunggu sebentar',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading() }
+                });
 
-    // Jeda waktu untuk memastikan halaman stabil di atas sebelum difoto
-    setTimeout(() => {
-        html2pdf().set(opt).from(element).save().then(() => {
-            // Kembalikan desain lengkung dan bayangan ke layar
-            Object.assign(element.style, originalStyle);
-            Swal.close();
-        }).catch(err => {
-            console.error("Gagal membuat PDF:", err);
-            Object.assign(element.style, originalStyle);
-            Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
-        });
-    }, 600);
-}, 
-
+                setTimeout(() => {
+                    html2pdf().set(opt).from(element).save().then(() => {
+                        Object.assign(element.style, originalStyle);
+                        Swal.close();
+                    }).catch(err => {
+                        console.error("Gagal membuat PDF:", err);
+                        Object.assign(element.style, originalStyle);
+                        Swal.fire('Error', 'Gagal mengunduh dokumen PDF', 'error');
+                    });
+                }, 600);
+            }, 
             
             async submitRating() {
                 if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Silakan pilih minimal 1 bintang terlebih dahulu.', 'warning');
