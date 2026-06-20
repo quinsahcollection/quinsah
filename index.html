@@ -10546,11 +10546,23 @@ async fetchRolesFromDatabase() {
                 this.showModal('supplierDetailModal');
             },
 
-            goToTransaction(trxId) {
-                this.hideModal('customerDetailModal');
-                this.currentView = 'reports';
-                this.reportSearchQuery = trxId;
-            },
+            goToTransaction(invId) {
+        // 1. Ubah tampilan ke menu Penjualan (Sales)
+        this.currentView = 'sales';
+
+        // 2. Beri sedikit jeda agar Vue selesai merender halaman Sales sebelum melakukan filter
+        setTimeout(() => {
+            // 3. Masukkan nomor invoice ke kolom pencarian (reportSearchQuery)
+            this.reportSearchQuery = invId;
+            
+            // 4. Tutup modal detail pelanggan secara manual dengan Bootstrap
+            const modalEl = document.getElementById('customerDetailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) {
+                modal.hide();
+            }
+        }, 100);
+    },
 
             goToPurchase(poId) {
                 this.hideModal('supplierDetailModal');
