@@ -343,27 +343,37 @@
             },
 
             async fetchReceipt(invId) {
-                try {
-                    const docRef = doc(db, "transactions", invId);
-                    const docSnap = await getDoc(docRef);
+    try {
+        const docRef = doc(db, "transactions", invId);
+        const docSnap = await getDoc(docRef);
 
-                    if (docSnap.exists()) {
-                        this.ereceiptData = docSnap.data();
-                        this.ereceiptData.docId = docSnap.id; 
-                        
-                        if (this.ereceiptData.companyId) {
-                            await this.fetchStoreSettings(this.ereceiptData.companyId);
-                        }
-                    } else {
-                        this.ereceiptData = null;
-                    }
-                } catch (error) {
-                    console.error("Gagal menarik data resi:", error);
-                    this.ereceiptData = null;
-                } finally {
-                    this.isLoading = false;
-                }
-            },
+        if (docSnap.exists()) {
+            this.ereceiptData = docSnap.data();
+            this.ereceiptData.docId = docSnap.id; 
+            
+            // 1. Ambil pengaturan profil toko (Logo, Sosmed, S&K)
+            if (this.ereceiptData.companyId) {
+                await this.fetchStoreSettings(this.ereceiptData.companyId);
+            }
+
+            // 2. AMBIL DATA OUTLET NYATA (Penyempurnaan Langkah 3)
+            // Memeriksa ID outlet yang tersimpan di transaksi (bisa di field 'outlet' atau 'outletId')
+            const savedOutletId = this.ereceiptData.outlet || this.ereceiptData.outletId;
+            if (savedOutletId) {
+                await this.fetchOutletData(savedOutletId);
+            }
+            
+        } else {
+            this.ereceiptData = null;
+        }
+    } catch (error) {
+        console.error("Gagal menarik data resi:", error);
+        this.ereceiptData = null;
+    } finally {
+        this.isLoading = false;
+    }
+},
+
 
             async fetchStoreSettings(companyId) {
                 try {
