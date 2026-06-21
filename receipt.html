@@ -372,8 +372,7 @@
     } finally {
         this.isLoading = false;
     }
-},
-
+            }, 
 
             async fetchStoreSettings(companyId) {
                 try {
@@ -390,20 +389,24 @@
 
             async fetchOutletData(outletId) {
     try {
-        // Asumsi nama collection cabang Anda di Firebase adalah "outlets"
         const outletRef = doc(db, "outlets", outletId);
         const outletSnap = await getDoc(outletRef);
         
         if (outletSnap.exists()) {
             const data = outletSnap.data();
-            // Masukkan nama cabang ke dalam data e-receipt
-            // Sesuaikan "data.name" jika field nama di database Anda berbeda (misal: data.namaOutlet)
-            this.ereceiptData.outletName = data.name || data.nama || data.outletName;
+            console.log("Data outlet ditemukan:", data); // Untuk mempermudah debugging Anda di console log
+            
+            // Mengatasi masalah reactivity Vue 3 agar teks langsung berubah di layar
+            // dan mendeteksi segala kemungkinan nama field (name, nama, atau namaOutlet)
+            this.ereceiptData = {
+                ...this.ereceiptData,
+                outletName: data.name || data.nama || data.namaOutlet || data.outletName || outletId
+            };
         }
     } catch (error) {
-        console.error("Gagal memuat data outlet:", error);
+        console.error("Gagal memuat detail nama outlet:", error);
     }
-            }, 
+},
 
             // LOGIKA PENCARIAN RIWAYAT DIPERBARUI (BYPASS FIREBASE INDEX & ANTI HURUF KECIL/BESAR)
             async fetchCustomerHistory() {
