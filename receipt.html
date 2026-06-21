@@ -348,18 +348,21 @@
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            this.ereceiptData = docSnap.data();
-            this.ereceiptData.docId = docSnap.id; 
+            // Menggunakan spread operator (...) agar Vue 3 membaca perubahan data secara reactive
+            this.ereceiptData = {
+                ...docSnap.data(),
+                docId: docSnap.id
+            };
             
-            // 1. Ambil pengaturan profil toko (Logo, Sosmed, S&K)
             if (this.ereceiptData.companyId) {
                 await this.fetchStoreSettings(this.ereceiptData.companyId);
             }
 
-            // 2. AMBIL DATA OUTLET NYATA (Penyempurnaan Langkah 3)
-            // Memeriksa ID outlet yang tersimpan di transaksi (bisa di field 'outlet' atau 'outletId')
+            // Ambil ID outlet dari field transaksi (bisa 'outlet' atau 'outletId')
             const savedOutletId = this.ereceiptData.outlet || this.ereceiptData.outletId;
-            if (savedOutletId) {
+            
+            // Pastikan ID-nya ada dan berupa string ID Firebase (bukan teks nama)
+            if (savedOutletId && typeof savedOutletId === 'string' && savedOutletId.length > 10) {
                 await this.fetchOutletData(savedOutletId);
             }
             
@@ -372,7 +375,7 @@
     } finally {
         this.isLoading = false;
     }
-            }, 
+}, 
 
             async fetchStoreSettings(companyId) {
                 try {
@@ -394,14 +397,21 @@
         
         if (outletSnap.exists()) {
             const data = outletSnap.data();
-            console.log("Data outlet ditemukan:", data); // Untuk mempermudah debugging Anda di console log
+            // Ambil kemungkinan penamaan field nama di collection outlets Anda
+            const namaAsliCabang = data.name || data.nama || data.namaOutlet || data.outletName;
             
-            // Mengatasi masalah reactivity Vue 3 agar teks langsung berubah di layar
-            // dan mendeteksi segala kemungkinan nama field (name, nama, atau namaOutlet)
-            this.ereceiptData = {
-                ...this.ereceiptData,
-                outletName: data.name || data.nama || data.namaOutlet || data.outletName || outletId
-            };
+            if (namaAsliCabang) {
+                // TRIK UTAMA: Kita isi dua-duanya (.outlet dan .outletName) dengan nama asli cabang.
+                // Ini akan langsung memaksa HTML memperbarui ID menjadi nama asli di layar.
+                this.ereceiptData = {
+                    ...this.ereceiptData,
+                    outlet: namaAsliCabang,
+                    outletName: namaAsliCabang
+                };
+                console.log("Teks Outlet berhasil diubah menjadi:", namaAsliCabang);
+            }
+        } else {
+            console.warn("Dokumen outlet tidak ditemukan untuk ID:", outletId);
         }
     } catch (error) {
         console.error("Gagal memuat detail nama outlet:", error);
