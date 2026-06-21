@@ -397,26 +397,28 @@
         
         if (outletSnap.exists()) {
             const data = outletSnap.data();
-            // Ambil kemungkinan penamaan field nama di collection outlets Anda
             const namaAsliCabang = data.name || data.nama || data.namaOutlet || data.outletName;
             
             if (namaAsliCabang) {
-                // TRIK UTAMA: Kita isi dua-duanya (.outlet dan .outletName) dengan nama asli cabang.
-                // Ini akan langsung memaksa HTML memperbarui ID menjadi nama asli di layar.
+                // PAKSA UKIR SEMUA FIELD YANG MUNGKIN DIPANGGIL DI HTML
+                // Apapun yang dipanggil HTML Anda sekarang akan otomatis berubah menjadi Nama Cabang
                 this.ereceiptData = {
                     ...this.ereceiptData,
                     outlet: namaAsliCabang,
-                    outletName: namaAsliCabang
+                    outletName: namaAsliCabang,
+                    outletId: namaAsliCabang // <-- Menimpa field ID agar ikut berubah menjadi nama
                 };
-                console.log("Teks Outlet berhasil diubah menjadi:", namaAsliCabang);
+                console.log("Sukses menerjemahkan ID menjadi:", namaAsliCabang);
             }
         } else {
-            console.warn("Dokumen outlet tidak ditemukan untuk ID:", outletId);
+            console.warn("Dokumen tidak ditemukan di collection 'outlets' untuk ID:", outletId);
         }
     } catch (error) {
-        console.error("Gagal memuat detail nama outlet:", error);
+        // KEMUNGKINAN 2 AKAN TERCATAT DI SINI
+        console.error("Firebase memblokir akses baca ke tabel outlets:", error.message);
     }
 },
+
 
             // LOGIKA PENCARIAN RIWAYAT DIPERBARUI (BYPASS FIREBASE INDEX & ANTI HURUF KECIL/BESAR)
             async fetchCustomerHistory() {
