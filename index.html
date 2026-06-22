@@ -3360,35 +3360,52 @@
             </div>
 
             <!-- SALES VIEW -->
-            <div v-if="currentView === 'sales'" class="dashboard-card">
-            
-            <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Transaksi Penjualan (POS)</h6>
-            
-            <div class="row mb-3 align-items-end">
-                
-                <div class="col-12 col-md-4 mb-2">
-                    <label class="form-label small fw-bold text-muted">Cari Invoice / Pelanggan</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" v-model="reportSearchQuery" placeholder="Ketik nomor invoice atau nama...">
-                    </div>
-                </div>
-
-                <div class="col-6 col-md-3 mb-2">
-                    <label class="form-label small fw-bold text-muted">Dari Tgl</label>
-                    <input type="date" class="form-control" v-model="transactionStartDate">
-                </div>
-                <div class="col-6 col-md-3 mb-2">
-                    <label class="form-label small fw-bold text-muted">Sampai Tgl</label>
-                    <input type="date" class="form-control" v-model="transactionEndDate">
-                </div>
-
-                <div class="col-12 col-md-2 mb-2">
-                    <button class="btn btn-outline-danger w-100" @click="transactionStartDate = ''; transactionEndDate = ''; reportSearchQuery = '';">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
-                    </button>
-                </div>             
+            <div v-if="currentView === 'sales'" class="dashboard-card mb-4 fade-in">
+    <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Transaksi Penjualan (POS)</h6>
+    
+    <div class="row g-2 mb-3 align-items-end">
+        
+        <div class="col-12 col-md-3">
+            <label class="form-label small fw-bold text-muted mb-1">Cari Inv / Nama</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" v-model="reportSearchQuery" placeholder="Ketik nomor/nama...">
             </div>
+        </div>
+
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Cabang</label>
+            <select class="form-select form-select-sm shadow-none" v-model="salesOutletFilter">
+                <option value="">-- Semua --</option>
+                <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+            </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Status Bayar</label>
+            <select class="form-select form-select-sm shadow-none" v-model="salesStatusFilter">
+                <option value="">-- Semua --</option>
+                <option value="LUNAS">LUNAS</option>
+                <option value="BELUM LUNAS">BELUM LUNAS (AR)</option>
+                <option value="DIRETUR">DIRETUR (VOID)</option>
+            </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Dari Tgl</label>
+            <input type="date" class="form-control form-control-sm shadow-none" v-model="transactionStartDate">
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Sampai Tgl</label>
+            <input type="date" class="form-control form-control-sm shadow-none" v-model="transactionEndDate">
+        </div>
+
+        <div class="col-12 col-md-1">
+            <button class="btn btn-sm btn-outline-danger w-100" @click="resetSalesFilter()">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>        
+    </div>
 
             <div class="table-responsive">
     <table class="table table-custom align-middle text-nowrap">
@@ -6097,7 +6114,10 @@
 
                 activeInvoiceDetail: null,
                 installmentForm: { amount: 0, method: 'CASH', note: '' },
-    
+
+                salesOutletFilter: '',  // 🌟 State untuk filter cabang
+                salesStatusFilter: '',  // 🌟 State untuk filter status
+              
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
                 customerPromoFilter: '',
@@ -7338,7 +7358,15 @@
             this.activeHppExample = methodType;
             this.openModal('hppExampleModal');
         },
-        
+
+        resetSalesFilter() {
+                this.transactionStartDate = '';
+                this.transactionEndDate = '';
+                this.reportSearchQuery = '';
+                this.salesOutletFilter = '';
+                this.salesStatusFilter = '';
+            },
+          
         // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
         openBatchDetail(product, variant = null) {
             // 1. Copy data produk/varian ke state yang diminta HTML Anda
