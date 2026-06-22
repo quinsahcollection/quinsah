@@ -6536,16 +6536,19 @@
             },
 
             activePaymentMethodsForCashier() {
-        // Ambil ID outlet aktif di kasir Anda saat ini 
-        // (Sesuaikan nama variabelnya, misal: this.currentOutletId atau this.posOutletId)
-        const currentOutletId = this.currentOutletId || this.user?.outletId || '';
+        // Coba mencari ID outlet dari berbagai variabel kasir yang umum dipakai
+        const currentOutletId = this.user?.outletId || this.currentOutletId || '';
 
         return (this.paymentMethods || []).filter(pm => {
-            // Hanya ambil yang berstatus AKTIF
+            // Syarat 1: Metode harus berstatus AKTIF
             const isMethodActive = pm.isActive === true;
             
-            // Cocokkan apakah metode ini Global (tanpa outletId) ATAU cocok dengan outlet kasir saat ini
-            const isOutletMatch = !pm.outletId || pm.outletId === currentOutletId;
+            // Syarat 2: Cocokkan Outletnya
+            // Akan muncul jika: 
+            // - Metode ini diset Global (!pm.outletId)
+            // - ATAU Outletnya cocok dengan kasir saat ini
+            // - ATAU Kasirnya tidak memiliki outlet spesifik (Admin Pusat / currentOutletId kosong)
+            const isOutletMatch = !pm.outletId || pm.outletId === currentOutletId || currentOutletId === '';
 
             return isMethodActive && isOutletMatch;
         });
