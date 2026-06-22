@@ -7981,20 +7981,40 @@ openPaymentMethodModal(pm = null) {
     modal.show();
 },
 
-// 1. FUNGSI PINTAR UNTUK MENCARI COMPANY ID OTOMATIS
+// 1. FUNGSI PINTAR PENCARI COMPANY ID (ULTRA AUTO-DETECT)
 getMyCompanyId() {
-    // Fungsi ini akan mencari Company ID dari mana saja data yang sudah berhasil di-load oleh sistem Anda
+    // A. Cek dari variabel Vue yang paling sering dipakai developer
     if (this.companyId) return this.companyId;
-    if (this.user && this.user.companyId) return this.user.companyId;
-    if (this.currentUser && this.currentUser.companyId) return this.currentUser.companyId;
-    if (this.appSettings && this.appSettings.companyId) return this.appSettings.companyId;
-    
-    // Alternatif terakhir: Ambil dari data cabang jika sudah ter-load
-    if (this.outlets && this.outlets.length > 0 && this.outlets[0].companyId) {
-        return this.outlets[0].companyId;
+    if (this.user?.companyId) return this.user.companyId;
+    if (this.currentUser?.companyId) return this.currentUser.companyId;
+    if (this.activeUser?.companyId) return this.activeUser.companyId;
+    if (this.adminData?.companyId) return this.adminData.companyId;
+
+    // B. BONGKAR PAKSA LOCAL STORAGE (Mencari sisa data Login Admin)
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            let key = localStorage.key(i);
+            let item = localStorage.getItem(key);
+            // Jika ada teks 'companyId' di dalam penyimpanannya, ambil!
+            if (item && item.includes('companyId')) {
+                let parsedData = JSON.parse(item);
+                if (parsedData && parsedData.companyId) {
+                    return parsedData.companyId;
+                }
+            }
+        }
+    } catch(e) {
+        console.warn("Gagal membaca Local Storage", e);
     }
+
+    // C. PINJAM DARI DATA LAIN YANG SUDAH TER-LOAD DI WEB
+    if (this.appSettings?.companyId) return this.appSettings.companyId;
+    if (this.outlets && this.outlets.length > 0) return this.outlets[0].companyId;
+    if (this.products && this.products.length > 0) return this.products[0].companyId;
     
-    return null; // Jika benar-benar belum siap
+    // Jika masih gagal juga, tampilkan seluruh isi web di console log agar kita bisa cari manual
+    console.error("Gagal menemukan Company ID! Isi data Vue saat ini:", this.$data);
+    return null; 
 },
 
 // 2. FUNGSI FETCH DENGAN AUTO-RETRY (ANTI ERROR)
