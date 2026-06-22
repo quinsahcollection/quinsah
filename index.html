@@ -5417,50 +5417,61 @@
 </div>
 
         <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered modal-sm">
-                <div class="modal-content border-0 shadow-lg">
-                    <div class="modal-body py-4 px-3 bg-white text-center">
-                        <h6 class="fw-bold mb-2">Penyelesaian Transaksi</h6>
-                        <p class="text-muted small mb-3">Pelanggan: {{ selectedCustomer ? selectedCustomer.name : '-' }}</p>
-                        
-                        <h3 class="text-primary-custom fw-bold mb-3 border-bottom pb-3">Rp {{ formatNumber(total) }}</h3>
-                        
-                        <div class="mb-3 text-start">
-                            <label class="form-label small fw-bold">Metode Pembayaran</label>
-                            <select class="form-select form-select-sm fw-semibold" v-model="paymentData.method">
-                                <option value="CASH">Uang Tunai (CASH)</option>
-                                <option value="QRIS">QRIS / E-Wallet</option>
-                                <option value="TRANSFER">Transfer Bank</option>
-                                <option value="DEBIT_KREDIT">Kartu Debit / Kredit (EDC)</option>
-                            </select>
-                        </div>
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body py-4 px-3 bg-white text-center">
+                <h6 class="fw-bold mb-2">Penyelesaian Transaksi</h6>
+                <p class="text-muted small mb-3">Pelanggan: {{ selectedCustomer ? selectedCustomer.name : '-' }}</p>
+                
+                <h3 class="text-primary-custom fw-bold mb-3 border-bottom pb-3">Rp {{ formatNumber(total) }}</h3>
+                
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">Metode Pembayaran</label>
+                    <select class="form-select form-select-sm fw-semibold" v-model="paymentData.method">
+                        <template v-if="activePaymentMethodsForCashier && activePaymentMethodsForCashier.length > 0">
+                            <option value="">-- Pilih Metode Bayar --</option>
+                            <option v-for="pm in activePaymentMethodsForCashier" :key="pm.id" :value="pm.name">
+                                {{ pm.name }}
+                                <template v-if="pm.surcharge > 0">
+                                    (+{{ pm.surchargeType === 'percent' ? pm.surcharge + '%' : 'Rp ' + formatNumber(pm.surcharge) }})
+                                </template>
+                            </option>
+                        </template>
+                        <template v-else>
+                            <option value="CASH">Uang Tunai (CASH)</option>
+                            <option value="QRIS">QRIS / E-Wallet</option>
+                            <option value="TRANSFER">Transfer Bank</option>
+                            <option value="DEBIT_KREDIT">Kartu Debit / Kredit (EDC)</option>
+                        </template>
+                    </select>
+                </div>
 
-                        <div class="mb-4 text-start" v-if="paymentData.method === 'CASH'">
-                        <label class="form-label small fw-bold">Jumlah Uang Diterima</label>
+                <div class="mb-4 text-start" v-if="paymentData.method === 'CASH' || (activePaymentMethodsForCashier && activePaymentMethodsForCashier.some(p => p.name === paymentData.method && p.type === 'CASH'))">
+                    <label class="form-label small fw-bold">Jumlah Uang Diterima</label>
     
-                        <div class="d-flex flex-wrap gap-1 mb-2">
+                    <div class="d-flex flex-wrap gap-1 mb-2">
                         <button type="button" class="btn btn-sm btn-outline-success" style="font-size: 0.75rem;" @click="paymentData.amountReceived = total">Uang Pas</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 20000">20.000</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 50000">50.000</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 100000">100.000</button>
-                   </div>
+                    </div>
 
-                        <input type="number" class="form-control form-control-sm text-center fw-bold fs-6" v-model.number="paymentData.amountReceived" placeholder="0">
+                    <input type="number" class="form-control form-control-sm text-center fw-bold fs-6" v-model.number="paymentData.amountReceived" placeholder="0">
     
-                        <div class="mt-2 d-flex justify-content-between align-items-center" v-if="paymentData.amountReceived > 0">
+                    <div class="mt-2 d-flex justify-content-between align-items-center" v-if="paymentData.amountReceived > 0">
                         <span class="small fw-bold">Kembalian:</span>
                         <span class="fw-bold text-danger fs-6">Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}</span>
                     </div>
-               </div>
-
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total)">
-                        <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
-                        </button>
-                        <button class="btn btn-white border w-100 fw-bold py-2 small" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
-                    </div>
                 </div>
+
+                <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total) || !paymentData.method">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
+                </button>
+                <button class="btn btn-white border w-100 fw-bold py-2 small" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
             </div>
         </div>
+    </div>
+</div>
             
                    <div class="modal fade" id="posModifierModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -6524,6 +6535,22 @@
                 flatten(roots, 0); return res;
             },
 
+            activePaymentMethodsForCashier() {
+        // Ambil ID outlet aktif di kasir Anda saat ini 
+        // (Sesuaikan nama variabelnya, misal: this.currentOutletId atau this.posOutletId)
+        const currentOutletId = this.currentOutletId || this.user?.outletId || '';
+
+        return (this.paymentMethods || []).filter(pm => {
+            // Hanya ambil yang berstatus AKTIF
+            const isMethodActive = pm.isActive === true;
+            
+            // Cocokkan apakah metode ini Global (tanpa outletId) ATAU cocok dengan outlet kasir saat ini
+            const isOutletMatch = !pm.outletId || pm.outletId === currentOutletId;
+
+            return isMethodActive && isOutletMatch;
+        });
+    },
+          
             // DAFTAR PRODUK UNTUK MODIFIER (Memecah Varian)
             modifierLinkableItems() {
                 let items = [];
