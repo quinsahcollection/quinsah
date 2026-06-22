@@ -888,6 +888,7 @@
     
     <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='invoice', 'bg-primary-custom': settingTab==='invoice'}" href="#" @click.prevent="settingTab='invoice'">Format Invoice</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='payment_methods', 'bg-primary-custom': settingTab==='payment_methods'}" href="#" @click.prevent="settingTab='payment_methods'"><i class="bi bi-wallet2 me-1"></i>Metode Pembayaran</a></li>
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='hpp', 'bg-primary-custom': settingTab==='hpp'}" href="#" @click.prevent="settingTab='hpp'">Metode HPP</a></li>
         
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='inventory_rules', 'bg-primary-custom': settingTab==='inventory_rules'}" href="#" @click.prevent="settingTab='inventory_rules'">Aturan Stok</a></li>
@@ -901,6 +902,139 @@
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='receipt', 'bg-primary-custom': settingTab==='receipt'}" href="#" @click.prevent="settingTab='receipt'"><i class="bi bi-printer me-1"></i>Struk & Cetak</a></li>
     </ul>
 
+    <!-- KONTEN: METODE PEMBAYARAN -->
+<div v-if="settingTab === 'payment_methods'">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="fw-bold mb-0 text-primary-custom">Master Metode Pembayaran</h6>
+                <div class="small text-muted">Kelola Kas, Transfer, QRIS, EDC, VA beserta MDR & Surcharge</div>
+            </div>
+            <button class="btn btn-sm btn-primary-custom fw-bold shadow-sm" @click="openPaymentMethodModal()">
+                <i class="bi bi-plus-circle me-1"></i> Tambah Metode
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle text-nowrap mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Nama Metode</th>
+                            <th>Kategori</th>
+                            <th>Berlaku Di (Outlet)</th>
+                            <th class="text-center">Potongan MDR</th>
+                            <th class="text-center">Surcharge (Customer)</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center pe-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(pm, idx) in paymentMethods" :key="idx">
+                            <td class="ps-3 fw-bold text-dark">{{ pm.name }}</td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ pm.type }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-shop me-1"></i>{{ pm.outletId ? getOutletName(pm.outletId) : 'Semua Cabang (Global)' }}
+                                </span>
+                            </td>
+                            <td class="text-center text-danger fw-semibold">{{ pm.mdr || 0 }}%</td>
+                            <td class="text-center text-success fw-semibold">
+                                {{ pm.surchargeType === 'percent' ? (pm.surcharge || 0) + '%' : 'Rp ' + formatNumber(pm.surcharge || 0) }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" :class="pm.isActive ? 'bg-success' : 'bg-danger'">{{ pm.isActive ? 'Aktif' : 'Nonaktif' }}</span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <button class="btn btn-sm btn-outline-primary me-1" @click="openPaymentMethodModal(pm)"><i class="bi bi-pencil"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" @click="deletePaymentMethod(pm.id)"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                        <tr v-if="paymentMethods.length === 0">
+                            <td colspan="7" class="text-center py-4 text-muted">Belum ada metode pembayaran. Klik "Tambah Metode" untuk memulai.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+           <div class="modal fade" id="paymentMethodModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom p-3">
+                <h6 class="fw-bold mb-0 text-primary-custom">
+                    <i class="bi bi-wallet2 me-2"></i>{{ paymentForm.id ? 'Edit' : 'Tambah' }} Metode Pembayaran
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Cabang / Outlet</label>
+                    <select class="form-select" v-model="paymentForm.outletId">
+                        <option value="">-- Berlaku untuk Semua Cabang (Global) --</option>
+                        <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+                    </select>
+                    <div class="form-text" style="font-size: 0.7rem;">Kosongkan jika metode ini berlaku di semua cabang.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold">Kategori</label>
+                        <select class="form-select" v-model="paymentForm.type">
+                            <option value="CASH">CASH (Tunai)</option>
+                            <option value="TRANSFER">TRANSFER BANK</option>
+                            <option value="QRIS">QRIS / E-WALLET</option>
+                            <option value="EDC">EDC BANK</option>
+                            <option value="VA">VIRTUAL ACCOUNT</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label small fw-bold">Nama Metode (Tampil di Kasir)</label>
+                        <input type="text" class="form-control" v-model="paymentForm.name" placeholder="Contoh: QRIS ShopeePay, EDC BCA...">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-danger">Potongan MDR (%)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" v-model.number="paymentForm.mdr" placeholder="0" step="0.1">
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text" style="font-size: 0.7rem;">Potongan dari pihak bank/aplikasi.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-success">Surcharge (Biaya ke Customer)</label>
+                        <div class="input-group">
+                            <select class="form-select" style="max-width: 80px;" v-model="paymentForm.surchargeType">
+                                <option value="nominal">Rp</option>
+                                <option value="percent">%</option>
+                            </select>
+                            <input type="number" class="form-control" v-model.number="paymentForm.surcharge" placeholder="0">
+                        </div>
+                        <div class="form-text" style="font-size: 0.7rem;">Biaya layanan yg dibebankan ke pembeli.</div>
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mt-4">
+                    <input class="form-check-input" type="checkbox" role="switch" id="pmStatus" v-model="paymentForm.isActive">
+                    <label class="form-check-label small fw-bold" for="pmStatus">Aktifkan Metode Pembayaran Ini</label>
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2">
+                <button type="button" class="btn btn-white border fw-bold" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary-custom fw-bold px-4" @click="savePaymentMethod" :disabled="isProcessing">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="bi bi-save me-1"></i> Simpan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>   
+              
     <div v-if="settingTab==='inventory_rules'" class="dashboard-card">
         <div class="mb-3">
             <h6 class="fw-bold mb-1">Pengaturan Aturan Inventory (Stok)</h6>
@@ -6095,7 +6229,19 @@
                 paymentSearchQuery: '',
                 paymentStartDate: '', // Tambahan untuk filter tgl
                 paymentEndDate: '',
-                
+
+                paymentMethods: [],
+                paymentForm: {
+                 id: null,
+                 outletId: '',
+                 type: 'CASH',
+                 name: '',
+                 mdr: 0,
+                 surcharge: 0,
+                 surchargeType: 'nominal', // 'nominal' atau 'percent'
+                 isActive: true
+               },
+              
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 activeBatchProduct: {},
@@ -6301,23 +6447,30 @@
         },
 
         async mounted() {
-            // 1. Fungsi reset tanggal bawaan Anda
-            this.resetPosDate();
-            
-            // 2. Fix untuk modal Bootstrap bertumpuk (Bawaan Anda)
-            document.addEventListener('hidden.bs.modal', (event) => {
-                if (document.querySelectorAll('.modal.show').length > 0) { 
-                    document.body.classList.add('modal-open'); 
-                }
-            });
-            // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
-            if (typeof this.fetchOpnameHistory === 'function') {
-                await this.fetchOpnameHistory();
+        // 1. Fungsi reset tanggal bawaan Anda
+        this.resetPosDate();
+        
+        // 2. Fix untuk modal Bootstrap bertumpuk (Bawaan Anda)
+        document.addEventListener('hidden.bs.modal', (event) => {
+            if (document.querySelectorAll('.modal.show').length > 0) { 
+                document.body.classList.add('modal-open'); 
             }
-            // TAMBAHKAN BARIS INI: Tarik riwayat Transfer
-            if (typeof this.fetchTransferHistory === 'function') {
-                await this.fetchTransferHistory();
-            }
+        });
+
+        // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
+        if (typeof this.fetchOpnameHistory === 'function') {
+            await this.fetchOpnameHistory();
+        }
+
+        // 4. Tarik riwayat Transfer
+        if (typeof this.fetchTransferHistory === 'function') {
+            await this.fetchTransferHistory();
+        }
+
+        // 🌟 5. TAMBAHAN BARU: Tarik data Metode Pembayaran
+        if (typeof this.fetchPaymentMethods === 'function') {
+            await this.fetchPaymentMethods();
+        }
 
             // =======================================================
             // PENGAMAN PRINT MOBILE: Reset tampilan setelah print batal/selesai
@@ -7812,7 +7965,123 @@ async processPoReturn() {
         }
     }
 },
-        
+
+        // MEMBUKA MODAL FORM METODE PEMBAYARAN
+openPaymentMethodModal(pm = null) {
+    if (pm) {
+        // Edit Mode
+        this.paymentForm = { ...pm };
+    } else {
+        // Add Mode
+        this.paymentForm = {
+            id: null, outletId: '', type: 'CASH', name: '', mdr: 0, surcharge: 0, surchargeType: 'nominal', isActive: true
+        };
+    }
+    const modal = new bootstrap.Modal(document.getElementById('paymentMethodModal'));
+    modal.show();
+},
+
+// MENGAMBIL DATA METODE PEMBAYARAN DARI FIREBASE
+async fetchPaymentMethods() {
+        try {
+            // 🌟 Cari Company ID dari berbagai kemungkinan variabel di sistem Anda
+            const activeCompanyId = this.companyId || (this.currentUser ? this.currentUser.companyId : null) || (this.user ? this.user.companyId : null) || localStorage.getItem('companyId');
+            
+            if (!activeCompanyId) {
+                console.warn("Menunggu data Company ID siap...");
+                return; // Berhenti sebentar jika ID perusahaan belum ter-load
+            }
+
+            const q = query(collection(db, "payment_methods"), where("companyId", "==", activeCompanyId));
+            const querySnapshot = await getDocs(q);
+            
+            const methods = [];
+            querySnapshot.forEach((doc) => {
+                methods.push({ id: doc.id, ...doc.data() });
+            });
+            
+            this.paymentMethods = methods;
+        } catch (error) {
+            console.error("Gagal mengambil metode pembayaran:", error);
+        }
+    },
+
+    // 2. TIMPA FUNGSI INI JUGA
+    async savePaymentMethod() {
+        if (!this.paymentForm.name) {
+            return Swal.fire('Perhatian', 'Nama metode pembayaran harus diisi!', 'warning');
+        }
+
+        this.isProcessing = true;
+        try {
+            // 🌟 Cari Company ID
+            const activeCompanyId = this.companyId || (this.currentUser ? this.currentUser.companyId : null) || (this.user ? this.user.companyId : null) || localStorage.getItem('companyId');
+
+            if (!activeCompanyId) {
+                Swal.fire('Error', 'Sistem belum memuat data Perusahaan Anda. Coba refresh halaman.', 'error');
+                this.isProcessing = false;
+                return;
+            }
+
+            const payload = {
+                companyId: activeCompanyId,
+                outletId: this.paymentForm.outletId || '',
+                type: this.paymentForm.type,
+                name: this.paymentForm.name,
+                mdr: this.paymentForm.mdr || 0,
+                surcharge: this.paymentForm.surcharge || 0,
+                surchargeType: this.paymentForm.surchargeType,
+                isActive: this.paymentForm.isActive,
+                updatedAt: new Date()
+            };
+
+            if (this.paymentForm.id) {
+                // Proses Update
+                await updateDoc(doc(db, "payment_methods", this.paymentForm.id), payload);
+                Swal.fire('Berhasil', 'Metode pembayaran diperbarui', 'success');
+            } else {
+                // Proses Tambah Baru
+                payload.createdAt = new Date();
+                await addDoc(collection(db, "payment_methods"), payload);
+                Swal.fire('Berhasil', 'Metode pembayaran baru ditambahkan', 'success');
+            }
+
+            // Tutup modal dan refresh data
+            bootstrap.Modal.getInstance(document.getElementById('paymentMethodModal')).hide();
+            await this.fetchPaymentMethods();
+
+        } catch (error) {
+            console.error("Error saving payment method: ", error);
+            Swal.fire('Error', 'Gagal menyimpan data: ' + error.message, 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    },
+
+// MENGHAPUS METODE PEMBAYARAN
+async deletePaymentMethod(id) {
+    const confirm = await Swal.fire({
+        title: 'Hapus Metode?',
+        text: "Metode pembayaran ini akan dihapus permanen.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Hapus!'
+    });
+
+    if (confirm.isConfirmed) {
+        try {
+            await deleteDoc(doc(db, "payment_methods", id));
+            Swal.fire('Terhapus!', 'Metode pembayaran telah dihapus.', 'success');
+            await this.fetchPaymentMethods();
+        } catch (error) {
+            console.error("Error deleting payment method: ", error);
+            Swal.fire('Error', 'Gagal menghapus data', 'error');
+        }
+    }
+},
+          
         // ================================
         // FUNGSI RETUR BARANG (SUDAH DIPERBAIKI & DILENGKAPI STOK LOGIC)
         // ================================
