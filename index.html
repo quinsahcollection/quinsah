@@ -3657,33 +3657,43 @@
     </div>
 </div>
 <div class="modal fade" id="eReceiptModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow">
+    <div class="modal-dialog modal-dialog-centered modal-md"> <div class="modal-content border-0 shadow">
+            
             <div class="modal-header bg-success text-white p-3">
-                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-phone-vibrate me-2"></i>Kirim E-Receipt</h6>
+                <h6 class="modal-title fw-bold mb-0"><i class="bi bi-phone-vibrate me-2"></i>Bagikan E-Receipt</h6>
                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 text-center bg-light" v-if="activeEReceipt">
-                <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                <h5 class="fw-bold mt-3 mb-1 text-primary-custom">{{ activeEReceipt.id }}</h5>
-                <p class="fw-semibold text-dark mb-1">{{ activeEReceipt.customer }}</p>
-                <p class="text-muted small mb-4">Total: Rp {{ formatNumber(activeEReceipt.total) }}</p>
+            
+            <div class="modal-body p-0 bg-light text-center" v-if="activeEReceipt">
                 
-                <div class="d-grid gap-2">
-                    <button class="btn btn-success fw-bold d-flex justify-content-between align-items-center shadow-sm" @click="sendEReceiptWA(activeEReceipt)">
-                        <span><i class="bi bi-whatsapp me-2 fs-5"></i> Kirim via WhatsApp</span>
-                        <i class="bi bi-chevron-right small"></i>
-                    </button>
-                    
-                    <button class="btn btn-primary fw-bold d-flex justify-content-between align-items-center shadow-sm" @click="sendEReceiptEmail(activeEReceipt)">
-                        <span><i class="bi bi-envelope-at me-2 fs-5"></i> Kirim via Email</span>
-                        <i class="bi bi-chevron-right small"></i>
-                    </button>
+                <div class="bg-secondary bg-opacity-10 py-3 border-bottom">
+                    <div class="text-muted fw-bold small mb-2 text-uppercase" style="letter-spacing: 1px;">Pratinjau Struk Digital</div>
+                    <div class="mx-auto shadow-sm" style="width: 320px; height: 450px; border-radius: 12px; overflow: hidden; border: 2px solid #dee2e6; background: #fff;">
+                        <iframe :src="'receipt.html?inv=' + activeEReceipt.id" frameborder="0" width="100%" height="100%" style="pointer-events: none;"></iframe>
+                    </div>
+                    <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i> Tampilan yang akan dilihat oleh pelanggan.</div>
+                </div>
 
-                    <button class="btn btn-outline-secondary fw-bold d-flex justify-content-between align-items-center mt-2" @click="copyEReceiptLink(activeEReceipt)">
-                        <span><i class="bi bi-link-45deg me-2 fs-5"></i> Salin Teks Struk</span>
-                        <i class="bi bi-clipboard text-muted small"></i>
-                    </button>
+                <div class="p-4">
+                    <h5 class="fw-bold mb-1 text-primary-custom">{{ activeEReceipt.id }}</h5>
+                    <p class="fw-semibold text-dark mb-3">{{ activeEReceipt.customer }}</p>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptWA(activeEReceipt)">
+                            <span><i class="bi bi-whatsapp me-2 fs-5"></i> Kirim Link via WhatsApp</span>
+                            <i class="bi bi-chevron-right small"></i>
+                        </button>
+                        
+                        <button class="btn btn-primary fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptEmail(activeEReceipt)">
+                            <span><i class="bi bi-envelope-at me-2 fs-5"></i> Kirim Link via Email</span>
+                            <i class="bi bi-chevron-right small"></i>
+                        </button>
+
+                        <button class="btn btn-outline-secondary fw-bold d-flex justify-content-between align-items-center mt-2 py-2" @click="copyEReceiptLinkOnly(activeEReceipt)">
+                            <span><i class="bi bi-link-45deg me-2 fs-5"></i> Salin URL Struk Digital</span>
+                            <i class="bi bi-clipboard text-muted small"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -8178,55 +8188,42 @@ openEReceipt(trx) {
     modal.show();
 },
 
-// Format teks E-Receipt
-generateReceiptText(trx) {
-    let teks = `*E-RECEIPT ${this.appSettings.storeName || 'Toko Kami'}*\n`;
-    teks += `Cabang: ${this.getOutletName(trx.outletId) || 'Pusat'}\n`;
-    teks += `No. Inv: ${trx.id}\n`;
-    teks += `Tanggal: ${trx.dateStr}\n`;
-    teks += `Pelanggan: ${trx.customer}\n`;
-    teks += `--------------------------------\n`;
-    
-    trx.items.forEach(item => {
-        let harga = item.finalPrice || item.price || item.sellPrice || 0;
-        teks += `${item.name} (${item.qty} x ${this.formatNumber(harga)})\n`;
-    });
-    
-    teks += `--------------------------------\n`;
-    teks += `Total Belanja: Rp ${this.formatNumber(trx.total)}\n`;
-    teks += `Status Bayar: ${trx.paymentStatus || 'LUNAS'}\n\n`;
-    teks += `Terima kasih telah berbelanja! 🙏`;
-    
-    return encodeURIComponent(teks);
+// Mengambil URL absolut ke halaman receipt.html Anda
+getReceiptUrl(trxId) {
+    // Membaca URL website admin saat ini, lalu membuang nama file admin.html-nya
+    let baseUrl = window.location.href.split('/').slice(0, -1).join('/');
+    return `${baseUrl}/receipt.html?inv=${trxId}`;
 },
 
-// Kirim ke WhatsApp
+// Kirim URL ke WhatsApp
 sendEReceiptWA(trx) {
-    // Coba cari nomor HP dari data pelanggan jika ada
     let noHp = '';
     const customerData = this.customers ? this.customers.find(c => c.id === trx.customerId) : null;
     if (customerData && customerData.phone) {
-        // Hapus angka 0 di depan, ganti 62 untuk API WA
         noHp = customerData.phone.replace(/^0+/, '62'); 
     }
     
-    const teks = this.generateReceiptText(trx);
-    const waLink = `https://wa.me/${noHp}?text=${teks}`;
+    const urlStruk = this.getReceiptUrl(trx.id);
+    const teks = `Halo kak ${trx.customer},\nTerima kasih telah berbelanja di *${this.appSettings.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
+    
+    const waLink = `https://wa.me/${noHp}?text=${encodeURIComponent(teks)}`;
     window.open(waLink, '_blank');
 },
 
-// Kirim ke Email
+// Kirim URL ke Email
 sendEReceiptEmail(trx) {
+    const urlStruk = this.getReceiptUrl(trx.id);
     const subject = encodeURIComponent(`E-Receipt Pembelian: ${trx.id}`);
-    const body = this.generateReceiptText(trx);
+    const body = encodeURIComponent(`Halo ${trx.customer},\n\nTerima kasih telah berbelanja. Berikut link E-Receipt Anda:\n${urlStruk}\n\nSalam Hangat,\n${this.appSettings.storeName || 'Toko Kami'}`);
+    
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
 },
 
-// Copy teks Struk ke Clipboard (Bisa di-paste dimana saja)
-copyEReceiptLink(trx) {
-    const teks = decodeURIComponent(this.generateReceiptText(trx));
-    navigator.clipboard.writeText(teks).then(() => {
-        alert("Isi struk berhasil disalin! Silakan paste di chat pelanggan.");
+// Copy URL Struk ke Clipboard
+copyEReceiptLinkOnly(trx) {
+    const urlStruk = this.getReceiptUrl(trx.id);
+    navigator.clipboard.writeText(urlStruk).then(() => {
+        alert("URL Struk Digital berhasil disalin! Silakan paste di chat pelanggan.");
     });
 },
           
