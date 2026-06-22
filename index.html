@@ -6529,29 +6529,23 @@
                 // Gunakan || [] agar tidak error jika data transactions sedang kosong
                 let list = this.transactions || [];
 
-                // 1. FILTER RENTANG TANGGAL (Script asli Anda tetap dipertahankan utuh)
+                // 1. FILTER RENTANG TANGGAL
                 if (this.transactionStartDate || this.transactionEndDate) {
                     list = list.filter(trx => {
                         if (!trx.dateStr) return true; // Abaikan jika data tidak memiliki tanggal
 
-                        // Ambil tanggal saja dari "17/05/2026, 12:00:00" -> "17/05/2026"
                         let trxDateStr = String(trx.dateStr).split(',')[0].trim(); 
-                        
-                        // Pecah menjadi array [DD, MM, YYYY]
                         let parts = trxDateStr.split('/');
-                        if (parts.length !== 3) return true; // Abaikan jika format tanggal tidak valid
+                        if (parts.length !== 3) return true; 
 
-                        // Ubah format menjadi YYYY-MM-DD agar komputer bisa membandingkan ukurannya
                         let isoTrxDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
 
                         let isAfterStart = true;
                         let isBeforeEnd = true;
 
-                        // Cek batas awal
                         if (this.transactionStartDate) {
                             isAfterStart = isoTrxDate >= this.transactionStartDate;
                         }
-                        // Cek batas akhir
                         if (this.transactionEndDate) {
                             isBeforeEnd = isoTrxDate <= this.transactionEndDate;
                         }
@@ -6560,25 +6554,34 @@
                     });
                 }
 
-                // 2. FILTER CABANG/OUTLET (Pilih berdasarkan Dropdown)
+                // 2. FILTER CABANG/OUTLET
                 if (this.salesOutletFilter) {
                     list = list.filter(trx => trx.outletId === this.salesOutletFilter);
                 }
 
-                // 3. FILTER STATUS PEMBAYARAN (Pilih berdasarkan Dropdown)
+                // 3. FILTER STATUS PEMBAYARAN (🌟 SUDAH DIPERBAIKI)
                 if (this.salesStatusFilter) {
                     if (this.salesStatusFilter === 'BELUM LUNAS') {
+                        // Tangkap yang belum lunas, cicilan sebagian, atau masih ada sisa tagihan
                         list = list.filter(trx => 
                             trx.paymentStatus === 'BELUM LUNAS' || 
                             trx.paymentStatus === 'SEBAGIAN' || 
                             (trx.sisaTagihan && trx.sisaTagihan > 0)
                         );
+                    } else if (this.salesStatusFilter === 'DIRETUR') {
+                        // 🌟 Tangkap SEMUA yang berbau Retur (DIRETUR, RETUR FULL, RETUR SEBAGIAN)
+                        list = list.filter(trx => {
+                            if (!trx.paymentStatus) return false;
+                            const status = trx.paymentStatus.toUpperCase();
+                            return status.includes('RETUR') || status === 'DIRETUR';
+                        });
                     } else {
+                        // Untuk LUNAS
                         list = list.filter(trx => trx.paymentStatus === this.salesStatusFilter);
                     }
                 }
 
-                // 4. FILTER PENCARIAN TEKS (Nomor Invoice / Nama Customer)
+                // 4. FILTER PENCARIAN TEKS (Invoice/Nama)
                 if (this.reportSearchQuery) {
                     const query = this.reportSearchQuery.toLowerCase().trim();
                     list = list.filter(trx => 
@@ -6587,41 +6590,35 @@
                     );
                 }
 
-                // 5. URUTAN TRANSAKSI (SORTING DETIK TERBARU KE TERLAMA)
+                // 5. URUTAN TRANSAKSI (SORTING DETIK TERBARU)
                 return list.sort((a, b) => {
-                    // Fungsi internal untuk mengubah waktu struk menjadi angka milidetik yg bisa dihitung komputer
                     const getExactTime = (trx) => {
-                        // Jika ada data timestamp bawaan Firebase (Sangat Akurat)
                         if (trx.timestamp && typeof trx.timestamp.toMillis === 'function') {
                             return trx.timestamp.toMillis();
                         } else if (trx.timestamp && trx.timestamp.seconds) {
                             return trx.timestamp.seconds * 1000;
                         }
                         
-                        // Jika membaca dari teks tanggal (misal: "19/6/2026, 14.48.44")
                         if (trx.dateStr) {
                             try {
-                                let parts = trx.dateStr.split(','); // Pisah Tgl dan Jam
-                                let datePart = parts[0].trim().split('/'); // [19, 6, 2026]
+                                let parts = trx.dateStr.split(','); 
+                                let datePart = parts[0].trim().split('/'); 
                                 let timePart = parts[1] ? parts[1].trim() : '00:00:00';
                                 
-                                // Ubah format jam "14.48.44" menjadi standar komputer "14:48:44"
                                 timePart = timePart.replace(/\./g, ':');
                                 
-                                // Gabung jadi format baku: YYYY-MM-DDTHH:mm:ss
                                 let isoString = `${datePart[2]}-${datePart[1].padStart(2, '0')}-${datePart[0].padStart(2, '0')}T${timePart}`;
-                                return new Date(isoString).getTime(); // Ubah jadi milidetik
+                                return new Date(isoString).getTime(); 
                             } catch (e) {
                                 return 0;
                             }
                         }
-                        return 0; // Kembalikan 0 jika tidak ada data waktu sama sekali
+                        return 0; 
                     };
 
                     const timeA = getExactTime(a);
                     const timeB = getExactTime(b);
 
-                    // Sort descending (waktu paling besar/baru menempati urutan atas)
                     return timeB - timeA;
                 });
             },
