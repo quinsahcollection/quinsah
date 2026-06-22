@@ -11633,7 +11633,7 @@ async fetchRolesFromDatabase() {
                     }
 
                     // =================================================================
-                    // 2. KUNCI SEMUA VARIABEL TOTALAN
+                    // 2. KUNCI SEMUA VARIABEL TOTALAN & HITUNG MDR 🌟
                     // =================================================================
                     let currentSubtotalBase = this.subtotalBase || 0;
                     let currentGlobalDiscountType = this.globalDiscountType || 'none';
@@ -11659,6 +11659,16 @@ async fetchRolesFromDatabase() {
                                         ? Number(this.paymentData.amountReceived) 
                                         : currentTotal;
 
+                    // 🌟 HITUNG MDR (Potongan Bank/Merchant)
+                    let nominalMdr = 0;
+                    if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
+                        let metodeDipilih = this.activePaymentMethodsForCashier.find(pm => pm.name === this.paymentData.method);
+                        if (metodeDipilih && metodeDipilih.mdr > 0) {
+                            // (Total Transaksi x Persentase MDR) / 100
+                            nominalMdr = (currentTotal * metodeDipilih.mdr) / 100;
+                        }
+                    }
+
                     let trxRaw = {
                         id: currentInvoiceId,
                         // <--- TAMBAHAN MULTI-TENANT (Wajib agar omzet masuk ke toko ini)
@@ -11672,6 +11682,7 @@ async fetchRolesFromDatabase() {
                         outletId: this.posActiveOutletId || '',
                         cashierName: this.userProfile.name || 'Admin',
                         paymentMethod: this.paymentData.method || 'CASH',
+                        mdrFee: nominalMdr, // 🌟 MENYIMPAN POTONGAN MDR KE DATABASE
                         amountReceived: uangDiterima,
                         sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
                         paymentStatus: (uangDiterima >= currentTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
