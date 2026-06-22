@@ -135,33 +135,36 @@
                         </div>
                     </div>
 
-                    <div v-if="ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0" class="mt-4 p-3 bg-white border border-success rounded-3 shadow-sm" style="font-size: 0.85em;">
-                        <div class="fw-bold text-center text-white bg-success rounded-2 py-1 mb-3"><i class="bi bi-wallet2 me-1"></i> HISTORI PEMBAYARAN</div>
-                        
-                        <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+                                    <div v-if="ereceiptData.amountReceived > 0" class="mt-4 p-3 bg-white border border-success rounded-3 shadow-sm" style="font-size: 0.85em;">
+                    <div class="fw-bold text-center text-white bg-success rounded-2 py-1 mb-3"><i class="bi bi-wallet2 me-1"></i> DETAIL PEMBAYARAN</div>
+                    
+                    <div class="d-flex justify-content-between mb-2 pb-2" :class="{'border-bottom border-light': ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0}">
                         <div style="width: 60%;">
-                        <strong>Pembayaran Awal :</strong><br>
-                        <span class="badge bg-secondary mb-1 mt-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                        <i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}
-                        </span><br>
-                        <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
-                      </div>
-                    <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
-                  Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - (ereceiptData.paymentHistory ? ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0) : 0))) }}
-     </div>
-</div>
-
-                        <div v-for="(pay, idx) in ereceiptData.paymentHistory" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
-                            <div style="width: 60%;">
-                                <strong>Cicilan Ke-{{ idx + 1 }}</strong> ({{ pay.method }})<br>
-                                <span class="text-muted fst-italic">{{ pay.dateStr || pay.date }}</span>
-                                <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
-                            </div>
-                            <div class="text-end text-success fw-bold" style="width: 40%;">
-                                Rp {{ formatNumber(pay.amount) }}
-                            </div>
+                            <strong>{{ (ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0) ? 'Pembayaran Awal :' : 'Dibayar Dengan :' }}</strong><br>
+                            <span class="badge bg-secondary mb-1 mt-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                <i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}
+                            </span><br>
+                            <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
+                        </div>
+                        <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
+                            Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - (ereceiptData.paymentHistory ? ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0) : 0))) }}
                         </div>
                     </div>
+
+                    <div v-for="(pay, idx) in (ereceiptData.paymentHistory || [])" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+                        <div style="width: 60%;">
+                            <strong>Cicilan Ke-{{ idx + 1 }}</strong><br>
+                            <span class="badge border text-dark mb-1 mt-1" style="font-size: 0.65rem;">
+                                <i class="bi bi-credit-card me-1"></i>{{ pay.method }}
+                            </span><br>
+                            <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ pay.dateStr || pay.date }}</span>
+                            <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
+                        </div>
+                        <div class="text-end text-success fw-bold" style="width: 40%;">
+                            Rp {{ formatNumber(pay.amount) }}
+                        </div>
+                    </div>
+                </div>
 
                 <div v-if="ereceiptData.returHistory && ereceiptData.returHistory.length > 0" class="mt-4 p-3 bg-white border border-danger rounded-3 shadow-sm" style="font-size: 0.85em;">
                     <div class="fw-bold text-center text-white bg-danger rounded-2 py-1 mb-3"><i class="bi bi-arrow-return-left me-1"></i> INFO RETUR / REFUND</div>
