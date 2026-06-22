@@ -3669,7 +3669,7 @@
                 <div class="bg-secondary bg-opacity-10 py-3 border-bottom">
                     <div class="text-muted fw-bold small mb-2 text-uppercase" style="letter-spacing: 1px;">Pratinjau Struk Digital</div>
                     <div class="mx-auto shadow-sm" style="width: 320px; height: 450px; border-radius: 12px; overflow: hidden; border: 2px solid #dee2e6; background: #fff;">
-                        <iframe :src="'receipt.html?inv=' + activeEReceipt.id" frameborder="0" width="100%" height="100%" style="pointer-events: none;"></iframe>
+                        <iframe :src="getReceiptUrl(activeEReceipt.id)" frameborder="0" width="100%" height="100%" style="pointer-events: none;"></iframe>
                     </div>
                     <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i> Tampilan yang akan dilihat oleh pelanggan.</div>
                 </div>
@@ -8182,17 +8182,26 @@ async processPoReturn() {
         },
 
         // Buka modal E-Receipt
+// Buka modal E-Receipt
 openEReceipt(trx) {
     this.activeEReceipt = trx;
     const modal = new bootstrap.Modal(document.getElementById('eReceiptModal'));
     modal.show();
 },
 
-// Mengambil URL absolut ke halaman receipt.html Anda
+// Mengambil URL absolut ke halaman receipt.html secara dinamis dan akurat
 getReceiptUrl(trxId) {
-    // Membaca URL website admin saat ini, lalu membuang nama file admin.html-nya
-    let baseUrl = window.location.href.split('/').slice(0, -1).join('/');
-    return `${baseUrl}/receipt.html?inv=${trxId}`;
+    try {
+        // Ini akan otomatis membaca domain Anda (misal: quinsahcollection.github.io)
+        const currentUrl = window.location.href;
+        const targetUrl = new URL('receipt.html?inv=' + trxId, currentUrl);
+        return targetUrl.href;
+    } catch (e) {
+        // Fallback jika browser lawas
+        let baseUrl = window.location.href.split('?')[0]; 
+        baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/'));
+        return `${baseUrl}/receipt.html?inv=${trxId}`;
+    }
 },
 
 // Kirim URL ke WhatsApp
@@ -8203,8 +8212,9 @@ sendEReceiptWA(trx) {
         noHp = customerData.phone.replace(/^0+/, '62'); 
     }
     
+    // Memanggil URL yang sudah valid
     const urlStruk = this.getReceiptUrl(trx.id);
-    const teks = `Halo kak ${trx.customer},\nTerima kasih telah berbelanja di *${this.appSettings.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
+    const teks = `Halo kak *${trx.customer}*,\nTerima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
     
     const waLink = `https://wa.me/${noHp}?text=${encodeURIComponent(teks)}`;
     window.open(waLink, '_blank');
@@ -8214,7 +8224,7 @@ sendEReceiptWA(trx) {
 sendEReceiptEmail(trx) {
     const urlStruk = this.getReceiptUrl(trx.id);
     const subject = encodeURIComponent(`E-Receipt Pembelian: ${trx.id}`);
-    const body = encodeURIComponent(`Halo ${trx.customer},\n\nTerima kasih telah berbelanja. Berikut link E-Receipt Anda:\n${urlStruk}\n\nSalam Hangat,\n${this.appSettings.storeName || 'Toko Kami'}`);
+    const body = encodeURIComponent(`Halo ${trx.customer},\n\nTerima kasih telah berbelanja. Berikut link E-Receipt Anda:\n${urlStruk}\n\nSalam Hangat,\n${this.appSettings?.storeName || 'Toko Kami'}`);
     
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
 },
@@ -8223,7 +8233,15 @@ sendEReceiptEmail(trx) {
 copyEReceiptLinkOnly(trx) {
     const urlStruk = this.getReceiptUrl(trx.id);
     navigator.clipboard.writeText(urlStruk).then(() => {
-        alert("URL Struk Digital berhasil disalin! Silakan paste di chat pelanggan.");
+        Swal.fire({
+            icon: 'success',
+            title: 'Tersalin!',
+            text: 'URL Struk Digital berhasil disalin. Silakan paste ke chat pelanggan.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }).catch(err => {
+        alert("Gagal menyalin link: " + urlStruk);
     });
 },
           
