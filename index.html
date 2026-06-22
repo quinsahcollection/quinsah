@@ -3657,43 +3657,65 @@
     </div>
 </div>
 <div class="modal fade" id="eReceiptModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-md"> <div class="modal-content border-0 shadow">
+    <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Diubah ke modal-lg -->
+        <div class="modal-content border-0 shadow-lg">
             
             <div class="modal-header bg-success text-white p-3">
                 <h6 class="modal-title fw-bold mb-0"><i class="bi bi-phone-vibrate me-2"></i>Bagikan E-Receipt</h6>
                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
             </div>
             
-            <div class="modal-body p-0 bg-light text-center" v-if="activeEReceipt">
-                
-                <div class="bg-secondary bg-opacity-10 py-3 border-bottom">
-                    <div class="text-muted fw-bold small mb-2 text-uppercase" style="letter-spacing: 1px;">Pratinjau Struk Digital</div>
-                    <div class="mx-auto shadow-sm" style="width: 320px; height: 450px; border-radius: 12px; overflow: hidden; border: 2px solid #dee2e6; background: #fff;">
-                        <iframe :src="getReceiptUrl(activeEReceipt.id)" frameborder="0" width="100%" height="100%" style="pointer-events: none;"></iframe>
-                    </div>
-                    <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i> Tampilan yang akan dilihat oleh pelanggan.</div>
-                </div>
-
-                <div class="p-4">
-                    <h5 class="fw-bold mb-1 text-primary-custom">{{ activeEReceipt.id }}</h5>
-                    <p class="fw-semibold text-dark mb-3">{{ activeEReceipt.customer }}</p>
+            <div class="modal-body p-0 bg-white" v-if="activeEReceipt">
+                <div class="row g-0">
                     
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-success fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptWA(activeEReceipt)">
-                            <span><i class="bi bi-whatsapp me-2 fs-5"></i> Kirim Link via WhatsApp</span>
-                            <i class="bi bi-chevron-right small"></i>
-                        </button>
+                    <!-- BAGIAN KIRI: PREVIEW STRUK (Lebih besar di PC) -->
+                    <div class="col-md-7 bg-light border-end border-light-subtle p-3 p-md-4 d-flex flex-column align-items-center">
+                        <div class="text-muted fw-bold small mb-3 text-uppercase w-100 text-center" style="letter-spacing: 1px;">Pratinjau Struk Digital</div>
                         
-                        <button class="btn btn-primary fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptEmail(activeEReceipt)">
-                            <span><i class="bi bi-envelope-at me-2 fs-5"></i> Kirim Link via Email</span>
-                            <i class="bi bi-chevron-right small"></i>
-                        </button>
-
-                        <button class="btn btn-outline-secondary fw-bold d-flex justify-content-between align-items-center mt-2 py-2" @click="copyEReceiptLinkOnly(activeEReceipt)">
-                            <span><i class="bi bi-link-45deg me-2 fs-5"></i> Salin URL Struk Digital</span>
-                            <i class="bi bi-clipboard text-muted small"></i>
-                        </button>
+                        <!-- Container Iframe (pointer-events dihapus agar bisa scroll) -->
+                        <div class="w-100 shadow-sm custom-scrollbar" style="max-width: 400px; height: 60vh; min-height: 450px; border-radius: 12px; overflow: hidden; border: 2px solid #dee2e6; background: #fff;">
+                            <iframe :src="getReceiptUrl(activeEReceipt.id)" frameborder="0" width="100%" height="100%" style="overflow-y: auto;"></iframe>
+                        </div>
+                        
+                        <div class="small text-muted mt-3 text-center"><i class="bi bi-hand-index-thumb me-1"></i> Area struk dapat di-scroll ke bawah</div>
                     </div>
+
+                    <!-- BAGIAN KANAN: INFORMASI & TOMBOL AKSI -->
+                    <div class="col-md-5 p-4 d-flex flex-column justify-content-center">
+                        
+                        <!-- Informasi Customer & Invoice -->
+                        <div class="text-center mb-4 pb-4 border-bottom">
+                            <div class="badge bg-danger text-white mb-3 fs-6 px-3 py-2 shadow-sm rounded-pill">{{ activeEReceipt.id }}</div>
+                            
+                            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-fill me-1 text-muted"></i> {{ activeEReceipt.customer || 'Pelanggan Umum' }}</h5>
+                            
+                            <div class="fw-semibold text-secondary mb-2">
+                                <i class="bi bi-telephone-fill me-1 text-muted"></i> {{ getEreceiptPhone(activeEReceipt) }}
+                            </div>
+                            
+                            <div class="fs-5 fw-bold text-success mt-3 bg-success bg-opacity-10 py-2 rounded-3">
+                                Total: Rp {{ formatNumber(activeEReceipt.total) }}
+                            </div>
+                        </div>
+                        
+                        <!-- Tombol Aksi -->
+                        <div class="d-grid gap-3">
+                            <button class="btn btn-success fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptWA(activeEReceipt)">
+                                <span><i class="bi bi-whatsapp me-2 fs-5"></i> Kirim via WhatsApp</span>
+                                <i class="bi bi-chevron-right small"></i>
+                            </button>
+                            
+                            <button class="btn btn-primary fw-bold d-flex justify-content-between align-items-center shadow-sm py-2" @click="sendEReceiptEmail(activeEReceipt)">
+                                <span><i class="bi bi-envelope-at me-2 fs-5"></i> Kirim via Email</span>
+                                <i class="bi bi-chevron-right small"></i>
+                            </button>
+
+                            <button class="btn btn-outline-secondary fw-bold d-flex justify-content-between align-items-center py-2" @click="copyEReceiptLinkOnly(activeEReceipt)">
+                                <span><i class="bi bi-link-45deg me-2 fs-5"></i> Salin URL Struk</span>
+                                <i class="bi bi-clipboard text-muted small"></i>
+                            </button>
+                        </div>                 
+                    </div> 
                 </div>
             </div>
         </div>
@@ -8204,6 +8226,24 @@ getReceiptUrl(trxId) {
     }
 },
 
+// Fungsi aman untuk mengambil Nomor HP customer
+getEreceiptPhone(trx) {
+    if (!trx) return '-';
+    // 1. Coba cari apakah nomor hp sudah tersimpan di nota transaksi
+    if (trx.customerPhone) return trx.customerPhone;
+    if (trx.phone) return trx.phone;
+    
+    // 2. Jika tidak ada di nota, cari di database pelanggan berdasarkan ID Pelanggan
+    if (this.customers && trx.customerId) {
+        const customer = this.customers.find(c => c.id === trx.customerId);
+        if (customer && customer.phone) {
+            return customer.phone;
+        }
+    }
+    // 3. Jika benar-benar tidak ada
+    return 'Tidak ada nomor HP';
+},
+          
 // Kirim URL ke WhatsApp
 sendEReceiptWA(trx) {
     let noHp = '';
