@@ -7981,82 +7981,99 @@ openPaymentMethodModal(pm = null) {
     modal.show();
 },
 
-// MENGAMBIL DATA METODE PEMBAYARAN DARI FIREBASE
+// 1. FUNGSI PINTAR UNTUK MENCARI COMPANY ID OTOMATIS
+getMyCompanyId() {
+    // Fungsi ini akan mencari Company ID dari mana saja data yang sudah berhasil di-load oleh sistem Anda
+    if (this.companyId) return this.companyId;
+    if (this.user && this.user.companyId) return this.user.companyId;
+    if (this.currentUser && this.currentUser.companyId) return this.currentUser.companyId;
+    if (this.appSettings && this.appSettings.companyId) return this.appSettings.companyId;
+    
+    // Alternatif terakhir: Ambil dari data cabang jika sudah ter-load
+    if (this.outlets && this.outlets.length > 0 && this.outlets[0].companyId) {
+        return this.outlets[0].companyId;
+    }
+    
+    return null; // Jika benar-benar belum siap
+},
+
+// 2. FUNGSI FETCH DENGAN AUTO-RETRY (ANTI ERROR)
 async fetchPaymentMethods() {
-        try {
-            // 🌟 Cari Company ID dari berbagai kemungkinan variabel di sistem Anda
-            const activeCompanyId = this.companyId || (this.currentUser ? this.currentUser.companyId : null) || (this.user ? this.user.companyId : null) || localStorage.getItem('companyId');
-            
-            if (!activeCompanyId) {
-                console.warn("Menunggu data Company ID siap...");
-                return; // Berhenti sebentar jika ID perusahaan belum ter-load
-            }
+    const compId = this.getMyCompanyId();
+    
+    if (!compId) {
+        console.warn("⏳ [Metode Pembayaran] Company ID belum siap, menunggu 1.5 detik...");
+        // Jika belum siap, fungsi akan menunggu 1,5 detik lalu mencoba menarik data lagi (Self-Healing)
+        setTimeout(() => {
+            if(typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
+        }, 1500);
+        return; 
+    }
 
-            const q = query(collection(db, "payment_methods"), where("companyId", "==", activeCompanyId));
-            const querySnapshot = await getDocs(q);
-            
-            const methods = [];
-            querySnapshot.forEach((doc) => {
-                methods.push({ id: doc.id, ...doc.data() });
-            });
-            
-            this.paymentMethods = methods;
-        } catch (error) {
-            console.error("Gagal mengambil metode pembayaran:", error);
+    try {
+        const q = query(collection(db, "payment_methods"), where("companyId", "==", compId));
+        const querySnapshot = await getDocs(q);
+        
+        const methods = [];
+        querySnapshot.forEach((doc) => {
+            methods.push({ id: doc.id, ...doc.data() });
+        });
+        
+        this.paymentMethods = methods;
+        console.log("✅ Data Metode Pembayaran berhasil dimuat!");
+    } catch (error) {
+        console.error("Gagal mengambil metode pembayaran:", error);
+    }
+},
+
+// 3. FUNGSI SIMPAN YANG LEBIH AMAN
+async savePaymentMethod() {
+    if (!this.paymentForm.name) {
+        return Swal.fire('Perhatian', 'Nama metode pembayaran harus diisi!', 'warning');
+    }
+
+    const compId = this.getMyCompanyId();
+    if (!compId) {
+        return Swal.fire('Error', 'Sistem belum memuat data Perusahaan Anda sepenuhnya. Mohon tunggu beberapa detik atau refresh halaman.', 'error');
+    }
+
+    this.isProcessing = true;
+    try {
+        const payload = {
+            companyId: compId, // Menggunakan Company ID yang sudah pasti aman
+            outletId: this.paymentForm.outletId || '',
+            type: this.paymentForm.type,
+            name: this.paymentForm.name,
+            mdr: this.paymentForm.mdr || 0,
+            surcharge: this.paymentForm.surcharge || 0,
+            surchargeType: this.paymentForm.surchargeType,
+            isActive: this.paymentForm.isActive,
+            updatedAt: new Date()
+        };
+
+        if (this.paymentForm.id) {
+            await updateDoc(doc(db, "payment_methods", this.paymentForm.id), payload);
+            Swal.fire('Berhasil', 'Metode pembayaran diperbarui', 'success');
+        } else {
+            payload.createdAt = new Date();
+            await addDoc(collection(db, "payment_methods"), payload);
+            Swal.fire('Berhasil', 'Metode pembayaran baru ditambahkan', 'success');
         }
-    },
 
-    // 2. TIMPA FUNGSI INI JUGA
-    async savePaymentMethod() {
-        if (!this.paymentForm.name) {
-            return Swal.fire('Perhatian', 'Nama metode pembayaran harus diisi!', 'warning');
-        }
+        // Tutup modal dan refresh data
+        const modalEl = document.getElementById('paymentMethodModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.hide();
+        
+        await this.fetchPaymentMethods();
 
-        this.isProcessing = true;
-        try {
-            // 🌟 Cari Company ID
-            const activeCompanyId = this.companyId || (this.currentUser ? this.currentUser.companyId : null) || (this.user ? this.user.companyId : null) || localStorage.getItem('companyId');
-
-            if (!activeCompanyId) {
-                Swal.fire('Error', 'Sistem belum memuat data Perusahaan Anda. Coba refresh halaman.', 'error');
-                this.isProcessing = false;
-                return;
-            }
-
-            const payload = {
-                companyId: activeCompanyId,
-                outletId: this.paymentForm.outletId || '',
-                type: this.paymentForm.type,
-                name: this.paymentForm.name,
-                mdr: this.paymentForm.mdr || 0,
-                surcharge: this.paymentForm.surcharge || 0,
-                surchargeType: this.paymentForm.surchargeType,
-                isActive: this.paymentForm.isActive,
-                updatedAt: new Date()
-            };
-
-            if (this.paymentForm.id) {
-                // Proses Update
-                await updateDoc(doc(db, "payment_methods", this.paymentForm.id), payload);
-                Swal.fire('Berhasil', 'Metode pembayaran diperbarui', 'success');
-            } else {
-                // Proses Tambah Baru
-                payload.createdAt = new Date();
-                await addDoc(collection(db, "payment_methods"), payload);
-                Swal.fire('Berhasil', 'Metode pembayaran baru ditambahkan', 'success');
-            }
-
-            // Tutup modal dan refresh data
-            bootstrap.Modal.getInstance(document.getElementById('paymentMethodModal')).hide();
-            await this.fetchPaymentMethods();
-
-        } catch (error) {
-            console.error("Error saving payment method: ", error);
-            Swal.fire('Error', 'Gagal menyimpan data: ' + error.message, 'error');
-        } finally {
-            this.isProcessing = false;
-        }
-    },
+    } catch (error) {
+        console.error("Error saving payment method: ", error);
+        Swal.fire('Error', 'Gagal menyimpan data ke Firebase', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
 
 // MENGHAPUS METODE PEMBAYARAN
 async deletePaymentMethod(id) {
