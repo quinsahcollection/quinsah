@@ -902,8 +902,7 @@
         <li class="nav-item"><a class="nav-link" :class="{active: settingTab==='receipt', 'bg-primary-custom': settingTab==='receipt'}" href="#" @click.prevent="settingTab='receipt'"><i class="bi bi-printer me-1"></i>Struk & Cetak</a></li>
     </ul>
 
-    <!-- KONTEN: METODE PEMBAYARAN -->
-<div v-if="settingTab === 'payment_methods'">
+    <div v-if="settingTab === 'payment_methods'">
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
             <div>
@@ -915,45 +914,73 @@
             </button>
         </div>
         <div class="card-body p-0">
+            
             <div class="table-responsive">
-                <table class="table table-hover align-middle text-nowrap mb-0" style="font-size: 0.85rem;">
+                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Nama Metode</th>
-                            <th>Kategori</th>
-                            <th>Berlaku Di (Outlet)</th>
-                            <th class="text-center">Potongan MDR</th>
-                            <th class="text-center">Surcharge (Customer)</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center pe-3">Aksi</th>
+                            <th class="ps-4" width="30%">Nama Metode & Detail</th>
+                            <th width="15%">Kategori</th>
+                            <th class="text-center" width="15%">Potongan MDR</th>
+                            <th class="text-center" width="15%">Surcharge (Customer)</th>
+                            <th class="text-center" width="10%">Status</th>
+                            <th class="text-center pe-4" width="15%">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(pm, idx) in paymentMethods" :key="idx">
-                            <td class="ps-3 fw-bold text-dark">{{ pm.name }}</td>
-                            <td>
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ pm.type }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-shop me-1"></i>{{ pm.outletId ? getOutletName(pm.outletId) : 'Semua Cabang (Global)' }}
-                                </span>
-                            </td>
-                            <td class="text-center text-danger fw-semibold">{{ pm.mdr || 0 }}%</td>
-                            <td class="text-center text-success fw-semibold">
-                                {{ pm.surchargeType === 'percent' ? (pm.surcharge || 0) + '%' : 'Rp ' + formatNumber(pm.surcharge || 0) }}
-                            </td>
-                            <td class="text-center">
-                                <span class="badge" :class="pm.isActive ? 'bg-success' : 'bg-danger'">{{ pm.isActive ? 'Aktif' : 'Nonaktif' }}</span>
-                            </td>
-                            <td class="text-center pe-3">
-                                <button class="btn btn-sm btn-outline-primary me-1" @click="openPaymentMethodModal(pm)"><i class="bi bi-pencil"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" @click="deletePaymentMethod(pm.id)"><i class="bi bi-trash"></i></button>
+                        <tr v-if="!paymentMethods || paymentMethods.length === 0">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-wallet2 fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Belum ada metode pembayaran.<br>Klik tombol <b>Tambah Metode</b> untuk memulai.
                             </td>
                         </tr>
-                        <tr v-if="paymentMethods.length === 0">
-                            <td colspan="7" class="text-center py-4 text-muted">Belum ada metode pembayaran. Klik "Tambah Metode" untuk memulai.</td>
-                        </tr>
+
+                        <template v-for="(methods, outletName) in groupedPaymentMethodsByOutlet" :key="outletName">
+                            
+                            <tr style="background-color: #f8fafc;">
+                                <td colspan="6" class="py-3 border-bottom border-top border-light">
+                                    <div class="d-flex align-items-center ps-2">
+                                        <div class="bg-white border rounded p-2 me-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="bi" :class="outletName === 'Semua Cabang (Global)' ? 'bi-globe text-primary' : 'bi-shop text-danger'" style="font-size: 1.2rem;"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark">{{ outletName }}</h6>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary mt-1 border" style="font-size: 0.7rem;">{{ methods.length }} Metode Aktif/Nonaktif</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <tr v-for="pm in methods" :key="pm.id">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ pm.name }}</div>
+                                    
+                                    <div v-if="pm.bankName || pm.accountNumber" class="text-muted mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-bank me-1"></i>
+                                        <span class="fw-semibold">{{ pm.bankName }}</span> 
+                                        <span v-if="pm.accountNumber">- {{ pm.accountNumber }}</span>
+                                    </div>
+                                    <div v-else-if="pm.type === 'QRIS' && pm.qrImageUrl" class="text-success mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-qr-code me-1"></i> QR Code Tersedia
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border shadow-sm">{{ pm.type }}</span>
+                                </td>
+                                <td class="text-center text-danger fw-semibold">{{ pm.mdr || 0 }}%</td>
+                                <td class="text-center text-success fw-semibold">
+                                    {{ pm.surchargeType === 'percent' ? (pm.surcharge || 0) + '%' : 'Rp ' + formatNumber(pm.surcharge || 0) }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge" :class="pm.isActive ? 'bg-success' : 'bg-danger'">{{ pm.isActive ? 'Aktif' : 'Nonaktif' }}</span>
+                                </td>
+                                <td class="text-center pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="openPaymentMethodModal(pm)"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="deletePaymentMethod(pm.id)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+
+                        </template>
                     </tbody>
                 </table>
             </div>
@@ -6723,6 +6750,29 @@
         });
     },
 
+        groupedPaymentMethodsByOutlet() {
+        if (!this.paymentMethods || this.paymentMethods.length === 0) return {};
+
+        return this.paymentMethods.reduce((groups, method) => {
+            // Tentukan nama outlet (Global jika outletId kosong)
+            let outletName = "Semua Cabang (Global)";
+            
+            if (method.outletId) {
+                // Gunakan fungsi getOutletName yang biasa Anda pakai di kasir/struk
+                outletName = this.getOutletName ? this.getOutletName(method.outletId) : method.outletId;
+            }
+
+            // Jika grup untuk outlet ini belum ada, buatkan array kosong
+            if (!groups[outletName]) {
+                groups[outletName] = [];
+            }
+
+            // Masukkan metode ke dalam grup outletnya
+            groups[outletName].push(method);
+            return groups;
+        }, {});
+    },
+          
            groupedPaymentMethods() {
         const methods = this.activePaymentMethodsForCashier || [];
         return {
