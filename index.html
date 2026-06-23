@@ -8171,30 +8171,29 @@ async processPoReturn() {
 
         // MEMBUKA MODAL FORM METODE PEMBAYARAN
 openPaymentMethodModal(pm = null) {
-    if (pm) {
-        // Edit Mode
-        this.paymentForm = { ...pm };
-    } else {
-        // Add Mode
-        this.paymentForm = {
-            id: null,
-            outletId: '',
-            type: 'CASH',
-            name: '',
-            mdr: 0,
-            surcharge: 0,
-            surchargeType: 'percent',
-            isActive: true,
-            // Field Data Dinamis Baru:
-            bankName: '',
-            accountNumber: '',
-            accountName: '',
-            qrImageUrl: ''
-        };
-    }
-    const modal = new bootstrap.Modal(document.getElementById('paymentMethodModal'));
-    modal.show();
-},
+        if (pm) {
+            // Mode Edit: Salin semua data yang sudah ada
+            this.paymentForm = JSON.parse(JSON.stringify(pm)); 
+        } else {
+            // Mode Tambah Baru: Kosongkan semua form, TERMASUK field baru
+            this.paymentForm = {
+                id: null,
+                outletId: '',
+                type: 'CASH',
+                name: '',
+                mdr: 0,
+                surcharge: 0,
+                surchargeType: 'percent',
+                isActive: true,
+                // 🌟 Reset Field Dinamis:
+                bankName: '',
+                accountNumber: '',
+                accountName: '',
+                qrImageUrl: ''
+            };
+        }
+        this.showModal('paymentMethodModal'); // Sesuaikan dengan fungsi pemanggil modal Anda
+    },
 
 // 1. FUNGSI PINTAR PENCARI COMPANY ID (ULTRA AUTO-DETECT)
 getMyCompanyId() {
@@ -8283,6 +8282,13 @@ async savePaymentMethod() {
             surcharge: this.paymentForm.surcharge || 0,
             surchargeType: this.paymentForm.surchargeType,
             isActive: this.paymentForm.isActive,
+            
+            // 🌟 TAMBAHAN: Menyimpan detail Bank, Rekening, VA, dan Link QRIS
+            bankName: this.paymentForm.bankName || '',
+            accountNumber: this.paymentForm.accountNumber || '',
+            accountName: this.paymentForm.accountName || '',
+            qrImageUrl: this.paymentForm.qrImageUrl || '',
+            
             updatedAt: new Date()
         };
 
