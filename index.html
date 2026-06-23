@@ -292,7 +292,11 @@
                 <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
                     <i class="bi bi-display"></i> POS
                 </div>
-                
+
+               <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
+                    <i class="bi bi-cash-coin"></i> Kasir
+                </div>
+              
                 <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
                     <i class="bi bi-cart-plus"></i> Pembelian
                 </div>
@@ -883,6 +887,148 @@
             </div>
         </div>
 
+         <div v-if="currentView === 'cash_register'">
+    
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <h4 class="fw-bold text-dark mb-1">Manajemen Laci Kasir (Shift)</h4>
+            <p class="text-muted small mb-0">Kelola modal awal, pengeluaran, dan tutup kasir per cabang.</p>
+        </div>
+        
+        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100" style="max-width: 500px;">
+            
+            <div class="input-group input-group-sm shadow-sm flex-grow-1">
+                <span class="input-group-text bg-light text-muted border-secondary border-opacity-25">
+                    <i class="bi bi-funnel-fill"></i>
+                </span>
+                <select class="form-select form-select-sm border-secondary border-opacity-25 fw-semibold text-dark" style="cursor: pointer;" v-model="registerFilterOutlet">
+                    <option value="">Semua Cabang</option>
+                    <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-sm btn-primary-custom fw-bold shadow-sm text-nowrap flex-shrink-0 py-2 py-sm-1" @click="openShiftModal()">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Buka Shift Baru
+            </button>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle text-nowrap mb-0" style="font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Info Shift</th>
+                            <th>Cabang</th>
+                            <th class="text-end">Modal Awal</th>
+                            <th class="text-end text-danger">Pengeluaran</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center pe-4">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-if="filteredRegisters.length === 0">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                                Belum ada riwayat shift kasir.
+                            </td>
+                        </tr>
+                        
+                        <tr v-for="reg in filteredRegisters" :key="reg.id">
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><i class="bi bi-person-badge me-2 text-primary-custom"></i>{{ reg.cashierName || 'Kasir' }}</div>
+                                <div class="text-muted mt-1" style="font-size: 0.8rem;">
+                                    Buka: {{ reg.openTimeStr }}<br>
+                                    <span v-if="reg.status === 'CLOSED'">Tutup: {{ reg.closeTimeStr }}</span>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(reg.outletId) }}</span></td>
+                            <td class="text-end fw-bold text-success">Rp {{ formatNumber(reg.startingCash) }}</td>
+                            <td class="text-end fw-bold text-danger">Rp {{ formatNumber(reg.totalExpenses || 0) }}</td>
+                            <td class="text-center">
+                                <span v-if="reg.status === 'OPEN'" class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-unlock-fill me-1"></i>AKTIF</span>
+                                <span v-else class="badge bg-secondary px-3 py-2 rounded-pill"><i class="bi bi-lock-fill me-1"></i>DITUTUP</span>
+                            </td>
+                            <td class="text-center pe-4">
+                                <button v-if="reg.status === 'OPEN'" class="btn btn-sm btn-outline-danger me-1 fw-bold" @click="openExpenseModal(reg)" title="Catat Pengeluaran">
+                                    <i class="bi bi-dash-circle me-1"></i>Kas Keluar
+                                </button>
+                                <button v-if="reg.status === 'OPEN'" class="btn btn-sm btn-dark fw-bold" @click="openCloseShiftModal(reg)" title="Tutup Shift">
+                                    <i class="bi bi-box-arrow-right"></i> Tutup
+                                </button>
+                                <button v-if="reg.status === 'CLOSED'" class="btn btn-sm btn-outline-secondary fw-bold" @click="printShiftSummary(reg)" title="Cetak Ringkasan">
+                                    <i class="bi bi-printer"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="openShiftModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary-custom text-white border-0 p-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-box-arrow-in-right me-2"></i>Buka Shift Kasir</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <img src="https://cdn-icons-png.flaticon.com/512/5501/5501360.png" style="width: 80px; opacity: 0.8;" class="mb-3">
+                <h6 class="fw-bold text-dark mb-1">Uang Modal Laci (Cash)</h6>
+                <p class="small text-muted mb-4">Masukkan jumlah uang fisik pecahan yang ada di laci saat ini.</p>
+                
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">Pilih Cabang / Outlet</label>
+                    <select class="form-select fw-bold" v-model="shiftForm.outletId">
+                        <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+                    </select>
+                </div>
+
+                <div class="input-group input-group-lg shadow-sm">
+                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold fs-4" v-model.number="shiftForm.startingCash" placeholder="0">
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2 border-0">
+                <button type="button" class="btn btn-white fw-bold w-100 mb-2 border" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary-custom fw-bold w-100 py-2" @click="saveOpenShift" :disabled="isProcessing">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="bi bi-play-circle-fill me-1"></i> Mulai Shift</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="expenseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white border-0 p-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-dash-circle me-2"></i>Catat Kas Keluar</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-3">Ambil uang dari laci untuk keperluan operasional (Beli galon, parkir, dll).</p>
+                
+                <label class="form-label small fw-bold">Nominal Diambil</label>
+                <div class="input-group mb-3 shadow-sm">
+                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold text-danger fs-5" v-model.number="expenseForm.amount" placeholder="0">
+                </div>
+
+                <label class="form-label small fw-bold">Keterangan / Keperluan</label>
+                <textarea class="form-control" rows="2" v-model="expenseForm.note" placeholder="Contoh: Beli air galon dan tisu"></textarea>
+            </div>
+            <div class="modal-footer bg-light p-2 border-0">
+                <button type="button" class="btn btn-danger fw-bold w-100 py-2" @click="saveExpense" :disabled="isProcessing || !expenseForm.amount">Simpan Pengeluaran</button>
+            </div>
+        </div>
+    </div>
+</div>
+          
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings'">
     
@@ -6525,7 +6671,20 @@
                 posModifierStep: 1,
                 posSelectedVariantForTopping: null,
                 posSelectedModifiers: {},
-                
+
+                // Data untuk Cash Register
+                registers: [], // Menyimpan daftar shift dari Firebase
+                registerFilterOutlet: '', 
+                shiftForm: {
+                outletId: '',
+                startingCash: 0
+                },
+                expenseForm: {
+                shiftId: '',
+                amount: 0,
+                note: ''
+                },
+              
                 // ==========================================
                 // STATE STOK OPNAME
                 // ==========================================
@@ -6747,6 +6906,12 @@
                 flatten(roots, 0); return res;
             },
 
+            filteredRegisters() {
+            if (!this.registers) return [];
+            if (!this.registerFilterOutlet) return this.registers;
+            return this.registers.filter(r => r.outletId === this.registerFilterOutlet);
+            },
+          
             activePaymentMethodsForCashier() {
         // Coba mencari ID outlet dari berbagai variabel kasir yang umum dipakai
         const currentOutletId = this.user?.outletId || this.currentOutletId || '';
