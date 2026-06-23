@@ -5882,6 +5882,12 @@
                     <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <tr><td style="padding-top:5px; text-transform:uppercase; font-size:0.9em; color:#333;">METODE BAYAR</td><td style="text-align: right; padding-top:5px; font-weight:bold; text-transform:uppercase;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
+                    
+                    <tr v-if="activePrintData.paymentNote">
+                        <td style="font-size:0.85em; color:#555; padding-top:2px; font-style:italic;">Catatan</td>
+                        <td style="text-align: right; font-size:0.85em; color:#555; padding-top:2px; font-weight:500;">{{ activePrintData.paymentNote }}</td>
+                    </tr>
+                    
                     <tr><td style="padding-top:2px; text-transform:uppercase;">TOTAL DIBAYAR</td><td style="text-align: right; padding-top:2px;">{{ formatNumber(activePrintData.amountReceived) }}</td></tr>
                     <tr v-if="activePrintData.amountReceived >= activePrintData.total"><td style="font-weight:bold;">KEMBALI</td><td style="text-align: right; font-weight:bold;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td></tr>
                     <tr v-else><td style="font-weight:bold; color:red;">SISA HUTANG</td><td style="text-align: right; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td></tr>
@@ -5960,7 +5966,6 @@
                 <div style="font-style: italic; font-size: 0.85em; white-space: pre-wrap;">{{ (appSettings && appSettings.receiptFooter) ? appSettings.receiptFooter : 'Dokumen ini dicetak otomatis oleh Sistem ERP Quinsah. Terima Kasih atas kepercayaan Anda.' }}</div>
             </div>
         </div>
-
 
         <div v-if="printMode === 'invoiceA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
             <div style="display:flex; justify-content:space-between; margin-bottom: 30px;">
@@ -6061,6 +6066,12 @@
                     <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <tr><td style="padding: 8px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb;">Metode Pembayaran</td><td style="padding: 8px 10px; text-align: right; font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
+                    
+                    <tr v-if="activePrintData.paymentNote">
+                        <td style="padding: 6px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb; font-style: italic;">Catatan Transaksi</td>
+                        <td style="padding: 6px 10px; text-align: right; font-weight: 600; color: #555; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentNote }}</td>
+                    </tr>
+                    
                     <tr><td style="padding: 8px 10px;">TOTAL DIBAYAR</td><td style="padding: 8px 10px; text-align: right;">Rp {{ formatNumber(activePrintData.amountReceived) }}</td></tr>
                     <tr v-if="activePrintData.amountReceived >= activePrintData.total"><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Kembalian</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td></tr>
                     <tr v-else><td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td><td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td></tr>
