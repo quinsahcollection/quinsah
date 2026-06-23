@@ -961,7 +961,7 @@
     </div>
 </div>
 
-           <div class="modal fade" id="paymentMethodModal" tabindex="-1">
+<div class="modal fade" id="paymentMethodModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light border-bottom p-3">
@@ -970,7 +970,7 @@
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Cabang / Outlet</label>
                     <select class="form-select" v-model="paymentForm.outletId">
@@ -993,8 +993,37 @@
                     </div>
                     <div class="col-md-7">
                         <label class="form-label small fw-bold">Nama Metode (Tampil di Kasir)</label>
-                        <input type="text" class="form-control" v-model="paymentForm.name" placeholder="Contoh: QRIS ShopeePay, EDC BCA...">
+                        <input type="text" class="form-control" v-model="paymentForm.name" placeholder="Cth: QRIS OVO, Transfer BCA...">
                     </div>
+                </div>
+
+                <div v-if="paymentForm.type === 'TRANSFER' || paymentForm.type === 'VA'" class="p-3 mb-3 bg-light border border-primary border-opacity-25 rounded">
+                    <label class="form-label small fw-bold text-primary-custom mb-2"><i class="bi bi-bank me-1"></i>Detail Rekening / Virtual Account</label>
+                    <div class="row g-2">
+                        <div class="col-md-12">
+                            <input type="text" class="form-control form-control-sm mb-1" v-model="paymentForm.bankName" placeholder="Nama Bank (Contoh: BCA, Mandiri)">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control form-control-sm" v-model="paymentForm.accountNumber" placeholder="No. Rekening / Kode VA">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control form-control-sm" v-model="paymentForm.accountName" placeholder="Atas Nama (A/N)">
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="paymentForm.type === 'QRIS'" class="p-3 mb-3 bg-light border border-primary border-opacity-25 rounded">
+                    <label class="form-label small fw-bold text-primary-custom mb-2"><i class="bi bi-qr-code me-1"></i>Gambar QR Code (Static)</label>
+                    <input type="url" class="form-control form-control-sm" v-model="paymentForm.qrImageUrl" placeholder="https://contoh.com/gambar-qris-toko.png">
+                    <div class="form-text" style="font-size: 0.7rem;">Upload gambar QR toko ke Google Drive/Imgur, lalu tempel linknya di sini.</div>
+                </div>
+
+                <div v-if="paymentForm.type === 'EDC'" class="p-3 mb-3 bg-light border border-primary border-opacity-25 rounded">
+                    <label class="form-label small fw-bold text-primary-custom mb-2"><i class="bi bi-credit-card me-1"></i>Pengaturan Mesin EDC</label>
+                    <div class="alert alert-warning py-2 mb-2" style="font-size: 0.7rem; line-height: 1.2;">
+                        <i class="bi bi-shield-lock-fill me-1"></i><b>Keamanan:</b> Kasir dilarang merekam nomor kartu pelanggan. Proses gesek tetap di mesin EDC fisik.
+                    </div>
+                    <input type="text" class="form-control form-control-sm" v-model="paymentForm.bankName" placeholder="Nama Mesin EDC (Contoh: EDC BCA, EDC BRI)">
                 </div>
 
                 <div class="row g-3 mb-3">
@@ -1007,7 +1036,7 @@
                         <div class="form-text" style="font-size: 0.7rem;">Potongan dari pihak bank/aplikasi.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small fw-bold text-success">Surcharge (Biaya ke Customer)</label>
+                        <label class="form-label small fw-bold text-success">Surcharge (ke Customer)</label>
                         <div class="input-group">
                             <select class="form-select" style="max-width: 80px;" v-model="paymentForm.surchargeType">
                                 <option value="nominal">Rp</option>
@@ -1019,12 +1048,12 @@
                     </div>
                 </div>
 
-                <div class="form-check form-switch mt-4">
+                <div class="form-check form-switch mt-4 pt-2 border-top">
                     <input class="form-check-input" type="checkbox" role="switch" id="pmStatus" v-model="paymentForm.isActive">
                     <label class="form-check-label small fw-bold" for="pmStatus">Aktifkan Metode Pembayaran Ini</label>
                 </div>
             </div>
-            <div class="modal-footer bg-light p-2">
+            <div class="modal-footer bg-light p-3">
                 <button type="button" class="btn btn-white border fw-bold" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-primary-custom fw-bold px-4" @click="savePaymentMethod" :disabled="isProcessing">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
@@ -5417,58 +5446,185 @@
 </div>
 
         <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-body py-4 px-3 bg-white text-center">
-                <h6 class="fw-bold mb-2">Penyelesaian Transaksi</h6>
-                <p class="text-muted small mb-3">Pelanggan: {{ selectedCustomer ? selectedCustomer.name : '-' }}</p>
-                
-                <h3 class="text-primary-custom fw-bold mb-3 border-bottom pb-3">Rp {{ formatNumber(total) }}</h3>
-                
-                <div class="mb-3 text-start">
-                    <label class="form-label small fw-bold">Metode Pembayaran</label>
-                    <select class="form-select form-select-sm fw-semibold" v-model="paymentData.method">
-                        <template v-if="activePaymentMethodsForCashier && activePaymentMethodsForCashier.length > 0">
-                            <option value="">-- Pilih Metode Bayar --</option>
-                            <option v-for="pm in activePaymentMethodsForCashier" :key="pm.id" :value="pm.name">
-                                {{ pm.name }}
-                                <template v-if="pm.surcharge > 0">
-                                    (+{{ pm.surchargeType === 'percent' ? pm.surcharge + '%' : 'Rp ' + formatNumber(pm.surcharge) }})
-                                </template>
-                            </option>
-                        </template>
-                        <template v-else>
-                            <option value="CASH">Uang Tunai (CASH)</option>
-                            <option value="QRIS">QRIS / E-Wallet</option>
-                            <option value="TRANSFER">Transfer Bank</option>
-                            <option value="DEBIT_KREDIT">Kartu Debit / Kredit (EDC)</option>
-                        </template>
-                    </select>
-                </div>
-
-                <div class="mb-4 text-start" v-if="paymentData.method === 'CASH' || (activePaymentMethodsForCashier && activePaymentMethodsForCashier.some(p => p.name === paymentData.method && p.type === 'CASH'))">
-                    <label class="form-label small fw-bold">Jumlah Uang Diterima</label>
-    
-                    <div class="d-flex flex-wrap gap-1 mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-success" style="font-size: 0.75rem;" @click="paymentData.amountReceived = total">Uang Pas</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 20000">20.000</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 50000">50.000</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;" @click="paymentData.amountReceived = 100000">100.000</button>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            
+            <div class="row g-0">
+                <div class="col-md-7 bg-white p-4 border-end" style="max-height: 85vh; overflow-y: auto;">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-wallet2 me-2"></i>Pilih Pembayaran</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
 
-                    <input type="number" class="form-control form-control-sm text-center fw-bold fs-6" v-model.number="paymentData.amountReceived" placeholder="0">
-    
-                    <div class="mt-2 d-flex justify-content-between align-items-center" v-if="paymentData.amountReceived > 0">
-                        <span class="small fw-bold">Kembalian:</span>
-                        <span class="fw-bold text-danger fs-6">Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}</span>
+                    <div v-if="activePaymentMethodsForCashier && activePaymentMethodsForCashier.length > 0">
+                        
+                        <div v-if="groupedPaymentMethods['CASH'] && groupedPaymentMethods['CASH'].length > 0" class="mb-4">
+                            <div class="small fw-bold text-muted mb-2 text-uppercase letter-spacing-1"><i class="bi bi-cash-stack me-1"></i> Tunai (CASH)</div>
+                            <div class="row g-2">
+                                <div class="col-6" v-for="pm in groupedPaymentMethods['CASH']" :key="pm.id">
+                                    <button type="button" class="btn w-100 py-3 fw-bold text-start border shadow-sm"
+                                            :class="paymentData.method === pm.name ? 'btn-primary-custom text-white border-primary-custom' : 'btn-white'"
+                                            @click="paymentData.method = pm.name">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>{{ pm.name }}</span>
+                                            <i class="bi bi-check-circle-fill" v-if="paymentData.method === pm.name"></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="groupedPaymentMethods['QRIS'] && groupedPaymentMethods['QRIS'].length > 0" class="mb-4">
+                            <div class="small fw-bold text-muted mb-2 text-uppercase letter-spacing-1"><i class="bi bi-qr-code-scan me-1"></i> QRIS & E-Wallet</div>
+                            <div class="row row-cols-3 g-2">
+                                <div class="col" v-for="pm in groupedPaymentMethods['QRIS']" :key="pm.id">
+                                    <button type="button" class="btn w-100 h-100 py-3 border shadow-sm text-center position-relative"
+                                            :class="paymentData.method === pm.name ? 'btn-primary-custom text-white border-primary-custom' : 'btn-white'"
+                                            @click="paymentData.method = pm.name">
+                                        <i class="bi bi-check-circle-fill position-absolute top-0 end-0 m-2" v-if="paymentData.method === pm.name"></i>
+                                        <i class="bi bi-qr-code fs-3 d-block mb-2"></i>
+                                        <span class="small fw-bold" style="font-size: 0.8rem;">{{ pm.name }}</span>
+                                        <div v-if="pm.surcharge > 0" class="badge mt-2 px-2 py-1" :class="paymentData.method === pm.name ? 'bg-light text-primary-custom' : 'bg-danger text-white'" style="font-size: 0.65rem;">
+                                            +{{ pm.surchargeType === 'percent' ? pm.surcharge + '%' : 'Rp ' + formatNumber(pm.surcharge) }}
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="(groupedPaymentMethods['TRANSFER'] && groupedPaymentMethods['TRANSFER'].length > 0) || (groupedPaymentMethods['EDC'] && groupedPaymentMethods['EDC'].length > 0) || (groupedPaymentMethods['VA'] && groupedPaymentMethods['VA'].length > 0)" class="mb-2">
+                            <div class="small fw-bold text-muted mb-2 text-uppercase letter-spacing-1"><i class="bi bi-bank me-1"></i> Bank & Kartu</div>
+                            <div class="row row-cols-2 g-2">
+                                <div class="col" v-for="pm in [...(groupedPaymentMethods['TRANSFER'] || []), ...(groupedPaymentMethods['VA'] || []), ...(groupedPaymentMethods['EDC'] || [])]" :key="pm.id">
+                                    <button type="button" class="btn w-100 py-3 border shadow-sm text-start position-relative"
+                                            :class="paymentData.method === pm.name ? 'btn-primary-custom text-white border-primary-custom' : 'btn-white'"
+                                            @click="paymentData.method = pm.name">
+                                        <i class="bi bi-check-circle-fill position-absolute top-50 end-0 translate-middle-y me-3" v-if="paymentData.method === pm.name"></i>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi" :class="pm.type === 'EDC' ? 'bi-credit-card' : 'bi-bank'" style="font-size: 1.4rem; margin-right: 12px;"></i>
+                                            <div>
+                                                <div class="small fw-bold">{{ pm.name }}</div>
+                                                <div v-if="pm.surcharge > 0" class="mt-1 fw-bold" :class="paymentData.method === pm.name ? 'text-light' : 'text-danger'" style="font-size: 0.65rem;">
+                                                    +{{ pm.surchargeType === 'percent' ? pm.surcharge + '%' : 'Rp ' + formatNumber(pm.surcharge) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-else class="row row-cols-2 g-2">
+                        <div class="col">
+                            <button type="button" class="btn w-100 py-4 border shadow-sm text-center" :class="paymentData.method === 'CASH' ? 'btn-primary-custom text-white' : 'btn-white'" @click="paymentData.method = 'CASH'">
+                                <i class="bi bi-cash-stack fs-3 d-block mb-2"></i><span class="small fw-bold">Tunai (CASH)</span>
+                            </button>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn w-100 py-4 border shadow-sm text-center" :class="paymentData.method === 'QRIS' ? 'btn-primary-custom text-white' : 'btn-white'" @click="paymentData.method = 'QRIS'">
+                                <i class="bi bi-qr-code fs-3 d-block mb-2"></i><span class="small fw-bold">QRIS / E-Wallet</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <button class="btn btn-primary-custom w-100 fw-bold py-2 mb-2" @click="processTransaction" :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total) || !paymentData.method">
-                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span><span v-else>Cetak Invoice & Selesai</span>
-                </button>
-                <button class="btn btn-white border w-100 fw-bold py-2 small" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
-            </div>
+                <div class="col-md-5 bg-light p-4 d-flex flex-column">
+                    
+                    <div class="mb-auto">
+                        <h5 class="fw-bold text-dark mb-4"><i class="bi bi-receipt-cutoff me-2"></i>Detail Tagihan</h5>
+                        <p class="text-muted small mb-1">Pelanggan: <span class="fw-bold">{{ selectedCustomer ? selectedCustomer.name : 'Umum (Tanpa Nama)' }}</span></p>
+                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom">Rp {{ formatNumber(total) }}</h2>
+
+                        <div v-if="paymentData.method === 'CASH' || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH') || (!selectedPaymentMethodData && paymentData.method === 'CASH')">
+                            <label class="form-label small fw-bold text-dark">Jumlah Uang Diterima</label>
+                            
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 fw-bold py-2" @click="paymentData.amountReceived = total">Uang Pas</button>
+                                
+                                <button type="button" class="btn btn-sm btn-white shadow-sm border flex-grow-1 fw-bold" 
+                                        v-if="Math.ceil(total / 50000) * 50000 > total" 
+                                        @click="paymentData.amountReceived = Math.ceil(total / 50000) * 50000">
+                                    {{ formatNumber(Math.ceil(total / 50000) * 50000) }}
+                                </button>
+                                
+                                <button type="button" class="btn btn-sm btn-white shadow-sm border flex-grow-1 fw-bold" 
+                                        v-if="Math.ceil(total / 100000) * 100000 > Math.ceil(total / 50000) * 50000" 
+                                        @click="paymentData.amountReceived = Math.ceil(total / 100000) * 100000">
+                                    {{ formatNumber(Math.ceil(total / 100000) * 100000) }}
+                                </button>
+                            </div>
+
+                            <div class="input-group input-group-lg mb-2 shadow-sm">
+                                <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
+                                <input type="number" class="form-control border-start-0 fw-bold fs-4 text-end" v-model.number="paymentData.amountReceived" placeholder="0">
+                            </div>
+            
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0">
+                                <span class="fw-bold text-muted">Kembalian:</span>
+                                <span class="fw-bold fs-4" :class="paymentData.amountReceived >= total ? 'text-success' : 'text-danger'">
+                                    Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'QRIS'" class="text-center p-3 mt-2 bg-white rounded border border-primary border-opacity-25 shadow-sm">
+                            <span class="fw-bold d-block text-dark mb-3">{{ paymentData.method }}</span>
+                            
+                            <div v-if="selectedPaymentMethodData && selectedPaymentMethodData.qrImageUrl" class="bg-light p-2 rounded d-inline-block mb-2 border">
+                                <img :src="selectedPaymentMethodData.qrImageUrl" alt="QR Code" style="width: 150px; height: 150px; object-fit: contain;">
+                            </div>
+                            <div v-else class="bg-light p-2 rounded d-inline-block mb-2 border">
+                                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + total" alt="Dummy QR Code" style="width: 150px; height: 150px;">
+                            </div>
+                            
+                            <span class="small text-muted fw-semibold d-block" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
+                        </div>
+
+                        <div v-else-if="selectedPaymentMethodData && (selectedPaymentMethodData.type === 'TRANSFER' || selectedPaymentMethodData.type === 'VA')" class="text-center p-3 mt-2 bg-white rounded border border-primary border-opacity-25 shadow-sm">
+                            <i class="bi bi-bank text-primary-custom fs-1 d-block mb-2 mt-2"></i>
+                            <span class="fw-bold d-block text-dark mb-3">{{ paymentData.method }}</span>
+                            
+                            <div class="p-2 bg-light border rounded mb-3 text-start">
+                                <span class="small text-muted d-block fw-bold mb-1">Informasi Rekening:</span>
+                                <div v-if="selectedPaymentMethodData.accountNumber">
+                                    <div class="fw-bold text-dark">{{ selectedPaymentMethodData.bankName || paymentData.method }}</div>
+                                    <div class="fs-5 fw-bold text-primary-custom letter-spacing-1">{{ selectedPaymentMethodData.accountNumber }}</div>
+                                    <div class="small text-muted">a/n {{ selectedPaymentMethodData.accountName || '-' }}</div>
+                                </div>
+                                <span v-else class="small fw-semibold text-dark" style="white-space: pre-wrap;">{{ (appSettings && appSettings.storePaymentInfo) ? appSettings.storePaymentInfo : 'Mohon transfer sejumlah tagihan di atas ke rekening resmi toko.' }}</span>
+                            </div>
+                        </div>
+
+                        <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'EDC'" class="p-3 mt-2 bg-white rounded border border-primary border-opacity-25 shadow-sm text-start">
+                            <div class="text-center mb-3">
+                                <i class="bi bi-credit-card-2-front text-primary-custom fs-1 d-block mb-2 mt-2"></i>
+                                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                <div v-if="selectedPaymentMethodData.bankName" class="badge bg-light text-dark border">
+                                    Mesin: {{ selectedPaymentMethodData.bankName }}
+                                </div>
+                            </div>
+                            
+                            <div class="border-top pt-3">
+                                <label class="form-label small fw-bold text-dark">Catatan Kartu (Opsional)</label>
+                                <input type="text" class="form-control form-control-sm" v-model="paymentData.note" placeholder="Cth: Debit BCA - Appr 1234">
+                                <span class="small text-muted d-block mt-1" style="font-size: 0.7rem;">Tulis jenis kartu atau nomor referensi dari struk EDC untuk pencocokan.</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 pt-3 d-flex gap-2 w-100">
+                        <button class="btn btn-light border fw-bold w-50 py-3" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
+                        <button class="btn btn-primary-custom fw-bold w-50 py-3 shadow-sm" 
+                                @click="processTransaction" 
+                                :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total) || !paymentData.method">
+                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                            <span v-else><i class="bi bi-printer me-2"></i>Cetak</span>
+                        </button>
+                    </div>
+                </div>
+            </div>            
         </div>
     </div>
 </div>
@@ -6554,6 +6710,21 @@
 
             return isMethodActive && isOutletMatch;
         });
+    },
+
+           groupedPaymentMethods() {
+        const methods = this.activePaymentMethodsForCashier || [];
+        return {
+            'CASH': methods.filter(pm => pm.type === 'CASH'),
+            'QRIS': methods.filter(pm => pm.type === 'QRIS'),
+            'TRANSFER': methods.filter(pm => pm.type === 'TRANSFER'),
+            'EDC': methods.filter(pm => pm.type === 'EDC'),
+            'VA': methods.filter(pm => pm.type === 'VA')
+        };
+    },
+    selectedPaymentMethodData() {
+        if (!this.paymentData.method || !this.activePaymentMethodsForCashier) return null;
+        return this.activePaymentMethodsForCashier.find(p => p.name === this.paymentData.method);
     },
           
             // DAFTAR PRODUK UNTUK MODIFIER (Memecah Varian)
@@ -8006,7 +8177,19 @@ openPaymentMethodModal(pm = null) {
     } else {
         // Add Mode
         this.paymentForm = {
-            id: null, outletId: '', type: 'CASH', name: '', mdr: 0, surcharge: 0, surchargeType: 'nominal', isActive: true
+            id: null,
+            outletId: '',
+            type: 'CASH',
+            name: '',
+            mdr: 0,
+            surcharge: 0,
+            surchargeType: 'percent',
+            isActive: true,
+            // Field Data Dinamis Baru:
+            bankName: '',
+            accountNumber: '',
+            accountName: '',
+            qrImageUrl: ''
         };
     }
     const modal = new bootstrap.Modal(document.getElementById('paymentMethodModal'));
@@ -11684,6 +11867,7 @@ async fetchRolesFromDatabase() {
                         outletId: this.posActiveOutletId || '',
                         cashierName: this.userProfile.name || 'Admin',
                         paymentMethod: this.paymentData.method || 'CASH',
+                        paymentNote: this.paymentData.note || '',
                         mdrFee: nominalMdr, // 🌟 MENYIMPAN POTONGAN MDR KE DATABASE
                         amountReceived: uangDiterima,
                         sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
@@ -11858,7 +12042,7 @@ async fetchRolesFromDatabase() {
                     this.selectedCustomer = null;
                     this.globalDiscountType = 'none';
                     this.globalDiscountValue = 0;
-                    this.paymentData = { method: 'CASH', amountReceived: 0 };
+                    this.paymentData = { method: 'CASH', amountReceived: 0, note: '' };
                     
                     Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
 
