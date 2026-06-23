@@ -140,12 +140,17 @@
                     
                     <div class="d-flex justify-content-between mb-2 pb-2" :class="{'border-bottom border-light': ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0}">
                         <div style="width: 60%;">
-                            <strong>{{ (ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0) ? 'Pembayaran Awal :' : 'Dibayar Dengan :' }}</strong><br>
-                            <span class="badge bg-secondary mb-1 mt-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                                <i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}
-                            </span><br>
-                            <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
-                        </div>
+    <strong>{{ (ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0) ? 'Pembayaran Awal :' : 'Dibayar Dengan :' }}</strong><br>
+    <span class="badge bg-secondary mb-1 mt-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+        <i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}
+    </span><br>
+    <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
+    
+    <!-- 🌟 TAMBAHAN UNTUK MENAMPILKAN CATATAN / REFERENSI EDC & TRANSFER 🌟 -->
+    <div v-if="ereceiptData.paymentNote" class="text-dark mt-1 fw-semibold" style="font-size: 0.85em; font-style: italic;">
+        Ket: {{ ereceiptData.paymentNote }}
+    </div>
+</div>
                         <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
                             Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - (ereceiptData.paymentHistory ? ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0) : 0))) }}
                         </div>
