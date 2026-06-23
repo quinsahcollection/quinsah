@@ -904,15 +904,30 @@
 
     <div v-if="settingTab === 'payment_methods'">
     <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
-            <div>
-                <h6 class="fw-bold mb-0 text-primary-custom">Master Metode Pembayaran</h6>
-                <div class="small text-muted">Kelola Kas, Transfer, QRIS, EDC, VA beserta MDR & Surcharge</div>
-            </div>
-            <button class="btn btn-sm btn-primary-custom fw-bold shadow-sm" @click="openPaymentMethodModal()">
-                <i class="bi bi-plus-circle me-1"></i> Tambah Metode
-            </button>
+        <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h6 class="fw-bold mb-0 text-primary-custom">Master Metode Pembayaran</h6>
+        <div class="small text-muted">Kelola Kas, Transfer, QRIS, EDC, VA beserta MDR & Surcharge</div>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        
+        <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+            <span class="input-group-text bg-light text-muted border-secondary border-opacity-25">
+                <i class="bi bi-funnel-fill"></i>
+            </span>
+            <select class="form-select form-select-sm border-secondary border-opacity-25 fw-semibold text-dark" style="min-width: 160px; cursor: pointer;" v-model="selectedOutletFilter">
+                <option value="">Semua Outlet</option>
+                <option value="GLOBAL">Pusat / Global</option>
+                <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+            </select>
         </div>
+        
+        <button class="btn btn-sm btn-primary-custom fw-bold shadow-sm text-nowrap" @click="openPaymentMethodModal()">
+            <i class="bi bi-plus-circle me-1"></i> Tambah Metode
+        </button>
+    </div>
+</div>
         <div class="card-body p-0">
             
             <div class="table-responsive">
@@ -6534,7 +6549,8 @@
                 reportStartDate: '',
                 reportEndDate: '',
                 reportOutletFilter: '', // Untuk menyaring laba rugi per cabang
-                
+                selectedOutletFilter: '', // Tambahkan ini untuk filter outlet metode pembayaran
+              
                 // ==========================================
                 // STATE TRANSFER STOK ANTAR TOKO
                 // ==========================================
@@ -6753,21 +6769,26 @@
         groupedPaymentMethodsByOutlet() {
         if (!this.paymentMethods || this.paymentMethods.length === 0) return {};
 
-        return this.paymentMethods.reduce((groups, method) => {
-            // Tentukan nama outlet (Global jika outletId kosong)
+        // 🌟 1. TAHAP FILTERING (Saring data berdasarkan dropdown)
+        let filteredMethods = this.paymentMethods;
+        if (this.selectedOutletFilter) {
+            filteredMethods = filteredMethods.filter(pm => {
+                if (this.selectedOutletFilter === 'GLOBAL') {
+                    return !pm.outletId || pm.outletId === ''; // Cari metode yang berlaku di semua cabang
+                }
+                return pm.outletId === this.selectedOutletFilter; // Cari metode di cabang spesifik
+            });
+        }
+
+        // 🌟 2. TAHAP PENGELOMPOKAN (Group data yang sudah disaring)
+        return filteredMethods.reduce((groups, method) => {
             let outletName = "Semua Cabang (Global)";
-            
             if (method.outletId) {
-                // Gunakan fungsi getOutletName yang biasa Anda pakai di kasir/struk
                 outletName = this.getOutletName ? this.getOutletName(method.outletId) : method.outletId;
             }
-
-            // Jika grup untuk outlet ini belum ada, buatkan array kosong
             if (!groups[outletName]) {
                 groups[outletName] = [];
             }
-
-            // Masukkan metode ke dalam grup outletnya
             groups[outletName].push(method);
             return groups;
         }, {});
