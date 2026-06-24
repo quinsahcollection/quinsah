@@ -8455,12 +8455,23 @@ viewPecahanInfo(reg, typeStr) {
             activeUserPhone = uData.phone || uData.phoneNumber || '-';
         }
 
-        // 🌟 CEK BENTROKAN SHIFT
-        const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
-        if (activeShift) {
-            this.isProcessing = false;
-            return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
-        }
+        // 🌟 1. CEK BENTROKAN PERANGKAT (Sudah ada di kode Anda)
+const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
+if (activeShift) {
+    this.isProcessing = false;
+    return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
+}
+
+// 🌟 2. BARU: CEK BENTROKAN USER (1 User tidak boleh punya > 1 laci aktif)
+const userActiveShift = this.registers.find(r => r.cashierId === activeUserId && r.status === 'OPEN');
+if (userActiveShift) {
+    this.isProcessing = false;
+    return Swal.fire(
+        'Akses Ditolak', 
+        `Anda masih memiliki shift aktif di ${userActiveShift.registerName} (${this.getOutletName(userActiveShift.outletId)}). Silakan TUTUP shift tersebut terlebih dahulu sebelum membuka laci baru!`, 
+        'error'
+    );
+}
 
         // 🌟 SIAPKAN PECAHAN UANG (Sesuai script asli Anda)
         let openDenominationsPayload = null;
