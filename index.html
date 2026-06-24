@@ -10065,280 +10065,278 @@ getPaymentBreakdown(trx) {
 },
         
         // --- FUNGSI BARU CEK METODE BAYAR ---
-            getPaymentMethods(po) {
-                // Jika PO punya riwayat cicilan/pembayaran
-                if (po.paymentHistory && po.paymentHistory.length > 0) {
-                    // Ambil semua metode bayar dari riwayat
-                    let methods = po.paymentHistory.map(h => h.method || 'CASH');
-                    // Buang yang duplikat (misal 2x bayar Cash, cukup tampil 1x)
-                    let uniqueMethods = [...new Set(methods)];
-                    // Gabungkan dengan simbol '&'
-                    return uniqueMethods.join(' & '); 
-                }
-                // Jika tidak ada riwayat (data lama), ambil metode default
-                return po.paymentMethod || 'CASH';
-            },
-        
-                    // 1. Warna Status Pembayaran
-            getPaymentStatusColor(status) {
-                if (status === 'LUNAS') return 'bg-success text-white';
-                if (status === 'SEBAGIAN') return 'bg-warning text-dark';
-                if (status === 'BELUM LUNAS') return 'bg-danger text-white';
-                return 'bg-success text-white'; // default bawaan lama
-            },
-
-            // 2. Buka Detail Invoice
-            openInvoiceDetail(trx) {
-                this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx)); // Clone data
-                
-                // Pastikan variabel histori dan sisa tagihan ada nilainya (utk transaksi lama yg belum ada sistem AR)
-                if (this.activeInvoiceDetail.sisaTagihan === undefined) {
-                    this.activeInvoiceDetail.sisaTagihan = (this.activeInvoiceDetail.total - this.activeInvoiceDetail.amountReceived) > 0 ? (this.activeInvoiceDetail.total - this.activeInvoiceDetail.amountReceived) : 0;
-                }
-                
-                this.installmentForm = { amount: this.activeInvoiceDetail.sisaTagihan, method: 'CASH', note: '' }; // Auto set ke sisa tagihan
-                this.showModal('invoiceDetailModal');
-            },
-
-            // 3. Proses Cicilan / Pelunasan ke Firebase
-            async processInstallment() {
-                if (this.isProcessing) return;
-                this.isProcessing = true;
-
-                try {
-                    let trx = this.activeInvoiceDetail;
-                    let bayarSekarang = Number(this.installmentForm.amount);
-                    
-                    // Kalkulasi nominal baru
-                    let uangTerkumpulBerdasarkanSistem = Number(trx.amountReceived) + bayarSekarang;
-                    let sisaTagihanBaru = Number(trx.total) - uangTerkumpulBerdasarkanSistem;
-                    if (sisaTagihanBaru < 0) sisaTagihanBaru = 0; // Cegah minus
-
-                    // Tentukan Status Baru
-                    let statusBaru = 'SEBAGIAN';
-                    if (sisaTagihanBaru <= 0) statusBaru = 'LUNAS';
-
-                    // Siapkan Histori Pembayaran Baru
-                    let riwayatBaru = trx.paymentHistory ? [...trx.paymentHistory] : [];
-                    riwayatBaru.push({
-                        date: new Date().toLocaleString('id-ID'),
-                        amount: bayarSekarang,
-                        method: this.installmentForm.method,
-                        note: this.installmentForm.note || ''
-                    });
-
-                    // Update data ke Firebase
-                    await updateDoc(doc(db, "transactions", trx.id), {
-                        amountReceived: uangTerkumpulBerdasarkanSistem,
-                        sisaTagihan: sisaTagihanBaru,
-                        paymentStatus: statusBaru,
-                        paymentHistory: riwayatBaru
-                    });
-
-                    // Update tampilan UI Modal secara instan
-                    this.activeInvoiceDetail.amountReceived = uangTerkumpulBerdasarkanSistem;
-                    this.activeInvoiceDetail.sisaTagihan = sisaTagihanBaru;
-                    this.activeInvoiceDetail.paymentStatus = statusBaru;
-                    this.activeInvoiceDetail.paymentHistory = riwayatBaru;
-                    
-                    // Reset Form
-                    this.installmentForm.amount = sisaTagihanBaru;
-                    this.installmentForm.note = '';
-
-                    Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pembayaran cicilan berhasil disimpan!', timer: 1500, showConfirmButton: false });
-                } catch (error) {
-                    console.error("Gagal simpan cicilan:", error);
-                    Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan data', 'error');
-                }
-                this.isProcessing = false;
-            },
-
-
-            // --- SALIN DARI SINI DAN MASUKKAN KE DALAM METHODS: ---
-hasAccess(moduleId, action = 'read') {
-    try {
-        const profile = this.userProfile || this.loggedInUser;
-        if (!profile) return false;
-
-        // 1. KUNCI BOS (Otomatis buka semua)
-        if (profile.role === 'Admin' || profile.role === 'Super Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
-            return true; 
-        }
-
-        if (profile.roleId === 'pending') return false;
-
-        // 2. Tentukan Wadah Role
-        let userRole = null;
-        if (this.roles && this.roles.length > 0) {
-            userRole = this.roles.find(r => r.id == profile.roleId);
-        }
-        if (!userRole && this.rolesList && this.rolesList.length > 0) {
-            userRole = this.rolesList.find(r => r.id == profile.roleId);
-        }
-
-        // Jika tidak ketemu
-        if (!userRole || !userRole.permissions) return false;
-
-        // 3. Ambil nilai centang dari database
-        const perm = userRole.permissions[moduleId];
-        if (perm === undefined || perm === null) return false;
-
-        // 4. PENYELAMAT BUG VUE (Membaca semua jenis centang: Boolean, Text, Angka)
-        if (typeof perm === 'object') {
-            let isRead = perm.read === true || perm.read == "true" || perm.read == 1 || perm.read === "on";
-            let isWrite = perm.write === true || perm.write == "true" || perm.write == 1 || perm.write === "on";
-
-            if (action === 'read') return isRead || isWrite;
-            if (action === 'write') return isWrite;
-        } else {
-            return perm === true || perm == "true" || perm == 1 || perm === "on";
-        }
-
-        return true;
-    } catch (e) {
-        return true; 
-    }
-},
-
-getRoleName(roleId) {
-    const role = this.roles.find(r => r.id == roleId);
-    return role ? role.name : 'Tidak Ada Role';
-},
-
-// ==============================================================
-            // PEMBARUAN: FUNGSI MEMBUKA FORM ROLE YANG ANTI NGE-BLANK
-            // ==============================================================
+        getPaymentMethods(po) {
+            // 🌟 AMAN: Cegah eror jika objek PO belum termuat
+            if (!po) return 'CASH';
             
-            initNewRole() {
-                // 1. Siapkan keranjang kosong untuk hak akses
-                let defaultPermissions = {};
-                
-                // 2. Absen semua modul, dan setel default ke FALSE (Belum dicentang)
-                this.appModules.forEach(mod => {
-                    defaultPermissions[mod.id] = { read: false, write: false };
-                });
+            // Jika PO punya riwayat cicilan/pembayaran
+            if (po.paymentHistory && po.paymentHistory.length > 0) {
+                // Ambil semua metode bayar dari riwayat
+                let methods = po.paymentHistory.map(h => h.method || 'CASH');
+                // Buang yang duplikat (misal 2x bayar Cash, cukup tampil 1x)
+                let uniqueMethods = [...new Set(methods)];
+                // Gabungkan dengan simbol '&'
+                return uniqueMethods.join(' & '); 
+            }
+            // Jika tidak ada riwayat (data lama), ambil metode default
+            return po.paymentMethod || 'CASH';
+        },
 
-                // 3. Masukkan ke dalam form
-                this.formRole = { 
-                    id: Date.now().toString(), // Gunakan waktu saat ini sebagai ID unik sementara
-                    name: '', 
-                    permissions: defaultPermissions 
-                };
-                
-                this.isEditingRole = false;
-            },
+        // 1. Warna Status Pembayaran
+        getPaymentStatusColor(status) {
+            if (status === 'LUNAS') return 'bg-success text-white';
+            if (status === 'SEBAGIAN') return 'bg-warning text-dark';
+            if (status === 'BELUM LUNAS') return 'bg-danger text-white';
+            return 'bg-success text-white'; // default bawaan lama
+        },
 
-            editRole(role) {
-                // 1. Siapkan keranjang kosong
-                let safePermissions = {};
-                
-                // 2. Absen semua modul dari daftar master aplikasi Anda
-                this.appModules.forEach(mod => {
-                    // Cek apakah di database lama sudah ada settingan untuk modul ini?
-                    if (role.permissions && role.permissions[mod.id]) {
-                        // Jika sudah ada, salin datanya
-                        safePermissions[mod.id] = {
-                            read: role.permissions[mod.id].read || false,
-                            write: role.permissions[mod.id].write || false
-                        };
-                    } else {
-                        // Jika ini modul baru (misal: 'opname'), otomatis setel ke FALSE agar tidak error
-                        safePermissions[mod.id] = { read: false, write: false };
-                    }
-                });
+        // 2. Buka Detail Invoice
+        openInvoiceDetail(trx) {
+            // 🌟 AMAN: Pastikan data transaksi ada sebelum dikloning
+            if (!trx) return;
+            
+            this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx)); // Clone data
+            
+            // Pastikan variabel histori dan sisa tagihan ada nilainya (utk transaksi lama yg belum ada sistem AR)
+            if (this.activeInvoiceDetail.sisaTagihan === undefined) {
+                let total = Number(this.activeInvoiceDetail.total || 0);
+                let received = Number(this.activeInvoiceDetail.amountReceived || 0);
+                this.activeInvoiceDetail.sisaTagihan = (total - received) > 0 ? (total - received) : 0;
+            }
+            
+            this.installmentForm = { 
+                amount: this.activeInvoiceDetail.sisaTagihan || 0, 
+                method: 'CASH', 
+                note: '' 
+            }; // Auto set ke sisa tagihan
+            this.showModal('invoiceDetailModal');
+        },
 
-                // 3. Masukkan ke dalam form
-                this.formRole = {
-                    id: role.id,
-                    name: role.name,
-                    permissions: safePermissions
-                };
-                
-                this.isEditingRole = true;
-            },
+        // 3. Proses Cicilan / Pelunasan ke Firebase
+        async processInstallment() {
+            if (this.isProcessing) return;
+            
+            let trx = this.activeInvoiceDetail;
+            if (!trx || !trx.id) {
+                Swal.fire('Error', 'Data transaksi tidak valid.', 'error');
+                return;
+            }
+            
+            this.isProcessing = true;
 
-async saveRole() {
-    if (!this.formRole.name.trim()) {
-        Swal.fire('Error', 'Nama Role tidak boleh kosong!', 'error');
-        return;
-    }
-
-    try {
-        // Jika buat baru, gunakan timestamp sebagai ID unik dokumennya
-        const roleIdStr = String(this.formRole.id);
-        const roleRef = doc(db, "roles", roleIdStr);
-
-        // Simpan matriks ke Firestore
-        await setDoc(roleRef, {
-            name: this.formRole.name,
-            permissions: this.formRole.permissions,
-            companyId: this.userProfile.companyId // <--- TAMBAHAN MULTI-TENANT
-        });
-
-        Swal.fire('Berhasil', 'Konfigurasi Hak Akses berhasil disimpan ke database cloud.', 'success');
-        
-        // Reset form
-        this.formRole = { id: null, name: '', permissions: {} };
-        this.isEditingRole = false;
-
-        // Refresh data di layar dari database terbaru
-        this.fetchRolesFromDatabase();
-
-    } catch (error) {
-        console.error("Gagal menyimpan role ke Firebase:", error);
-        Swal.fire('Error', 'Gagal menyimpan Hak Akses ke database.', 'error');
-    }
-},
-
-async deleteRole(roleId) {
-    // Proteksi agar role penting bawaan sistem tidak bisa terhapus sengaja/tidak sengaja
-    if (roleId === 1 || roleId === '1' || roleId === 2 || roleId === '2') {
-        Swal.fire('Ditolak', 'Role bawaan utama sistem tidak boleh dihapus!', 'warning');
-        return;
-    }
-
-    Swal.fire({
-        title: 'Apakah anda yakin?',
-        text: "User yang terhubung dengan jabatan ini akan kehilangan akses masuk!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Hapus Permanen!'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
             try {
-                // Hapus dokumen role di Firestore
-                await deleteDoc(doc(db, "roles", String(roleId)));
+                let bayarSekarang = Number(this.installmentForm.amount || 0);
                 
-                Swal.fire('Terhapus', 'Role berhasil dihapus dari database cloud.', 'success');
+                // 🌟 AMAN: Gunakan fallback || 0 untuk mengantisipasi nilai NaN di database
+                let totalNota = Number(trx.total || 0);
+                let uangTerkumpulBerdasarkanSistem = Number(trx.amountReceived || 0) + bayarSekarang;
+                let sisaTagihanBaru = totalNota - uangTerkumpulBerdasarkanSistem;
+                if (sisaTagihanBaru < 0) sisaTagihanBaru = 0; // Cegah minus
+
+                // Tentukan Status Baru
+                let statusBaru = 'SEBAGIAN';
+                if (sisaTagihanBaru <= 0) statusBaru = 'LUNAS';
+
+                // Siapkan Histori Pembayaran Baru
+                let riwayatBaru = trx.paymentHistory ? [...trx.paymentHistory] : [];
+                riwayatBaru.push({
+                    date: new Date().toLocaleString('id-ID'),
+                    amount: bayarSekarang,
+                    method: this.installmentForm.method,
+                    note: this.installmentForm.note || ''
+                });
+
+                // Update data ke Firebase
+                await updateDoc(doc(db, "transactions", trx.id), {
+                    amountReceived: uangTerkumpulBerdasarkanSistem,
+                    sisaTagihan: sisaTagihanBaru,
+                    paymentStatus: statusBaru,
+                    paymentHistory: riwayatBaru
+                });
+
+                // Update tampilan UI Modal secara instan
+                this.activeInvoiceDetail.amountReceived = uangTerkumpulBerdasarkanSistem;
+                this.activeInvoiceDetail.sisaTagihan = sisaTagihanBaru;
+                this.activeInvoiceDetail.paymentStatus = statusBaru;
+                this.activeInvoiceDetail.paymentHistory = riwayatBaru;
                 
-                // Refresh data di layar
+                // Reset Form
+                this.installmentForm.amount = sisaTagihanBaru;
+                this.installmentForm.note = '';
+
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pembayaran cicilan berhasil disimpan!', timer: 1500, showConfirmButton: false });
+            } catch (error) {
+                console.error("Gagal simpan cicilan:", error);
+                Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan data', 'error');
+            } finally {
+                this.isProcessing = false;
+            }
+        },
+
+        hasAccess(moduleId, action = 'read') {
+            try {
+                const profile = this.userProfile || this.loggedInUser;
+                if (!profile) return false;
+
+                // 1. KUNCI BOS (Otomatis buka semua)
+                if (profile.role === 'Admin' || profile.role === 'Super Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
+                    return true; 
+                }
+
+                if (profile.roleId === 'pending') return false;
+
+                // 2. Tentukan Wadah Role
+                let userRole = null;
+                if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
+                    userRole = this.roles.find(r => r.id == profile.roleId);
+                }
+                if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
+                    userRole = this.rolesList.find(r => r.id == profile.roleId);
+                }
+
+                // Jika tidak ketemu
+                if (!userRole || !userRole.permissions) return false;
+
+                // 3. Ambil nilai centang dari database
+                const perm = userRole.permissions[moduleId];
+                if (perm === undefined || perm === null) return false;
+
+                // 4. PENYELAMAT BUG VUE (Membaca semua jenis centang: Boolean, Text, Angka)
+                if (typeof perm === 'object') {
+                    let isRead = perm.read === true || perm.read == "true" || perm.read == 1 || perm.read === "on";
+                    let isWrite = perm.write === true || perm.write == "true" || perm.write == 1 || perm.write === "on";
+
+                    if (action === 'read') return isRead || isWrite;
+                    if (action === 'write') return isWrite;
+                } else {
+                    return perm === true || perm == "true" || perm == 1 || perm === "on";
+                }
+
+                return false;
+            } catch (e) {
+                console.error("RBAC Check Error:", e);
+                return false; // 🌟 FIX KRITIS: Fail-Closed jika error
+            }
+        },
+
+        getRoleName(roleId) {
+            if (!this.roles || !Array.isArray(this.roles)) return 'Tidak Ada Role';
+            const role = this.roles.find(r => r.id == roleId);
+            return role ? role.name : 'Tidak Ada Role';
+        },
+
+        initNewRole() {
+            let defaultPermissions = {};
+            
+            // 🌟 AMAN: Proteksi jika appModules belum di-load dari Firestore
+            const modules = Array.isArray(this.appModules) ? this.appModules : [];
+            modules.forEach(mod => {
+                defaultPermissions[mod.id] = { read: false, write: false };
+            });
+
+            this.formRole = { 
+                id: Date.now().toString(), 
+                name: '', 
+                permissions: defaultPermissions 
+            };
+            
+            this.isEditingRole = false;
+        },
+
+        editRole(role) {
+            if (!role) return;
+            let safePermissions = {};
+            
+            const modules = Array.isArray(this.appModules) ? this.appModules : [];
+            modules.forEach(mod => {
+                if (role.permissions && role.permissions[mod.id]) {
+                    safePermissions[mod.id] = {
+                        read: role.permissions[mod.id].read || false,
+                        write: role.permissions[mod.id].write || false
+                    };
+                } else {
+                    safePermissions[mod.id] = { read: false, write: false };
+                }
+            });
+
+            this.formRole = {
+                id: role.id,
+                name: role.name,
+                permissions: safePermissions
+            };
+            
+            this.isEditingRole = true;
+        },
+
+        async saveRole() {
+            if (!this.formRole.name.trim()) {
+                Swal.fire('Error', 'Nama Role tidak boleh kosong!', 'error');
+                return;
+            }
+
+            try {
+                const roleIdStr = String(this.formRole.id);
+                const roleRef = doc(db, "roles", roleIdStr);
+                const compId = this.userProfile?.companyId || null;
+
+                await setDoc(roleRef, {
+                    name: this.formRole.name,
+                    permissions: this.formRole.permissions,
+                    companyId: compId
+                });
+
+                Swal.fire('Berhasil', 'Konfigurasi Hak Akses berhasil disimpan.', 'success');
+                this.formRole = { id: null, name: '', permissions: {} };
+                this.isEditingRole = false;
                 this.fetchRolesFromDatabase();
             } catch (error) {
-                console.error("Gagal mendelete role:", error);
-                Swal.fire('Error', 'Gagal menghapus data dari database.', 'error');
+                console.error("Gagal menyimpan role:", error);
+                Swal.fire('Error', 'Gagal menyimpan Hak Akses ke database.', 'error');
             }
-        }
-    });
-},
+        },
 
-initNewUser() {
-            // 🌟 Menambahkan phone dan outletId agar form baru memiliki variabel tersebut
+        async deleteRole(roleId) {
+            if (roleId === 1 || roleId === '1' || roleId === 2 || roleId === '2') {
+                Swal.fire('Ditolak', 'Role bawaan utama sistem tidak boleh dihapus!', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Apakah anda yakin?',
+                text: "User yang terhubung dengan jabatan ini akan kehilangan akses masuk!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus Permanen!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await deleteDoc(doc(db, "roles", String(roleId)));
+                        Swal.fire('Terhapus', 'Role berhasil dihapus.', 'success');
+                        this.fetchRolesFromDatabase();
+                    } catch (error) {
+                        console.error("Gagal mendelete role:", error);
+                        Swal.fire('Error', 'Gagal menghapus data.', 'error');
+                    }
+                }
+            });
+        },
+
+        initNewUser() {
             this.formUser = { 
                 id: 'NEW', 
                 email: '', 
                 password: '', 
                 roleId: '', 
                 namaLengkap: '',
-                phone: '',       // Tambahan
-                outletId: ''     // Tambahan
+                phone: '',       
+                outletId: ''     
             };
             this.isEditingUser = false;
         },
 
         editUser(user) {
+            if (!user) return;
             this.isEditingUser = true;
-            // 🌟 Menggunakan spread operator untuk memastikan semua properti (termasuk phone & outletId) tersalin
-            // Kita juga memberikan nilai default jika user lama belum memiliki data tersebut
             this.formUser = { 
                 ...user,
                 phone: user.phone || '', 
@@ -10346,8 +10344,7 @@ initNewUser() {
             };
         },
 
-async saveUser() {
-            // 1. Validasi Input
+        async saveUser() {
             if (!this.formUser.namaLengkap || !this.formUser.roleId || (!this.isEditingUser && (!this.formUser.email || !this.formUser.password))) {
                 Swal.fire('Error', 'Nama Lengkap, Jabatan, Email, dan Password wajib diisi!', 'error');
                 return;
@@ -10360,9 +10357,6 @@ async saveUser() {
 
             try {
                 if (this.isEditingUser) {
-                    // ==========================================
-                    // JIKA EDIT USER (Promosi Jabatan / Ubah Nama)
-                    // ==========================================
                     const userRef = doc(db, "users", this.formUser.id);
                     await updateDoc(userRef, {
                         namaLengkap: this.formUser.namaLengkap,
@@ -10372,33 +10366,21 @@ async saveUser() {
                         outletId: this.formUser.outletId || ''  
                     });
                     
-                    // ✨ SINTAKS TAMBAHAN: Sinkronisasi Sesi Aktif
-                    // Cek apakah yang diedit adalah akun miliknya sendiri
                     if (this.userProfile && this.userProfile.id === this.formUser.id) {
                         this.userProfile = {
-                            ...this.userProfile, // Pertahankan data lain yang tidak diedit
+                            ...this.userProfile,
                             namaLengkap: this.formUser.namaLengkap,
                             roleId: roleIdNumber,
                             username: this.formUser.username || '',
                             phone: this.formUser.phone || '',
                             outletId: this.formUser.outletId || ''
                         };
-                        
-                        // Jika Anda juga memakai loggedInUser di template, samakan datanya
                         this.loggedInUser = { ...this.userProfile };
                     }
-                    
-                    Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate.', 'success');
+                    Swal.fire('Berhasil', 'Data user berhasil diupdate.', 'success');
                     
                 } else {
-                    // ==========================================
-                    // JIKA TAMBAH USER BARU (TANPA LOGOUT ADMIN)
-                    // ==========================================
-                    
-                    // 1. Ambil API Key Firebase
                     const apiKey = auth.app.options.apiKey;
-
-                    // 2. Tembak langsung ke Server Firebase (REST API)
                     const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -10411,85 +10393,82 @@ async saveUser() {
 
                     const data = await response.json();
 
-                    // 3. Tangani jika terjadi error
                     if (!response.ok) {
                         let errorMsg = 'Gagal mendaftarkan karyawan.';
-                        if (data.error && data.error.message === 'EMAIL_EXISTS') errorMsg = 'Email ini sudah terdaftar! Gunakan email lain.';
-                        if (data.error && data.error.message === 'WEAK_PASSWORD : Password should be at least 6 characters') errorMsg = 'Password terlalu lemah (minimal 6 karakter).';
+                        if (data.error && data.error.message === 'EMAIL_EXISTS') errorMsg = 'Email ini sudah terdaftar!';
+                        if (data.error && data.error.message.includes('WEAK_PASSWORD')) errorMsg = 'Password terlalu lemah (minimal 6 karakter).';
                         throw new Error(errorMsg);
                     }
 
-                    // 4. Simpan profil Karyawan ke Database
                     const newUserId = data.localId; 
+                    const compId = this.userProfile?.companyId || null;
                     
                     await setDoc(doc(db, "users", newUserId), {
                         namaLengkap: this.formUser.namaLengkap,
                         email: this.formUser.email,
-                        username: this.formUser.username || '', // 🌟 PERBAIKAN: Masukkan Username
+                        username: this.formUser.username || '', 
                         roleId: String(this.formUser.roleId),
-                        companyId: this.userProfile.companyId, 
-                        phone: this.formUser.phone || '',       // 🌟 PERBAIKAN: Simpan No. Telp
-                        outletId: this.formUser.outletId || '', // 🌟 PERBAIKAN: Simpan Kunci Outlet
+                        companyId: compId, 
+                        phone: this.formUser.phone || '',       
+                        outletId: this.formUser.outletId || '', 
                         createdAt: serverTimestamp()
                     });
 
-                    Swal.fire('Berhasil', 'Karyawan berhasil didaftarkan! Karyawan kini bisa langsung login.', 'success');
+                    Swal.fire('Berhasil', 'Karyawan berhasil didaftarkan!', 'success');
                 }
 
-                // Bersihkan form kembali ke awal dan Refresh Tabel
                 this.formUser = { id: null, username: '', email: '', password: '', roleId: null, namaLengkap: '', phone: '', outletId: '' };
                 this.isEditingUser = false;
                 this.fetchUsersFromDatabase();
 
             } catch (error) {
-                console.error("Gagal menyimpan ke Firebase:", error);
+                console.error("Gagal menyimpan user:", error);
                 Swal.fire('Error', error.message || 'Terjadi kesalahan pada sistem.', 'error');
             } finally {
                 this.isProcessing = false;
             }
         },
-        
-async deleteUser(userId) {
-    if (userId === 1 || userId === '1') {
-        Swal.fire('Ditolak', 'Super Admin utama tidak bisa dihapus!', 'warning');
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Hapus Karyawan?',
-        text: "Data hak akses user ini akan dihapus dari database.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Hapus!'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                // Hapus data dari Firestore Database
-                await deleteDoc(doc(db, "users", userId));
-                
-                // Hapus dari tampilan tabel
-                this.usersList = this.usersList.filter(u => u.id !== userId);
-                Swal.fire('Terhapus', 'User berhasil dihapus dari database.', 'success');
-            } catch (error) {
-                console.error("Gagal menghapus user:", error);
-                Swal.fire('Error', 'Gagal menghapus data dari Firebase.', 'error');
-            }
-        }
-    });
-},
 
-switchUserSimulate(userId) {
-    const user = this.usersList.find(u => u.id == userId);
-    if(user) {
-        this.loggedInUser = user;
-        this.userProfile = user;
-        
-        // 🌟 KUNCI PENTING: Perbarui juga string userRole globalnya agar UI langsung berubah
-        this.userRole = this.getRoleName(user.roleId); 
-        
-        Swal.fire('Simulasi Login', `Masuk sebagai: ${user.namaLengkap}`, 'info');
-    }
-},
+        async deleteUser(userId) {
+            if (userId === 1 || userId === '1') {
+                Swal.fire('Ditolak', 'Super Admin utama tidak bisa dihapus!', 'warning');
+                return;
+            }
+            
+            Swal.fire({
+                title: 'Hapus Karyawan?',
+                text: "Data hak akses user ini akan dihapus dari database.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        await deleteDoc(doc(db, "users", userId));
+                        if (Array.isArray(this.usersList)) {
+                            this.usersList = this.usersList.filter(u => u.id !== userId);
+                        }
+                        Swal.fire('Terhapus', 'User berhasil dihapus.', 'success');
+                    } catch (error) {
+                        console.error("Gagal menghapus user:", error);
+                        Swal.fire('Error', 'Gagal menghapus data.', 'error');
+                    }
+                }
+            });
+        },
+
+        switchUserSimulate(userId) {
+            if (!this.usersList || !Array.isArray(this.usersList)) return;
+            
+            const user = this.usersList.find(u => u.id == userId);
+            if (user) {
+                this.loggedInUser = user;
+                this.userProfile = user;
+                this.userRole = this.getRoleName(user.roleId); 
+                
+                Swal.fire('Simulasi Login', `Masuk sebagai: ${user.namaLengkap}`, 'info');
+            }
+        },
 
 async fetchUsersFromDatabase() {
             try {
