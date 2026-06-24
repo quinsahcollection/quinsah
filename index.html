@@ -6766,14 +6766,18 @@
             </div>
         </div>
     </div>
-    </div>
+</div>
  
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+<script type="module">
+    // 1. Import Core Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    // 2. Gabungkan writeBatch ke dalam baris ini (Lihat di paling ujung kanan)
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    // 3. Import Auth
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+      
     const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
     
     const firebaseApp = initializeApp(firebaseConfig);
@@ -6814,7 +6818,11 @@
                 currentView: hasInv ? 'ereceipt' : 'pos', 
                 catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
                 userRole: 'Admin', // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
-                
+
+                _modalListener: null,
+                _printListener: null,
+                _authUnsubscribe: null,
+              
                 // viewTitles diperbarui agar sinkron dengan menu baru
                 viewTitles: { 
                     pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Data Master Produk', inventory: 'Inventori & Cek Stok', opname: 'Stok Opname', transfer: 'Transfer Antar Cabang', barcode: 'Cetak Label Barcode', crm: 'Pelanggan (CRM)', outlets: 'Manajemen Cabang / Outlet', sales: 'Riwayat Penjualan', payment: 'Manajemen Keuangan (AR/AP)', reports: 'Laporan Laba/Rugi & Analitik', settings: 'Setelan Sistem & Hak Akses'},
@@ -7063,70 +7071,56 @@
         },
 
         async mounted() {
-        // 1. Fungsi reset tanggal bawaan Anda
-        this.resetPosDate();
-        
-        // 2. Fix untuk modal Bootstrap bertumpuk (Bawaan Anda)
-        document.addEventListener('hidden.bs.modal', (event) => {
-            if (document.querySelectorAll('.modal.show').length > 0) { 
-                document.body.classList.add('modal-open'); 
+    this.resetPosDate();
+    
+    // Simpan reference ke fungsi agar bisa dihapus nanti
+    this._modalListener = (event) => {
+        if (document.querySelectorAll('.modal.show').length > 0) { 
+            document.body.classList.add('modal-open'); 
+        }
+    };
+    document.addEventListener('hidden.bs.modal', this._modalListener);
+
+    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+    if (typeof this.fetchTransferHistory === 'function') await this.fetchTransferHistory();
+    if (typeof this.fetchPaymentMethods === 'function') await this.fetchPaymentMethods();
+
+    this._printListener = () => {
+        setTimeout(() => {
+            this.activePrintData = null; 
+            this.printMode = null;
+        }, 300);
+    };
+    window.addEventListener('afterprint', this._printListener);
+
+    // Simpan fungsi unsubscribe dari Firebase
+    this._authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (this.isRegistering) return; 
+        try {
+            if (user) { 
+                await this.fetchUserProfile(user); 
+                this.isLoggedIn = true; 
+                this.initAppListeners(); 
+                this.fetchUsersFromDatabase();
+                this.fetchRolesFromDatabase(); 
+            } else { 
+                this.isLoggedIn = false; 
+                this.userProfile = {}; 
             }
-        });
-
-        // 3. TAMBAHAN BARU: Tarik riwayat Stok Opname permanen dari Firebase saat web dibuka
-        if (typeof this.fetchOpnameHistory === 'function') {
-            await this.fetchOpnameHistory();
+        } catch(err) { 
+            console.error("Login Check Failed: ", err); 
+        } finally { 
+            this.isAppReady = true; 
         }
+    });
+},
 
-        // 4. Tarik riwayat Transfer
-        if (typeof this.fetchTransferHistory === 'function') {
-            await this.fetchTransferHistory();
-        }
-
-        // 🌟 5. TAMBAHAN BARU: Tarik data Metode Pembayaran
-        if (typeof this.fetchPaymentMethods === 'function') {
-            await this.fetchPaymentMethods();
-        }
-
-            // =======================================================
-            // PENGAMAN PRINT MOBILE: Reset tampilan setelah print batal/selesai
-            // =======================================================
-            window.addEventListener('afterprint', () => {
-                // Beri delay 300ms agar layar transisi dengan mulus kembali ke aplikasi
-                setTimeout(() => {
-                    this.activePrintData = null; 
-                    this.printMode = null;
-                }, 300);
-            });
-            // =======================================================
-
-            onAuthStateChanged(auth, async (user) => {
-                // --- TAMBAHAN LANGKAH 2: Tahan sistem jika sedang proses registrasi ---
-                if (this.isRegistering) return; 
-                // ----------------------------------------------------------------------
-
-                try {
-                    if (user) { 
-                        await this.fetchUserProfile(user); 
-                        this.isLoggedIn = true; 
-                        this.initAppListeners(); 
-                        
-                        // ===== LETAKKAN DI SINI =====
-                        // Ambil daftar user dan role dari Firestore HANYA setelah dipastikan berhasil login
-                        this.fetchUsersFromDatabase();
-                        this.fetchRolesFromDatabase(); 
-                        
-                    } else { 
-                        this.isLoggedIn = false; 
-                        this.userProfile = {}; 
-                    }
-                } catch(err) { 
-                    console.error("Login Check Failed: ", err); 
-                } finally { 
-                    this.isAppReady = true; 
-                }
-            });
-            },
+      // Tambahkan hook ini untuk membersihkan sisa listener (Gunakan unmounted() jika Vue 3)
+    beforeDestroy() {
+    if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
+    if (this._printListener) window.removeEventListener('afterprint', this._printListener);
+    if (this._authUnsubscribe) this._authUnsubscribe(); // Matikan listener Firebase
+},
         
         computed: {
             structuredCategories() {
@@ -8501,7 +8495,8 @@ viewPecahanInfo(reg, typeStr) {
             note: '',
             existingExpenses: reg.expenses || [] // Menyalin list pengeluaran lama untuk ditampilkan
         };
-        const modal = new bootstrap.Modal(document.getElementById('expenseModal'));
+        const modalElement = document.getElementById('expenseModal');
+        const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
         modal.show();
     },
 
@@ -8820,23 +8815,32 @@ async processPoReturn() {
     if (confirm.isConfirmed) {
         this.isProcessing = true;
         try {
+            // 1. Inisialisasi Firestore Batch
+            const batch = writeBatch(db);
+            
             let poIdx = this.purchases.findIndex(p => p.id === this.returnPoForm.id);
             if (poIdx === -1) throw new Error("Dokumen PO tidak ditemukan");
             
             let po = JSON.parse(JSON.stringify(this.purchases[poIdx]));
             if (!po.returHistory) po.returHistory = [];
 
+            // Map lokal untuk mengumpulkan perubahan beberapa produk sekaligus sebelum masuk batch
+            let updatedProductsMap = {}; 
+
             for (let i = 0; i < this.returnPoForm.items.length; i++) {
                 let retItem = this.returnPoForm.items[i];
                 
                 if (retItem.returnQty > 0) {
                     let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
-                    // PERBAIKAN BUG NAMA UNDEFINED
                     let namaLengkap = (retItem.productName || retItem.name || 'Produk') + variantText;
 
                     let prod = this.products.find(p => p.sku === retItem.sku || p.id === retItem.productId);
                     if (prod) {
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        // Ambil dari map jika sudah pernah diubah di loop sebelumnya, jika belum buat clone baru
+                        if (!updatedProductsMap[prod.id]) {
+                            updatedProductsMap[prod.id] = JSON.parse(JSON.stringify(prod));
+                        }
+                        let prodCopy = updatedProductsMap[prod.id];
                         
                         // JIKA BUKAN TUKAR BARANG (Stok harus dipotong karena barang kembali ke pabrik)
                         if (isRefund || (isExchange && !isReceived)) {
@@ -8853,12 +8857,7 @@ async processPoReturn() {
                                 }
                             }
 
-                            await updateDoc(doc(db, "products", prod.id), {
-                                variants: prodCopy.variants || [],
-                                baseOutletStocks: prodCopy.baseOutletStocks || {}
-                            });
-
-                            // Catat Minus
+                            // Catat Minus ke Log (Log Tetap Berjalan Async)
                             await this.logStock('OUT', {
                                 productId: prod.id,
                                 sku: retItem.sku || prod.sku || '-',
@@ -8872,7 +8871,7 @@ async processPoReturn() {
                             });
                         }
                         
-                        // JIKA TUKAR BARANG LANSUNG: Stok Tetap. Kita catat histori In & Out sebagai formalitas pembukuan.
+                        // JIKA TUKAR BARANG LANGSUNG: Stok Tetap. Cukup catat log formalitas.
                         if (isExchange && isReceived) {
                              await this.logStock('OUT', {
                                 productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
@@ -8885,7 +8884,7 @@ async processPoReturn() {
                         }
                     }
 
-                    // UPDATE INVOICE
+                    // UPDATE INVOICE PO
                     let poItem = po.items.find(item => (item.productName || item.name) === (retItem.productName || retItem.name) && (item.variantSku || null) === (retItem.variantSku || null));
                     if (poItem && isRefund) {
                         poItem.qty -= retItem.returnQty;
@@ -8894,16 +8893,27 @@ async processPoReturn() {
 
                     let hargaBeli = retItem.basePrice || retItem.cost || retItem.price || 0;
                     
-                    // Rekam jejak retur di dalam PO
+                    // 🌟 PERBAIKAN UTAMA: Menyimpan ID & SKU secara eksplisit ke dalam histori retur
                     po.returHistory.push({
                         date: new Date().toLocaleString('id-ID'),
-                        productName: namaLengkap,
+                        productId: retItem.productId || prod?.id || null, // Diikat dengan ID Produk
+                        variantSku: retItem.variantSku || null,          // Diikat dengan SKU Varian
+                        productName: namaLengkap, 
                         qtyRetur: retItem.returnQty,
                         refundAmount: isRefund ? (retItem.returnQty * hargaBeli) : 0,
                         action: isRefund ? 'Refund' : (isReceived ? 'Tukar Barang (Langsung)' : 'Tukar Barang (Menyusul)'),
                         alasan: this.returnPoForm.reason
                     });
                 }
+            }
+
+            // 2. Masukkan semua perubahan produk dari Map ke dalam Firestore Batch
+            for (const prodId in updatedProductsMap) {
+                const prodRef = doc(db, "products", prodId);
+                batch.update(prodRef, {
+                    variants: updatedProductsMap[prodId].variants || [],
+                    baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {}
+                });
             }
 
             // HANYA POTONG TAGIHAN JIKA MODE REFUND
@@ -8915,14 +8925,13 @@ async processPoReturn() {
                 
                 let isSisaBarangAda = po.items.some(i => i.qty > 0);
                 po.poStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-            } 
-            // JIKA TUKAR BARANG: Berikan status khusus tanpa merubah uang
-            else {
+            } else {
                 po.poStatus = isReceived ? 'SELESAI' : 'RETUR TUKAR';
             }
 
-            // SIMPAN KE FIREBASE
-            await updateDoc(doc(db, "purchases", po.id), {
+            // 3. Masukkan perubahan dokumen PO utama ke dalam Batch yang sama
+            const poRef = doc(db, "purchases", po.id);
+            batch.update(poRef, {
                 items: po.items,
                 total: po.total,
                 subtotal: po.subtotal,
@@ -8931,6 +8940,10 @@ async processPoReturn() {
                 returHistory: po.returHistory
             });
 
+            // 4. Eksekusi Batch sekaligus (All-or-Nothing)
+            await batch.commit();
+
+            // Jalankan update ke state lokal Vue setelah Firestore sukses
             this.purchases[poIdx] = po;
 
             Swal.fire('Berhasil', 'Proses retur tersimpan sukses!', 'success');
@@ -8959,32 +8972,46 @@ async processPoReturn() {
     if (confirm.isConfirmed) {
         this.isProcessing = true;
         try {
-            // 1. Cari PO di database lokal
+            // 1. Inisialisasi Firestore Batch
+            const batch = writeBatch(db);
+
             let poIdx = this.purchases.findIndex(p => p.id === po.id);
             if (poIdx === -1) throw new Error("PO tidak ditemukan");
             
             let updatedPo = JSON.parse(JSON.stringify(this.purchases[poIdx]));
             let hasProcessed = false;
+            let updatedProductsMap = {}; // Map untuk mengumpulkan perubahan stok produk
 
-            // 2. Cari riwayat retur mana yang statusnya "Menyusul"
+            // 2. Loop riwayat retur
             for (let i = 0; i < updatedPo.returHistory.length; i++) {
                 let ret = updatedPo.returHistory[i];
                 
                 if (ret.action === 'Tukar Barang (Menyusul)') {
-                    // Cari item aslinya di dalam rincian PO
+                    
+                    // 🌟 PERBAIKAN MENCARI ITEM PO: Menggunakan ID & SKU. Jika data lama, fallback ke nama teks.
                     let poItem = updatedPo.items.find(item => {
-                        let vName = item.variantName && item.variantName !== '-' ? ` (${item.variantName})` : '';
-                        let fName = (item.productName || item.name || 'Produk') + vName;
-                        return fName === ret.productName;
+                        if (ret.productId) {
+                            return item.productId === ret.productId && (item.variantSku || null) === (ret.variantSku || null);
+                        } else {
+                            // Cadangan data lama (String Matching)
+                            let vName = item.variantName && item.variantName !== '-' ? ` (${item.variantName})` : '';
+                            let fName = (item.productName || item.name || 'Produk') + vName;
+                            return fName === ret.productName;
+                        }
                     });
 
                     if (poItem) {
-                        // Cari produk di master produk Anda
-                        let prod = this.products.find(p => p.sku === poItem.sku || p.id === poItem.productId);
+                        // Ambil target produk berdasarkan ID unik yang tersimpan di histori atau item PO
+                        let targetProductId = ret.productId || poItem.productId;
+                        let prod = this.products.find(p => p.id === targetProductId || p.sku === poItem.sku);
+                        
                         if (prod) {
-                            let prodCopy = JSON.parse(JSON.stringify(prod));
+                            if (!updatedProductsMap[prod.id]) {
+                                updatedProductsMap[prod.id] = JSON.parse(JSON.stringify(prod));
+                            }
+                            let prodCopy = updatedProductsMap[prod.id];
                             
-                            // 3. Tambahkan Stok Kembali ke Outlet
+                            // 3. Tambahkan Stok Kembali ke Outlet di dalam Object salinan lokal
                             if (poItem.variantSku) {
                                 let vIdx = prodCopy.variants.findIndex(v => v.variantSku === poItem.variantSku);
                                 if (vIdx !== -1 && prodCopy.variants[vIdx].outletStocks) {
@@ -8996,13 +9023,7 @@ async processPoReturn() {
                                 }
                             }
 
-                            // 4. Simpan Stok Produk ke Firebase
-                            await updateDoc(doc(db, "products", prod.id), {
-                                variants: prodCopy.variants || [],
-                                baseOutletStocks: prodCopy.baseOutletStocks || {}
-                            });
-
-                            // 5. Catat Log Stok (Barang Masuk)
+                            // 4. Catat Log Stok (Barang Masuk) secara langsung
                             await this.logStock('IN', {
                                 productId: prod.id, 
                                 name: prod.name, 
@@ -9022,16 +9043,28 @@ async processPoReturn() {
                 }
             }
 
-            // 6. Simpan Status PO yang Baru
             if (hasProcessed) {
-                updatedPo.poStatus = 'SELESAI'; // Ubah status PO jadi selesai
+                // 5. Daftarkan semua perubahan produk dari Map ke dalam Batch
+                for (const prodId in updatedProductsMap) {
+                    batch.update(doc(db, "products", prodId), {
+                        variants: updatedProductsMap[prodId].variants || [],
+                        baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {}
+                    });
+                }
+
+                // Ubah status PO jadi selesai
+                updatedPo.poStatus = 'SELESAI'; 
                 
-                await updateDoc(doc(db, "purchases", updatedPo.id), {
+                // 6. Daftarkan pembaruan Invoice PO ke dalam Batch
+                batch.update(doc(db, "purchases", updatedPo.id), {
                     poStatus: updatedPo.poStatus,
                     returHistory: updatedPo.returHistory
                 });
                 
-                // Update tampilan layar
+                // 7. Eksekusi seluruh Batch secara massal dan aman
+                await batch.commit();
+                
+                // Update tampilan layar secara lokal
                 this.purchases[poIdx] = updatedPo;
                 Swal.fire('Berhasil', 'Stok barang pengganti berhasil masuk ke gudang!', 'success');
             } else {
