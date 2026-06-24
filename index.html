@@ -8556,43 +8556,55 @@ if (userActiveShift) {
 
     // 5. Simpan Kas Keluar ke Firebase (Menambahkan ke List)
     async saveExpense() {
-        if (!this.expenseForm.amount || this.expenseForm.amount <= 0) return;
+    if (!this.expenseForm.amount || this.expenseForm.amount <= 0) return;
+    
+    this.isProcessing = true;
+    try {
+        const shiftRef = doc(db, "cash_registers", this.expenseForm.shiftId);
+        const targetShift = this.registers.find(r => r.id === this.expenseForm.shiftId);
         
-        this.isProcessing = true;
-        try {
-            const shiftRef = doc(db, "cash_registers", this.expenseForm.shiftId);
-            const targetShift = this.registers.find(r => r.id === this.expenseForm.shiftId);
-            
-            if (!targetShift) throw new Error("Shift tidak ditemukan");
+        if (!targetShift) throw new Error("Shift tidak ditemukan");
 
-            // Tambahkan data pengeluaran baru ke dalam array lama
-            let currentExpenses = targetShift.expenses || [];
-            currentExpenses.push({
-                amount: Number(this.expenseForm.amount),
-                note: this.expenseForm.note || 'Pengeluaran tanpa keterangan',
-                createdAt: new Date().toLocaleString('id-ID', { timeStyle: 'short' })
-            });
-
-            let newTotalExpenses = (targetShift.totalExpenses || 0) + Number(this.expenseForm.amount);
-
-            // Update ke Firebase
-            await updateDoc(shiftRef, {
-                totalExpenses: newTotalExpenses,
-                expenses: currentExpenses
-            });
-
-            Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pengeluaran ditambahkan.', timer: 1500, showConfirmButton: false });
-            
-            // Tutup modal lalu reset formnya
-            bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
-            this.fetchRegisters();
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Gagal mencatat pengeluaran.', 'error');
-        } finally {
+        // 🌟 PROTEKSI KEAMANAN LENGKAP (Bagian 3)
+        // Jika fungsi canManageShift() merespons false, langsung blokir dan batalkan proses!
+        if (!this.canManageShift(targetShift)) {
             this.isProcessing = false;
+            return Swal.fire(
+                'Akses Ditolak', 
+                'Tindakan ilegal. Anda tidak berhak mencatat kas keluar di laci milik orang lain!', 
+                'error'
+            );
         }
-    },
+
+        // Tambahkan data pengeluaran baru ke dalam array lama (SKRIP ASLI)
+        let currentExpenses = targetShift.expenses || [];
+        currentExpenses.push({
+            amount: Number(this.expenseForm.amount),
+            note: this.expenseForm.note || 'Pengeluaran tanpa keterangan',
+            createdAt: new Date().toLocaleString('id-ID', { timeStyle: 'short' })
+        });
+
+        let newTotalExpenses = (targetShift.totalExpenses || 0) + Number(this.expenseForm.amount);
+
+        // Update ke Firebase (SKRIP ASLI)
+        await updateDoc(shiftRef, {
+            totalExpenses: newTotalExpenses,
+            expenses: currentExpenses
+        });
+
+        Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pengeluaran ditambahkan.', timer: 1500, showConfirmButton: false });
+        
+        // Tutup modal lalu reset formnya (SKRIP ASLI)
+        bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+        this.fetchRegisters();
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Gagal mencatat pengeluaran.', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
 
     // 6. 🌟 ANTI ERROR: Buka Modal Tutup Shift (Dihitung di sisi Client Javascript)
     async openCloseShiftModal(reg) {
