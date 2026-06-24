@@ -901,10 +901,15 @@
                 <span class="input-group-text bg-light text-muted border-secondary border-opacity-25">
                     <i class="bi bi-funnel-fill"></i>
                 </span>
-                <select class="form-select form-select-sm border-secondary border-opacity-25 fw-semibold text-dark" style="cursor: pointer;" v-model="registerFilterOutlet">
-                    <option value="">Semua Cabang</option>
-                    <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
-                </select>
+                <select class="form-select form-select-sm border-secondary border-opacity-25 fw-semibold text-dark" 
+                style="cursor: pointer;" 
+                v-model="registerFilterOutlet"
+                :disabled="userProfile && userProfile.role === 'cashier'">
+        
+                <option value="" v-if="!userProfile || userProfile.role !== 'cashier'">Semua Cabang</option>
+        
+                <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+              </select>
             </div>
             
             <button class="btn btn-sm btn-primary-custom fw-bold shadow-sm text-nowrap flex-shrink-0 py-2 py-sm-1" @click="openShiftModal()">
@@ -982,7 +987,8 @@
                 
                 <div class="mb-3 text-start">
                     <label class="form-label small fw-bold">Pilih Cabang / Outlet</label>
-                    <select class="form-select fw-bold" v-model="shiftForm.outletId">
+                    <select class="form-select fw-bold" v-model="shiftForm.outletId"
+                      :disabled="userProfile && userProfile.role === 'cashier'">
                         <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
                     </select>
                 </div>
@@ -6978,6 +6984,13 @@
                 flatten(roots, 0); return res;
             },
 
+            // Taruh di dalam computed: { ... }
+            currentActiveShift() {
+            if (!this.registers || !this.posActiveOutletId) return null;
+            // Cari apakah ada shift yang sedang 'OPEN' di outlet jualan aktif saat ini
+            return this.registers.find(r => r.outletId === this.posActiveOutletId && r.status === 'OPEN');
+          },
+          
             filteredRegisters() {
             if (!this.registers) return [];
             if (!this.registerFilterOutlet) return this.registers;
@@ -8053,7 +8066,13 @@
                 } else if (newView === 'transfer') {
                     if (typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
                 } else if (newView === 'cash_register') {
-                    // 🌟 TAMBAHAN UNTUK CASH REGISTER (SHIFT KASIR)
+                    
+                    // 🌟 TAMBAHAN LOGIKA OTOMATIS: 
+                    // Jika yang login adalah kasir, otomatis filter tabel ke cabangnya sendiri
+                    if (this.userProfile && this.userProfile.role === 'cashier') {
+                        this.registerFilterOutlet = this.userProfile.outletId || '';
+                    }
+                    
                     if (typeof this.fetchRegisters === 'function') this.fetchRegisters();
                 }
             }
@@ -8094,26 +8113,39 @@
         if (!compId) return;
         
         try {
+            // 🌟 PERBAIKAN: Hapus orderBy dari query Firestore agar tidak memicu error Index
             const q = query(
                 collection(db, "cash_registers"),
-                where("companyId", "==", compId),
-                orderBy("openTime", "desc")
+                where("companyId", "==", compId)
             );
             const snap = await getDocs(q);
             let list = [];
             snap.forEach(doc => {
                 list.push({ id: doc.id, ...doc.data() });
             });
+            
+            // 🌟 SOLUSI: Urutkan data berdasarkan waktu buka (terbaru di atas) lewat Javascript
+            list.sort((a, b) => {
+                const timeA = a.openTime?.toDate ? a.openTime.toDate() : new Date(a.openTime);
+                const timeB = b.openTime?.toDate ? b.openTime.toDate() : new Date(b.openTime);
+                return timeB - timeA; 
+            });
+            
             this.registers = list;
         } catch (err) {
             console.error("Gagal load data shift:", err);
+            Swal.fire('Error', 'Gagal memuat riwayat laci kasir.', 'error');
         }
     },
 
     // 2. Membuka Modal Buka Shift & Set Default Cabang
     openShiftModal() {
+        // Cek jika user login punya otoritas cabang khusus
+        let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
+        
         this.shiftForm = {
-            outletId: this.outlets && this.outlets.length > 0 ? this.outlets[0].id : '',
+            // Jika dia kasir, otomatis set ke cabangnya. Jika admin/owner, ambil cabang pertama
+            outletId: userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : ''),
             startingCash: 0
         };
         const modal = new bootstrap.Modal(document.getElementById('openShiftModal'));
