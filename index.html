@@ -9301,13 +9301,16 @@ async deletePaymentMethod(id) {
         // Siapkan array histori untuk dicetak di struk
         if (!trx.returHistory) trx.returHistory = []; 
 
+        // Wadah tampungan untuk eksekusi Firebase secara paralel (Mencegah Data Corrupt)
+        let firebaseUpdates = [];
+
         // 3. LOOPING SEMUA BARANG YANG DIRETUR DI FORM
         for (let i = 0; i < this.returnForm.items.length; i++) {
             let retItem = this.returnForm.items[i];
             
             if (retItem.returnQty > 0) {
                 // ========================================================
-                // A. KEMBALIKAN STOK KE GUDANG (Update ke Firebase Products)
+                // A. KEMBALIKAN STOK KE GUDANG (Kalkulasi Lokal Sebelum di-Push)
                 // ========================================================
                 let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
                 if (prod) {
@@ -9325,24 +9328,28 @@ async deletePaymentMethod(id) {
                         prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + retItem.returnQty;
                     }
 
-                    // Tembak Data Stok Baru ke Firebase
-                    await updateDoc(doc(db, "products", prod.id), {
-                        variants: prodCopy.variants || [],
-                        baseOutletStocks: prodCopy.baseOutletStocks || {}
-                    });
+                    // Masukkan rencana update dokumen produk ke array antrean Firebase
+                    firebaseUpdates.push(
+                        updateDoc(doc(db, "products", prod.id), {
+                            variants: prodCopy.variants || [],
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}
+                        })
+                    );
 
-                    // CATAT MUTASI STOK MASUK (Gunakan fungsi pusat logStock)
-                    await this.logStock('IN', {
-                        productId: prod.id,
-                        sku: retItem.sku || prod.sku || '-',
-                        name: prod.name,
-                        variantSku: retItem.variantSku || null,
-                        variantName: retItem.variantName || '-',
-                        qty: retItem.returnQty,
-                        outletId: trx.outletId,
-                        refId: `RETUR-${trx.id}`,
-                        note: `Retur dari Inv: ${trx.id} | ${this.returnForm.reason || 'Tanpa Keterangan'}`
-                    });
+                    // Masukkan rencana pencatatan mutasi stok masuk ke array antrean Firebase
+                    firebaseUpdates.push(
+                        this.logStock('IN', {
+                            productId: prod.id,
+                            sku: retItem.sku || prod.sku || '-',
+                            name: prod.name,
+                            variantSku: retItem.variantSku || null,
+                            variantName: retItem.variantName || '-',
+                            qty: retItem.returnQty,
+                            outletId: trx.outletId,
+                            refId: `RETUR-${trx.id}`,
+                            note: `Retur dari Inv: ${trx.id} | ${this.returnForm.reason || 'Tanpa Keterangan'}`
+                        })
+                    );
                 }
 
                 // ========================================================
@@ -9356,15 +9363,20 @@ async deletePaymentMethod(id) {
                     let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
 
                     trx.returHistory.push({
-                    date: new Date().toLocaleString('id-ID'),
-                    productName: retItem.name + variantText, // <-- Sekarang akan menjadi: Baju (Merah - M)
-                    qtyRetur: retItem.returnQty,
-                    refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
-                    alasan: this.returnForm.reason || 'Retur Pelanggan'
+                        date: new Date().toLocaleString('id-ID'),
+                        productName: retItem.name + variantText, // Contoh hasil: Baju (Merah - M)
+                        qtyRetur: retItem.returnQty,
+                        refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                        alasan: this.returnForm.reason || 'Retur Pelanggan'
                     });
                 }
             }
         } // Tutup For Loop
+
+        // 🌟 EKSEKUSI PARALEL: Tembak seluruh pembaruan stok produk & log mutasi sekaligus ke Cloud
+        if (firebaseUpdates.length > 0) {
+            await Promise.all(firebaseUpdates);
+        }
 
         // ========================================================
         // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA
@@ -9751,13 +9763,19 @@ getEreceiptPhone(trx) {
           
 // Kirim URL ke WhatsApp
 sendEReceiptWA(trx) {
-    let noHp = '';
-    const customerData = this.customers ? this.customers.find(c => c.id === trx.customerId) : null;
-    if (customerData && customerData.phone) {
-        noHp = customerData.phone.replace(/^0+/, '62'); 
+    // 🌟 Gunakan fungsi helper yang sudah Anda buat sebelumnya
+    let noHp = this.getEreceiptPhone(trx);
+    
+    // Bersihkan nomor HP agar valid untuk link wa.me (Hapus spasi/strip, ubah 08 menjadi 62)
+    if (noHp && noHp !== '-' && noHp !== 'Tidak ada nomor HP') {
+        noHp = noHp.toString().replace(/\D/g, ''); // Ambil angka saja
+        if (noHp.startsWith('0')) {
+            noHp = '62' + noHp.slice(1);
+        }
+    } else {
+        noHp = ''; // Kosongkan jika memang tidak ada nomor valid
     }
     
-    // Memanggil URL yang sudah valid
     const urlStruk = this.getReceiptUrl(trx.id);
     const teks = `Halo kak *${trx.customer}*,\nTerima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
     
