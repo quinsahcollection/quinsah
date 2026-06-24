@@ -960,7 +960,9 @@
                         
                         <tr v-for="reg in filteredRegisters" :key="reg.id">
                             <td class="ps-4">
-                                <div class="fw-bold text-dark"><i class="bi bi-display me-2 text-primary-custom"></i>{{ reg.registerName || 'Kasir Utama' }}</div>
+                                <div class="fw-bold text-dark">
+                                    <i class="bi bi-display me-2 text-primary-custom"></i>{{ reg.registerName }}
+                                </div>
                                 <div class="text-muted mt-1" style="font-size: 0.8rem;">
                                     <i class="bi bi-person-badge me-1"></i> {{ reg.cashierName }}<br>
                                     Buka: {{ reg.openTimeStr }}<br>
@@ -1014,13 +1016,11 @@
                 </div>
 
                 <div class="mb-4 text-start">
-                    <label class="form-label small fw-bold">Pilih Mesin / Register</label>
-                    <select class="form-select" v-model="shiftForm.registerName">
-                        <option value="Kasir 1">Kasir 1</option>
-                        <option value="Kasir 2">Kasir 2</option>
-                        <option value="Kasir 3">Kasir 3</option>
-                        <option value="Kasir Mobile">Kasir Mobile (HP/Tablet)</option>
+                    <label class="form-label small fw-bold">Pilih Mesin / Register Aktif</label>
+                    <select class="form-select fw-bold text-primary-custom" v-model="shiftForm.registerName">
+                        <option v-for="rName in availableRegisters" :key="rName" :value="rName">{{ rName }}</option>
                     </select>
+                    <div class="form-text text-muted" style="font-size: 0.65rem;">Hanya perangkat terdaftar di cabang ini yang akan muncul.</div>
                 </div>
 
                 <h6 class="fw-bold text-dark mb-1">Uang Modal Laci (Cash)</h6>
@@ -7053,6 +7053,20 @@
                 flatten(roots, 0); return res;
             },
 
+            availableRegisters() {
+            if (!this.shiftForm.outletId || !this.outlets) return ['Kasir 1', 'Kasir 2']; // Fallback bawaan jika outlet belum dipilih
+        
+            // Cari data objek outlet yang sedang dipilih kasir saat ini
+            const selectedOutlet = this.outlets.find(o => o.id === this.shiftForm.outletId);
+        
+            // Jika outlet memiliki daftar register di database, tampilkan. Jika tidak ada, pakai default kasir 1 & 2
+            if (selectedOutlet && selectedOutlet.registers && selectedOutlet.registers.length > 0) {
+            return selectedOutlet.registers.filter(r => r && r.trim() !== '');
+        }
+        
+        return ['Kasir 1', 'Kasir 2'];
+    },
+          
             // Taruh di dalam computed: { ... }
             currentActiveShift() {
             if (!this.registers || !this.posActiveOutletId) return null;
@@ -8224,27 +8238,35 @@
     async saveOpenShift() {
         const compId = this.getMyCompanyId();
         if (!this.shiftForm.outletId) return Swal.fire('Peringatan', 'Silakan pilih cabang terlebih dahulu!', 'warning');
-        if (!this.shiftForm.registerName) return Swal.fire('Peringatan', 'Silakan pilih nama mesin Kasir!', 'warning');
+        if (!this.shiftForm.registerName) return Swal.fire('Peringatan', 'Silakan pilih perangkat register kasir!', 'warning');
         
         this.isProcessing = true;
         try {
-            // Cek apakah Register tersebut sedang dipakai/aktif
+            // 🌟 VALIDASI GANDA: Pastikan perangkat kasir tersebut tidak berstatus 'OPEN' di database
             const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
             if (activeShift) {
                 this.isProcessing = false;
-                return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} di cabang ini masih digunakan oleh ${activeShift.cashierName}. Silakan pilih mesin kasir lain atau tutup shift sebelumnya!`, 'error');
+                return Swal.fire({
+                    icon: 'error',
+                    title: 'Perangkat Terkunci',
+                    text: `${this.shiftForm.registerName} sedang digunakan oleh kasir ${activeShift.cashierName}. Perangkat ini tidak bisa ditempati sampai shift tersebut ditutup!`,
+                    confirmButtonText: 'Mengerti'
+                });
             }
 
-            // Ambil Nama Asli User (Bukan lagi default 'Kasir Toko')
-            const activeUserName = (this.userProfile && (this.userProfile.displayName || this.userProfile.name)) || (this.userProfile && this.userProfile.email) || 'Kasir (Tanpa Nama)';
+            // 🌟 DETEKSI AKUN REAL-TIME: Ambil nama asli dari objek user login Anda
+            let activeUserName = 'Kasir Toko';
+            if (this.userProfile) {
+                activeUserName = this.userProfile.name || this.userProfile.displayName || this.userProfile.fullName || this.userProfile.email || 'Kasir Aktif';
+            }
 
             const now = new Date();
             const payload = {
                 companyId: compId,
                 outletId: this.shiftForm.outletId,
                 registerName: this.shiftForm.registerName,
-                cashierId: this.userProfile.uid || 'system',
-                cashierName: activeUserName,
+                cashierId: this.userProfile?.uid || 'system',
+                cashierName: activeUserName, // Menyimpan nama nyata user
                 status: 'OPEN',
                 startingCash: Number(this.shiftForm.startingCash) || 0,
                 totalExpenses: 0,
@@ -8254,13 +8276,13 @@
             };
 
             await addDoc(collection(db, "cash_registers"), payload);
-            Swal.fire('Berhasil', 'Laci kasir aktif! Anda siap berjualan.', 'success');
+            Swal.fire('Berhasil', `${this.shiftForm.registerName} berhasil diaktifkan untuk kasir ${activeUserName}!`, 'success');
             
             bootstrap.Modal.getInstance(document.getElementById('openShiftModal')).hide();
             this.fetchRegisters();
         } catch (err) {
             console.error(err);
-            Swal.fire('Error', 'Gagal membuka laci kasir.', 'error');
+            Swal.fire('Error', 'Gagal membuka shift laci kasir.', 'error');
         } finally {
             this.isProcessing = false;
         }
