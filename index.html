@@ -8660,46 +8660,67 @@ if (userActiveShift) {
 
     // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
     async saveCloseShift() {
-        this.isProcessing = true;
-        try {
-            const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
-            const now = new Date();
-            let actual = Number(this.activeCloseShift.actualCash) || 0;
-            let expected = this.activeCloseShift.expectedCash;
-            let diff = actual - expected;
-
-            // Kloning data pecahan tutup (jika ada)
-            let closeDenominationsPayload = null;
-            let hasInputPecahanClose = false;
-            for (let key in this.pecahanData) {
-                if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
-            }
-            if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
-
-            await updateDoc(shiftRef, {
-                status: 'CLOSED',
-                cashSales: this.activeCloseShift.cashSales,
-                expectedCash: expected,
-                actualCash: actual,
-                difference: diff,
-                closeDenominations: closeDenominationsPayload,
-                closeNote: this.activeCloseShift.closeNote || '',
-                closeTime: now,
-                closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
-            });
-
-            Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
-            
-            this.showPecahan = false;
-            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
-            this.fetchRegisters();
-        } catch (err) {
-            Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
-        } finally {
-            this.isProcessing = false;
+    this.isProcessing = true;
+    try {
+        // 🌟 PROTEKSI KEAMANAN LENGKAP (Cek Hak Akses Tutup Kasir)
+        // Jika laci tidak ditemukan atau tidak valid, batalkan.
+        if (!this.activeCloseShift || !this.activeCloseShift.id) {
+            throw new Error("Data laci kasir tidak ditemukan.");
         }
-    },
+
+        // Jika fungsi canManageShift() merespons false, langsung blokir prosesnya!
+        if (!this.canManageShift(this.activeCloseShift)) {
+            this.isProcessing = false;
+            return Swal.fire(
+                'Akses Ditolak', 
+                'Tindakan ilegal. Anda tidak berhak menutup laci kasir milik orang lain!', 
+                'error'
+            );
+        }
+
+        // ==========================================
+        // SKRIP ASLI ANDA DIMULAI DARI SINI 
+        // ==========================================
+        const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
+        const now = new Date();
+        let actual = Number(this.activeCloseShift.actualCash) || 0;
+        let expected = this.activeCloseShift.expectedCash;
+        let diff = actual - expected;
+
+        // Kloning data pecahan tutup (jika ada)
+        let closeDenominationsPayload = null;
+        let hasInputPecahanClose = false;
+        for (let key in this.pecahanData) {
+            if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
+        }
+        if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
+
+        await updateDoc(shiftRef, {
+            status: 'CLOSED',
+            cashSales: this.activeCloseShift.cashSales,
+            expectedCash: expected,
+            actualCash: actual,
+            difference: diff,
+            closeDenominations: closeDenominationsPayload,
+            closeNote: this.activeCloseShift.closeNote || '',
+            closeTime: now,
+            closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+        });
+
+        Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
+        
+        this.showPecahan = false;
+        this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
+        this.fetchRegisters();
+        
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
           
         // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
         openBatchDetail(product, variant = null) {
