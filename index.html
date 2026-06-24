@@ -9460,14 +9460,16 @@ async deletePaymentMethod(id) {
                 let trx = JSON.parse(JSON.stringify(this.transactions[trxIdx]));
                 
                 if (!trx.returHistory) trx.returHistory = []; 
-                let daftarNamaBarangTukar = []; // Menyimpan nama barang untuk keranjang kasir
+                let daftarNamaBarangTukar = [];
+
+                // 🌟 SAMA KAN DENGAN PROSES RETURN: Gunakan wadah antrean paralel untuk mencegah data corrupt
+                let firebaseUpdates = [];
 
                 // 3. LOOPING BARANG YANG DIKEMBALIKAN
                 for (let i = 0; i < this.returnForm.items.length; i++) {
                     let retItem = this.returnForm.items[i];
                     
                     if (retItem.returnQty > 0) {
-                        // 🌟 GABUNGKAN NAMA & VARIAN AGAR MUNCUL DI STRUK 🌟
                         let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
                         let namaLengkap = retItem.name + variantText;
                         daftarNamaBarangTukar.push(namaLengkap);
@@ -9487,22 +9489,27 @@ async deletePaymentMethod(id) {
                                 prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + retItem.returnQty;
                             }
 
-                            await updateDoc(doc(db, "products", prod.id), {
-                                variants: prodCopy.variants || [],
-                                baseOutletStocks: prodCopy.baseOutletStocks || {}
-                            });
+                            // Masukkan ke antrean, jangan di-await langsung di dalam loop
+                            firebaseUpdates.push(
+                                updateDoc(doc(db, "products", prod.id), {
+                                    variants: prodCopy.variants || [],
+                                    baseOutletStocks: prodCopy.baseOutletStocks || {}
+                                })
+                            );
 
-                            await this.logStock('IN', {
-                                productId: prod.id,
-                                sku: retItem.sku || prod.sku || '-',
-                                name: prod.name,
-                                variantSku: retItem.variantSku || null,
-                                variantName: retItem.variantName || '-',
-                                qty: retItem.returnQty,
-                                outletId: trx.outletId,
-                                refId: `TUKAR-${trx.id}`,
-                                note: `Tukar dari Inv: ${trx.id}`
-                            });
+                            firebaseUpdates.push(
+                                this.logStock('IN', {
+                                    productId: prod.id,
+                                    sku: retItem.sku || prod.sku || '-',
+                                    name: prod.name,
+                                    variantSku: retItem.variantSku || null,
+                                    variantName: retItem.variantName || '-',
+                                    qty: retItem.returnQty,
+                                    outletId: trx.outletId,
+                                    refId: `TUKAR-${trx.id}`,
+                                    note: `Tukar dari Inv: ${trx.id}`
+                                })
+                            );
                         }
 
                         // B. Potong Invoice Lama & Masukkan ke History Struk
@@ -9511,16 +9518,20 @@ async deletePaymentMethod(id) {
                             invItem.qty -= retItem.returnQty;
                             invItem.isReturned = true;
 
-                            // Simpan namaLengkap ke history agar Struk mencetak Variannya
                             trx.returHistory.push({
                                 date: new Date().toLocaleString('id-ID'),
-                                productName: namaLengkap, // <--- VARIAN DISIMPAN DI SINI
+                                productName: namaLengkap,
                                 qtyRetur: retItem.returnQty,
                                 refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
                                 alasan: this.returnForm.reason || 'Tukar Tambah'
                             });
                         }
                     }
+                } // Tutup For Loop
+
+                // 🌟 JALANKAN UPDATE FIREBASE SECARA PARALEL (Di luar loop)
+                if (firebaseUpdates.length > 0) {
+                    await Promise.all(firebaseUpdates);
                 }
 
                 // 4. Update Sisa Tagihan Invoice Lama
@@ -9541,7 +9552,7 @@ async deletePaymentMethod(id) {
                     note: 'Potongan Tukar Tambah'
                 });
 
-                // Simpan ke Firebase
+                // Simpan transaksi ke Firebase
                 await updateDoc(doc(db, "transactions", trx.id), {
                     items: trx.items,
                     total: trx.total,
@@ -9558,18 +9569,16 @@ async deletePaymentMethod(id) {
                      this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx));
                 }
 
-                // =======================================================
                 // 5. BAWA SALDO MINUS KE KERANJANG KASIR SEBAGAI POTONGAN
-                // =======================================================
                 let itemTukar = {
                     cartId: 'EXC-' + Date.now(),
                     productId: 'EXCHANGE', 
-                    name: `[SALDO TUKAR] ${daftarNamaBarangTukar.join(', ')}`, // Nama item yang ditukar
+                    name: `[SALDO TUKAR] ${daftarNamaBarangTukar.join(', ')}`,
                     sku: 'TUKAR-01',
                     uom: '-',
                     qty: 1,
                     basePrice: 0,
-                    sellPrice: -refundTotal, // NILAI MINUS UNTUK MEMOTONG TAGIHAN
+                    sellPrice: -refundTotal, 
                     promoPrice: -refundTotal,
                     posDiscountType: 'none', 
                     posDiscountValue: 0,
@@ -9578,26 +9587,22 @@ async deletePaymentMethod(id) {
                 };
 
                 this.cart = []; 
-                this.cart.push(itemTukar); // Masukkan saldo ke keranjang
+                this.cart.push(itemTukar);
 
-                // Sambungkan nama pelanggan ke Kasir
                 if (trx.customer) {
                     let cust = this.customers.find(c => c.name === trx.customer);
                     this.selectedCustomer = cust || { name: trx.customer };
                 }
 
-                // Tutup Modal Form Retur
                 let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
                 if (returnModal) returnModal.hide();
 
-                // Tutup Modal Invoice (Jika terbuka)
                 let invModal = document.getElementById('invoiceDetailModal');
                 if(invModal) {
                     let im = bootstrap.Modal.getInstance(invModal);
                     if (im) im.hide();
                 }
                 
-                // Lempar Aplikasi ke Halaman Kasir (POS)
                 this.currentView = 'pos';
                 
                 Swal.fire({
@@ -9763,21 +9768,19 @@ getEreceiptPhone(trx) {
           
 // Kirim URL ke WhatsApp
 sendEReceiptWA(trx) {
-    // 🌟 Gunakan fungsi helper yang sudah Anda buat sebelumnya
-    let noHp = this.getEreceiptPhone(trx);
+    // 🌟 OPTIMALKAN: Gunakan fungsi getEreceiptPhone() yang sudah Anda buat di atas
+    let nomorMentah = this.getEreceiptPhone(trx);
+    let noHp = '';
     
-    // Bersihkan nomor HP agar valid untuk link wa.me (Hapus spasi/strip, ubah 08 menjadi 62)
-    if (noHp && noHp !== '-' && noHp !== 'Tidak ada nomor HP') {
-        noHp = noHp.toString().replace(/\D/g, ''); // Ambil angka saja
-        if (noHp.startsWith('0')) {
-            noHp = '62' + noHp.slice(1);
-        }
-    } else {
-        noHp = ''; // Kosongkan jika memang tidak ada nomor valid
+    if (nomorMentah && nomorMentah !== '-' && nomorMentah !== 'Tidak ada nomor HP') {
+        // Hilangkan spasi, strip, atau karakter non-angka lainnya
+        let angkaSaja = nomorMentah.replace(/\D/g, '');
+        // Ubah awalan 0 menjadi 62 sesuai standar API WhatsApp
+        noHp = angkaSaja.replace(/^0/, '62');
     }
     
     const urlStruk = this.getReceiptUrl(trx.id);
-    const teks = `Halo kak *${trx.customer}*,\nTerima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
+    const teks = `Halo kak *${trx.customer || 'Pelanggan'}*,\nTerima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
     
     const waLink = `https://wa.me/${noHp}?text=${encodeURIComponent(teks)}`;
     window.open(waLink, '_blank');
