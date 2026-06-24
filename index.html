@@ -1028,6 +1028,77 @@
         </div>
     </div>
 </div>
+
+        <div class="modal fade" id="closeShiftModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0 p-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-lock-fill me-2"></i>Tutup Shift Kasir</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <span class="badge bg-light text-dark border p-2 mb-2">
+                        <i class="bi bi-shop me-1"></i>{{ getOutletName(activeCloseShift.outletId) }}
+                    </span>
+                    <div class="small text-muted">Kasir: <b>{{ activeCloseShift.cashierName }}</b></div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 mb-4" style="font-size: 0.9rem;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">1. Modal Awal:</span>
+                        <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.startingCash || 0) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">2. Penjualan Tunai (Cash):</span>
+                        <span class="fw-bold text-success">+ Rp {{ formatNumber(activeCloseShift.cashSales || 0) }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">3. Total Kas Keluar:</span>
+                        <span class="fw-bold text-danger">- Rp {{ formatNumber(activeCloseShift.totalExpenses || 0) }}</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between fw-bold fs-6">
+                        <span class="text-dark">Uang Seharusnya di Laci:</span>
+                        <span class="text-primary-custom">Rp {{ formatNumber(activeCloseShift.expectedCash || 0) }}</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-dark">Total Uang Fisik di Laci Aktif</label>
+                    <div class="input-group input-group-lg shadow-sm">
+                        <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
+                        <input type="number" class="form-control border-start-0 fw-bold text-dark fs-4" 
+                               v-model.number="activeCloseShift.actualCash" placeholder="Hitung uang fisik di laci...">
+                    </div>
+                    <div class="form-text" style="font-size: 0.75rem;">Hitung semua uang kertas & koin fisik yang ada di dalam laci kasir saat ini.</div>
+                </div>
+
+                <div v-if="activeCloseShift.actualCash !== undefined && activeCloseShift.actualCash !== ''" class="alert p-3 rounded-3 mb-3 text-center"
+                     :class="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0 ? 'alert-success' : (activeCloseShift.actualCash - activeCloseShift.expectedCash > 0 ? 'alert-info' : 'alert-danger')">
+                    <div class="small fw-bold text-uppercase mb-1">Kondisi Selisih Kas</div>
+                    <h4 class="fw-bold mb-0">
+                        <span v-if="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0"><i class="bi bi-check-circle-fill me-1"></i> PAS (Rp 0)</span>
+                        <span v-else-if="activeCloseShift.actualCash - activeCloseShift.expectedCash > 0"><i class="bi bi-plus-circle-fill me-1"></i> SURPLUS (+ Rp {{ formatNumber(activeCloseShift.actualCash - activeCloseShift.expectedCash) }})</span>
+                        <span v-else><i class="bi bi-dash-circle-fill me-1"></i> MINUS (- Rp {{ formatNumber(Math.abs(activeCloseShift.actualCash - activeCloseShift.expectedCash)) }})</span>
+                    </h4>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small fw-bold text-dark">Catatan Penutupan Shift (Opsional)</label>
+                    <textarea class="form-control form-control-sm" rows="2" v-model="activeCloseShift.closeNote" placeholder="Cth: Selisih Rp 2.000 karena tidak ada kembalian koin."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light p-2 border-0">
+                <button type="button" class="btn btn-white fw-bold w-100 mb-2 border" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-dark fw-bold w-100 py-2" @click="saveCloseShift" :disabled="isProcessing || activeCloseShift.actualCash === undefined || activeCloseShift.actualCash === ''">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                    <span v-else><i class="bi bi-lock-fill me-1"></i> Selesaikan & Tutup Laci</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
           
             <!-- SETTINGS VIEW -->
             <div v-if="currentView === 'settings'">
@@ -6684,6 +6755,7 @@
                 amount: 0,
                 note: ''
                 },
+                activeCloseShift: {}, // Menampung data shift yang sedang dihitung untuk ditutup
               
                 // ==========================================
                 // STATE STOK OPNAME
@@ -7980,6 +8052,9 @@
                     if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
                 } else if (newView === 'transfer') {
                     if (typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
+                } else if (newView === 'cash_register') {
+                    // 🌟 TAMBAHAN UNTUK CASH REGISTER (SHIFT KASIR)
+                    if (typeof this.fetchRegisters === 'function') this.fetchRegisters();
                 }
             }
         },
@@ -8008,6 +8083,203 @@
                 this.salesOutletFilter = '';
                 this.salesStatusFilter = '';
             },
+
+          // =========================================================================
+    // 🌟 FUNGSI MANAJEMEN CASH REGISTER (SHIFT KASIR)
+    // =========================================================================
+    
+    // 1. Membaca Data Riwayat Shift dari Firebase
+    async fetchRegisters() {
+        const compId = this.getMyCompanyId();
+        if (!compId) return;
+        
+        try {
+            const q = query(
+                collection(db, "cash_registers"),
+                where("companyId", "==", compId),
+                orderBy("openTime", "desc")
+            );
+            const snap = await getDocs(q);
+            let list = [];
+            snap.forEach(doc => {
+                list.push({ id: doc.id, ...doc.data() });
+            });
+            this.registers = list;
+        } catch (err) {
+            console.error("Gagal load data shift:", err);
+        }
+    },
+
+    // 2. Membuka Modal Buka Shift & Set Default Cabang
+    openShiftModal() {
+        this.shiftForm = {
+            outletId: this.outlets && this.outlets.length > 0 ? this.outlets[0].id : '',
+            startingCash: 0
+        };
+        const modal = new bootstrap.Modal(document.getElementById('openShiftModal'));
+        modal.show();
+    },
+
+    // 3. Eksekusi Simpan Buka Shift Baru ke Firebase
+    async saveOpenShift() {
+        const compId = this.getMyCompanyId();
+        if (!this.shiftForm.outletId) return Swal.fire('Peringatan', 'Silakan pilih cabang terlebih dahulu!', 'warning');
+        
+        this.isProcessing = true;
+        try {
+            // Cek apakah di cabang tersebut masih ada shift yang berstatus 'OPEN'
+            const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.status === 'OPEN');
+            if (activeShift) {
+                this.isProcessing = false;
+                return Swal.fire('Gagal', `Masih ada shift aktif yang belum ditutup di cabang ini oleh kasir ${activeShift.cashierName}. Harap tutup terlebih dahulu!`, 'error');
+            }
+
+            const now = new Date();
+            const payload = {
+                companyId: compId,
+                outletId: this.shiftForm.outletId,
+                cashierId: this.userProfile.uid || 'system',
+                cashierName: this.userProfile.name || 'Kasir Toko',
+                status: 'OPEN',
+                startingCash: Number(this.shiftForm.startingCash) || 0,
+                totalExpenses: 0,
+                expenses: [],
+                openTime: now,
+                openTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+            };
+
+            await addDoc(collection(db, "cash_registers"), payload);
+            Swal.fire('Berhasil', 'Shift kasir resmi dibuka. Laci kasir aktif!', 'success');
+            
+            bootstrap.Modal.getInstance(document.getElementById('openShiftModal')).hide();
+            this.fetchRegisters();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Gagal membuka laci kasir.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    },
+
+    // 4. Membuka Modal Input Kas Keluar (Pengeluaran harian)
+    openExpenseModal(reg) {
+        this.expenseForm = {
+            shiftId: reg.id,
+            amount: 0,
+            note: ''
+        };
+        const modal = new bootstrap.Modal(document.getElementById('expenseModal'));
+        modal.show();
+    },
+
+    // 5. Eksekusi Simpan Kas Keluar ke Firebase
+    async saveExpense() {
+        if (!this.expenseForm.amount || this.expenseForm.amount <= 0) return;
+        
+        this.isProcessing = true;
+        try {
+            const shiftRef = doc(db, "cash_registers", this.expenseForm.shiftId);
+            const targetShift = this.registers.find(r => r.id === this.expenseForm.shiftId);
+            
+            if (!targetShift) throw new Error("Shift tidak ditemukan");
+
+            let currentExpenses = targetShift.expenses || [];
+            currentExpenses.push({
+                amount: Number(this.expenseForm.amount),
+                note: this.expenseForm.note || 'Pengeluaran tanpa catatan',
+                createdAt: new Date().toLocaleString('id-ID', { timeStyle: 'short' })
+            });
+
+            let newTotalExpenses = (targetShift.totalExpenses || 0) + Number(this.expenseForm.amount);
+
+            await updateDoc(shiftRef, {
+                totalExpenses: newTotalExpenses,
+                expenses: currentExpenses
+            });
+
+            Swal.fire('Berhasil', 'Kas keluar berhasil dicatat di laci!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
+            this.fetchRegisters();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Gagal mencatat kas keluar.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    },
+
+    // 6. Membuka Modal Tutup Shift & Menghitung Omset Tunai Otomatis dari Firebase
+    async openCloseShiftModal(reg) {
+        Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, sistem sedang merekap transaksi tunai...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        
+        try {
+            // Ambil semua transaksi sukses (CASH) dari cabang tersebut yang terjadi SETELAH shift dibuka
+            const qTrx = query(
+                collection(db, "transactions"),
+                where("outletId", "==", reg.outletId),
+                where("paymentMethod", "==", "CASH"),
+                where("createdAt", ">=", reg.openTime)
+            );
+            const snapTrx = await getDocs(qTrx);
+            
+            let totalCashSales = 0;
+            snapTrx.forEach(docTrx => {
+                const d = docTrx.data();
+                totalCashSales += Number(d.total || 0);
+            });
+
+            // Hitung kalkulasi akhir laci kasir
+            let expected = reg.startingCash + totalCashSales - (reg.totalExpenses || 0);
+
+            this.activeCloseShift = {
+                ...reg,
+                cashSales: totalCashSales,
+                expectedCash: expected,
+                actualCash: '',
+                closeNote: ''
+            };
+
+            Swal.close();
+            const modal = new bootstrap.Modal(document.getElementById('closeShiftModal'));
+            modal.show();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Gagal menghitung ringkasan transaksi.', 'error');
+        }
+    },
+
+    // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
+    async saveCloseShift() {
+        this.isProcessing = true;
+        try {
+            const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
+            const now = new Date();
+            
+            let actual = Number(this.activeCloseShift.actualCash) || 0;
+            let expected = this.activeCloseShift.expectedCash;
+            let diff = actual - expected;
+
+            await updateDoc(shiftRef, {
+                status: 'CLOSED',
+                cashSales: this.activeCloseShift.cashSales,
+                expectedCash: expected,
+                actualCash: actual,
+                difference: diff,
+                closeNote: this.activeCloseShift.closeNote || '',
+                closeTime: now,
+                closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+            });
+
+            Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci & disimpan ke arsip laporan!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
+            this.fetchRegisters();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Gagal mengunci data penutupan kasir.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    },
           
         // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
         openBatchDetail(product, variant = null) {
