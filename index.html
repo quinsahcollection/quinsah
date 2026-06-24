@@ -8430,76 +8430,96 @@ viewPecahanInfo(reg, typeStr) {
 
     // 3. Simpan Buka Shift Baru ke Firebase
     async saveOpenShift() {
-        const compId = this.getMyCompanyId();
-        if (!this.shiftForm.outletId || !this.shiftForm.registerName) return Swal.fire('Peringatan', 'Silakan pilih cabang & perangkat!', 'warning');
-        
-        // AMBIL DATA USER DENGAN AGRESIF (Antisipasi Variabel Kosong)
-        const currentUser = this.userProfile || this.loggedInUser || {};
-        const activeUserId = String(currentUser.id || currentUser.uid || '');
-        
-        // Jika ID masih kosong, hentikan proses (Jangan simpan sebagai 'system' lagi)
-        if (!activeUserId) {
-            return Swal.fire('Error Sesi', 'Identitas Anda belum terbaca. Silakan Refresh/Reload halaman dan Login ulang.', 'error');
-        }
+    const compId = this.getMyCompanyId();
+    if (!this.shiftForm.outletId || !this.shiftForm.registerName) {
+        return Swal.fire('Peringatan', 'Silakan pilih cabang & perangkat!', 'warning');
+    }
 
-        const activeUserName = currentUser.namaLengkap || currentUser.name || currentUser.displayName || currentUser.username || currentUser.email || 'Kasir';
-        const activeUserEmail = currentUser.email || '-';
-        const activeUserPhone = currentUser.phone || currentUser.phoneNumber || '-';
+    this.isProcessing = true; 
 
-        this.isProcessing = true;
-        try {
-            const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
-            if (activeShift) {
-                this.isProcessing = false;
-                return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
-            }
+    try {
+        // 🌟 BYPASS 1: Tarik data LANGSUNG dari mesin Firebase Auth (Tidak nunggu variabel Vue)
+        const auth = getAuth(); 
+        const fUser = auth.currentUser;
 
-            // AMANKAN DATA PECAHAN (Ambil jika ada nilai yang > 0)
-            let openDenominationsPayload = null;
-            let hasInputPecahan = false;
-            for (let key in this.pecahanData) {
-                if (Number(this.pecahanData[key]) > 0) hasInputPecahan = true;
-            }
-            if (hasInputPecahan) openDenominationsPayload = { ...this.pecahanData };
-
-            const now = new Date();
-            const payload = {
-                companyId: compId,
-                outletId: this.shiftForm.outletId,
-                registerName: this.shiftForm.registerName,
-                cashierId: activeUserId,
-                cashierName: activeUserName,
-                cashierEmail: activeUserEmail,
-                cashierPhone: activeUserPhone,
-                status: 'OPEN',
-                startingCash: Number(this.shiftForm.startingCash) || 0,
-                openDenominations: openDenominationsPayload, // Data pecahan masuk ke Firebase
-                totalExpenses: 0,
-                expenses: [],
-                openTime: now,
-                openTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
-            };
-
-            await addDoc(collection(db, "cash_registers"), payload);
-            Swal.fire('Berhasil', `${this.shiftForm.registerName} diaktifkan oleh ${activeUserName}!`, 'success');
-            
-            // Cari kode ini di dalam saveOpenShift() dan ganti:
-            const modalElement = document.getElementById('openShiftModal');
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-               modal.hide();
-            }
-            
-            // Bersihkan form
-            this.showPecahan = false; 
-            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
-            this.fetchRegisters();
-        } catch (err) {
-            Swal.fire('Error', 'Gagal membuka laci kasir.', 'error');
-        } finally {
+        if (!fUser) {
             this.isProcessing = false;
+            return Swal.fire('Error Sesi', 'Sesi login terputus. Silakan refresh halaman dan login ulang.', 'error');
         }
-    },
+
+        const activeUserId = fUser.uid;
+        
+        // Siapkan nama default sementara dari email
+        let activeUserName = fUser.email ? fUser.email.split('@')[0] : 'Kasir'; 
+        let activeUserEmail = fUser.email || '-';
+        let activeUserPhone = '-';
+
+        // 🌟 BYPASS 2: Tarik nama asli karyawan LANGSUNG dari database 'users'
+        const userRef = doc(db, "users", activeUserId); 
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            const uData = userSnap.data();
+            // Ambil nama lengkap yang paling valid
+            activeUserName = uData.namaLengkap || uData.name || uData.displayName || uData.username || activeUserName;
+            activeUserPhone = uData.phone || uData.phoneNumber || '-';
+        }
+
+        // 🌟 CEK BENTROKAN SHIFT
+        const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
+        if (activeShift) {
+            this.isProcessing = false;
+            return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
+        }
+
+        // 🌟 SIAPKAN PECAHAN UANG (Sesuai script asli Anda)
+        let openDenominationsPayload = null;
+        let hasInputPecahan = false;
+        for (let key in this.pecahanData) {
+            if (Number(this.pecahanData[key]) > 0) hasInputPecahan = true;
+        }
+        if (hasInputPecahan) openDenominationsPayload = { ...this.pecahanData };
+
+        // 🌟 PROSES SIMPAN KE DATABASE
+        const now = new Date();
+        const payload = {
+            companyId: compId,
+            outletId: this.shiftForm.outletId,
+            registerName: this.shiftForm.registerName,
+            cashierId: activeUserId, // Dijamin AMAN & tidak kosong!
+            cashierName: activeUserName, // Dijamin bukan "Kasir Tanpa Nama"!
+            cashierEmail: activeUserEmail,
+            cashierPhone: activeUserPhone,
+            status: 'OPEN',
+            startingCash: Number(this.shiftForm.startingCash) || 0,
+            openDenominations: openDenominationsPayload,
+            totalExpenses: 0,
+            expenses: [],
+            openTime: now,
+            openTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+        };
+
+        await addDoc(collection(db, "cash_registers"), payload);
+        
+        Swal.fire('Berhasil', `${this.shiftForm.registerName} diaktifkan oleh ${activeUserName}!`, 'success');
+        
+        // Tutup Modal
+        const modalElement = document.getElementById('openShiftModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        if (modal) modal.hide();
+        
+        // Bersihkan Form & Refresh Data
+        this.showPecahan = false; 
+        this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
+        this.fetchRegisters();
+
+    } catch (err) {
+        console.error("Error Buka Shift:", err); 
+        Swal.fire('Error', 'Gagal membuka laci kasir.', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+}, 
 
     // 4. Membuka Modal Input Kas Keluar (Menampilkan Data Detail)
     openExpenseModal(reg) {
