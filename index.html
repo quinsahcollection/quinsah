@@ -9863,249 +9863,206 @@ copyEReceiptLinkOnly(trx) {
         },
         
         upgradePremium() {
-            // Tutup dropdown menu jika masih terbuka
-            let dropdownEl = document.getElementById('userProfileMenu');
-            if (dropdownEl) {
-                let dropdownInstance = bootstrap.Dropdown.getInstance(dropdownEl);
-                if (dropdownInstance) dropdownInstance.hide();
+    // Tutup dropdown menu jika masih terbuka
+    let dropdownEl = document.getElementById('userProfileMenu');
+    if (dropdownEl) {
+        let dropdownInstance = bootstrap.Dropdown.getInstance(dropdownEl);
+        if (dropdownInstance) dropdownInstance.hide();
+    }
+
+    // 🌟 AMAN: Tambahkan optional chaining (?.) di userProfile untuk mencegah crash jika data belum load
+    const namaUsahaToko = this.userProfile?.companyData?.namaUsaha || 'toko Anda';
+
+    Swal.fire({
+        title: '<h5 class="fw-bold mb-0">Tingkatkan Bisnis Anda! 🚀</h5>',
+        width: '650px',
+        html: `
+            <style>
+                .pricing-container { width: 100%; overflow: hidden; }
+                .pricing-wrapper { display: flex; gap: 15px; padding: 10px 0; }
+                .pricing-card { flex: 1; }
+                .slider-dots { display: none; text-align: center; margin-top: 5px; margin-bottom: 10px; }
+                .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dee2e6; margin: 0 4px; transition: all 0.3s ease; }
+                .dot.active { background: #0d6efd; width: 16px; border-radius: 10px; }
+                
+                @media (max-width: 767px) {
+                    .pricing-wrapper { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+                    .pricing-wrapper::-webkit-scrollbar { display: none; }
+                    .pricing-card { flex: 0 0 100%; scroll-snap-align: center; }
+                    .slider-dots { display: block; }
+                }
+            </style>
+
+            <div class="text-center mb-3 mt-1">
+                <p class="text-muted" style="font-size: 0.85rem;">Dapatkan akses fitur premium & laporan analitik untuk <b>${namaUsahaToko}</b>.</p>
+            </div>
+            
+            <div class="pricing-container">
+                <div class="pricing-wrapper" id="pricingWrapper">
+                    <div class="pricing-card">
+                        <div class="card border-0 h-100" style="background: linear-gradient(145deg, #f8f9fa, #ffffff); border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            <div class="card-body p-3 text-center">
+                                <span class="fw-bold text-secondary d-block mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">PAKET BULANAN</span>
+                                <h4 class="fw-bold text-dark mb-0">Rp 99rb</h4>
+                                <small class="text-muted" style="font-size: 0.7rem;">/ bulan</small>
+                                <hr class="my-2 border-secondary border-opacity-25">
+                                <ul class="list-unstyled text-start mb-0 text-dark mx-auto" style="font-size: 0.8rem; max-width: 210px;">
+                                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Semua Fitur Kasir (POS)</li>
+                                    <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Laporan Keuangan Dasar</li>
+                                    <li><i class="bi bi-check-circle-fill text-success me-2"></i>Bantuan CS Reguler</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pricing-card">
+                        <div class="card border-0 h-100 position-relative" style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border-radius: 12px; box-shadow: 0 6px 15px rgba(142,197,252,0.3);">
+                            <div class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger px-2 py-1 shadow-sm" style="font-size: 0.65rem;">
+                                TERLARIS - Hemat 20%
+                            </div>
+                            <div class="card-body p-3 text-center text-dark mt-1">
+                                <span class="fw-bold d-block mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">PAKET TAHUNAN</span>
+                                <h4 class="fw-bold mb-0">Rp 949rb</h4>
+                                <small class="opacity-75" style="font-size: 0.7rem;">/ tahun</small>
+                                <hr class="my-2 border-dark border-opacity-25">
+                                <ul class="list-unstyled text-start mb-0 fw-medium mx-auto" style="font-size: 0.8rem; max-width: 210px;">
+                                    <li class="mb-1"><i class="bi bi-check-circle-fill text-primary me-2"></i>Akses Analitik Premium</li>
+                                    <li class="mb-1"><i class="bi bi-check-circle-fill text-primary me-2"></i>Bebas Tambah Karyawan</li>
+                                    <li><i class="bi bi-check-circle-fill text-primary me-2"></i>Prioritas CS 24/7</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="slider-dots" id="sliderDots">
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#25D366',
+        cancelButtonColor: '#e9ecef',
+        confirmButtonText: '<i class="bi bi-whatsapp me-1"></i> Pilih Paket',
+        cancelButtonText: '<span class="text-dark" style="font-size:0.85rem;">Nanti Saja</span>',
+        customClass: { popup: 'rounded-4', actions: 'mt-1' },
+        didOpen: () => {
+            const wrapper = document.getElementById('pricingWrapper');
+            const dots = document.querySelectorAll('#sliderDots .dot');
+            
+            if (wrapper && dots.length > 0) {
+                wrapper.addEventListener('scroll', () => {
+                    let clientWidth = wrapper.clientWidth || 1; // Mencegah pembagian dengan angka 0
+                    let index = Math.round(wrapper.scrollLeft / clientWidth);
+                    
+                    dots.forEach((dot, i) => {
+                        if (i === index) dot.classList.add('active');
+                        else dot.classList.remove('active');
+                    });
+                });
             }
-
-            Swal.fire({
-                title: '<h5 class="fw-bold mb-0">Tingkatkan Bisnis Anda! 🚀</h5>',
-                width: '650px', // Tetap lebar di PC
-                html: `
-                    <style>
-                        /* Wadah utama agar rapi */
-                        .pricing-container {
-                            width: 100%;
-                            overflow: hidden;
-                        }
-                        .pricing-wrapper {
-                            display: flex;
-                            gap: 15px;
-                            padding: 10px 0;
-                        }
-                        .pricing-card {
-                            flex: 1; /* Di PC: Kartu otomatis berbagi tempat 50/50 */
-                        }
-                        
-                        /* Indikator Titik (Dots) */
-                        .slider-dots {
-                            display: none; /* Sembunyikan di PC */
-                            text-align: center;
-                            margin-top: 5px;
-                            margin-bottom: 10px;
-                        }
-                        .dot {
-                            display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 50%;
-                            background: #dee2e6;
-                            margin: 0 4px;
-                            transition: all 0.3s ease;
-                        }
-                        .dot.active {
-                            background: #0d6efd;
-                            width: 16px; /* Dot aktif menjadi lonjong (modern) */
-                            border-radius: 10px;
-                        }
-                        
-                        /* DESAIN KHUSUS HP (MOBILE) */
-                        @media (max-width: 767px) {
-                            .pricing-wrapper {
-                                overflow-x: auto;
-                                scroll-snap-type: x mandatory; /* Memaksa kartu berhenti di tengah */
-                                scrollbar-width: none;
-                                -ms-overflow-style: none;
-                                scroll-behavior: smooth;
-                            }
-                            .pricing-wrapper::-webkit-scrollbar {
-                                display: none; /* Sembunyikan scrollbar bawah */
-                            }
-                            .pricing-card {
-                                flex: 0 0 100%; /* Kartu mengambil layar FULL 100% di HP */
-                                scroll-snap-align: center;
-                            }
-                            .slider-dots {
-                                display: block; /* Tampilkan Dots di HP */
-                            }
-                        }
-                    </style>
-
-                    <div class="text-center mb-3 mt-1">
-                        <p class="text-muted" style="font-size: 0.85rem;">Dapatkan akses fitur premium & laporan analitik untuk <b>${this.userProfile.companyData?.namaUsaha || 'toko Anda'}</b>.</p>
-                    </div>
-                    
-                    <div class="pricing-container">
-                        <div class="pricing-wrapper" id="pricingWrapper">
-                            
-                            <div class="pricing-card">
-                                <div class="card border-0 h-100" style="background: linear-gradient(145deg, #f8f9fa, #ffffff); border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                                    <div class="card-body p-3 text-center">
-                                        <span class="fw-bold text-secondary d-block mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">PAKET BULANAN</span>
-                                        <h4 class="fw-bold text-dark mb-0">Rp 99rb</h4>
-                                        <small class="text-muted" style="font-size: 0.7rem;">/ bulan</small>
-                                        <hr class="my-2 border-secondary border-opacity-25">
-                                        <ul class="list-unstyled text-start mb-0 text-dark mx-auto" style="font-size: 0.8rem; max-width: 210px;">
-                                            <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Semua Fitur Kasir (POS)</li>
-                                            <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Laporan Keuangan Dasar</li>
-                                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Bantuan CS Reguler</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="pricing-card">
-                                <div class="card border-0 h-100 position-relative" style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border-radius: 12px; box-shadow: 0 6px 15px rgba(142,197,252,0.3);">
-                                    <div class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger px-2 py-1 shadow-sm" style="font-size: 0.65rem;">
-                                        TERLARIS - Hemat 20%
-                                    </div>
-                                    <div class="card-body p-3 text-center text-dark mt-1">
-                                        <span class="fw-bold d-block mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">PAKET TAHUNAN</span>
-                                        <h4 class="fw-bold mb-0">Rp 949rb</h4>
-                                        <small class="opacity-75" style="font-size: 0.7rem;">/ tahun</small>
-                                        <hr class="my-2 border-dark border-opacity-25">
-                                        <ul class="list-unstyled text-start mb-0 fw-medium mx-auto" style="font-size: 0.8rem; max-width: 210px;">
-                                            <li class="mb-1"><i class="bi bi-check-circle-fill text-primary me-2"></i>Akses Analitik Premium</li>
-                                            <li class="mb-1"><i class="bi bi-check-circle-fill text-primary me-2"></i>Bebas Tambah Karyawan</li>
-                                            <li><i class="bi bi-check-circle-fill text-primary me-2"></i>Prioritas CS 24/7</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                        
-                        <div class="slider-dots" id="sliderDots">
-                            <span class="dot active"></span>
-                            <span class="dot"></span>
-                        </div>
-                    </div>
-                `,
-                showCancelButton: true,
-                confirmButtonColor: '#25D366',
-                cancelButtonColor: '#e9ecef',
-                confirmButtonText: '<i class="bi bi-whatsapp me-1"></i> Pilih Paket',
-                cancelButtonText: '<span class="text-dark" style="font-size:0.85rem;">Nanti Saja</span>',
-                customClass: {
-                    popup: 'rounded-4',
-                    actions: 'mt-1'
-                },
-                // FUNGSI JAVASCRIPT UNTUK MENGGERAKKAN DOTS
-                didOpen: () => {
-                    const wrapper = document.getElementById('pricingWrapper');
-                    const dots = document.querySelectorAll('#sliderDots .dot');
-                    
-                    if (wrapper && dots.length > 0) {
-                        wrapper.addEventListener('scroll', () => {
-                            // Hitung halaman mana yang sedang aktif berdasarkan posisi scroll
-                            let index = Math.round(wrapper.scrollLeft / wrapper.clientWidth);
-                            
-                            // Ganti warna dot sesuai posisi
-                            dots.forEach((dot, i) => {
-                                if (i === index) dot.classList.add('active');
-                                else dot.classList.remove('active');
-                            });
-                        });
-                    }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const noWhatsApp = '6285760035568';
-                    const namaToko = this.userProfile.companyData?.namaUsaha || this.userProfile.namaLengkap;
-                    const pesan = encodeURIComponent(`Halo Tim Support,\n\nSaya pemilik usaha *${namaToko}*. Saya tertarik untuk *Upgrade Aplikasi Kasir ke Premium*.\n\nMohon info detail harganya. Terima kasih!`);
-                    window.open(`https://wa.me/${noWhatsApp}?text=${pesan}`, '_blank');
-                }
-            });
-        },
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const noWhatsApp = '6285760035568';
+            // 🌟 AMAN: Menggunakan perlindungan berlapis untuk nama pengirim di pesan WA
+            const namaToko = this.userProfile?.companyData?.namaUsaha || this.userProfile?.namaLengkap || 'Pelanggan';
+            const pesan = encodeURIComponent(`Halo Tim Support,\n\nSaya pemilik usaha *${namaToko}*. Saya tertarik untuk *Upgrade Aplikasi Kasir ke Premium*.\n\nMohon info detail harganya. Terima kasih!`);
+            window.open(`https://wa.me/${noWhatsApp}?text=${pesan}`, '_blank');
+        }
+    });
+},
         
         formatTanggalCantik(dateString) {
-            if (!dateString) return '-';
-            try {
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                return new Date(dateString).toLocaleDateString('id-ID', options);
-            } catch (e) {
-                return dateString; // Kembalikan apa adanya jika error
-            }
-        },
+    if (!dateString) return '-';
+    try {
+        const tgl = new Date(dateString);
+        // 🌟 AMAN: Menangkap celah bypass objek 'Invalid Date' di JavaScript
+        if (isNaN(tgl.getTime())) {
+            return dateString;
+        }
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        return tgl.toLocaleDateString('id-ID', options);
+    } catch (e) {
+        return dateString;
+    }
+},
         
         // Fungsi pencari nama pelanggan (Penangkal Error Render)
             getCustomerName(id) {
-                if (!id) return 'Pelanggan Umum';
-                
-                // Jika Anda memiliki master data pelanggan
-                if (this.customers && Array.isArray(this.customers)) {
-                    let cust = this.customers.find(c => c.id === id);
-                    if (cust) return cust.name;
-                }
-                
-                // Jika nama pelanggan diketik manual/langsung tersimpan di ID (misal: "Erika", "Yunie")
-                return id; 
-            },
+    if (!id) return 'Pelanggan Umum';
+    if (this.customers && Array.isArray(this.customers)) {
+        let cust = this.customers.find(c => c.id === id);
+        if (cust) return cust.name;
+    }
+    return id; 
+},
             
             getActualPaid(trx) {
-                if (trx.paymentStatus === 'LUNAS') return trx.total || 0;
-                if (trx.sisaTagihan !== undefined) return (trx.total || 0) - trx.sisaTagihan; // Khusus Penjualan
-                if (trx.paidAmount !== undefined) return trx.paidAmount; // Khusus Pembelian
-                if (trx.amountReceived !== undefined) return trx.amountReceived; // Khusus Penjualan Lama
-                return 0;
-            },
+    // 🌟 AMAN: Tambahkan guard clause untuk mencegah pemrosesan variabel null/undefined
+    if (!trx) return 0;
+    if (trx.paymentStatus === 'LUNAS') return trx.total || 0;
+    if (trx.sisaTagihan !== undefined) return (trx.total || 0) - trx.sisaTagihan;
+    if (trx.paidAmount !== undefined) return trx.paidAmount;
+    if (trx.amountReceived !== undefined) return trx.amountReceived;
+    return 0;
+},
             
             getSisaTagihan(trx) {
-                if (trx.paymentStatus === 'LUNAS') return 0;
-                if (trx.sisaTagihan !== undefined) return trx.sisaTagihan;
-                return (trx.total || 0) - this.getActualPaid(trx);
-            },
-            
-            getPaymentBreakdown(trx) {
-                let history = [];
-                let actualPaidAmount = this.getActualPaid(trx);
-                let historyTotal = 0;
+    if (!trx) return 0;
+    if (trx.paymentStatus === 'LUNAS') return 0;
+    if (trx.sisaTagihan !== undefined) return trx.sisaTagihan;
+    return (trx.total || 0) - this.getActualPaid(trx);
+},
 
-                if (trx.paymentHistory && trx.paymentHistory.length > 0) {
-                    trx.paymentHistory.forEach(ph => {
-                        let amt = ph.amount || 0;
-                        history.push({ method: (ph.method || 'CASH').toUpperCase(), amount: amt });
-                        historyTotal += amt;
-                    });
-                }
+getPaymentBreakdown(trx) {
+    if (!trx) return []; // 🌟 AMAN: Kembalikan array kosong jika objek transaksi kosong
+    
+    let history = [];
+    let actualPaidAmount = this.getActualPaid(trx);
+    let historyTotal = 0;
 
-                let unaccounted = actualPaidAmount - historyTotal;
-                if (unaccounted > 0) {
-                    let method = trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : 'CASH');
-                    history.unshift({ method: method.toUpperCase(), amount: unaccounted }); 
-                }
-                return history;
-            },
+    if (trx.paymentHistory && trx.paymentHistory.length > 0) {
+        trx.paymentHistory.forEach(ph => {
+            let amt = ph.amount || 0;
+            history.push({ method: (ph.method || 'CASH').toUpperCase(), amount: amt });
+            historyTotal += amt;
+        });
+    }
+
+    let unaccounted = actualPaidAmount - historyTotal;
+    if (unaccounted > 0) {
+        // 🌟 AMAN: Ganti ke optional chaining agar tidak crash jika objek paymentData null
+        let method = trx.paymentMethod || trx.paymentData?.method || 'CASH';
+        history.unshift({ method: method.toUpperCase(), amount: unaccounted }); 
+    }
+    return history;
+},
         
         addModifierGroupToProduct() {
-            if (!this.formProduct.modifiers) {
-                this.formProduct.modifiers = [];
-            }
-            this.formProduct.modifiers.push({
-                groupId: '',
-                isRequired: false, 
-                // PERUBAHAN: Tambahkan linkedProductId agar tidak undefined
-                options: [{ name: '', price: 0, linkedProductId: '' }] 
-            });
-        },
+    if (!this.formProduct) this.formProduct = {}; // Proteksi tambahan
+    if (!this.formProduct.modifiers) {
+        this.formProduct.modifiers = [];
+    }
+    this.formProduct.modifiers.push({
+        groupId: '',
+        isRequired: false, 
+        options: [{ name: '', price: 0, linkedProductId: '' }] 
+    });
+},
         
         autoFillOptionPrice(opt) {
-            if (opt.linkedProductId) {
-                // Cari item yang dipilih dari daftar cerdas tadi
-                const linkedItem = this.modifierLinkableItems.find(i => i.id === opt.linkedProductId);
-                if (linkedItem) {
-                    // 1. Otomatis isi harga
-                    opt.price = linkedItem.price || 0;
-                    
-                    // 2. BONUS: Jika nama opsi masih kosong, otomatis copas nama produknya juga!
-                    if (!opt.name) {
-                        opt.name = linkedItem.name;
-                    }
-                }
+    if (opt && opt.linkedProductId && Array.isArray(this.modifierLinkableItems)) {
+        const linkedItem = this.modifierLinkableItems.find(i => i.id === opt.linkedProductId);
+        if (linkedItem) {
+            opt.price = linkedItem.price || 0;
+            if (!opt.name) {
+                opt.name = linkedItem.name;
             }
-        },
+        }
+    }
+},
         
         // --- FUNGSI BARU CEK METODE BAYAR ---
             getPaymentMethods(po) {
