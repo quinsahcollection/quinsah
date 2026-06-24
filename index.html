@@ -923,9 +923,9 @@
                 <select class="form-select form-select-sm border-secondary border-opacity-25 fw-semibold text-dark" 
                 style="cursor: pointer;" 
                 v-model="registerFilterOutlet"
-                :disabled="userProfile && userProfile.role === 'cashier'">
+                :disabled="userRole === 'Kasir' || userRole === 'cashier'">
         
-                <option value="" v-if="!userProfile || userProfile.role !== 'cashier'">Semua Cabang</option>
+                <option value="" v-if="userRole !== 'Kasir' && userRole !== 'cashier'">Semua Cabang</option>
         
                 <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
               </select>
@@ -1087,7 +1087,7 @@
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold">Cabang Aktif</label>
-                                <select class="form-select form-select-sm fw-bold" v-model="shiftForm.outletId" :disabled="userProfile && userProfile.role === 'cashier'">
+                                <select class="form-select form-select-sm fw-bold" v-model="shiftForm.outletId" :disabled="userRole === 'Kasir' || userRole === 'cashier'">
                                     <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
                                 </select>
                             </div>
@@ -2801,7 +2801,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold">PIC (Petugas) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm bg-secondary bg-opacity-10 fw-bold" :value="userProfile ? userProfile.name : 'Admin'" readonly>
+                                <input type="text" class="form-control form-control-sm bg-secondary bg-opacity-10 fw-bold" :value="userProfile.namaLengkap || userProfile.name || 'Admin'" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Catatan Jurnal Opname</label>
@@ -4364,7 +4364,7 @@
             <div class="mb-3">
                 <select class="form-select form-select-sm fw-bold border-secondary border-opacity-25 shadow-sm text-dark" 
                  v-model="posActiveOutletId" 
-                 :disabled="userProfile && userProfile.role !== 'Admin'">
+                 :disabled="userRole !== 'Admin'">
                 <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
             </select>
             </div>
@@ -10472,7 +10472,11 @@ switchUserSimulate(userId) {
     if(user) {
         this.loggedInUser = user;
         this.userProfile = user;
-        Swal.fire('Simulasi Login', `Sekarang Anda masuk sebagai: ${user.namaLengkap} (${this.getRoleName(user.roleId)})`, 'info');
+        
+        // 🌟 KUNCI PENTING: Perbarui juga string userRole globalnya agar UI langsung berubah
+        this.userRole = this.getRoleName(user.roleId); 
+        
+        Swal.fire('Simulasi Login', `Masuk sebagai: ${user.namaLengkap}`, 'info');
     }
 },
 
