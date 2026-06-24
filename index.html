@@ -942,7 +942,7 @@
                 <table class="table table-hover align-middle text-nowrap mb-0" style="font-size: 0.9rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Info Shift</th>
+                            <th class="ps-4">Perangkat & Info Shift</th>
                             <th>Cabang</th>
                             <th class="text-end">Modal Awal</th>
                             <th class="text-end text-danger">Pengeluaran</th>
@@ -960,15 +960,19 @@
                         
                         <tr v-for="reg in filteredRegisters" :key="reg.id">
                             <td class="ps-4">
-                                <div class="fw-bold text-dark"><i class="bi bi-person-badge me-2 text-primary-custom"></i>{{ reg.cashierName || 'Kasir' }}</div>
+                                <div class="fw-bold text-dark"><i class="bi bi-display me-2 text-primary-custom"></i>{{ reg.registerName || 'Kasir Utama' }}</div>
                                 <div class="text-muted mt-1" style="font-size: 0.8rem;">
+                                    <i class="bi bi-person-badge me-1"></i> {{ reg.cashierName }}<br>
                                     Buka: {{ reg.openTimeStr }}<br>
                                     <span v-if="reg.status === 'CLOSED'">Tutup: {{ reg.closeTimeStr }}</span>
                                 </div>
                             </td>
                             <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(reg.outletId) }}</span></td>
                             <td class="text-end fw-bold text-success">Rp {{ formatNumber(reg.startingCash) }}</td>
-                            <td class="text-end fw-bold text-danger">Rp {{ formatNumber(reg.totalExpenses || 0) }}</td>
+                            <td class="text-end fw-bold text-danger">
+                                Rp {{ formatNumber(reg.totalExpenses || 0) }}
+                                <div v-if="reg.expenses && reg.expenses.length > 0" class="text-muted" style="font-size: 0.7rem;">({{ reg.expenses.length }} item)</div>
+                            </td>
                             <td class="text-center">
                                 <span v-if="reg.status === 'OPEN'" class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-unlock-fill me-1"></i>AKTIF</span>
                                 <span v-else class="badge bg-secondary px-3 py-2 rounded-pill"><i class="bi bi-lock-fill me-1"></i>DITUTUP</span>
@@ -1001,17 +1005,25 @@
             </div>
             <div class="modal-body p-4 text-center">
                 <img src="https://cdn-icons-png.flaticon.com/512/5501/5501360.png" style="width: 80px; opacity: 0.8;" class="mb-3">
-                <h6 class="fw-bold text-dark mb-1">Uang Modal Laci (Cash)</h6>
-                <p class="small text-muted mb-4">Masukkan jumlah uang fisik pecahan yang ada di laci saat ini.</p>
                 
                 <div class="mb-3 text-start">
                     <label class="form-label small fw-bold">Pilih Cabang / Outlet</label>
-                    <select class="form-select fw-bold" v-model="shiftForm.outletId"
-                      :disabled="userProfile && userProfile.role === 'cashier'">
+                    <select class="form-select fw-bold" v-model="shiftForm.outletId" :disabled="userProfile && userProfile.role === 'cashier'">
                         <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
                     </select>
                 </div>
 
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold">Pilih Mesin / Register</label>
+                    <select class="form-select" v-model="shiftForm.registerName">
+                        <option value="Kasir 1">Kasir 1</option>
+                        <option value="Kasir 2">Kasir 2</option>
+                        <option value="Kasir 3">Kasir 3</option>
+                        <option value="Kasir Mobile">Kasir Mobile (HP/Tablet)</option>
+                    </select>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-1">Uang Modal Laci (Cash)</h6>
                 <div class="input-group input-group-lg shadow-sm">
                     <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
                     <input type="number" class="form-control border-start-0 fw-bold fs-4" v-model.number="shiftForm.startingCash" placeholder="0">
@@ -1029,14 +1041,28 @@
 </div>
 
 <div class="modal fade" id="expenseModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white border-0 p-3">
                 <h6 class="fw-bold mb-0"><i class="bi bi-dash-circle me-2"></i>Catat Kas Keluar</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <p class="small text-muted mb-3">Ambil uang dari laci untuk keperluan operasional (Beli galon, parkir, dll).</p>
+                
+                <div class="mb-3" v-if="expenseForm.existingExpenses && expenseForm.existingExpenses.length > 0">
+                    <label class="form-label small fw-bold text-dark">Riwayat Kas Keluar Shift Ini</label>
+                    <ul class="list-group list-group-flush border rounded mb-2" style="max-height: 150px; overflow-y: auto; font-size: 0.8rem;">
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light" v-for="(exp, idx) in expenseForm.existingExpenses" :key="idx">
+                            <div>
+                                <div class="fw-bold text-dark">{{ exp.note }}</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">{{ exp.createdAt }}</div>
+                            </div>
+                            <span class="fw-bold text-danger">- Rp {{ formatNumber(exp.amount) }}</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <p class="small text-muted mb-3 fw-bold border-bottom pb-2">Tambah Pengeluaran Baru</p>
                 
                 <label class="form-label small fw-bold">Nominal Diambil</label>
                 <div class="input-group mb-3 shadow-sm">
@@ -1048,7 +1074,9 @@
                 <textarea class="form-control" rows="2" v-model="expenseForm.note" placeholder="Contoh: Beli air galon dan tisu"></textarea>
             </div>
             <div class="modal-footer bg-light p-2 border-0">
-                <button type="button" class="btn btn-danger fw-bold w-100 py-2" @click="saveExpense" :disabled="isProcessing || !expenseForm.amount">Simpan Pengeluaran</button>
+                <button type="button" class="btn btn-danger fw-bold w-100 py-2" @click="saveExpense" :disabled="isProcessing || !expenseForm.amount">
+                    <i class="bi bi-plus-circle me-1"></i> Tambah Pengeluaran
+                </button>
             </div>
         </div>
     </div>
@@ -8157,40 +8185,44 @@
         }
     },
 
-    // 2. Membuka Modal Buka Shift & Set Default Cabang
+    // 2. Membuka Modal Buka Shift
     openShiftModal() {
-        // Cek jika user login punya otoritas cabang khusus
         let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
         
         this.shiftForm = {
-            // Jika dia kasir, otomatis set ke cabangnya. Jika admin/owner, ambil cabang pertama
             outletId: userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : ''),
+            registerName: 'Kasir 1', // Default pilih Kasir 1
             startingCash: 0
         };
         const modal = new bootstrap.Modal(document.getElementById('openShiftModal'));
         modal.show();
     },
 
-    // 3. Eksekusi Simpan Buka Shift Baru ke Firebase
+    // 3. Simpan Buka Shift Baru ke Firebase
     async saveOpenShift() {
         const compId = this.getMyCompanyId();
         if (!this.shiftForm.outletId) return Swal.fire('Peringatan', 'Silakan pilih cabang terlebih dahulu!', 'warning');
+        if (!this.shiftForm.registerName) return Swal.fire('Peringatan', 'Silakan pilih nama mesin Kasir!', 'warning');
         
         this.isProcessing = true;
         try {
-            // Cek apakah di cabang tersebut masih ada shift yang berstatus 'OPEN'
-            const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.status === 'OPEN');
+            // Cek apakah Register tersebut sedang dipakai/aktif
+            const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
             if (activeShift) {
                 this.isProcessing = false;
-                return Swal.fire('Gagal', `Masih ada shift aktif yang belum ditutup di cabang ini oleh kasir ${activeShift.cashierName}. Harap tutup terlebih dahulu!`, 'error');
+                return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} di cabang ini masih digunakan oleh ${activeShift.cashierName}. Silakan pilih mesin kasir lain atau tutup shift sebelumnya!`, 'error');
             }
+
+            // Ambil Nama Asli User (Bukan lagi default 'Kasir Toko')
+            const activeUserName = (this.userProfile && (this.userProfile.displayName || this.userProfile.name)) || (this.userProfile && this.userProfile.email) || 'Kasir (Tanpa Nama)';
 
             const now = new Date();
             const payload = {
                 companyId: compId,
                 outletId: this.shiftForm.outletId,
+                registerName: this.shiftForm.registerName,
                 cashierId: this.userProfile.uid || 'system',
-                cashierName: this.userProfile.name || 'Kasir Toko',
+                cashierName: activeUserName,
                 status: 'OPEN',
                 startingCash: Number(this.shiftForm.startingCash) || 0,
                 totalExpenses: 0,
@@ -8200,7 +8232,7 @@
             };
 
             await addDoc(collection(db, "cash_registers"), payload);
-            Swal.fire('Berhasil', 'Shift kasir resmi dibuka. Laci kasir aktif!', 'success');
+            Swal.fire('Berhasil', 'Laci kasir aktif! Anda siap berjualan.', 'success');
             
             bootstrap.Modal.getInstance(document.getElementById('openShiftModal')).hide();
             this.fetchRegisters();
@@ -8212,18 +8244,19 @@
         }
     },
 
-    // 4. Membuka Modal Input Kas Keluar (Pengeluaran harian)
+    // 4. Membuka Modal Input Kas Keluar (Menampilkan Data Detail)
     openExpenseModal(reg) {
         this.expenseForm = {
             shiftId: reg.id,
-            amount: 0,
-            note: ''
+            amount: '',
+            note: '',
+            existingExpenses: reg.expenses || [] // Menyalin list pengeluaran lama untuk ditampilkan
         };
         const modal = new bootstrap.Modal(document.getElementById('expenseModal'));
         modal.show();
     },
 
-    // 5. Eksekusi Simpan Kas Keluar ke Firebase
+    // 5. Simpan Kas Keluar ke Firebase (Menambahkan ke List)
     async saveExpense() {
         if (!this.expenseForm.amount || this.expenseForm.amount <= 0) return;
         
@@ -8234,52 +8267,68 @@
             
             if (!targetShift) throw new Error("Shift tidak ditemukan");
 
+            // Tambahkan data pengeluaran baru ke dalam array lama
             let currentExpenses = targetShift.expenses || [];
             currentExpenses.push({
                 amount: Number(this.expenseForm.amount),
-                note: this.expenseForm.note || 'Pengeluaran tanpa catatan',
+                note: this.expenseForm.note || 'Pengeluaran tanpa keterangan',
                 createdAt: new Date().toLocaleString('id-ID', { timeStyle: 'short' })
             });
 
             let newTotalExpenses = (targetShift.totalExpenses || 0) + Number(this.expenseForm.amount);
 
+            // Update ke Firebase
             await updateDoc(shiftRef, {
                 totalExpenses: newTotalExpenses,
                 expenses: currentExpenses
             });
 
-            Swal.fire('Berhasil', 'Kas keluar berhasil dicatat di laci!', 'success');
+            Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Pengeluaran ditambahkan.', timer: 1500, showConfirmButton: false });
+            
+            // Tutup modal lalu reset formnya
             bootstrap.Modal.getInstance(document.getElementById('expenseModal')).hide();
             this.fetchRegisters();
         } catch (err) {
             console.error(err);
-            Swal.fire('Error', 'Gagal mencatat kas keluar.', 'error');
+            Swal.fire('Error', 'Gagal mencatat pengeluaran.', 'error');
         } finally {
             this.isProcessing = false;
         }
     },
 
-    // 6. Membuka Modal Tutup Shift & Menghitung Omset Tunai Otomatis dari Firebase
+    // 6. 🌟 ANTI ERROR: Buka Modal Tutup Shift (Dihitung di sisi Client Javascript)
     async openCloseShiftModal(reg) {
-        Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, sistem sedang merekap transaksi tunai...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, merekap transaksi tunai...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
         
         try {
-            // Ambil semua transaksi sukses (CASH) dari cabang tersebut yang terjadi SETELAH shift dibuka
+            const compId = this.getMyCompanyId();
+            
+            // Ambil SEMUA transaksi perusahaan (Ini menghindari error Composite Index Firebase!)
             const qTrx = query(
                 collection(db, "transactions"),
-                where("outletId", "==", reg.outletId),
-                where("paymentMethod", "==", "CASH"),
-                where("createdAt", ">=", reg.openTime)
+                where("companyId", "==", compId)
             );
             const snapTrx = await getDocs(qTrx);
             
             let totalCashSales = 0;
+            let shiftOpenTime = reg.openTime?.toDate ? reg.openTime.toDate().getTime() : new Date(reg.openTime).getTime();
+
+            // Lakukan Filter manual menggunakan JavaScript
             snapTrx.forEach(docTrx => {
                 const d = docTrx.data();
-                totalCashSales += Number(d.total || 0);
+                
+                // Syarat 1: Outletnya sama dan Metode pembayarannya CASH (Uang Fisik)
+                if (d.outletId === reg.outletId && d.paymentMethod === 'CASH') {
+                    // Syarat 2: Waktu transaksi harus SETELAH laci dibuka
+                    let trxTime = d.createdAt?.toDate ? d.createdAt.toDate().getTime() : new Date(d.createdAt).getTime();
+                    
+                    if (trxTime >= shiftOpenTime) {
+                        totalCashSales += Number(d.total || 0);
+                    }
+                }
             });
 
-            // Hitung kalkulasi akhir laci kasir
+            // Hitung Uang Seharusnya (Modal + Omset Tunai - Kas Keluar)
             let expected = reg.startingCash + totalCashSales - (reg.totalExpenses || 0);
 
             this.activeCloseShift = {
@@ -8294,7 +8343,7 @@
             const modal = new bootstrap.Modal(document.getElementById('closeShiftModal'));
             modal.show();
         } catch (err) {
-            console.error(err);
+            console.error("Error Hitung Kasir:", err);
             Swal.fire('Error', 'Gagal menghitung ringkasan transaksi.', 'error');
         }
     },
