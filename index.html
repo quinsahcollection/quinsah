@@ -942,7 +942,7 @@
                 <table class="table table-hover align-middle text-nowrap mb-0" style="font-size: 0.9rem;">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Perangkat & Info Shift</th>
+                            <th class="ps-4">Perangkat & Info Karyawan</th>
                             <th>Cabang</th>
                             <th class="text-end">Modal Awal</th>
                             <th class="text-end text-danger">Pengeluaran</th>
@@ -954,38 +954,69 @@
                         <tr v-if="filteredRegisters.length === 0">
                             <td colspan="6" class="text-center py-5 text-muted">Belum ada riwayat shift kasir.</td>
                         </tr>
+                        
                         <tr v-for="reg in filteredRegisters" :key="reg.id">
+                            
                             <td class="ps-4">
-                                <div class="fw-bold text-dark"><i class="bi bi-display me-2 text-primary-custom"></i>{{ reg.registerName }}</div>
-                                <div class="text-muted mt-1" style="font-size: 0.8rem; line-height: 1.5;">
-                                    <i class="bi bi-person-badge me-1 text-primary"></i> <span class="fw-semibold">{{ reg.cashierName }}</span> <br>
-                                    <i class="bi bi-envelope me-1 text-secondary"></i> {{ reg.cashierEmail || '-' }} <br>
-                                    <i class="bi bi-telephone me-1 text-success"></i> {{ reg.cashierPhone || 'Tidak ada no. telp' }} <br>
-                                    Buka: {{ reg.openTimeStr }}<br>
-                                    <span v-if="reg.status === 'CLOSED'">Tutup: {{ reg.closeTimeStr }}</span>
+                                <div class="fw-bold text-dark mb-1">
+                                    <i class="bi bi-display me-2 text-primary-custom"></i>{{ reg.registerName || 'Kasir Utama' }}
+                                </div>
+                                <div class="text-muted" style="font-size: 0.75rem; line-height: 1.6;">
+                                    <div class="fw-bold text-dark"><i class="bi bi-person-badge me-1 text-primary"></i> {{ reg.cashierName }}</div>
+                                    <div><i class="bi bi-envelope me-1 text-secondary"></i> {{ reg.cashierEmail || '-' }}</div>
+                                    <div><i class="bi bi-telephone me-1 text-success"></i> {{ reg.cashierPhone || '-' }}</div>
+                                    <div class="mt-1 border-top pt-1 text-secondary" style="font-size: 0.7rem;">
+                                        Buka: {{ reg.openTimeStr }}<br>
+                                        <span v-if="reg.status === 'CLOSED'">Tutup: {{ reg.closeTimeStr }}</span>
+                                    </div>
                                 </div>
                             </td>
+                            
                             <td><span class="badge bg-light text-dark border"><i class="bi bi-shop me-1"></i>{{ getOutletName(reg.outletId) }}</span></td>
+                            
                             <td class="text-end">
                                 <div class="fw-bold text-success">Rp {{ formatNumber(reg.startingCash) }}</div>
                                 <button v-if="reg.openDenominations" class="btn btn-sm btn-link text-decoration-none p-0 mt-1" style="font-size: 0.75rem;" @click="viewPecahanInfo(reg, 'Buka Shift')">
                                     <i class="bi bi-cash-stack"></i> Lihat Pecahan
                                 </button>
                             </td>
+                            
                             <td class="text-end">
                                 <div class="fw-bold text-danger">Rp {{ formatNumber(reg.totalExpenses || 0) }}</div>
                                 <button v-if="reg.expenses && reg.expenses.length > 0" class="btn btn-sm btn-link text-decoration-none text-danger p-0 mt-1" style="font-size: 0.75rem;" @click="viewExpenseHistory(reg)">
                                     <i class="bi bi-card-list"></i> Lihat Riwayat ({{ reg.expenses.length }})
                                 </button>
                             </td>
+                            
                             <td class="text-center">
                                 <span v-if="reg.status === 'OPEN'" class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-unlock-fill me-1"></i>AKTIF</span>
                                 <span v-else class="badge bg-secondary px-3 py-2 rounded-pill"><i class="bi bi-lock-fill me-1"></i>DITUTUP</span>
                             </td>
+                            
                             <td class="text-center pe-4">
-                                <button v-if="reg.status === 'OPEN'" class="btn btn-sm btn-outline-danger me-1 fw-bold" @click="openExpenseModal(reg)"><i class="bi bi-dash-circle me-1"></i>Kas Keluar</button>
-                                <button v-if="reg.status === 'OPEN'" class="btn btn-sm btn-dark fw-bold" @click="showPecahan=false; openCloseShiftModal(reg)"><i class="bi bi-box-arrow-right"></i> Tutup</button>
+                                <template v-if="reg.status === 'OPEN'">
+                                    <template v-if="canManageShift(reg)">
+                                        <button class="btn btn-sm btn-outline-danger me-1 fw-bold" @click="openExpenseModal(reg)">
+                                            <i class="bi bi-dash-circle me-1"></i>Kas Keluar
+                                        </button>
+                                        <button class="btn btn-sm btn-dark fw-bold" @click="showPecahan=false; openCloseShiftModal(reg)">
+                                            <i class="bi bi-box-arrow-right"></i> Tutup
+                                        </button>
+                                    </template>
+                                    <template v-else>
+                                        <span class="badge bg-light text-muted border py-2 px-3">
+                                            <i class="bi bi-lock-fill me-1"></i> Laci Terkunci
+                                        </span>
+                                    </template>
+                                </template>
+
+                                <template v-if="reg.status === 'CLOSED'">
+                                    <button class="btn btn-sm btn-outline-secondary fw-bold" @click="printShiftSummary(reg)">
+                                        <i class="bi bi-printer me-1"></i> Cetak Lap.
+                                    </button>
+                                </template>
                             </td>
+                            
                         </tr>
                     </tbody>
                 </table>
@@ -1003,11 +1034,13 @@
             </div>
             <div class="modal-body p-0">
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center" v-for="(qty, nominal) in viewShiftDetails.data" :key="nominal" v-if="qty > 0">
-                        <span class="fw-bold text-muted">Rp {{ formatNumber(nominal) }}</span>
-                        <span class="badge bg-primary rounded-pill">{{ qty }} Lembar</span>
-                    </li>
-                </ul>
+    <template v-for="(qty, nominal) in viewShiftDetails.data" :key="nominal">
+        <li class="list-group-item d-flex justify-content-between align-items-center" v-if="qty > 0">
+            <span class="fw-bold text-muted">Rp {{ formatNumber(nominal) }}</span>
+            <span class="badge bg-primary rounded-pill">{{ qty }} Lembar</span>
+        </li>
+    </template>
+</ul>
             </div>
         </div>
     </div>
@@ -8264,15 +8297,37 @@
         }
     },
 
-      // 🌟 FUNGSI BARU: Buka Modal Detail Pecahan
-    viewPecahanInfo(reg, typeStr) {
-        this.viewShiftDetails = {
-            type: typeStr,
-            data: typeStr === 'Buka Shift' ? reg.openDenominations : reg.closeDenominations
-        };
-        const modal = new bootstrap.Modal(document.getElementById('pecahanInfoModal'));
+      // PASTIKAN FUNGSI INI ADA DI DALAM methods: { ... }
+viewPecahanInfo(reg, typeStr) {
+    // Ambil data pecahan dari parameter typeStr
+    let dataPecahan = null;
+    if (typeStr === 'Buka Shift') {
+        dataPecahan = reg.openDenominations;
+    } else {
+        dataPecahan = reg.closeDenominations;
+    }
+
+    // Jika data tidak ada, beri tahu pengguna
+    if (!dataPecahan) {
+        Swal.fire('Info', 'Data pecahan untuk shift ini tidak tersedia/kosong.', 'info');
+        return;
+    }
+
+    // Assign data ke state untuk dirender di modal
+    this.viewShiftDetails = {
+        type: typeStr,
+        data: dataPecahan
+    };
+
+    // Panggil modal Bootstrap
+    const modalElement = document.getElementById('pecahanInfoModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
         modal.show();
-    },
+    } else {
+        Swal.fire('Error', 'Elemen modal tidak ditemukan di halaman.', 'error');
+    }
+},
 
     // 🌟 FUNGSI BARU: Buka Modal Riwayat Pengeluaran
     viewExpenseHistory(reg) {
@@ -8283,17 +8338,31 @@
 
           // 🌟 FUNGSI BARU: Pengecekan Hak Akses Kasir & Admin
         canManageShift(reg) {
-        if (!this.userProfile) return false;
+        // Gabungkan deteksi user agar tidak ada yang terlewat
+        const currentUser = this.userProfile || this.loggedInUser;
+        if (!currentUser) return false;
         
-        // 1. Jika Admin (Cek berdasarkan nama role atau ID)
-        const roleName = this.getRoleName ? this.getRoleName(this.userProfile.roleId) : '';
-        if (roleName.toLowerCase().includes('admin') || roleName.toLowerCase().includes('owner')) {
+        let roleName = '';
+        if (typeof this.getRoleName === 'function') {
+            roleName = this.getRoleName(currentUser.roleId) || '';
+        }
+        
+        // Pengecekan Admin Super Kuat (Bisa buka laci siapa saja)
+        if (
+            this.userRole === 'Admin' || 
+            String(currentUser.roleId) === '1' || 
+            String(currentUser.roleId).toLowerCase() === 'admin' ||
+            roleName.toLowerCase().includes('admin') || 
+            roleName.toLowerCase().includes('owner')
+        ) {
             return true; 
         }
         
-        // 2. Jika bukan Admin, cek apakah ID Kasir yang login sama dengan ID Pembuat Shift
-        const currentUserId = this.userProfile.id || this.userProfile.uid;
-        return currentUserId === reg.cashierId;
+        // Pengecekan Kasir: Samakan ID User yang login dengan ID pembuat laci
+        const currentUserId = String(currentUser.id || currentUser.uid || '');
+        const shiftOwnerId = String(reg.cashierId || '');
+        
+        return currentUserId === shiftOwnerId;
     },
           
           // =========================================================================
@@ -8333,22 +8402,42 @@
 
     // 2. Membuka Modal Buka Shift
     openShiftModal() {
-        let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
-        
-        this.shiftForm = {
-            outletId: userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : ''),
-            registerName: 'Kasir 1', // Default pilih Kasir 1
-            startingCash: 0
-        };
-        const modal = new bootstrap.Modal(document.getElementById('openShiftModal'));
-        modal.show();
-    },
+    let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
+    
+    this.shiftForm = {
+        outletId: userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : ''),
+        registerName: 'Kasir 1', // Default pilih Kasir 1
+        startingCash: 0
+    };
+
+    // 🌟 TAMBAHAN: Reset form pecahan agar tidak bentrok dengan shift sebelumnya
+    this.showPecahan = false;
+    this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
+
+    // 🌟 PERBAIKAN: Gunakan instance yang sudah ada agar tidak error saat di-hide
+    const modalElement = document.getElementById('openShiftModal');
+    const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+    modal.show();
+},
 
     // 3. Simpan Buka Shift Baru ke Firebase
     async saveOpenShift() {
         const compId = this.getMyCompanyId();
         if (!this.shiftForm.outletId || !this.shiftForm.registerName) return Swal.fire('Peringatan', 'Silakan pilih cabang & perangkat!', 'warning');
         
+        // AMBIL DATA USER DENGAN AGRESIF (Antisipasi Variabel Kosong)
+        const currentUser = this.userProfile || this.loggedInUser || {};
+        const activeUserId = String(currentUser.id || currentUser.uid || '');
+        
+        // Jika ID masih kosong, hentikan proses (Jangan simpan sebagai 'system' lagi)
+        if (!activeUserId) {
+            return Swal.fire('Error Sesi', 'Identitas Anda belum terbaca. Silakan Refresh/Reload halaman dan Login ulang.', 'error');
+        }
+
+        const activeUserName = currentUser.namaLengkap || currentUser.name || currentUser.displayName || currentUser.username || currentUser.email || 'Kasir';
+        const activeUserEmail = currentUser.email || '-';
+        const activeUserPhone = currentUser.phone || currentUser.phoneNumber || '-';
+
         this.isProcessing = true;
         try {
             const activeShift = this.registers.find(r => r.outletId === this.shiftForm.outletId && r.registerName === this.shiftForm.registerName && r.status === 'OPEN');
@@ -8357,17 +8446,13 @@
                 return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
             }
 
-            // 🌟 MENGATASI KASIR TANPA NAMA: Gunakan namaLengkap dan id
-            const activeUserId = (this.userProfile && (this.userProfile.id || this.userProfile.uid)) || 'system';
-            const activeUserName = (this.userProfile && (this.userProfile.namaLengkap || this.userProfile.username)) || 'Kasir Tanpa Nama';
-            const activeUserEmail = (this.userProfile && this.userProfile.email) || '-';
-            const activeUserPhone = (this.userProfile && this.userProfile.phone) || '-';
-
-            // 🌟 MENGATASI RIWAYAT PECAHAN HILANG: Kloning objek data pecahan
-            let savedDenominations = null;
-            if (this.showPecahan) {
-                savedDenominations = { ...this.pecahanData }; // Copy data agar tidak hilang saat di-reset
+            // AMANKAN DATA PECAHAN (Ambil jika ada nilai yang > 0)
+            let openDenominationsPayload = null;
+            let hasInputPecahan = false;
+            for (let key in this.pecahanData) {
+                if (Number(this.pecahanData[key]) > 0) hasInputPecahan = true;
             }
+            if (hasInputPecahan) openDenominationsPayload = { ...this.pecahanData };
 
             const now = new Date();
             const payload = {
@@ -8380,7 +8465,7 @@
                 cashierPhone: activeUserPhone,
                 status: 'OPEN',
                 startingCash: Number(this.shiftForm.startingCash) || 0,
-                openDenominations: savedDenominations, // Simpan hasil kloning
+                openDenominations: openDenominationsPayload, // Data pecahan masuk ke Firebase
                 totalExpenses: 0,
                 expenses: [],
                 openTime: now,
@@ -8388,14 +8473,21 @@
             };
 
             await addDoc(collection(db, "cash_registers"), payload);
-            Swal.fire('Berhasil', `${this.shiftForm.registerName} siap digunakan!`, 'success');
+            Swal.fire('Berhasil', `${this.shiftForm.registerName} diaktifkan oleh ${activeUserName}!`, 'success');
             
-            bootstrap.Modal.getInstance(document.getElementById('openShiftModal')).hide();
+            // Cari kode ini di dalam saveOpenShift() dan ganti:
+            const modalElement = document.getElementById('openShiftModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+               modal.hide();
+            }
+            
+            // Bersihkan form
             this.showPecahan = false; 
-            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' }; // Reset
+            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
             this.fetchRegisters();
         } catch (err) {
-            Swal.fire('Error', 'Gagal membuka shift laci kasir.', 'error');
+            Swal.fire('Error', 'Gagal membuka laci kasir.', 'error');
         } finally {
             this.isProcessing = false;
         }
@@ -8515,11 +8607,13 @@
             let expected = this.activeCloseShift.expectedCash;
             let diff = actual - expected;
 
-            // Kloning data pecahan tutup
-            let savedCloseDenominations = null;
-            if (this.showPecahan) {
-                savedCloseDenominations = { ...this.pecahanData };
+            // Kloning data pecahan tutup (jika ada)
+            let closeDenominationsPayload = null;
+            let hasInputPecahanClose = false;
+            for (let key in this.pecahanData) {
+                if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
             }
+            if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
 
             await updateDoc(shiftRef, {
                 status: 'CLOSED',
@@ -8527,7 +8621,7 @@
                 expectedCash: expected,
                 actualCash: actual,
                 difference: diff,
-                closeDenominations: savedCloseDenominations, // Simpan histori pecahan tutup
+                closeDenominations: closeDenominationsPayload,
                 closeNote: this.activeCloseShift.closeNote || '',
                 closeTime: now,
                 closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
@@ -8535,8 +8629,9 @@
 
             Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
+            
             this.showPecahan = false;
-            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' }; // Reset
+            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
             this.fetchRegisters();
         } catch (err) {
             Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
@@ -10261,10 +10356,26 @@ async saveUser() {
                     await updateDoc(userRef, {
                         namaLengkap: this.formUser.namaLengkap,
                         roleId: roleIdNumber,
-                        username: this.formUser.username || '', // 🌟 PERBAIKAN: Masukkan Username
-                        phone: this.formUser.phone || '',       // 🌟 PERBAIKAN: Update No. Telp
-                        outletId: this.formUser.outletId || ''  // 🌟 PERBAIKAN: Update Kunci Outlet
+                        username: this.formUser.username || '', 
+                        phone: this.formUser.phone || '',       
+                        outletId: this.formUser.outletId || ''  
                     });
+                    
+                    // ✨ SINTAKS TAMBAHAN: Sinkronisasi Sesi Aktif
+                    // Cek apakah yang diedit adalah akun miliknya sendiri
+                    if (this.userProfile && this.userProfile.id === this.formUser.id) {
+                        this.userProfile = {
+                            ...this.userProfile, // Pertahankan data lain yang tidak diedit
+                            namaLengkap: this.formUser.namaLengkap,
+                            roleId: roleIdNumber,
+                            username: this.formUser.username || '',
+                            phone: this.formUser.phone || '',
+                            outletId: this.formUser.outletId || ''
+                        };
+                        
+                        // Jika Anda juga memakai loggedInUser di template, samakan datanya
+                        this.loggedInUser = { ...this.userProfile };
+                    }
                     
                     Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate.', 'success');
                     
