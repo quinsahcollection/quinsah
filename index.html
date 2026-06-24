@@ -8280,6 +8280,21 @@
         const modal = new bootstrap.Modal(document.getElementById('expenseHistoryModal'));
         modal.show();
     },
+
+          // 🌟 FUNGSI BARU: Pengecekan Hak Akses Kasir & Admin
+        canManageShift(reg) {
+        if (!this.userProfile) return false;
+        
+        // 1. Jika Admin (Cek berdasarkan nama role atau ID)
+        const roleName = this.getRoleName ? this.getRoleName(this.userProfile.roleId) : '';
+        if (roleName.toLowerCase().includes('admin') || roleName.toLowerCase().includes('owner')) {
+            return true; 
+        }
+        
+        // 2. Jika bukan Admin, cek apakah ID Kasir yang login sama dengan ID Pembuat Shift
+        const currentUserId = this.userProfile.id || this.userProfile.uid;
+        return currentUserId === reg.cashierId;
+    },
           
           // =========================================================================
     // 🌟 FUNGSI MANAJEMEN CASH REGISTER (SHIFT KASIR)
@@ -8342,27 +8357,30 @@
                 return Swal.fire('Akses Ditolak', `Mesin ${this.shiftForm.registerName} sedang digunakan oleh ${activeShift.cashierName}.`, 'error');
             }
 
-            // MENGHINDARI UNDEFINED: Jika nama kosong, ambil awalan email. Jika email kosong, tulis 'Kasir Toko'.
-            let activeUserName = 'Kasir Toko';
-            if (this.userProfile) {
-                activeUserName = this.userProfile.name || this.userProfile.displayName || this.userProfile.fullName || (this.userProfile.email ? this.userProfile.email.split('@')[0] : 'Kasir Toko');
-            }
-            
+            // 🌟 MENGATASI KASIR TANPA NAMA: Gunakan namaLengkap dan id
+            const activeUserId = (this.userProfile && (this.userProfile.id || this.userProfile.uid)) || 'system';
+            const activeUserName = (this.userProfile && (this.userProfile.namaLengkap || this.userProfile.username)) || 'Kasir Tanpa Nama';
             const activeUserEmail = (this.userProfile && this.userProfile.email) || '-';
             const activeUserPhone = (this.userProfile && this.userProfile.phone) || '-';
+
+            // 🌟 MENGATASI RIWAYAT PECAHAN HILANG: Kloning objek data pecahan
+            let savedDenominations = null;
+            if (this.showPecahan) {
+                savedDenominations = { ...this.pecahanData }; // Copy data agar tidak hilang saat di-reset
+            }
 
             const now = new Date();
             const payload = {
                 companyId: compId,
                 outletId: this.shiftForm.outletId,
                 registerName: this.shiftForm.registerName,
-                cashierId: this.userProfile?.uid || 'system',
+                cashierId: activeUserId,
                 cashierName: activeUserName,
                 cashierEmail: activeUserEmail,
-                cashierPhone: activeUserPhone, // 👈 Tersimpan dari profil user
+                cashierPhone: activeUserPhone,
                 status: 'OPEN',
                 startingCash: Number(this.shiftForm.startingCash) || 0,
-                openDenominations: this.showPecahan ? this.pecahanData : null, 
+                openDenominations: savedDenominations, // Simpan hasil kloning
                 totalExpenses: 0,
                 expenses: [],
                 openTime: now,
@@ -8374,6 +8392,7 @@
             
             bootstrap.Modal.getInstance(document.getElementById('openShiftModal')).hide();
             this.showPecahan = false; 
+            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' }; // Reset
             this.fetchRegisters();
         } catch (err) {
             Swal.fire('Error', 'Gagal membuka shift laci kasir.', 'error');
@@ -8496,13 +8515,19 @@
             let expected = this.activeCloseShift.expectedCash;
             let diff = actual - expected;
 
+            // Kloning data pecahan tutup
+            let savedCloseDenominations = null;
+            if (this.showPecahan) {
+                savedCloseDenominations = { ...this.pecahanData };
+            }
+
             await updateDoc(shiftRef, {
                 status: 'CLOSED',
                 cashSales: this.activeCloseShift.cashSales,
                 expectedCash: expected,
                 actualCash: actual,
                 difference: diff,
-                closeDenominations: this.showPecahan ? this.pecahanData : null, // Simpan histori pecahan tutup
+                closeDenominations: savedCloseDenominations, // Simpan histori pecahan tutup
                 closeNote: this.activeCloseShift.closeNote || '',
                 closeTime: now,
                 closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
@@ -8510,7 +8535,8 @@
 
             Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
-            this.showPecahan = false; // Reset UI Pecahan
+            this.showPecahan = false;
+            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' }; // Reset
             this.fetchRegisters();
         } catch (err) {
             Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
@@ -10234,7 +10260,10 @@ async saveUser() {
                     const userRef = doc(db, "users", this.formUser.id);
                     await updateDoc(userRef, {
                         namaLengkap: this.formUser.namaLengkap,
-                        roleId: roleIdNumber
+                        roleId: roleIdNumber,
+                        username: this.formUser.username || '', // 🌟 PERBAIKAN: Masukkan Username
+                        phone: this.formUser.phone || '',       // 🌟 PERBAIKAN: Update No. Telp
+                        outletId: this.formUser.outletId || ''  // 🌟 PERBAIKAN: Update Kunci Outlet
                     });
                     
                     Swal.fire('Berhasil', 'Hak akses dan data user berhasil diupdate.', 'success');
@@ -10244,10 +10273,10 @@ async saveUser() {
                     // JIKA TAMBAH USER BARU (TANPA LOGOUT ADMIN)
                     // ==========================================
                     
-                    // 1. Ambil API Key Firebase milik Anda secara otomatis
+                    // 1. Ambil API Key Firebase
                     const apiKey = auth.app.options.apiKey;
 
-                    // 2. Tembak langsung ke Server Firebase (REST API) agar Admin tidak ter-logout
+                    // 2. Tembak langsung ke Server Firebase (REST API)
                     const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -10260,7 +10289,7 @@ async saveUser() {
 
                     const data = await response.json();
 
-                    // 3. Tangani jika terjadi error (Email sudah dipakai, dll)
+                    // 3. Tangani jika terjadi error
                     if (!response.ok) {
                         let errorMsg = 'Gagal mendaftarkan karyawan.';
                         if (data.error && data.error.message === 'EMAIL_EXISTS') errorMsg = 'Email ini sudah terdaftar! Gunakan email lain.';
@@ -10268,22 +10297,25 @@ async saveUser() {
                         throw new Error(errorMsg);
                     }
 
-                    // 4. Jika sukses, simpan profil Karyawan ke Database dengan ID Toko Bos-nya
-                    const newUserId = data.localId; // UID User Baru
+                    // 4. Simpan profil Karyawan ke Database
+                    const newUserId = data.localId; 
                     
                     await setDoc(doc(db, "users", newUserId), {
                         namaLengkap: this.formUser.namaLengkap,
                         email: this.formUser.email,
+                        username: this.formUser.username || '', // 🌟 PERBAIKAN: Masukkan Username
                         roleId: String(this.formUser.roleId),
-                        companyId: this.userProfile.companyId, // <--- KUNCI MULTI-TENANT
+                        companyId: this.userProfile.companyId, 
+                        phone: this.formUser.phone || '',       // 🌟 PERBAIKAN: Simpan No. Telp
+                        outletId: this.formUser.outletId || '', // 🌟 PERBAIKAN: Simpan Kunci Outlet
                         createdAt: serverTimestamp()
                     });
 
-                    Swal.fire('Berhasil', 'Karyawan berhasil didaftarkan! Karyawan kini bisa langsung login menggunakan email tersebut.', 'success');
+                    Swal.fire('Berhasil', 'Karyawan berhasil didaftarkan! Karyawan kini bisa langsung login.', 'success');
                 }
 
                 // Bersihkan form kembali ke awal dan Refresh Tabel
-                this.formUser = { id: null, email: '', password: '', roleId: null, namaLengkap: '' };
+                this.formUser = { id: null, username: '', email: '', password: '', roleId: null, namaLengkap: '', phone: '', outletId: '' };
                 this.isEditingUser = false;
                 this.fetchUsersFromDatabase();
 
