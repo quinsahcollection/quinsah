@@ -1122,10 +1122,20 @@
                             <input type="number" class="form-control border-start-0 fw-bold fs-4 text-success" v-model.number="shiftForm.startingCash" placeholder="0" :readonly="showPecahan">
                         </div>
 
-                        <button type="button" class="btn btn-primary-custom fw-bold w-100 py-3 shadow-sm" @click="saveOpenShift" :disabled="isProcessing">
-                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-                            <span v-else><i class="bi bi-check-circle-fill me-2"></i> Aktifkan Laci & Mulai Jualan</span>
-                        </button>
+                        <button type="button" class="btn btn-primary-custom fw-bold w-100 py-3 shadow-sm" @click="saveOpenShift" :disabled="isProcessing || !userProfile">
+    <span v-if="isProcessing">
+        <span class="spinner-border spinner-border-sm me-2"></span> Menyimpan Data Shift...
+    </span>
+    
+    <span v-else-if="!userProfile">
+        <span class="spinner-border spinner-border-sm me-2 text-white"></span> Membaca Identitas Kasir...
+    </span>
+    
+    <span v-else>
+        <i class="bi bi-check-circle-fill me-2"></i> Aktifkan Laci & Mulai Jualan
+    </span>
+</button>
+
                     </div>
                 </div>
             </div>
