@@ -8334,18 +8334,33 @@ viewPecahanInfo(reg, typeStr) {
         modal.show();
     },
 
-          // 🌟 FUNGSI BARU: Pengecekan Hak Akses Kasir & Admin
-        canManageShift(reg) {
+              // 🌟 FUNGSI BARU: Pengecekan Hak Akses Kasir & Admin
+    canManageShift(reg) {
         // Gabungkan deteksi user agar tidak ada yang terlewat
-        const currentUser = this.userProfile || this.loggedInUser;
-        if (!currentUser) return false;
+        // (Ditambahkan "|| {}" agar tidak error jika variabel kosong)
+        const currentUser = this.userProfile || this.loggedInUser || {};
+        
+        // 🌟 PENGAMAN 1: Tarik ID agresif. Jika Vue lambat, ambil langsung dari Firebase
+        let currentUserId = String(currentUser.id || currentUser.uid || '');
+        if (!currentUserId) {
+            try {
+                const authUser = getAuth().currentUser; // Pastikan getAuth sudah di-import di atas
+                if (authUser) currentUserId = authUser.uid;
+            } catch (e) {
+                // Abaikan jika getAuth tidak terbaca
+            }
+        }
+
+        // Jika identitas sama sekali tidak terbaca dan bukan admin, tolak akses
+        if (!currentUserId && !this.userRole) return false;
         
         let roleName = '';
-        if (typeof this.getRoleName === 'function') {
+        if (typeof this.getRoleName === 'function' && currentUser.roleId) {
             roleName = this.getRoleName(currentUser.roleId) || '';
         }
         
         // Pengecekan Admin Super Kuat (Bisa buka laci siapa saja)
+        // 100% SKRIP ASLI ANDA
         if (
             this.userRole === 'Admin' || 
             String(currentUser.roleId) === '1' || 
@@ -8357,9 +8372,13 @@ viewPecahanInfo(reg, typeStr) {
         }
         
         // Pengecekan Kasir: Samakan ID User yang login dengan ID pembuat laci
-        const currentUserId = String(currentUser.id || currentUser.uid || '');
         const shiftOwnerId = String(reg.cashierId || '');
         
+        // 🌟 PENGAMAN 2: Mencegah bug '' === ''. Jika ID kosong, tidak boleh tembus!
+        if (!currentUserId || !shiftOwnerId) {
+            return false;
+        }
+
         return currentUserId === shiftOwnerId;
     },
           
