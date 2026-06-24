@@ -5358,51 +5358,73 @@
         </div>
 
         <div class="modal fade" id="addOutletModal" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-body p-4 bg-white">
-                        <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-shop text-primary-custom me-2"></i>{{ formOutlet.id ? 'Edit' : 'Tambah' }} Outlet & Parameter Pajak</h6>
-                        
-                        <div class="row g-2 mb-3">
-                            <div class="col-4">
-                                <label class="form-label small fw-bold">Kode Cabang</label>
-                                <input type="text" class="form-control form-control-sm" v-model="formOutlet.code" placeholder="Cth: JKT-01">
-                            </div>
-                            <div class="col-8">
-                                <label class="form-label small fw-bold">Nama Toko/Cabang</label>
-                                <input type="text" class="form-control form-control-sm" v-model="formOutlet.name" placeholder="Cth: Quinsah Cabang Sudirman">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label small fw-bold">Alamat Lengkap</label>
-                                <input type="text" class="form-control form-control-sm" v-model="formOutlet.location" placeholder="Masukkan alamat lengkap cabang untuk dicetak di struk...">
-                            </div>
-                        </div>
-                        
-                        <h6 class="fw-bold small border-top pt-3 text-muted"><i class="bi bi-calculator me-1"></i>Pengaturan Biaya Tambahan Operasional</h6>
-                        <div class="row g-2 mb-4">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-danger">Pajak / PPN Otomatis</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" v-model.number="formOutlet.taxPercent" placeholder="Cth: 11">
-                                    <span class="input-group-text bg-white">%</span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-warning" style="color: #d97706 !important;">Service Charge</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" v-model.number="formOutlet.serviceChargePercent" placeholder="Cth: 5">
-                                    <span class="input-group-text bg-white">%</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveData('outlets', formOutlet, 'addOutletModal')" :disabled="isSaving">
-                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-                        <i v-else class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Pengaturan Cabang' }}
-                        </button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-body p-4 bg-white" style="max-height: 85vh; overflow-y: auto;">
+                <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-shop text-primary-custom me-2"></i>{{ formOutlet.id ? 'Edit' : 'Tambah' }} Outlet & Parameter Pajak</h6>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-4">
+                        <label class="form-label small fw-bold">Kode Cabang</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formOutlet.code" placeholder="Cth: JKT-01">
+                    </div>
+                    <div class="col-8">
+                        <label class="form-label small fw-bold">Nama Toko/Cabang</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formOutlet.name" placeholder="Cth: Quinsah Cabang Sudirman">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Alamat Lengkap</label>
+                        <input type="text" class="form-control form-control-sm" v-model="formOutlet.location" placeholder="Masukkan alamat lengkap cabang untuk dicetak di struk...">
                     </div>
                 </div>
+                
+                <h6 class="fw-bold small border-top pt-3 text-muted"><i class="bi bi-calculator me-1"></i>Pengaturan Biaya Tambahan Operasional</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-danger">Pajak / PPN Otomatis</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control" v-model.number="formOutlet.taxPercent" placeholder="Cth: 11">
+                            <span class="input-group-text bg-white">%</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-warning" style="color: #d97706 !important;">Service Charge</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control" v-model.number="formOutlet.serviceChargePercent" placeholder="Cth: 5">
+                            <span class="input-group-text bg-white">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4 border-top pt-3">
+                    <label class="form-label small fw-bold text-dark"><i class="bi bi-display me-1"></i> Mesin Kasir / Perangkat Register</label>
+                    <p class="text-muted lh-sm" style="font-size: 0.70rem; margin-bottom: 10px;">Daftarkan perangkat (PC/HP/Tablet) yang digunakan kasir di toko ini (Cth: Kasir Utama, PC-Depan). Kasir wajib memilih perangkat ini saat membuka shift.</p>
+                    
+                    <div v-for="(regName, regIdx) in (formOutlet.registers || [])" :key="regIdx" class="input-group input-group-sm mb-2 shadow-sm">
+                        <span class="input-group-text bg-light text-muted fw-bold" style="font-size: 0.7rem;">#{{ regIdx + 1 }}</span>
+                        <input type="text" class="form-control" v-model="formOutlet.registers[regIdx]" placeholder="Cth: Kasir Utama">
+                        <button type="button" class="btn btn-outline-danger" @click="formOutlet.registers.splice(regIdx, 1)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="!formOutlet.registers || formOutlet.registers.length === 0" class="text-center p-2 mb-2 bg-light rounded text-muted" style="font-size: 0.75rem;">
+                        Belum ada mesin kasir yang didaftarkan.
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold" 
+                            @click="if(!formOutlet.registers) formOutlet.registers = []; formOutlet.registers.push('Kasir ' + (formOutlet.registers.length + 1))">
+                        <i class="bi bi-plus-circle me-1"></i> Tambah Perangkat
+                    </button>
+                </div>
+                <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="saveData('outlets', formOutlet, 'addOutletModal')" :disabled="isSaving">
+                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                    <span v-else><i class="bi bi-save me-1"></i> {{ isSaving ? 'Menyimpan...' : 'Simpan Pengaturan Cabang' }}</span>
+                </button>               
             </div>
         </div>
+    </div>
+</div>
 
         <div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -6923,7 +6945,7 @@
                 formSupplier: { id: null, name: '', phone: '', address: '' },
                 formCustomer: { id: null, name: '', phone: '', address: '', membershipId: '' },
                 formMembership: { id: null, tierName: '', discountPercent: 0 },
-                formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0 },
+                formOutlet: { id: null, code: '', name: '', location: '', taxPercent: 0, serviceChargePercent: 0, registers: [] },
                 
                 formProduct: { id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', uom: 'Pcs', productTags: [], productTagInput: '', hppPrice: 0, sellPrice: 0, basePrice: 0, baseOutletStocks: {}, imageBase64: '', variants: [], discountType: 'none', discountValue: 0, tiers: [], dynamicVariantsData: [{ name: 'Warna', tags: [], input: '' }] },
                 formProductOriginalState: null,
