@@ -165,7 +165,8 @@
         /* ======================================================= */
         /* 2. SEMBUNYIKAN KARDUS CETAKAN DARI LAYAR UTAMA          */
         /* ======================================================= */
-        #print-section { display: none !important; }
+        /* 🌟 PERBAIKAN: Tambahkan #temp-print-section agar otomatis sembunyi di layar normal */
+        #print-section, #temp-print-section { display: none !important; }
 
         /* ======================================================= */
         /* 3. CSS DARURAT: KEMBALIKAN SCROLL PC/LAPTOP             */
@@ -220,27 +221,25 @@
         /* PENGATURAN CETAK (GABUNGAN IPAD/IOS & THERMAL BARCODE)  */
         /* ======================================================= */
         @media print {
-            body.safe-print-mode > * { display: none !important; }
-            body.safe-print-mode > #temp-print-section { display: block !important; width: 100% !important; position: relative !important; left: 0 !important; top: 0 !important; margin: 0 auto !important; }
+            /* 🌟 PERBAIKAN: Ganti body.safe-print-mode dengan deteksi otomatis CSS murni */
+            body > *:not(#temp-print-section) { display: none !important; }
             
-            html, body.safe-print-mode { overflow: visible !important; height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
+            /* Tampilkan area cetak */
+            #temp-print-section { display: block !important; width: 100% !important; position: relative !important; left: 0 !important; top: 0 !important; margin: 0 auto !important; }
+            
+            html, body { overflow: visible !important; height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             @page { margin: 0mm; size: auto; }
-
             .no-print-area, #sidebar, .dashboard-card, .btn, .navbar { display: none !important; }
             
-            body { background: #fff !important; margin: 0 !important; padding: 0 !important; display: block !important; }
-
+            /* Pengaturan Barcode saat diprint */
             .barcode-print-sheet { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; background: #fff !important; padding: 0 !important; margin: 0 !important; gap: 0 !important; width: 100% !important; }
             .barcode-label-box { border: none !important; page-break-inside: avoid; margin: 0 !important; }
-          /* 1. Mencegah header tabel (nama toko/info) diulang di halaman 2 dst */
-            thead { display: table-row-group !important; }
-            tfoot { display: table-row-group !important; }
+            
+            /* Mencegah header tabel (nama toko/info) diulang di halaman 2 dst */
+            thead, tfoot { display: table-row-group !important; }
 
-            /* 2. Mencegah isi baris produk terpotong setengah di antara 2 halaman kertas */
+            /* Mencegah isi baris produk terpotong setengah di antara 2 halaman kertas */
             tr, td, th { page-break-inside: avoid !important; }
-
-            /* 3. Memastikan pembungkus tabel tidak error ukurannya saat terpotong */
             table { page-break-inside: auto !important; }
         }
     </style>
@@ -13778,39 +13777,22 @@ doActualPrint() {
     const originalPrintContent = document.getElementById('print-section');
     if (!originalPrintContent) return;
 
-    // 1. Bersihkan sisa kloningan lama (jika masih ada)
-    const oldClone = document.getElementById('temp-print-section');
-    if (oldClone) oldClone.remove();
+    // 1. Bersihkan SELURUH sisa kloningan lama secara total saat tombol cetak baru diklik
+    document.querySelectorAll('#temp-print-section').forEach(el => el.remove());
 
-    // 2. Kloning area cetak beserta seluruh isi datanya
+    // 2. Kloning area cetak beserta seluruh isi datanya yang baru
     const clonedPrint = originalPrintContent.cloneNode(true);
     clonedPrint.id = 'temp-print-section';
     
     // 3. Suntikkan langsung ke <body> paling luar
+    // Elemen ini otomatis tidak terlihat di layar aplikasi karena aturan CSS biasa (display: none)
     document.body.appendChild(clonedPrint);
-    
-    // 4. Tambahkan class penanda ke body
-    document.body.classList.add('safe-print-mode');
 
-    // 5. Beri jeda render yang lebih aman
+    // 4. Panggil pratinjau cetak browser
+    // Sistem printer HP/PC hanya akan membaca elemen #temp-print-section berdasarkan aturan @media print
     setTimeout(() => {
         window.print();
-        
-        // 🌟 PERBAIKAN UTAMA: Hapus kloningan BEGITU JENDELA PRINT DITUTUP
-        window.onafterprint = () => {
-            document.body.classList.remove('safe-print-mode');
-            const cleanupClone = document.getElementById('temp-print-section');
-            if (cleanupClone) cleanupClone.remove(); // Hancurkan bayangan!
-        };
-
-        // 🌟 PERBAIKAN: Fallback mundur (Pastikan tetap terhapus meski onafterprint gagal)
-        setTimeout(() => {
-            document.body.classList.remove('safe-print-mode');
-            const forceCleanup = document.getElementById('temp-print-section');
-            if (forceCleanup) forceCleanup.remove(); // Hancurkan paksa setelah 8 detik!
-        }, 8000);
-        
-    }, 800); 
+    }, 500); 
 },
 
         // 2. TIMPA FUNGSI triggerPrint LAMA ANDA
