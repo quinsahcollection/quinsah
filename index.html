@@ -631,6 +631,8 @@
                 <tr>
                     <th>No. Invoice / PO</th>
                     <th>Tanggal</th>
+                    <th>Cabang</th>
+                    <th>PIC</th>
                     <th>Supplier</th>
                     <th>Status Barang</th>
                     <th>Status Bayar</th>
@@ -645,6 +647,17 @@
                         <a href="#" class="text-primary-custom text-decoration-underline" @click.prevent="openPurchaseDetail(po)">{{ po.id }}</a>
                     </td>
                     <td style="font-size: 0.75rem;">{{ po.dateStr }}</td>
+                    
+                    <td style="font-size: 0.75rem;">
+                        <span class="badge bg-secondary bg-opacity-10 text-dark border">
+                            <i class="bi bi-shop me-1"></i>{{ getOutletName(po.outletId) || 'Gudang Pusat' }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
+                            <i class="bi bi-person me-1"></i>{{ po.pic || po.userName || 'Sistem' }}
+                        </span>
+                    </td>
                     <td class="fw-bold small cursor-pointer text-primary text-decoration-underline" @click="openSupplierDetail({id: po.supplierId, name: getSupplierName(po.supplierId)})">
                         {{ getSupplierName(po.supplierId) }}
                     </td>
@@ -5306,7 +5319,14 @@
                                 <div class="text-muted small">Nomor Invoice / PO</div>
                                 <div class="fw-bold text-dark fs-5">{{ activePurchaseDetail.id }}</div>
                                 <div class="text-muted small mt-2">Tanggal PO: <span class="fw-bold text-dark">{{ activePurchaseDetail.dateStr }}</span></div>
-                            </div>
+                                
+                                <div class="text-muted small mt-1">
+                                    Lokasi Cabang: <span class="fw-bold text-primary">{{ getOutletName(activePurchaseDetail.outletId) || 'Gudang Pusat' }}</span>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    PIC / User: <span class="fw-bold text-dark">{{ activePurchaseDetail.pic || activePurchaseDetail.userName || 'Sistem' }}</span>
+                                </div>
+                                </div>
                             <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
                                 <div class="text-muted small">Supplier Pemasok</div>
                                 <div class="fw-bold text-primary">{{ getSupplierName(activePurchaseDetail.supplierId) }}</div>
@@ -13507,14 +13527,22 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     delete dataToSave.originalPo;
                     dataToSave.id = String(this.formPurchase.invoiceNo || '').replace(/\//g, '-');
                     dataToSave.createdAt = serverTimestamp();
-                    dataToSave.userName = this.userProfile.name || 'Admin'; 
+                    
+                    // 👇 PERBAIKAN: Gunakan namaLengkap untuk mendeteksi user aktif
+                    let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+                    dataToSave.userName = activeUser;
+                    dataToSave.pic = activeUser; // Simpan juga sebagai pic agar HTML gampang membacanya
+                    
+                    // 👇 PENGAMAN CABANG: Pastikan outletId tidak kosong
+                    if (!dataToSave.outletId) {
+                        dataToSave.outletId = this.outlets.length > 0 ? this.outlets[0].id : '';
+                    }
 
                     // <--- TAMBAHAN MULTI-TENANT
-                    dataToSave.companyId = this.userProfile.companyId; 
+                    dataToSave.companyId = this.userProfile?.companyId || ''; 
                     // --------------------------
 
                     // --- TAMBAHAN PENTING: AUTO KALKULASI LUNAS ---
-                    // Jika status dipilih LUNAS, pastikan nominal bayar otomatis sama dengan Grand Total
                     if (dataToSave.paymentStatus === 'LUNAS') {
                         dataToSave.paidAmount = dataToSave.total;
                     }
@@ -13591,6 +13619,7 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                                 
                                 await updateDoc(doc(db, "products", prod.id), updatePayload);
                                 
+                                // 👇 PERBAIKAN LOG STOK: Memastikan tercatat dari PIC yang benar
                                 await this.logStock('IN', {
                                     productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
                                     qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
