@@ -11452,94 +11452,82 @@ async fetchRolesFromDatabase() {
     },
     
     triggerPrintBarcode() {
-    console.log("Fungsi cetak barcode (Tanpa Iframe) dipanggil!");
+    console.log("Fungsi cetak barcode dipanggil!"); // Cek di console (F12) apakah muncul
 
     const printContent = document.getElementById('printCanvas');
     const styleContent = document.getElementById('barcodeStyles'); 
 
     if (!printContent) {
-        Swal.fire('Oops!', 'Area stiker barcode tidak ditemukan.', 'warning');
+        // Jika tidak ketemu, munculkan notif, jangan diam saja
+        Swal.fire('Oops!', 'Area stiker barcode (printCanvas) tidak ditemukan di layar.', 'warning');
         return;
     }
 
-    // 1. Bersihkan sisa kloningan barcode lama jika ada
-    const oldClone = document.getElementById('temp-barcode-print');
-    if (oldClone) oldClone.remove();
+    // Buat iframe tersembunyi
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
 
-    // 2. Buat container baru yang akan disuntikkan ke Body
-    const printContainer = document.createElement('div');
-    printContainer.id = 'temp-barcode-print';
+    const iframeDoc = iframe.contentWindow.document;
+    iframeDoc.open();
     
-    // 3. Masukkan kelas alignment dari settingan Anda
-    if (this.barcodeAlign) {
-        printContainer.classList.add(this.barcodeAlign);
-    }
-
-    // 4. 🌟 TRIK CSS: Sembunyikan aplikasi utama HANYA SAAT DIPRINT 🌟
-    const styleHtml = `
-        <style>
-            @media print {
-                /* Sembunyikan semua elemen di website */
-                body > *:not(#temp-barcode-print) {
-                    display: none !important;
-                }
-                
-                /* Munculkan HANYA container barcode kita */
-                #temp-barcode-print {
-                    display: flex !important;
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                }
-                
-                /* Hilangkan margin browser bawaan */
+    // Gabungkan desain
+    iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Cetak Label Barcode</title>
+            ${styleContent ? styleContent.innerHTML : ''}
+            <style>
                 @page { margin: 0; size: auto; }
-            }
-            
-            /* Tampilan dasar container barcode */
-            #temp-barcode-print {
-                display: none; /* Sembunyikan di layar normal */
-                flex-wrap: wrap;
-                align-content: flex-start;
-                justify-content: flex-start;
-                gap: 1mm;
-                background: #fff;
-                color: #000;
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact; 
-            }
-        </style>
-    `;
-
-    // 5. Gabungkan Style dari pengaturan stiker Anda + CSS Trik + Gambar Barcode
-    printContainer.innerHTML = styleHtml + (styleContent ? styleContent.innerHTML : '') + printContent.innerHTML;
-
-    // 6. Suntikkan ke layar utama
-    document.body.appendChild(printContainer);
+                body { 
+                    background: #fff; 
+                    margin: 0; 
+                    padding: 0; 
+                    color: #000; 
+                    -webkit-print-color-adjust: exact; 
+                    print-color-adjust: exact; 
+                }
+                #print-wrapper { 
+                    display: flex; 
+                    flex-wrap: wrap; 
+                    align-content: flex-start; 
+                    justify-content: flex-start; 
+                    gap: 1mm; 
+                    width: 100%; 
+                }
+            </style>
+        </head>
+        <body>
+            <div id="print-wrapper" class="${this.barcodeAlign || ''}">
+                ${printContent.innerHTML}
+            </div>
+        </body>
+        </html>
+    `);
+    iframeDoc.close();
 
     console.log("Menunggu render barcode selesai...");
 
-    // 7. Beri waktu jeda untuk HP/Browser menggambar gambar barcode
+    // Jeda 1.5 detik agar mesin HP sempat menggambar gambar barcodenya
     setTimeout(() => {
-        console.log("Mengeksekusi jendela print bawaan browser!");
+        console.log("Mengeksekusi jendela print!");
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
         
-        // Panggil fungsi print utama
-        window.print();
+        // Bersihkan iframe 10 detik kemudian agar pratinjau di HP tidak error
+        setTimeout(() => { 
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe); 
+            }
+        }, 10000);
         
-        // Bersihkan bekas barcode dari layar ketika selesai nge-print
-        window.onafterprint = () => {
-            const cleanup = document.getElementById('temp-barcode-print');
-            if (cleanup) cleanup.remove();
-        };
-
-        // Fallback pembersihan otomatis setelah 8 detik
-        setTimeout(() => {
-            const cleanup = document.getElementById('temp-barcode-print');
-            if (cleanup) cleanup.remove();
-        }, 8000);
-        
-    }, 1500); // Jeda 1.5 detik
+    }, 1500);
 },
 
         // ========================================================
