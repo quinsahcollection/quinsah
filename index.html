@@ -7159,38 +7159,48 @@
         
         return ['Kasir 1', 'Kasir 2'];
     },
-          
-            // Taruh di dalam computed: { ... }
-            currentActiveShift() {
+        
+        currentActiveShift() {
             if (!this.registers || !this.posActiveOutletId) return null;
-            // Cari apakah ada shift yang sedang 'OPEN' di outlet jualan aktif saat ini
-            return this.registers.find(r => r.outletId === this.posActiveOutletId && r.status === 'OPEN');
-          },
+            
+            // 🌟 PERBAIKAN UTAMA: Ambil data user yang sedang login saat ini
+            const currentUser = this.userProfile || this.loggedInUser || this.user;
+            if (!currentUser) return null;
+            
+            const myId = String(currentUser.id || currentUser.uid || '');
+
+            // 🌟 KUNCI AMAN: Laci POS hanya terbuka jika OUTLET cocok, status 'OPEN', DAN milik USER itu sendiri
+            return this.registers.find(r => 
+                r.outletId === this.posActiveOutletId && 
+                r.status === 'OPEN' && 
+                String(r.cashierId) === myId
+            );
+        },
           
-            filteredRegisters() {
+        filteredRegisters() {
             if (!this.registers) return [];
             if (!this.registerFilterOutlet) return this.registers;
             return this.registers.filter(r => r.outletId === this.registerFilterOutlet);
-            },
+        },
           
-            activePaymentMethodsForCashier() {
-        // Coba mencari ID outlet dari berbagai variabel kasir yang umum dipakai
-        const currentOutletId = this.user?.outletId || this.currentOutletId || '';
+        activePaymentMethodsForCashier() {
+            // Coba mencari ID outlet dari berbagai variabel kasir yang umum dipakai
+            const currentOutletId = this.user?.outletId || this.currentOutletId || '';
 
-        return (this.paymentMethods || []).filter(pm => {
-            // Syarat 1: Metode harus berstatus AKTIF
-            const isMethodActive = pm.isActive === true;
-            
-            // Syarat 2: Cocokkan Outletnya
-            // Akan muncul jika: 
-            // - Metode ini diset Global (!pm.outletId)
-            // - ATAU Outletnya cocok dengan kasir saat ini
-            // - ATAU Kasirnya tidak memiliki outlet spesifik (Admin Pusat / currentOutletId kosong)
-            const isOutletMatch = !pm.outletId || pm.outletId === currentOutletId || currentOutletId === '';
+            return (this.paymentMethods || []).filter(pm => {
+                // Syarat 1: Metode harus berstatus AKTIF
+                const isMethodActive = pm.isActive === true;
+                
+                // Syarat 2: Cocokkan Outletnya
+                // Akan muncul jika: 
+                // - Metode ini diset Global (!pm.outletId)
+                // - ATAU Outletnya cocok dengan kasir saat ini
+                // - ATAU Kasirnya tidak memiliki outlet spesifik (Admin Pusat / currentOutletId kosong)
+                const isOutletMatch = !pm.outletId || pm.outletId === currentOutletId || currentOutletId === '';
 
-            return isMethodActive && isOutletMatch;
-        });
-    },
+                return isMethodActive && isOutletMatch;
+            });
+        },
 
         groupedPaymentMethodsByOutlet() {
         if (!this.paymentMethods || this.paymentMethods.length === 0) return {};
