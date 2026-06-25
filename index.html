@@ -8487,7 +8487,13 @@ beforeDestroy() {
         let productSales = {}; // Untuk Top Products
         let last7DaysSales = { 6:0, 5:0, 4:0, 3:0, 2:0, 1:0, 0:0 }; // 0 = hari ini, 6 = 6 hari lalu
         
-        const nowMs = new Date().getTime();
+        // 🌟 PERBAIKAN: Generate susunan string tanggal 7 hari terakhir sebagai acuan pencocokan data grafik
+        let last7DaysDates = [];
+        for (let i = 0; i <= 6; i++) {
+            let d = new Date();
+            d.setDate(d.getDate() - i);
+            last7DaysDates.push(d.toLocaleDateString('id-ID')); // Menyimpan array string tanggal (DD/MM/YYYY)
+        }
 
         snapTrx.forEach(doc => {
             let data = doc.data();
@@ -8499,12 +8505,10 @@ beforeDestroy() {
                 trxCount++;
             }
 
-            // Logika Grafik (Hitung 7 Hari ke belakang berdasarkan millisecond timestamp)
-            if (data.timestamp) {
-                let diffDays = Math.floor((nowMs - data.timestamp.toMillis()) / (1000 * 60 * 60 * 24));
-                if (diffDays >= 0 && diffDays <= 6) {
-                    last7DaysSales[diffDays] += data.total || 0;
-                }
+            // 🌟 PERBAIKAN: Logika grafik mencocokkan string tanggal transaksi dengan array 7 hari terakhir
+            let dayIndex = last7DaysDates.indexOf(trxDateStr);
+            if (dayIndex !== -1) {
+                last7DaysSales[dayIndex] += data.total || 0;
             }
 
             // Logika Top Produk (Aggregasi item terjual)
