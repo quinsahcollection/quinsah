@@ -7161,20 +7161,35 @@
     },
         
         currentActiveShift() {
-            if (!this.registers || !this.posActiveOutletId) return null;
+            if (!this.registers) return null;
             
-            // 🌟 PERBAIKAN UTAMA: Ambil data user yang sedang login saat ini
-            const currentUser = this.userProfile || this.loggedInUser || this.user;
-            if (!currentUser) return null;
-            
+            // 1. Ambil identitas user dengan aman
+            const currentUser = this.userProfile || this.loggedInUser || this.user || {};
             const myId = String(currentUser.id || currentUser.uid || '');
+            const myEmail = String(currentUser.email || '').toLowerCase();
 
-            // 🌟 KUNCI AMAN: Laci POS hanya terbuka jika OUTLET cocok, status 'OPEN', DAN milik USER itu sendiri
-            return this.registers.find(r => 
-                r.outletId === this.posActiveOutletId && 
-                r.status === 'OPEN' && 
-                String(r.cashierId) === myId
-            );
+            // 2. Cari laci yang OPEN berdasarkan ID *ATAU* Email (Pasti Ketemu)
+            const myShift = this.registers.find(r => {
+                if (r.status !== 'OPEN') return false;
+                
+                const shiftOwnerId = String(r.cashierId || '');
+                const shiftOwnerEmail = String(r.cashierEmail || '').toLowerCase();
+                
+                // Syarat Lolos: ID cocok, atau Email cocok
+                return (myId !== '' && shiftOwnerId === myId) || 
+                       (myEmail !== '' && shiftOwnerEmail === myEmail);
+            });
+
+            // 3. 🌟 SINKRONISASI OTOMATIS CABANG JUALAN
+            // Jika Willy buka laci cabang JKT, paksa layar POS langsung ke JKT!
+            if (myShift && this.posActiveOutletId !== myShift.outletId) {
+                // Gunakan setTimeout agar tidak terjadi error bentrok render di Vue
+                setTimeout(() => { 
+                    this.posActiveOutletId = myShift.outletId; 
+                }, 50);
+            }
+
+            return myShift;
         },
           
         filteredRegisters() {
