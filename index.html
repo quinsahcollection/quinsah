@@ -7095,7 +7095,7 @@
         async mounted() {
     this.resetPosDate();
     
-    // Simpan reference ke fungsi agar bisa dihapus nanti
+    // [TETAP] Simpan reference ke fungsi agar bisa dihapus nanti
     this._modalListener = (event) => {
         if (document.querySelectorAll('.modal.show').length > 0) { 
             document.body.classList.add('modal-open'); 
@@ -7103,10 +7103,11 @@
     };
     document.addEventListener('hidden.bs.modal', this._modalListener);
 
-    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
-    if (typeof this.fetchTransferHistory === 'function') await this.fetchTransferHistory();
-    if (typeof this.fetchPaymentMethods === 'function') await this.fetchPaymentMethods();
+    // 🌟 PERBAIKAN: Pemanggilan fetchOpnameHistory, fetchTransferHistory, dan fetchPaymentMethods 
+    // di sini DIHAPUS karena terlalu dini (saat ini userProfile.companyId belum di-load oleh Firebase).
+    // Fungsinya dipindahkan ke dalam 'watch: userProfile' di bawah agar otomatis jalan saat data siap.
 
+    // [TETAP] Listener untuk cetak/print
     this._printListener = () => {
         setTimeout(() => {
             this.activePrintData = null; 
@@ -7115,12 +7116,12 @@
     };
     window.addEventListener('afterprint', this._printListener);
 
-    // Simpan fungsi unsubscribe dari Firebase
+    // [TETAP] Simpan fungsi unsubscribe dari Firebase
     this._authUnsubscribe = onAuthStateChanged(auth, async (user) => {
         if (this.isRegistering) return; 
         try {
             if (user) { 
-                await this.fetchUserProfile(user); 
+                await this.fetchUserProfile(user); // 🌟 Selesai ini dijalankan, watch userProfile akan terpicu otomatis
                 this.isLoggedIn = true; 
                 this.initAppListeners(); 
                 this.fetchUsersFromDatabase();
@@ -7137,11 +7138,11 @@
     });
 },
 
-      // Tambahkan hook ini untuk membersihkan sisa listener (Gunakan unmounted() jika Vue 3)
-    beforeDestroy() {
+// [TETAP] Pembersihan sisa listener saat ganti halaman utama
+beforeDestroy() {
     if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
     if (this._printListener) window.removeEventListener('afterprint', this._printListener);
-    if (this._authUnsubscribe) this._authUnsubscribe(); // Matikan listener Firebase
+    if (this._authUnsubscribe) this._authUnsubscribe(); 
 },
         
         computed: {
@@ -8251,41 +8252,68 @@
         },
         
         watch: {
-            outlets(newVal) { 
-                if (newVal.length > 0) {
-                    // 🌟 Jika yang login BUKAN Admin dan punya Outlet spesifik, kunci langsung ke outletnya
-                    if (this.userProfile && this.userProfile.role !== 'Admin' && this.userProfile.outletId) {
-                        this.posActiveOutletId = this.userProfile.outletId;
-                    } else {
-                        // Logika lama (Untuk Admin)
-                        let outletMasihAda = newVal.find(o => o.id === this.posActiveOutletId);
-                        if (!this.posActiveOutletId || !outletMasihAda) {
-                            this.posActiveOutletId = newVal[0].id;
-                        }
-                    }
-                } else {
-                    this.posActiveOutletId = ''; 
-                }
-            },
-            
-            currentView(newView) {
-                if (newView === 'opname') {
-                    if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
-                } else if (newView === 'transfer') {
-                    if (typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
-                } else if (newView === 'pos') {
-                    // 🌟 Tambahan Pengaman: Saat buka halaman POS, paksa arahkan ke outlet kasir
-                    if (this.userProfile && this.userProfile.role !== 'Admin' && this.userProfile.outletId) {
-                        this.posActiveOutletId = this.userProfile.outletId;
-                    }
-                } else if (newView === 'cash_register') {
-                    if (this.userProfile && this.userProfile.role !== 'Admin') {
-                        this.registerFilterOutlet = this.userProfile.outletId || '';
-                    }
-                    if (typeof this.fetchRegisters === 'function') this.fetchRegisters();
+    // 🌟 TAMBAHAN BARU: Mengamankan data awal saat aplikasi pertama kali dimuat
+    userProfile: {
+        handler(newProfile) {
+            // Begitu Firebase selesai memuat profil dan companyId valid ditemukan
+            if (newProfile && newProfile.companyId) {
+                
+                // Ambil metode pembayaran yang bergantung pada companyId
+                if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
+
+                // Cek user sedang berada di halaman mana saat pertama kali terbuka, lalu muat datanya
+                if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
+                    this.fetchTransferHistory();
+                } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
+                    this.fetchOpnameHistory();
+                } else if (this.currentView === 'cash_register' && typeof this.fetchRegisters === 'function') {
+                    this.fetchRegisters();
                 }
             }
         },
+        deep: true,
+        immediate: true
+    },
+
+    // [TETAP] Logika penguncian outlet berdasarkan role
+    outlets(newVal) { 
+        if (newVal.length > 0) {
+            if (this.userProfile && this.userProfile.role !== 'Admin' && this.userProfile.outletId) {
+                this.posActiveOutletId = this.userProfile.outletId;
+            } else {
+                let outletMasihAda = newVal.find(o => o.id === this.posActiveOutletId);
+                if (!this.posActiveOutletId || !outletMasihAda) {
+                    this.posActiveOutletId = newVal[0].id;
+                }
+            }
+        } else {
+            this.posActiveOutletId = ''; 
+        }
+    },
+    
+    // 🌟 PERBAIKAN: Logika deteksi perpindahan halaman menu
+    currentView(newView) {
+        // Buat flag pengaman untuk memastikan profil & companyId sudah siap sebelum fetch data
+        const isReady = this.userProfile && this.userProfile.companyId;
+
+        if (newView === 'opname') {
+            if (isReady && typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
+        } else if (newView === 'transfer') {
+            if (isReady && typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
+        } else if (newView === 'pos') {
+            // [TETAP] Tambahan Pengaman: Saat buka halaman POS, paksa arahkan ke outlet kasir
+            if (this.userProfile && this.userProfile.role !== 'Admin' && this.userProfile.outletId) {
+                this.posActiveOutletId = this.userProfile.outletId;
+            }
+        } else if (newView === 'cash_register') {
+            // [TETAP] Filter default kasir non-admin
+            if (this.userProfile && this.userProfile.role !== 'Admin') {
+                this.registerFilterOutlet = this.userProfile.outletId || '';
+            }
+            if (isReady && typeof this.fetchRegisters === 'function') this.fetchRegisters();
+        }
+    }
+},
         
         methods: {
             askConfirm(title, message, callback) {
