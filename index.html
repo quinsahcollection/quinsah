@@ -8856,42 +8856,57 @@ if (userActiveShift) {
 
     // 6. 🌟 ANTI ERROR: Buka Modal Tutup Shift (Dihitung di sisi Client Javascript)
     async openCloseShiftModal(reg) {
-        Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, merekap transaksi tunai...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, merekap transaksi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
         
         try {
             const compId = this.getMyCompanyId();
             
-            // Ambil SEMUA transaksi perusahaan (Ini menghindari error Composite Index Firebase!)
+            // Ambil SEMUA transaksi perusahaan
             const qTrx = query(
                 collection(db, "transactions"),
                 where("companyId", "==", compId)
             );
             const snapTrx = await getDocs(qTrx);
             
+            // Wadah rekapan
             let totalCashSales = 0;
-            let shiftOpenTime = reg.openTime?.toDate ? reg.openTime.toDate().getTime() : new Date(reg.openTime).getTime();
+            let totalQrisSales = 0;
+            let totalCardSales = 0;
+            let totalTransferSales = 0;
 
-            // Lakukan Filter manual menggunakan JavaScript
+            // 🌟 LOGIKA BARU: Lakukan Filter menggunakan Tali Penghubung (shiftId)
             snapTrx.forEach(docTrx => {
                 const d = docTrx.data();
                 
-                // Syarat 1: Outletnya sama dan Metode pembayarannya CASH (Uang Fisik)
-                if (d.outletId === reg.outletId && d.paymentMethod === 'CASH') {
-                    // Syarat 2: Waktu transaksi harus SETELAH laci dibuka
-                    let trxTime = d.createdAt?.toDate ? d.createdAt.toDate().getTime() : new Date(d.createdAt).getTime();
+                // PENGAMAN: Gunakan String() agar tidak terjadi missmatch tipe data
+                if (String(d.shiftId) === String(reg.id)) {
                     
-                    if (trxTime >= shiftOpenTime) {
-                        totalCashSales += Number(d.total || 0);
+                    // 🌟 PERBAIKAN BUG OMSET: Harus pakai d.total (Nilai asli belanja), BUKAN uang yang diserahkan pelanggan
+                    let nominal = Number(d.total || 0); 
+
+                    // Pilah berdasarkan tipe pembayaran
+                    let pMethod = String(d.paymentMethod || '').toUpperCase();
+                    if (pMethod === 'CASH' || pMethod === 'TUNAI') {
+                        totalCashSales += nominal;
+                    } else if (pMethod.includes('QRIS')) {
+                        totalQrisSales += nominal;
+                    } else if (pMethod.includes('TRANSFER')) {
+                        totalTransferSales += nominal;
+                    } else {
+                        totalCardSales += nominal;
                     }
                 }
             });
 
-            // Hitung Uang Seharusnya (Modal + Omset Tunai - Kas Keluar)
+            // Hitung Uang Seharusnya (Modal + Omset Tunai Fisik - Kas Keluar)
             let expected = reg.startingCash + totalCashSales - (reg.totalExpenses || 0);
 
             this.activeCloseShift = {
                 ...reg,
                 cashSales: totalCashSales,
+                qrisSales: totalQrisSales,         // <-- Tambahan agar laporan cetak lebih kaya data
+                cardSales: totalCardSales,         // <-- Tambahan
+                transferSales: totalTransferSales, // <-- Tambahan
                 expectedCash: expected,
                 actualCash: '',
                 closeNote: ''
@@ -13114,21 +13129,46 @@ async fetchRolesFromDatabase() {
                         }
                     }
 
+                    // =================================================================
+                    // 🌟 PENCARIAN LACI AKTIF SECARA MANUAL (ANTI GAGAL)
+                    // =================================================================
+                    const currentUser = this.userProfile || this.loggedInUser || this.user || {};
+                    const myId = String(currentUser.id || currentUser.uid || '');
+                    const myEmail = String(currentUser.email || '').toLowerCase();
+
+                    // Cari manual di array registers saat ini juga
+                    const shiftAktif = (this.registers || []).find(r => {
+                        if (r.status !== 'OPEN') return false;
+                        const sId = String(r.cashierId || '');
+                        const sEmail = String(r.cashierEmail || '').toLowerCase();
+                        return (myId !== '' && sId === myId) || (myEmail !== '' && sEmail === myEmail);
+                    });
+                    
+                    const finalCashierId = shiftAktif ? shiftAktif.cashierId : myId;
+                    const finalCashierName = shiftAktif ? shiftAktif.cashierName : (currentUser.namaLengkap || currentUser.name || currentUser.username || 'Admin');
+                    const finalShiftId = shiftAktif ? shiftAktif.id : null;
+                    const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
+
                     let trxRaw = {
                         id: currentInvoiceId,
-                        // <--- TAMBAHAN MULTI-TENANT (Wajib agar omzet masuk ke toko ini)
                         companyId: this.userProfile.companyId,
-                        // --------------------------------------------------------------
                         dateStr: new Date().toLocaleString('id-ID'),
                         customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
                         customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
                         customerPhone: this.selectedCustomer ? (this.selectedCustomer.phone || '') : '',
                         customerAddress: this.selectedCustomer ? (this.selectedCustomer.address || '') : '',
                         outletId: this.posActiveOutletId || '',
-                        cashierName: this.userProfile.name || 'Admin',
+                        
+                        // 🌟 TALI PENGHUBUNG YANG SUDAH DIJAMIN TIDAK KOSONG
+                        cashierId: finalCashierId,
+                        cashierName: finalCashierName,
+                        shiftId: finalShiftId,
+                        registerName: finalRegisterName,
+                        // =========================================================
+
                         paymentMethod: this.paymentData.method || 'CASH',
                         paymentNote: this.paymentData.note || '',
-                        mdrFee: nominalMdr, // 🌟 MENYIMPAN POTONGAN MDR KE DATABASE
+                        mdrFee: nominalMdr,
                         amountReceived: uangDiterima,
                         sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
                         paymentStatus: (uangDiterima >= currentTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
