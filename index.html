@@ -8886,16 +8886,14 @@ if (userActiveShift) {
     },
 
     // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
-    async saveCloseShift() {
+async saveCloseShift() {
     this.isProcessing = true;
     try {
         // 🌟 PROTEKSI KEAMANAN LENGKAP (Cek Hak Akses Tutup Kasir)
-        // Jika laci tidak ditemukan atau tidak valid, batalkan.
         if (!this.activeCloseShift || !this.activeCloseShift.id) {
             throw new Error("Data laci kasir tidak ditemukan.");
         }
 
-        // Jika fungsi canManageShift() merespons false, langsung blokir prosesnya!
         if (!this.canManageShift(this.activeCloseShift)) {
             this.isProcessing = false;
             return Swal.fire(
@@ -8905,9 +8903,6 @@ if (userActiveShift) {
             );
         }
 
-        // ==========================================
-        // SKRIP ASLI ANDA DIMULAI DARI SINI 
-        // ==========================================
         const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
         const now = new Date();
         let actual = Number(this.activeCloseShift.actualCash) || 0;
@@ -8922,9 +8917,13 @@ if (userActiveShift) {
         }
         if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
 
+        // 🌟 PERBAIKAN UTAMA: Sekarang semua metode pembayaran ikut disimpan ke Firebase
         await updateDoc(shiftRef, {
             status: 'CLOSED',
             cashSales: this.activeCloseShift.cashSales,
+            qrisSales: this.activeCloseShift.qrisSales || 0,         // 🌟 BARU: Simpan data QRIS
+            cardSales: this.activeCloseShift.cardSales || 0,         // 🌟 BARU: Simpan data Debit/Kredit
+            transferSales: this.activeCloseShift.transferSales || 0, // 🌟 BARU: Simpan data Transfer
             expectedCash: expected,
             actualCash: actual,
             difference: diff,
