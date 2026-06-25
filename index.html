@@ -4060,7 +4060,12 @@
             <div class="modal-header bg-light pb-2">
                 <div>
                     <h5 class="modal-title fw-bold text-primary-custom mb-1">Detail Invoice: {{ activeInvoiceDetail?.id }}</h5>
-                    <div class="small text-muted"><i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }}</div>
+                    <div class="small text-muted">
+                        <i class="bi bi-person-fill"></i> {{ activeInvoiceDetail?.customer }} | 
+                        <i class="bi bi-calendar"></i> {{ activeInvoiceDetail?.dateStr }} | 
+                        <i class="bi bi-shop text-muted"></i> {{ getOutletName(activeInvoiceDetail?.outletId) || 'Global/Pusat' }} | 
+                        <i class="bi bi-person-badge text-muted"></i> Kasir: {{ activeInvoiceDetail?.cashierName || activeInvoiceDetail?.cashier || '-' }}
+                    </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -4077,8 +4082,7 @@
                                     <th class="text-end">Harga Satuan</th>
                                     <th class="text-end">Subtotal</th>
                                 </tr>
-                            </thead>
-                            <tbody>
+                            </thead> <tbody>
                                 <tr v-for="(item, idx) in activeInvoiceDetail.items" :key="idx">
                                     <td>
                                         <div class="fw-bold text-dark">{{ item.name }}</div>
@@ -4227,7 +4231,9 @@
                         </table>
                     </div>
                 </div>
-            </div> <div class="modal-footer bg-light p-2 d-flex justify-content-between">
+            </div> 
+            
+            <div class="modal-footer bg-light p-2 d-flex justify-content-between">
                 <button class="btn btn-sm btn-outline-danger fw-bold shadow-sm" 
                         v-if="currentView !== 'reports' && currentView !== 'analytics' && activeInvoiceDetail && activeInvoiceDetail.paymentStatus !== 'DIRETUR'"
                         @click="cekDanBukaModalRetur(activeInvoiceDetail)">
