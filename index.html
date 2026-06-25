@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root { --primary-color: #dc2626; --primary-dark: #991b1b; --bg-main: #f8f9fa; --bg-panel: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
@@ -297,11 +298,15 @@
             <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
             
             <div class="menu-scroll-area">
+                
+                <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'" v-if="hasAccess('dashboard', 'read')">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </div>
                 <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
                     <i class="bi bi-display"></i> POS
                 </div>
 
-               <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
+                <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
                     <i class="bi bi-cash-coin"></i> Kasir
                 </div>
               
