@@ -9340,14 +9340,28 @@ if (userActiveShift) {
                 closeNote: ''
             };
 
-            Swal.close();
-            const modal = new bootstrap.Modal(document.getElementById('closeShiftModal'));
+                Swal.close();
+            
+            // 🌟 PERBAIKAN BUG LAYAR MENGECIL (PADDDING STACKING)
+            const modalEl = document.getElementById('closeShiftModal');
+            
+            // Ambil instance modal yang sudah ada di memori, jika belum ada baru buat 'new'
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.show();
+            
+            // Pasang pembersih otomatis setiap kali modal ini selesai ditutup
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
+            }, { once: true }); // 'once: true' sangat penting agar event tidak menumpuk
+
         } catch (err) {
             console.error("Error Hitung Kasir:", err);
             Swal.fire('Error', 'Gagal menghitung ringkasan transaksi.', 'error');
         }
     },
+
 
     // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
 async saveCloseShift() {
@@ -9397,8 +9411,24 @@ async saveCloseShift() {
             closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
         });
 
-        Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
-        bootstrap.Modal.getInstance(document.getElementById('closeShiftModal')).hide();
+            Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
+        
+        // 🌟 PERBAIKAN: Tutup modal dengan instance yang benar
+        const modalEl = document.getElementById('closeShiftModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        // 🌟 PEMBERSIH PAKSA PADDING (ANTI-LAYAR MENGECIL)
+        // Kita beri jeda 300ms agar animasi penutupan modal Bootstrap selesai dulu
+        setTimeout(() => {
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
+            
+            // Sapu bersih jika ada sisa background hitam (backdrop) yang nyangkut
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(b => b.remove());
+        }, 300); 
         
         this.showPecahan = false;
         this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
@@ -9411,6 +9441,7 @@ async saveCloseShift() {
         this.isProcessing = false;
     }
 },
+
           
         // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
         openBatchDetail(product, variant = null) {
