@@ -8446,7 +8446,7 @@ beforeDestroy() {
         },
         
         watch: {
-    // 🌟 TAMBAHAN BARU: Mengamankan data awal saat aplikasi pertama kali dimuat
+    // 🌟 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
     userProfile: {
         handler(newProfile) {
             // Begitu Firebase selesai memuat profil dan companyId valid ditemukan
@@ -8455,8 +8455,11 @@ beforeDestroy() {
                 // Ambil metode pembayaran yang bergantung pada companyId
                 if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
 
-                // Cek user sedang berada di halaman mana saat pertama kali terbuka, lalu muat datanya
-                if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
+                // Cek user sedang berada di halaman mana saat pertama kali terbuka
+                if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
+                    // 🌟 SOLUSI KOSONG SAAT LOGIN: Beri jeda 150ms agar HTML <canvas> digambar penuh oleh browser
+                    setTimeout(() => { this.fetchDashboardData(); }, 150);
+                } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
                     this.fetchTransferHistory();
                 } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
                     this.fetchOpnameHistory();
@@ -8548,19 +8551,19 @@ beforeDestroy() {
 
     try {
         const companyId = this.userProfile.companyId;
-        const todayStr = new Date().toLocaleDateString('id-ID');
+        const todayStr = new Date().toLocaleDateString('id-ID'); // Format: DD/MM/YYYY
 
-        // 1. Ambil Transaksi
         const qTrx = query(collection(db, "transactions"), where("companyId", "==", companyId));
         const snapTrx = await getDocs(qTrx);
         
         let omzet = 0;
-        let laba = 0; // Variabel laba kotor
+        let laba = 0; 
         let trxCount = 0;
         let productSales = {}; 
         let last7DaysSales = { 6:0, 5:0, 4:0, 3:0, 2:0, 1:0, 0:0 };
         let paymentMethods = {}; 
-        let allTransactions = []; // Menyimpan semua transaksi untuk di-sort
+        let allTransactions = []; 
+        let hourlyCount = {}; // 🌟 Perekam jam transaksi
         
         let last7DaysDates = [];
         for (let i = 0; i <= 6; i++) {
@@ -8572,39 +8575,40 @@ beforeDestroy() {
         snapTrx.forEach(doc => {
             let data = doc.data();
             data.id = doc.id;
-            allTransactions.push(data); // Simpan untuk tabel "Transaksi Terakhir"
+            allTransactions.push(data); 
             
             let trxDateStr = data.dateStr ? data.dateStr.split(',')[0] : (data.date || '').split(',')[0];
             
-            // Logika Hari Ini (Omzet, Laba, dan Metode Pembayaran)
             if (trxDateStr === todayStr) {
                 omzet += data.total || 0;
                 trxCount++;
 
-                // Hitung Metode Pembayaran
                 let payMethod = data.paymentMethod || 'Tunai';
                 if (!paymentMethods[payMethod]) paymentMethods[payMethod] = 0;
                 paymentMethods[payMethod] += data.total || 0;
 
-                // Hitung Laba Kotor (Total Penjualan - Total Modal/HPP)
                 let totalHpp = 0;
                 if (data.items) {
                     data.items.forEach(item => {
-                        // Mencari HPP (harga modal) yang tersimpan di transaksi
                         let hpp = item.hppPrice || item.averageCost || item.capitalPrice || 0;
                         totalHpp += (hpp * item.qty);
                     });
                 }
                 laba += ((data.total || 0) - totalHpp);
+
+                // 🌟 PEREKAM JAM TERAMAI (Ambil jam dari dateStr, misal "16.32.36" -> "16")
+                let timeStr = data.dateStr ? data.dateStr.split(', ')[1] : ''; 
+                if (timeStr) {
+                    let hour = timeStr.replace(':', '.').split('.')[0]; // Deteksi format titik atau titik dua
+                    hourlyCount[hour] = (hourlyCount[hour] || 0) + 1;
+                }
             }
 
-            // Logika Grafik 7 Hari
             let dayIndex = last7DaysDates.indexOf(trxDateStr);
             if (dayIndex !== -1) {
                 last7DaysSales[dayIndex] += data.total || 0;
             }
 
-            // Logika Top Produk
             if (data.items) {
                 data.items.forEach(item => {
                     if (!productSales[item.name]) productSales[item.name] = 0;
@@ -8613,10 +8617,23 @@ beforeDestroy() {
             }
         });
 
+        // 🌟 MENGHITUNG JAM TERAMAI
+        let peakHour = '-';
+        let maxTrx = 0;
+        for (let h in hourlyCount) {
+            if (hourlyCount[h] > maxTrx) {
+                maxTrx = hourlyCount[h];
+                peakHour = `${h}:00 - ${String(Number(h)+1).padStart(2,'0')}:00`;
+            }
+        }
+
+        // Terapkan data ke State Dashboard
         this.dashData.omzetHariIni = omzet;
         this.dashData.labaHariIni = laba;
         this.dashData.transaksiHariIni = trxCount;
         this.dashData.paymentMethods = paymentMethods;
+        this.dashData.jamTeramai = maxTrx > 0 ? `${peakHour}` : 'Belum Ada';
+        this.dashData.rataRataTransaksi = trxCount > 0 ? (omzet / trxCount) : 0;
 
         // Ambil 5 Transaksi Terakhir (diurutkan berdasarkan waktu terbaru)
         this.dashData.recentTransactions = allTransactions
@@ -8629,7 +8646,7 @@ beforeDestroy() {
         }).sort((a, b) => b.qty - a.qty).slice(0, 5);
         this.dashData.topProducts = sortedProducts;
 
-        // 2. Ambil Data Hutang PO
+        // Ambil Data Hutang PO
         const qPo = query(collection(db, "purchases"), where("companyId", "==", companyId));
         const snapPo = await getDocs(qPo);
         let hutang = 0;
@@ -8641,7 +8658,7 @@ beforeDestroy() {
         });
         this.dashData.hutangPO = hutang;
 
-        // 3. Ambil Peringatan Stok Menipis
+        // Ambil Peringatan Stok Menipis
         const qProd = query(collection(db, "products"), where("companyId", "==", companyId));
         const snapProd = await getDocs(qProd);
         let lowStockCount = 0;
@@ -8652,7 +8669,7 @@ beforeDestroy() {
         });
         this.dashData.stokMenipis = lowStockCount;
 
-        // 4. Gambar Grafik
+        // Gambar Grafik
         this.renderChart(last7DaysSales);
         this.renderPaymentChart(paymentMethods);
 
