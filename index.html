@@ -233,6 +233,15 @@
 
             .barcode-print-sheet { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; background: #fff !important; padding: 0 !important; margin: 0 !important; gap: 0 !important; width: 100% !important; }
             .barcode-label-box { border: none !important; page-break-inside: avoid; margin: 0 !important; }
+          /* 1. Mencegah header tabel (nama toko/info) diulang di halaman 2 dst */
+            thead { display: table-row-group !important; }
+            tfoot { display: table-row-group !important; }
+
+            /* 2. Mencegah isi baris produk terpotong setengah di antara 2 halaman kertas */
+            tr, td, th { page-break-inside: avoid !important; }
+
+            /* 3. Memastikan pembungkus tabel tidak error ukurannya saat terpotong */
+            table { page-break-inside: auto !important; }
         }
     </style>
 </head>
@@ -13765,11 +13774,11 @@ async fetchRolesFromDatabase() {
             },
 
                     // 1. TAMBAHKAN FUNGSI BARU INI UNTUK IFRAME PRINTING
-        doActualPrint() {
+doActualPrint() {
     const originalPrintContent = document.getElementById('print-section');
     if (!originalPrintContent) return;
 
-    // 1. Bersihkan sisa kloningan lama (jika ada error sebelumnya)
+    // 1. Bersihkan sisa kloningan lama (jika masih ada)
     const oldClone = document.getElementById('temp-print-section');
     if (oldClone) oldClone.remove();
 
@@ -13783,21 +13792,22 @@ async fetchRolesFromDatabase() {
     // 4. Tambahkan class penanda ke body
     document.body.classList.add('safe-print-mode');
 
-    // 5. Beri jeda render yang lebih aman (800ms) untuk Invoice/PO yang datanya banyak
+    // 5. Beri jeda render yang lebih aman
     setTimeout(() => {
         window.print();
         
-        // 🌟 PERBAIKAN: Gunakan deteksi otomatis saat jendela pratinjau ditutup
+        // 🌟 PERBAIKAN UTAMA: Hapus kloningan BEGITU JENDELA PRINT DITUTUP
         window.onafterprint = () => {
             document.body.classList.remove('safe-print-mode');
+            const cleanupClone = document.getElementById('temp-print-section');
+            if (cleanupClone) cleanupClone.remove(); // Hancurkan bayangan!
         };
 
-        // 🌟 PERBAIKAN: Fallback mundur (Naikkan dari 1000ms menjadi 8000ms / 8 detik)
-        // Ini memastikan HP kentang sekalipun punya waktu untuk memuat pratinjau
+        // 🌟 PERBAIKAN: Fallback mundur (Pastikan tetap terhapus meski onafterprint gagal)
         setTimeout(() => {
             document.body.classList.remove('safe-print-mode');
-            // Catatan: Kloning 'temp-print-section' tidak perlu buru-buru di-remove di sini, 
-            // karena sudah otomatis dibersihkan di tahap 1 saat user nge-print lagi.
+            const forceCleanup = document.getElementById('temp-print-section');
+            if (forceCleanup) forceCleanup.remove(); // Hancurkan paksa setelah 8 detik!
         }, 8000);
         
     }, 800); 
