@@ -425,7 +425,91 @@
                     </ul>
                 </div>
             </header>
-            
+
+            <div v-if="currentView === 'dashboard'" class="dashboard-card p-3 p-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h5 class="fw-bold mb-0">Ringkasan Bisnis</h5>
+            <div class="text-muted small mt-1">Pantau performa toko Anda secara real-time.</div>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" @click="fetchDashboardData" :disabled="isLoadingDashboard">
+                <i class="bi bi-arrow-clockwise me-1" :class="{'spinner-border spinner-border-sm': isLoadingDashboard}"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                <div class="card-body p-3">
+                    <div class="text-white-50 small fw-bold mb-1"><i class="bi bi-cash-stack me-1"></i> Omzet Hari Ini</div>
+                    <h5 class="fw-bold mb-0">Rp {{ formatNumber(dashData.omzetHariIni) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary text-white">
+                <div class="card-body p-3">
+                    <div class="text-white-50 small fw-bold mb-1"><i class="bi bi-receipt me-1"></i> Transaksi Hari Ini</div>
+                    <h5 class="fw-bold mb-0">{{ dashData.transaksiHariIni }} Nota</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                <div class="card-body p-3">
+                    <div class="text-white-50 small fw-bold mb-1"><i class="bi bi-truck me-1"></i> Tagihan PO (Belum Lunas)</div>
+                    <h5 class="fw-bold mb-0">Rp {{ formatNumber(dashData.hutangPO) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-danger text-white">
+                <div class="card-body p-3">
+                    <div class="text-white-50 small fw-bold mb-1"><i class="bi bi-exclamation-triangle me-1"></i> Stok Menipis (Gudang)</div>
+                    <h5 class="fw-bold mb-0">{{ dashData.stokMenipis }} Item</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="fw-bold text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Tren Penjualan (7 Hari Terakhir)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="fw-bold text-dark"><i class="bi bi-trophy text-warning me-2"></i>Produk Terlaris (Bulan Ini)</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush mt-2">
+                        <div v-for="(item, index) in dashData.topProducts" :key="index" class="list-group-item d-flex justify-content-between align-items-center border-0 mb-1">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-light text-dark border me-2">{{ index + 1 }}</span>
+                                <div class="small fw-bold text-truncate" style="max-width: 150px;">{{ item.name }}</div>
+                            </div>
+                            <span class="badge bg-success rounded-pill">{{ item.qty }} Terjual</span>
+                        </div>
+                        <div v-if="dashData.topProducts.length === 0" class="text-center text-muted small p-4">
+                            Belum ada data penjualan bulan ini.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+          
             <div v-if="currentView === 'pos'" class="h-100 d-flex flex-column">
     
     <div v-if="!currentActiveShift" class="d-flex align-items-center justify-content-center h-100">
@@ -6869,6 +6953,19 @@
                 _modalListener: null,
                 _printListener: null,
                 _authUnsubscribe: null,
+
+                currentView: 'dashboard', // <--- JADIKAN INI DEFAULT SAAT APLIKASI DIMUAT
+        
+                // State Khusus Dashboard
+                isLoadingDashboard: false,
+                dashData: {
+                omzetHariIni: 0,
+                transaksiHariIni: 0,
+                hutangPO: 0,
+                stokMenipis: 0,
+                topProducts: []
+              },
+                chartInstance: null, // Penyimpan objek grafik agar tidak double render
               
                 // viewTitles diperbarui agar sinkron dengan menu baru
                 viewTitles: { 
@@ -8336,9 +8433,17 @@ beforeDestroy() {
                 this.registerFilterOutlet = this.userProfile.outletId || '';
             }
             if (isReady && typeof this.fetchRegisters === 'function') this.fetchRegisters();
+        } else if (newView === 'dashboard') {
+            // Ketika tab pindah ke dashboard, langsung fetch data
+            if (isReady && typeof this.fetchDashboardData === 'function') {
+                // Beri jeda sangat kecil agar HTML Canvas sempat dimuat (dirender) oleh Vue
+                setTimeout(() => {
+                    this.fetchDashboardData();
+                }, 100);
+            }
         }
     }
-},
+},         
         
         methods: {
             askConfirm(title, message, callback) {
@@ -8364,8 +8469,145 @@ beforeDestroy() {
                 this.salesOutletFilter = '';
                 this.salesStatusFilter = '';
             },
+ 
+          async fetchDashboardData() {
+    if (!this.userProfile || !this.userProfile.companyId) return;
+    this.isLoadingDashboard = true;
 
-         // =========================================================
+    try {
+        const companyId = this.userProfile.companyId;
+        const todayStr = new Date().toLocaleDateString('id-ID'); // Format: DD/MM/YYYY
+
+        // 1. Ambil Transaksi Hari Ini
+        const qTrx = query(collection(db, "transactions"), where("companyId", "==", companyId));
+        const snapTrx = await getDocs(qTrx);
+        
+        let omzet = 0;
+        let trxCount = 0;
+        let productSales = {}; // Untuk Top Products
+        let last7DaysSales = { 6:0, 5:0, 4:0, 3:0, 2:0, 1:0, 0:0 }; // 0 = hari ini, 6 = 6 hari lalu
+        
+        const nowMs = new Date().getTime();
+
+        snapTrx.forEach(doc => {
+            let data = doc.data();
+            
+            // Logika Omzet Hari ini
+            let trxDateStr = data.dateStr ? data.dateStr.split(',')[0] : (data.date || '').split(',')[0];
+            if (trxDateStr === todayStr) {
+                omzet += data.total || 0;
+                trxCount++;
+            }
+
+            // Logika Grafik (Hitung 7 Hari ke belakang berdasarkan millisecond timestamp)
+            if (data.timestamp) {
+                let diffDays = Math.floor((nowMs - data.timestamp.toMillis()) / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0 && diffDays <= 6) {
+                    last7DaysSales[diffDays] += data.total || 0;
+                }
+            }
+
+            // Logika Top Produk (Aggregasi item terjual)
+            if (data.items) {
+                data.items.forEach(item => {
+                    if (!productSales[item.name]) productSales[item.name] = 0;
+                    productSales[item.name] += item.qty;
+                });
+            }
+        });
+
+        this.dashData.omzetHariIni = omzet;
+        this.dashData.transaksiHariIni = trxCount;
+
+        // Sorting Top Products
+        let sortedProducts = Object.keys(productSales).map(key => {
+            return { name: key, qty: productSales[key] };
+        }).sort((a, b) => b.qty - a.qty).slice(0, 5); // Ambil 5 teratas
+        this.dashData.topProducts = sortedProducts;
+
+        // 2. Ambil Data Hutang PO
+        const qPo = query(collection(db, "purchases"), where("companyId", "==", companyId));
+        const snapPo = await getDocs(qPo);
+        let hutang = 0;
+        snapPo.forEach(doc => {
+            let data = doc.data();
+            if (data.paymentStatus !== 'LUNAS' && data.poStatus !== 'VOID') {
+                hutang += (data.total - (data.paidAmount || 0));
+            }
+        });
+        this.dashData.hutangPO = hutang;
+
+        // 3. Ambil Peringatan Stok Menipis
+        const qProd = query(collection(db, "products"), where("companyId", "==", companyId));
+        const snapProd = await getDocs(qProd);
+        let lowStockCount = 0;
+        snapProd.forEach(doc => {
+            let p = doc.data();
+            // Misalnya kita anggap menipis jika stok pusat <= 5
+            let totalBaseStock = Object.values(p.baseOutletStocks || {}).reduce((a,b)=>a+b, 0);
+            if (totalBaseStock <= 5 && p.isSellable !== false) {
+                lowStockCount++;
+            }
+        });
+        this.dashData.stokMenipis = lowStockCount;
+
+        // 4. Gambar Grafik (Chart.js)
+        this.renderChart(last7DaysSales);
+
+    } catch (e) {
+        console.error("Gagal load dashboard", e);
+    }
+    this.isLoadingDashboard = false;
+},
+
+renderChart(salesData) {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+
+    // Hancurkan grafik lama jika di-refresh agar tidak tumpang tindih
+    if (this.chartInstance) {
+        this.chartInstance.destroy();
+    }
+
+    // Buat Label Hari (H-6 sampai H-0)
+    let labels = [];
+    let dataPoin = [];
+    for (let i = 6; i >= 0; i--) {
+        let d = new Date();
+        d.setDate(d.getDate() - i);
+        labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
+        dataPoin.push(salesData[i] || 0);
+    }
+
+    this.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Omzet Penjualan (Rp)',
+                data: dataPoin,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: '#0d6efd',
+                fill: true,
+                tension: 0.4 // Membuat garisnya melengkung halus (smooth curve)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+},
+          
+    // =========================================================
     // 🌟 FUNGSI HITUNG PECAHAN UANG
     // =========================================================
     togglePecahan(target) {
