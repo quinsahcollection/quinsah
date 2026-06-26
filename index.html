@@ -12532,13 +12532,16 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             
             logout() { 
                 this.askConfirm('Tutup Sesi Sistem?', 'Anda akan keluar dari sistem POS ERP. Lanjutkan?', async () => { 
+                    // Munculkan layar loading agar proses pembersihan tidak diganggu
+                    Swal.fire({ title: 'Memutuskan Sesi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    
                     await signOut(auth); 
                     
                     // 1. Bersihkan Data Transaksi Aktif (Kasir)
                     this.cart = []; 
                     this.selectedCustomer = null; 
                     
-                    // 2. CUCI BERSIH SEMUA STATE DARI DATABASE (Sesuai Data Firestore)
+                    // 2. CUCI BERSIH SEMUA STATE (Sesuai Data Firestore)
                     this.categories = [];
                     this.companies = [];
                     this.customers = [];
@@ -12561,17 +12564,25 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     this.users = [];
                     this.usersList = []; 
                     
+                    // 🌟 INI YANG TERLEWAT SEBELUMNYA (Biang Kerok Kebocoran)
+                    this.registers = []; 
+                    this.paymentMethods = []; 
+                    
                     // 3. CUCI BERSIH ANTREAN & MEMORI BARCODE
                     this.barcodeSelectedItems = []; 
                     this.activeBarcodeSku = null;
                     this.barcodeSearchQuery = '';
                     
                     // 4. Reset Profil dan Setting
-                    this.userProfile = {};
+                    this.userProfile = null;
                     this.appSettings = {};
 
                     // 5. Bersihkan Local Storage (Jika ada sisa memori cache)
                     localStorage.removeItem('companyId');
+
+                    // 🌟 6. JURUS PAMUNGKAS SAAS (SAPU BERSIH TOTAL)
+                    // Membunuh semua onSnapshot yang berjalan di latar belakang dan mengosongkan RAM
+                    window.location.reload(); 
                 }); 
             },
             
