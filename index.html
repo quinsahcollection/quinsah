@@ -12529,9 +12529,16 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                         this.authMode = 'login';
                         this.authUser = { name: '', email: '', password: '', companyName: '' };
                     }
-                } catch(e) {
-                    this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
-                }
+                        } catch(e) {
+                    // 🌟 KEAMANAN: Jangan bocorkan detail error dari Firebase
+                    console.errconsole.error(\"Auth Error:\", e.code); // Tetap catat di log untuk pengecekan Andaor("Auth Error:", e.code); // Tetap catat di log untuk pengecekan Anda
+                    
+                    this.authError = "Email atau password yang Anda masukkan salah. Silakan coba lagi.";
+                    
+                    // Opsional: Jika Anda ingin pesan ini hilang otomatis setelah 5 detik
+                    setTimeout(() => { this.authError = ''; }, 5000);
+                    }
+
                 this.isProcessingAuth = false;
             },
             
