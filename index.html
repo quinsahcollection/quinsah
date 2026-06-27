@@ -2530,7 +2530,9 @@
             <div class="modal-footer border-top bg-light p-2">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                 
-                <button type="button" class="btn btn-primary-custom btn-sm fw-bold px-4" data-bs-dismiss="modal" @click="saveIdentifierGroup()">Simpan Grup</button>
+                <button type="button" class="btn btn-primary-custom btn-sm fw-bold px-4" @click="saveIdentifierGroup()">
+                <i class="bi bi-save me-1"></i> Simpan Grup
+            </button>
             </div>
         </div>
     </div>
@@ -8781,6 +8783,52 @@ renderChart(salesData) {
         }
     });
 },
+
+      async saveIdentifierGroup() {
+        // 1. Validasi Input Kosong
+        if (!this.formIdentifier.name || this.formIdentifier.name.trim() === '') {
+            return Swal.fire('Peringatan', 'Nama Grup Identifier wajib diisi!', 'warning');
+        }
+
+        // 2. Ambil ID Perusahaan (Tenant)
+        const compId = this.userProfile ? this.userProfile.companyId : null;
+        if (!compId) return Swal.fire('Error', 'Sesi perusahaan tidak ditemukan.', 'error');
+
+        this.isProcessing = true;
+        try {
+            if (this.formIdentifier.id) {
+                // ==========================================
+                // PROSES EDIT DATA LAMA
+                // ==========================================
+                const docRef = doc(db, "identifierGroups", this.formIdentifier.id);
+                await updateDoc(docRef, {
+                    name: this.formIdentifier.name
+                });
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Nama grup diperbarui.', timer: 1500, showConfirmButton: false });
+            } else {
+                // ==========================================
+                // PROSES TAMBAH DATA BARU
+                // ==========================================
+                await addDoc(collection(db, "identifierGroups"), {
+                    companyId: compId,
+                    name: this.formIdentifier.name,
+                    createdAt: serverTimestamp()
+                });
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Grup baru ditambahkan.', timer: 1500, showConfirmButton: false });
+            }
+
+            // 3. Tutup Modal secara aman menggunakan Script
+            const modalEl = document.getElementById('addIdentifierModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+        } catch (err) {
+            console.error("Gagal simpan grup identifier:", err);
+            Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan data.', 'error');
+        } finally {
+            this.isProcessing = false;
+        }
+    },
           
     // =========================================================
     // 🌟 FUNGSI HITUNG PECAHAN UANG
