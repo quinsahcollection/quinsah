@@ -13383,7 +13383,12 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                                 modifierNotes.push(`${groupName} : ${opt.name}${priceText}`);
                                 
                                 if (opt.linkedProductId) {
-                                    linkedProductIds.push({ id: opt.linkedProductId, qty: 1 });
+                                    // PERBAIKAN 1: Ubah key 'id' menjadi 'productId' agar terbaca oleh sistem checkout
+                                    linkedProductIds.push({ 
+                                        productId: opt.linkedProductId, 
+                                        name: opt.name, // Tambahan opsional agar mudah dilacak
+                                        qty: 1 
+                                    });
                                 }
                             }
                         });
@@ -13855,10 +13860,14 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 // =================================================================
                 // 🌟 ENGINE POTONG STOK UNTUK OPSI / MODIFIER LINKED PRODUCT
                 // =================================================================
-                let daftarOpsiTerpilih = item.selectedIdentifiers || item.modifiers || item.options || item.selectedOptions || [];
+                
+                // PERBAIKAN 2: Panggil 'item.linkedModifiers' sesuai dengan nama yang Anda daftarkan di keranjang (executeAddToCart)
+                let daftarOpsiTerpilih = item.linkedModifiers || [];
                 
                 for (let opsi of daftarOpsiTerpilih) {
-                    let linkedProdId = opsi.linkedProductId || opsi.productId;
+                    // PERBAIKAN 3: Ambil ID dari opsi.productId (karena di atas kita simpan dengan nama key ini)
+                    let linkedProdId = opsi.productId;
+                    
                     if (!linkedProdId) continue;
 
                     let linkedProd = this.products.find(p => p.id === linkedProdId);
@@ -13867,6 +13876,7 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     let linkedProdCopy = JSON.parse(JSON.stringify(linkedProd));
                     
                     let qtyOpsiPerItem = Number(opsi.qty || 1);
+                    // Total qty topping yang terpakai = (qty pesanan utama) x (qty topping)
                     let requiredOptQty = item.qty * qtyOpsiPerItem;
 
                     // Potong Stok Utama (Non-Varian)
@@ -13904,23 +13914,16 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     }
                     linkedProdCopy.batches[outletId] = optBatches;
 
-                    // Update Produk Opsi ke Firebase
+                    // Update Produk Opsi (Topping) ke Firebase
                     await updateDoc(doc(db, "products", linkedProd.id), {
                         baseOutletStocks: linkedProdCopy.baseOutletStocks || {},
                         batches: linkedProdCopy.batches || {}
                     });
-
-                    // Log Mutasi Produk Opsi
+                    
+                    // (Opsional) Log mutasi KELUAR untuk Produk Topping agar tercatat di histori
                     await this.logStock('OUT', {
-                        productId: linkedProd.id,
-                        sku: linkedProd.sku || '-',
-                        name: `${linkedProd.name || '-'} (Opsi: ${opsi.name || '-'})`,
-                        variantSku: null,
-                        variantName: '-',
-                        qty: -requiredOptQty,
-                        outletId: outletId,
-                        refId: trxData.id,
-                        note: `Terjual sebagai opsi dari ${item.name}`
+                        productId: linkedProd.id, sku: linkedProd.sku || '-', name: linkedProd.name || '-', variantSku: null, variantName: '-',
+                        qty: -requiredOptQty, outletId: trxData.outletId, refId: trxData.id, note: `Terjual sbg Topping di POS`
                     });
                 }
                 // =================================================================
