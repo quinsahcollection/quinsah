@@ -6661,11 +6661,17 @@
                             <div v-if="item.note" style="font-weight: bold; color: #555; margin-top: 3px;">
                                 Ref: {{ item.note }}
                             </div>
-                        </div>
+                        </div>                        
                         
-                        <div v-else-if="item.variantName" style="color: #6b7280; font-size: 12px; margin-top: 3px;">
-                            Varian: {{ item.variantName }}
-                        </div>
+<div v-if="item.variantName" style="color: #6b7280; font-size: 12px; margin-top: 3px;">
+    Varian: {{ item.variantName }}
+</div>
+
+<div v-if="item.note" style="margin-top: 2px;">
+    <div v-for="(catatan, index) in item.note.split(',')" :key="index" style="color: #6b7280; font-size: 12px; margin-bottom: 2px; font-style: italic; padding-left: 8px;">
+        - {{ catatan.trim() }}
+    </div>
+</div>
                     </td>
                     <td style="border: 1px solid #000; padding: 12px; text-align: center; color: #1d4ed8; font-weight: 600;">{{ item.variantSku || item.sku || '-' }}</td>
                     <td style="border: 1px solid #000; padding: 12px; text-align: center; font-weight: bold;">{{ item.qty }} {{ item.uom || 'pcs' }}</td>
