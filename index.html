@@ -6468,13 +6468,25 @@
             <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
             
             <div v-for="i in activePrintData.items.filter(item => item.productId !== 'EXCHANGE')" :key="i.cartId" style="margin-bottom: 8px;">
-                <div style="font-weight: bold; font-size: 1.05em;">{{ i.name }}</div>
-                <div v-if="i.variantName" style="font-size: 0.85em; color: #555; margin-bottom: 2px;">Varian: {{ i.variantName }}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice || i.sellPrice) }}</span>
-                    <span style="font-weight: bold;">{{ formatNumber(i.qty * (i.finalPrice || i.sellPrice)) }}</span>
-                </div>
-            </div>
+    
+    <div style="font-weight: bold; font-size: 1.05em;">{{ i.name }}</div>
+    
+    <div v-if="i.variantName" style="font-size: 0.85em; color: #555; margin-bottom: 2px;">
+        Varian: {{ i.variantName }}
+    </div>
+
+    <div v-if="i.note">
+        <div v-for="(catatan, index) in i.note.split(',')" :key="index" style="font-size: 0.85em; color: #555; margin-bottom: 2px; font-style: italic; padding-left: 8px;">
+            - {{ catatan.trim() }}
+        </div>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span>{{ i.qty }} {{ i.uom || 'Pcs' }} x {{ formatNumber(i.finalPrice || i.sellPrice) }}</span>
+        <span style="font-weight: bold;">{{ formatNumber(i.qty * (i.finalPrice || i.sellPrice)) }}</span>
+    </div>
+    
+</div>
 
             <div v-if="activePrintData.items.some(item => item.productId === 'EXCHANGE')" style="margin-top: 8px; padding: 6px; border: 1px dashed #333; border-radius: 4px; background-color: #f4f4f5;">
                 <div style="font-weight: bold; font-size: 0.85em; text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 4px; margin-bottom: 4px;">
