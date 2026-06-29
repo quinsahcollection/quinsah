@@ -1364,47 +1364,89 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="p-3 bg-light rounded-3 mb-4" style="font-size: 0.9rem;">
-                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">1. Modal Awal:</span><span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.startingCash || 0) }}</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">2. Tunai (Cash):</span><span class="fw-bold text-success">+ Rp {{ formatNumber(activeCloseShift.cashSales || 0) }}</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="text-muted">3. Kas Keluar:</span><span class="fw-bold text-danger">- Rp {{ formatNumber(activeCloseShift.totalExpenses || 0) }}</span></div>
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between fw-bold fs-6"><span class="text-dark">Sistem (Seharusnya):</span><span class="text-primary-custom">Rp {{ formatNumber(activeCloseShift.expectedCash || 0) }}</span></div>
-                </div>
+    <div class="p-3 bg-light rounded-3 mb-4" style="font-size: 0.85rem;">
+        
+        <div class="fw-bold text-dark border-bottom pb-1 mb-2 text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+            1. Omset Penjualan (Semua Metode)
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">[TUNAI] Uang Cash:</span>
+            <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.cashSales || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">[NON-TUNAI] QRIS:</span>
+            <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.qrisSales || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">[NON-TUNAI] Debit/Kredit Card:</span>
+            <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.cardSales || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">[NON-TUNAI] Bank Transfer:</span>
+            <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.transferSales || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between border-top pt-1 mb-3 fw-bold text-dark" style="font-size: 0.9rem;">
+            <span>TOTAL OMSET PENJUALAN:</span>
+            <span>Rp {{ formatNumber((activeCloseShift.cashSales || 0) + (activeCloseShift.qrisSales || 0) + (activeCloseShift.cardSales || 0) + (activeCloseShift.transferSales || 0)) }}</span>
+        </div>
 
-                <div class="d-flex justify-content-between align-items-end mb-2">
-                    <label class="form-label small fw-bold text-dark mb-0">Total Uang Fisik Aktual</label>
-                    <button class="btn btn-sm rounded-pill fw-bold" style="font-size: 0.7rem;" :class="showPecahan ? 'btn-danger' : 'btn-outline-dark'" @click="togglePecahan('close')">
-                        <i class="bi bi-cash-stack me-1"></i> {{ showPecahan ? 'Batal Hitung Pecahan' : 'Hitung Pecahan Akhir' }}
-                    </button>
-                </div>
+        <div class="fw-bold text-dark border-bottom pb-1 mb-2 text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+            2. Arus Uang Tunai di Laci
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">(+) Modal Awal Laci:</span>
+            <span class="fw-bold text-dark">Rp {{ formatNumber(activeCloseShift.startingCash || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">(+) Total Cash Masuk:</span>
+            <span class="fw-bold text-success">+ Rp {{ formatNumber(activeCloseShift.cashSales || 0) }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted">(-) Total Pengeluaran Kas:</span>
+            <span class="fw-bold text-danger">- Rp {{ formatNumber(activeCloseShift.totalExpenses || 0) }}</span>
+        </div>
+        
+        <hr class="my-2">
+        
+        <div class="d-flex justify-content-between fw-bold fs-6">
+            <span class="text-dark">Saldo Cash Seharusnya:</span>
+            <span class="text-primary-custom">Rp {{ formatNumber(activeCloseShift.expectedCash || 0) }}</span>
+        </div>
+    </div>
 
-                <div v-if="showPecahan" class="bg-light border rounded p-3 mb-3">
-                    <div class="row g-2">
-                        <div class="col-6" v-for="nom in pecahanList" :key="nom">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white fw-bold" style="width: 75px; font-size: 0.75rem;">{{ formatNumber(nom) }}</span>
-                                <input type="number" class="form-control text-center" v-model.number="pecahanData[nom]" @input="calculatePecahan" placeholder="0">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="d-flex justify-content-between align-items-end mb-2">
+        <label class="form-label small fw-bold text-dark mb-0">Total Uang Fisik Aktual (Cash)</label>
+        <button class="btn btn-sm rounded-pill fw-bold" style="font-size: 0.7rem;" :class="showPecahan ? 'btn-danger' : 'btn-outline-dark'" @click="togglePecahan('close')">
+            <i class="bi bi-cash-stack me-1"></i> {{ showPecahan ? 'Batal Hitung Pecahan' : 'Hitung Pecahan Akhir' }}
+        </button>
+    </div>
 
-                <div class="input-group input-group-lg shadow-sm mb-3">
-                    <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
-                    <input type="number" class="form-control border-start-0 fw-bold text-dark fs-4" v-model.number="activeCloseShift.actualCash" placeholder="Hitung aktual..." :readonly="showPecahan">
-                </div>
-
-                <div v-if="activeCloseShift.actualCash !== undefined && activeCloseShift.actualCash !== ''" class="alert p-3 rounded-3 mb-3 text-center"
-                     :class="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0 ? 'alert-success' : (activeCloseShift.actualCash - activeCloseShift.expectedCash > 0 ? 'alert-info' : 'alert-danger')">
-                    <div class="small fw-bold text-uppercase mb-1">Kondisi Selisih Kas</div>
-                    <h4 class="fw-bold mb-0">
-                        <span v-if="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0"><i class="bi bi-check-circle-fill me-1"></i> PAS (Rp 0)</span>
-                        <span v-else-if="activeCloseShift.actualCash - activeCloseShift.expectedCash > 0"><i class="bi bi-plus-circle-fill me-1"></i> SURPLUS (+ Rp {{ formatNumber(activeCloseShift.actualCash - activeCloseShift.expectedCash) }})</span>
-                        <span v-else><i class="bi bi-dash-circle-fill me-1"></i> MINUS (- Rp {{ formatNumber(Math.abs(activeCloseShift.actualCash - activeCloseShift.expectedCash)) }})</span>
-                    </h4>
+    <div v-if="showPecahan" class="bg-light border rounded p-3 mb-3">
+        <div class="row g-2">
+            <div class="col-6" v-for="nom in pecahanList" :key="nom">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white fw-bold" style="width: 75px; font-size: 0.75rem;">{{ formatNumber(nom) }}</span>
+                    <input type="number" class="form-control text-center" v-model.number="pecahanData[nom]" @input="calculatePecahan" placeholder="0">
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="input-group input-group-lg shadow-sm mb-3">
+        <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
+        <input type="number" class="form-control border-start-0 fw-bold text-dark fs-4" v-model.number="activeCloseShift.actualCash" placeholder="Hitung aktual..." :readonly="showPecahan">
+    </div>
+
+    <div v-if="activeCloseShift.actualCash !== undefined && activeCloseShift.actualCash !== ''" class="alert p-3 rounded-3 mb-3 text-center"
+         :class="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0 ? 'alert-success' : (activeCloseShift.actualCash - activeCloseShift.expectedCash > 0 ? 'alert-info' : 'alert-danger')">
+        <div class="small fw-bold text-uppercase mb-1">Kondisi Selisih Kas</div>
+        <h4 class="fw-bold mb-0">
+            <span v-if="activeCloseShift.actualCash - activeCloseShift.expectedCash === 0"><i class="bi bi-check-circle-fill me-1"></i> PAS (Rp 0)</span>
+            <span v-else-if="activeCloseShift.actualCash - activeCloseShift.expectedCash > 0"><i class="bi bi-plus-circle-fill me-1"></i> SURPLUS (+ Rp {{ formatNumber(activeCloseShift.actualCash - activeCloseShift.expectedCash) }})</span>
+            <span v-else><i class="bi bi-dash-circle-fill me-1"></i> MINUS (- Rp {{ formatNumber(Math.abs(activeCloseShift.actualCash - activeCloseShift.expectedCash)) }})</span>
+        </h4>
+    </div>
+</div>
             <div class="modal-footer bg-light p-2 border-0">
                 <button type="button" class="btn btn-dark fw-bold w-100 py-3" @click="saveCloseShift" :disabled="isProcessing || activeCloseShift.actualCash === undefined || activeCloseShift.actualCash === ''">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
