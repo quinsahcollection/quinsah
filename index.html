@@ -13269,14 +13269,20 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             },
 
             getPriceBeforePosDiscount(cartItem) {
-                let currentPrice = cartItem.promoPrice; 
-                if (cartItem.tiers && cartItem.tiers.length > 0) {
-                    let sortedTiers = [...cartItem.tiers].sort((a,b) => b.minQty - a.minQty); 
-                    let appliedTier = sortedTiers.find(t => cartItem.qty >= t.minQty);
-                    if (appliedTier) currentPrice = appliedTier.price;
-                }
-                return currentPrice;
-            },
+    // Harga promo ini secara default sudah termasuk modifierTotal dari executeAddToCart
+    let currentPrice = Number(cartItem.promoPrice || 0); 
+    
+    if (cartItem.tiers && cartItem.tiers.length > 0) {
+        let sortedTiers = [...cartItem.tiers].sort((a,b) => b.minQty - a.minQty); 
+        let appliedTier = sortedTiers.find(t => cartItem.qty >= t.minQty);
+        
+        if (appliedTier) {
+            // PERBAIKAN: Harga Grosir + Memori Harga Topping
+            currentPrice = Number(appliedTier.price || 0) + Number(cartItem.modifierPrice || 0);
+        }
+    }
+    return currentPrice;
+},
 
             getFinalItemPrice(cartItem) {
                 let currentPrice = this.getPriceBeforePosDiscount(cartItem);
@@ -13393,23 +13399,23 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                         
                         let opts = Array.isArray(selected) ? selected : [selected];
                         opts.forEach(opt => {
-                            if (opt) { 
-                                modifierTotal += (opt.price || 0);
-                                let priceText = opt.price > 0 ? ` (+Rp ${this.formatNumber(opt.price)})` : '';
-                                
-                                // FORMAT BARU: "Nama Grup : Nama Opsi (+Harga)"
-                                modifierNotes.push(`${groupName} : ${opt.name}${priceText}`);
-                                
-                                if (opt.linkedProductId) {
-                                    // PERBAIKAN 1: Ubah key 'id' menjadi 'productId' agar terbaca oleh sistem checkout
-                                    linkedProductIds.push({ 
-                                        productId: opt.linkedProductId, 
-                                        name: opt.name, // Tambahan opsional agar mudah dilacak
-                                        qty: 1 
-                                    });
-                                }
-                            }
-                        });
+    if (opt) {
+        // PERBAIKAN: Paksa menjadi Number untuk menghindari string concat
+        modifierTotal += Number(opt.price || 0); 
+        let priceText = opt.price > 0 ? ` (+Rp ${this.formatNumber(opt.price)})` : '';
+        
+        // FORMAT BARU: "Nama Grup : Nama Opsi (+Harga)"
+        modifierNotes.push(`${groupName} : ${opt.name}${priceText}`);
+        
+        if (opt.linkedProductId) {
+            linkedProductIds.push({ 
+                productId: opt.linkedProductId, 
+                name: opt.name, 
+                qty: 1 
+            });
+        }
+    }
+});
                     }
                 }
 
@@ -13451,23 +13457,29 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 // ==========================================
 
                 let basePromo = variant ? this.getEffectiveVariantPrice(prod, variant) : this.getEffectiveBasePrice(prod);
-                let baseSell = variant ? variant.sellPrice : prod.sellPrice;
+let baseSell = variant ? variant.sellPrice : prod.sellPrice;
 
-                let item = {
-                    cartId: Date.now() + Math.random().toString(36).substring(7),
-                    productId: prod.id,
-                    name: prod.name,
-                    sku: prod.sku,
-                    uom: prod.uom,
-                    qty: 1,
-                    basePrice: prod.basePrice || prod.hppPrice, 
-                    sellPrice: (baseSell || 0) + modifierTotal, 
-                    promoPrice: (basePromo || 0) + modifierTotal, 
-                    posDiscountType: 'none', posDiscountValue: 0,
-                    note: modifierNotes.join(', '), 
-                    linkedModifiers: linkedProductIds,
-                    tiers: JSON.parse(JSON.stringify(prod.tiers || []))
-                };
+// PERBAIKAN: Konversi semua ke Number sebelum menjumlahkan
+let finalPromo = Number(basePromo || 0) + Number(modifierTotal || 0);
+let finalSell = Number(baseSell || 0) + Number(modifierTotal || 0);
+
+let item = {
+    cartId: Date.now() + Math.random().toString(36).substring(7),
+    productId: prod.id,
+    name: prod.name,
+    sku: prod.sku,
+    uom: prod.uom,
+    qty: 1,
+    basePrice: prod.basePrice || prod.hppPrice, 
+    sellPrice: finalSell, 
+    promoPrice: finalPromo, 
+    modifierPrice: Number(modifierTotal || 0), // PERBAIKAN: Simpan harga topping di memori terpisah!
+    posDiscountType: 'none', 
+    posDiscountValue: 0,
+    note: modifierNotes.join(', '), 
+    linkedModifiers: linkedProductIds,
+    tiers: JSON.parse(JSON.stringify(prod.tiers || []))
+};
                 
                 if (variant) {
                     item.variantName = variant.name || variant.attributes;
