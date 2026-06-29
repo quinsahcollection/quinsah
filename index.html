@@ -6522,6 +6522,11 @@
                     <tr v-if="activePrintData.globalDiscountAmt > 0"><td style="padding-bottom:3px;">Diskon Invoice</td><td style="text-align: right; padding-bottom:3px;">-{{ formatNumber(activePrintData.globalDiscountAmt) }}</td></tr>
                     <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0"><td style="padding-bottom:3px;">PPN</td><td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td></tr>
                     
+                    <tr v-if="(activePrintData.surchargeFee || 0) > 0">
+                        <td style="padding-bottom:3px;">Biaya Layanan</td>
+                        <td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.surchargeFee) }}</td>
+                    </tr>
+                    
                     <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <tr><td style="padding-top:5px; text-transform:uppercase; font-size:0.9em; color:#333;">METODE BAYAR</td><td style="text-align: right; padding-top:5px; font-weight:bold; text-transform:uppercase;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -6712,6 +6717,11 @@
                         <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp 0</td>
                     </tr>
                     
+                    <tr v-if="(activePrintData.surchargeFee || 0) > 0">
+                        <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">Biaya Layanan</td>
+                        <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.surchargeFee) }}</td>
+                    </tr>
+                    
                     <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <tr><td style="padding: 8px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb;">Metode Pembayaran</td><td style="padding: 8px 10px; text-align: right; font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -6804,6 +6814,7 @@
                 </div>
             </div>
         </div>
+</div>
 
         <!-- ========================================== -->
         <!-- 3. CETAK LABEL / PACKING SLIP              -->
@@ -13602,165 +13613,163 @@ let item = {
             },
 
             async processTransaction() {
-        // Cegah klik ganda
-        if (this.isProcessing) return;
-        this.isProcessing = true;
+    // Cegah klik ganda
+    if (this.isProcessing) return;
+    this.isProcessing = true;
 
-        try {
-            // =================================================================
-            // 0. VALIDASI NOMOR INVOICE LOKAL
-            // =================================================================
-            let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
-            
-            if (!currentInvoiceId) {
-                Swal.fire({ icon: 'warning', title: 'Data Tidak Lengkap', text: 'Nomor invoice tidak boleh kosong!' });
+    try {
+        // =================================================================
+        // 0. VALIDASI NOMOR INVOICE LOKAL
+        // =================================================================
+        let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
+        
+        if (!currentInvoiceId) {
+            Swal.fire({ icon: 'warning', title: 'Data Tidak Lengkap', text: 'Nomor invoice tidak boleh kosong!' });
+            this.isProcessing = false;
+            return;
+        }
+
+        if (this.transactions && this.transactions.length > 0) {
+            let isDuplicate = this.transactions.some(t => {
+                let existingId = String(t.id).trim();
+                if (this.isEditingInvoice && this.originalEditTrx) {
+                    return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
+                }
+                return existingId === currentInvoiceId;
+            });
+
+            if (isDuplicate) {
+                Swal.fire({ icon: 'error', title: 'Nomor Invoice Duplikat!', text: 'Gagal menyimpan! Nomor Invoice sudah terdaftar di memori lokal.' });
                 this.isProcessing = false;
                 return;
             }
+        }
 
-            // Cek duplikat di array riwayat transaksi lokal
-            if (this.transactions && this.transactions.length > 0) {
-                let isDuplicate = this.transactions.some(t => {
-                    let existingId = String(t.id).trim();
-                    if (this.isEditingInvoice && this.originalEditTrx) {
-                        return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
-                    }
-                    return existingId === currentInvoiceId;
+        // =================================================================
+        // PENGAMAN KE FIREBASE / SERVER-SIDE
+        // =================================================================
+        const trxRef = doc(db, "transactions", currentInvoiceId);
+        const trxSnap = await getDoc(trxRef);
+
+        if (trxSnap.exists()) {
+            const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
+            if (!isNumpangEdit) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Bentrok Nomor Invoice',
+                    html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
+                    confirmButtonColor: '#dc2626'
                 });
+                if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
+                    await this.generateInvoiceNumber(); 
+                }
+                this.isProcessing = false;
+                return; 
+            }
+        }
 
-                if (isDuplicate) {
-                    Swal.fire({ icon: 'error', title: 'Nomor Invoice Duplikat!', text: 'Gagal menyimpan! Nomor Invoice sudah terdaftar di memori lokal.' });
-                    this.isProcessing = false;
-                    return;
+        // =================================================================
+        // 1. LOGIKA EDIT
+        // =================================================================
+        if (this.isEditingInvoice && this.originalEditTrx) {
+            await this.revertPosStock(this.originalEditTrx);
+            await deleteDoc(doc(db, "transactions", this.originalEditTrx.id));
+        }
+
+        // =================================================================
+        // 2. KUNCI SEMUA VARIABEL TOTALAN, HITUNG MDR & SURCHARGE 🌟
+        // =================================================================
+        let currentSubtotalBase = this.subtotalBase || 0;
+        let currentGlobalDiscountType = this.globalDiscountType || 'none';
+        let currentGlobalDiscountValue = this.globalDiscountValue || 0;
+        let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
+        let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
+        let currentTaxAmt = this.taxAmount || 0;
+        let currentServiceAmt = this.serviceAmount || 0;
+        let currentTotal = this.total || 0;
+
+        let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
+            ...c,
+            sku: c.sku || '-',
+            variantSku: c.variantSku || null,
+            variantName: c.variantName || null,
+            note: c.note || '',
+            finalPrice: this.getFinalItemPrice(c),
+            cutBatches: [], 
+            totalCogs: 0    
+        })));
+
+        // 🌟 LOGIKA MDR (BEBAN TOKO) & SURCHARGE (BEBAN CUSTOMER)
+        let nominalMdr = 0;
+        let nominalSurcharge = 0;
+        if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
+            let metodeDipilih = this.activePaymentMethodsForCashier.find(pm => pm.name === this.paymentData.method);
+            if (metodeDipilih) {
+                if (metodeDipilih.mdr > 0) nominalMdr = (currentTotal * metodeDipilih.mdr) / 100;
+                if (metodeDipilih.surcharge > 0) {
+                    nominalSurcharge = (metodeDipilih.surchargeType === 'percent') ? (currentTotal * metodeDipilih.surcharge / 100) : Number(metodeDipilih.surcharge);
                 }
             }
+        }
 
-            // =================================================================
-            // PENGAMAN KE FIREBASE / SERVER-SIDE
-            // =================================================================
-            const trxRef = doc(db, "transactions", currentInvoiceId);
-            const trxSnap = await getDoc(trxRef);
+        // Update Total setelah Surcharge
+        let grandTotal = currentTotal + nominalSurcharge;
+        
+        let inputUang = (this.paymentData.amountReceived !== undefined && this.paymentData.amountReceived !== null && this.paymentData.amountReceived !== '') 
+                            ? Number(this.paymentData.amountReceived) 
+                            : 0;
 
-            if (trxSnap.exists()) {
-                const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
-                if (!isNumpangEdit) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Bentrok Nomor Invoice',
-                        html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
-                        confirmButtonColor: '#dc2626'
-                    });
-                    if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
-                        await this.generateInvoiceNumber(); 
-                    }
-                    this.isProcessing = false;
-                    return; 
-                }
-            }
+        // LOGIKA BARU: Jika input uang masih kosong, ATAU nilainya persis sama dengan total lama (sebelum surcharge),
+        // maka otomatis sesuaikan uang diterima dengan grandTotal yang baru.
+        let uangDiterima = (inputUang === 0 || inputUang === currentTotal) ? grandTotal : inputUang;
 
-            // =================================================================
-            // 1. LOGIKA EDIT
-            // =================================================================
-            if (this.isEditingInvoice && this.originalEditTrx) {
-                await this.revertPosStock(this.originalEditTrx);
-                await deleteDoc(doc(db, "transactions", this.originalEditTrx.id));
-            }
+        // ... (lanjutan logika kasir / shift) ...
+        const currentUser = this.userProfile || this.loggedInUser || this.user || {};
+        const myId = String(currentUser.id || currentUser.uid || '');
+        const myEmail = String(currentUser.email || '').toLowerCase();
 
-            // =================================================================
-            // 2. KUNCI SEMUA VARIABEL TOTALAN & HITUNG MDR 🌟
-            // =================================================================
-            let currentSubtotalBase = this.subtotalBase || 0;
-            let currentGlobalDiscountType = this.globalDiscountType || 'none';
-            let currentGlobalDiscountValue = this.globalDiscountValue || 0;
-            let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
-            let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
-            let currentTaxAmt = this.taxAmount || 0;
-            let currentServiceAmt = this.serviceAmount || 0;
-            let currentTotal = this.total || 0;
+        const shiftAktif = (this.registers || []).find(r => {
+            if (r.status !== 'OPEN') return false;
+            const sId = String(r.cashierId || '');
+            const sEmail = String(r.cashierEmail || '').toLowerCase();
+            return (myId !== '' && sId === myId) || (myEmail !== '' && sEmail === myEmail);
+        });
+        
+        const finalCashierId = shiftAktif ? shiftAktif.cashierId : myId;
+        const finalCashierName = shiftAktif ? shiftAktif.cashierName : (currentUser.namaLengkap || currentUser.name || currentUser.username || 'Admin');
+        const finalShiftId = shiftAktif ? shiftAktif.id : null;
+        const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
 
-            let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
-                ...c,
-                sku: c.sku || '-',
-                variantSku: c.variantSku || null,
-                variantName: c.variantName || null,
-                note: c.note || '',
-                finalPrice: this.getFinalItemPrice(c),
-                cutBatches: [], // WADAH BARU UNTUK MENCATAT BATCH YANG TERJUAL
-                totalCogs: 0    // WADAH BARU UNTUK MENCATAT TOTAL HPP ITEM INI
-            })));
+        let trxRaw = {
+            id: currentInvoiceId,
+            companyId: this.userProfile.companyId,
+            dateStr: new Date().toLocaleString('id-ID'),
+            customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
+            customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
+            outletId: this.posActiveOutletId || '',
+            cashierId: finalCashierId,
+            cashierName: finalCashierName,
+            shiftId: finalShiftId,
+            registerName: finalRegisterName,
+            paymentMethod: this.paymentData.method || 'CASH',
+            mdrFee: nominalMdr,
+            surchargeFee: nominalSurcharge, // Pencatatan baru
+            amountReceived: uangDiterima,
+            sisaTagihan: (grandTotal - uangDiterima > 0) ? (grandTotal - uangDiterima) : 0,
+            paymentStatus: (uangDiterima >= grandTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
+            subtotal: currentSubtotalBase,
+            discountAmt: currentDiscountAmt,
+            taxAmt: currentTaxAmt,
+            serviceAmt: currentServiceAmt,
+            total: grandTotal, // Total yang sudah mencakup surcharge
+            items: cleanItems
+        };
 
-            let uangDiterima = (this.paymentData.amountReceived !== undefined && this.paymentData.amountReceived !== null && this.paymentData.amountReceived !== '') 
-                                ? Number(this.paymentData.amountReceived) 
-                                : currentTotal;
+        let trxData = JSON.parse(JSON.stringify(trxRaw));
+        trxData.createdAt = serverTimestamp();
+        this.posCustomInvoice = trxData.id;
 
-            // 🌟 HITUNG MDR (Potongan Bank/Merchant)
-            let nominalMdr = 0;
-            if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
-                let metodeDipilih = this.activePaymentMethodsForCashier.find(pm => pm.name === this.paymentData.method);
-                if (metodeDipilih && metodeDipilih.mdr > 0) {
-                    nominalMdr = (currentTotal * metodeDipilih.mdr) / 100;
-                }
-            }
-
-            // =================================================================
-            // 🌟 PENCARIAN LACI AKTIF SECARA MANUAL (ANTI GAGAL)
-            // =================================================================
-            const currentUser = this.userProfile || this.loggedInUser || this.user || {};
-            const myId = String(currentUser.id || currentUser.uid || '');
-            const myEmail = String(currentUser.email || '').toLowerCase();
-
-            const shiftAktif = (this.registers || []).find(r => {
-                if (r.status !== 'OPEN') return false;
-                const sId = String(r.cashierId || '');
-                const sEmail = String(r.cashierEmail || '').toLowerCase();
-                return (myId !== '' && sId === myId) || (myEmail !== '' && sEmail === myEmail);
-            });
-            
-            const finalCashierId = shiftAktif ? shiftAktif.cashierId : myId;
-            const finalCashierName = shiftAktif ? shiftAktif.cashierName : (currentUser.namaLengkap || currentUser.name || currentUser.username || 'Admin');
-            const finalShiftId = shiftAktif ? shiftAktif.id : null;
-            const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
-
-            let trxRaw = {
-                id: currentInvoiceId,
-                companyId: this.userProfile.companyId,
-                dateStr: new Date().toLocaleString('id-ID'),
-                customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
-                customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
-                customerPhone: this.selectedCustomer ? (this.selectedCustomer.phone || '') : '',
-                customerAddress: this.selectedCustomer ? (this.selectedCustomer.address || '') : '',
-                outletId: this.posActiveOutletId || '',
-                
-                cashierId: finalCashierId,
-                cashierName: finalCashierName,
-                shiftId: finalShiftId,
-                registerName: finalRegisterName,
-
-                paymentMethod: this.paymentData.method || 'CASH',
-                paymentNote: this.paymentData.note || '',
-                mdrFee: nominalMdr,
-                amountReceived: uangDiterima,
-                sisaTagihan: (currentTotal - uangDiterima > 0) ? (currentTotal - uangDiterima) : 0,
-                paymentStatus: (uangDiterima >= currentTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS'),
-                firstPayment: uangDiterima,
-                paymentHistory: [],
-                subtotal: currentSubtotalBase,
-                discountAmt: currentDiscountAmt,
-                globalDiscountAmt: currentGlobalDiscountAmt,
-                globalDiscountType: currentGlobalDiscountType,
-                globalDiscountValue: currentGlobalDiscountValue,
-                taxAmt: currentTaxAmt,
-                serviceAmt: currentServiceAmt,
-                total: currentTotal,
-                items: cleanItems
-            };
-
-            let trxData = JSON.parse(JSON.stringify(trxRaw));
-            trxData.createdAt = serverTimestamp();
-            this.posCustomInvoice = trxData.id;
-
-            // SIMPAN DRAFT TRANSAKSI AWAL KE FIREBASE
-            await setDoc(doc(db, "transactions", trxData.id), trxData);
+        await setDoc(doc(db, "transactions", trxData.id), trxData);
 
             let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
