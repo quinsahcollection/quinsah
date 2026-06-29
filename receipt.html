@@ -77,19 +77,28 @@
                 </div>
 
                 <h6 class="fw-bold mb-3 text-dark">Daftar Pesanan :</h6>
-                <div v-for="(item, idx) in ereceiptData.items" :key="idx" class="d-flex justify-content-between mb-3 pb-2 border-bottom border-light">
-                    <div style="width: 70%; line-height: 1.3;">
-                        <div class="fw-bold text-dark" style="font-size: 0.9em;">
-                            <span v-if="item.productId === 'EXCHANGE'" class="text-danger">TUKAR TAMBAH : </span>{{ item.name }}
-                        </div>
-                        <div v-if="item.variantName && item.productId !== 'EXCHANGE'" class="text-muted" style="font-size: 0.8em;">Varian : {{ item.variantName }}</div>
-                        <div v-if="item.productId === 'EXCHANGE'" class="text-muted fst-italic" style="font-size: 0.8em;">{{ item.name.replace('[SALDO TUKAR] ', '') }}</div>
-                        <div class="mt-1" style="font-size: 0.85em; color: #555;">{{ item.qty }} {{ item.uom || 'pcs' }} x Rp {{ formatNumber(item.finalPrice || item.sellPrice) }}</div>
-                    </div>
-                    <div class="text-end fw-bold" style="width: 30%; font-size: 0.95em;" :class="{'text-danger': item.productId === 'EXCHANGE'}">
-                        {{ item.productId === 'EXCHANGE' ? '-' : '' }}Rp {{ formatNumber(Math.abs(item.qty * (item.finalPrice || item.sellPrice))) }}
-                    </div>
-                </div>
+<div v-for="(item, idx) in ereceiptData.items" :key="idx" class="d-flex justify-content-between mb-3 pb-2 border-bottom border-light">
+    <div style="width: 70%; line-height: 1.3;">
+        <div class="fw-bold text-dark" style="font-size: 0.9em;">
+            <span v-if="item.productId === 'EXCHANGE'" class="text-danger">TUKAR TAMBAH : </span>{{ item.name }}
+        </div>
+        
+        <div v-if="item.variantName && item.productId !== 'EXCHANGE'" class="text-muted" style="font-size: 0.8em;">Varian : {{ item.variantName }}</div>
+        
+        <div v-if="item.note">
+            <div v-for="(catatan, index) in item.note.split(',')" :key="'note-'+index" class="text-muted fst-italic" style="font-size: 0.8em; padding-left: 5px;">
+                - {{ catatan.trim() }}
+            </div>
+        </div>
+        <div v-if="item.productId === 'EXCHANGE'" class="text-muted fst-italic" style="font-size: 0.8em;">{{ item.name.replace('[SALDO TUKAR] ', '') }}</div>
+        
+        <div class="mt-1" style="font-size: 0.85em; color: #555;">{{ item.qty }} {{ item.uom || 'pcs' }} x Rp {{ formatNumber(item.finalPrice || item.sellPrice) }}</div>
+    </div>
+    
+    <div class="text-end fw-bold" style="width: 30%; font-size: 0.95em;" :class="{'text-danger': item.productId === 'EXCHANGE'}">
+        {{ item.productId === 'EXCHANGE' ? '-' : '' }}Rp {{ formatNumber(Math.abs(item.qty * (item.finalPrice || item.sellPrice))) }}
+    </div>
+</div>
 
                 <div class="mt-4" style="font-size: 0.9em;">
                     <div class="d-flex justify-content-between mb-2">
@@ -109,9 +118,9 @@
                     <div v-if="(ereceiptData.taxAmt || ereceiptData.taxAmount || 0) > 0" class="d-flex justify-content-between mb-2">
                         <span class="text-muted">PPN (Tax) :</span><span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
                     </div>
-                    <div v-if="ereceiptData.surcharge && Number(ereceiptData.surcharge) > 0" class="d-flex justify-content-between mb-2 text-danger">
-                    <span>Biaya Tambahan (Surcharge) :</span>
-                    <span>Rp {{ formatNumber(Number(ereceiptData.surcharge)) }}</span>
+                    <div v-if="ereceiptData.surchargeFee > 0" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>Biaya Layanan :</span>
+                    <span>Rp {{ formatNumber(ereceiptData.surchargeFee) }}</span>
                     </div>
                     <hr class="my-3 border-dark" style="opacity: 0.2;">
                     <div class="d-flex justify-content-between fw-bold fs-6 mb-3 text-dark">
