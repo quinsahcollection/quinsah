@@ -13364,20 +13364,25 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
         },
 
            // 1. MEMBUKA MODAL (Tampilan Awal)
-        // 1. MEMBUKA MODAL (Tampilan Awal)
         openPosModifier(product) {
             this.activeProduct = product; // Kunci produk yang diklik
 
-            // Cek dengan ketat apakah bungkus varian/topping BENAR-BENAR ADA ISINYA
             let hasVariants = product.variants && product.variants.length > 0;
             let hasModifiers = product.modifiers && product.modifiers.length > 0;
 
-            if (hasVariants || hasModifiers) {
-                // Jika isinya ada, buka modal seperti biasa
+            if (hasVariants) {
+                // KONDISI 1: Jika punya Varian, wajib masuk Step 1 dulu (Pilih Varian)
                 this.posModifierStep = 1; 
                 this.openModal('posModifierModal');
-            } else {
-                // JIKA KOSONG (Seperti Tisue), Bypass Modal dan Langsung Masuk Keranjang!
+            } 
+            else if (hasModifiers) {
+                // KONDISI 2: Jika TIDAK punya Varian TAPI punya Topping (Modifier)
+                // Potong kompas! Siapkan data topping dan langsung lompat ke Step 2
+                this.selectVariantNextStep(null); 
+                this.openModal('posModifierModal');
+            } 
+            else {
+                // KONDISI 3: Kosong (Seperti Tisue), Langsung Masuk Keranjang!
                 this.addToCart(null);
             }
         },
