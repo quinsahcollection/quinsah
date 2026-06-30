@@ -14968,325 +14968,325 @@ doActualPrint() {
             this.opnameView = 'form';
         },
 
-        // 2. FUNGSI APPROVE (MENGUBAH STOK & MENYESUAIKAN BATCH HPP)
         // ==========================================
         // FUNGSI APPROVE OPNAME (FULL & RAPI)
         // ==========================================
         async approveOpname(id) {
-            let opname = this.opnameHistory.find(o => o.id === id);
-            if (!opname || opname.status !== 'PENDING') return;
+    let opname = this.opnameHistory.find(o => o.id === id);
+    if (!opname || opname.status !== 'PENDING') return;
 
-            this.askConfirm('Setujui Opname?', `Stok sistem & riwayat Batch akan disesuaikan secara permanen sesuai dokumen ${id}. Lanjutkan?`, async () => {
-                this.isProcessing = true;
-                try {
-                    let nowStr = new Date().toLocaleString('id-ID');
-                    let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+    this.askConfirm('Setujui Opname?', `Stok sistem & riwayat Batch akan disesuaikan secara permanen sesuai dokumen ${id}. Lanjutkan?`, async () => {
+        
+        // 🌟 FIX BUG 1: KUNCI STATUS SECARA LOKAL AGAR TIDAK BISA DI-SPAM KLIK
+        if (opname.status !== 'PENDING') return; 
+        opname.status = 'PROCESSING'; 
+        
+        this.isProcessing = true;
+        try {
+            let nowStr = new Date().toLocaleString('id-ID');
+            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-                    for (let item of opname.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod || item.diff === 0) continue; 
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-                        let qtyAbs = Math.abs(item.diff);
-                        let isPlus = item.diff > 0;
-                        let oId = opname.outletId;
-                        
-                        item.cutBatches = []; // INISIALISASI WADAH PENCATAT BATCH FEFO
+            for (let item of opname.items) {
+                let prod = this.products.find(x => x.id === item.productId);
+                if (!prod || item.diff === 0) continue; 
+                let prodCopy = JSON.parse(JSON.stringify(prod));
+                let qtyAbs = Math.abs(item.diff);
+                let isPlus = item.diff > 0;
+                let oId = opname.outletId;
+                
+                item.cutBatches = []; 
 
-                        if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
-                            if (vIdx !== -1) {
-                                // 1. Update Stok Fisik (Varian)
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
+                if (item.isVariant) {
+                    let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                    if (vIdx !== -1) {
+                        if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                        prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
 
-                                // 2. Siapkan Array Batches
-                                if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
-                                if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
-                                let batches = prodCopy.variants[vIdx].batches[oId];
+                        if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                        if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
+                        let batches = prodCopy.variants[vIdx].batches[oId];
 
-                                if (isPlus) {
-                                    // JIKA SURPLUS (+): Buat Batch Baru menggunakan Inputan Kasir
-                                    let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
-                                    let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                    
-                                    batches.push({ 
-                                        batchId: 'OPN-' + id, 
-                                        batchNo: finalBatchNo,        // MASUKKAN BATCH DARI FORM
-                                        expiredDate: finalExpired,    // MASUKKAN EXPIRED DARI FORM
-                                        tanggalMasuk: new Date().toISOString(), 
-                                        qtySisa: qtyAbs, 
-                                        hargaModal: cost 
-                                    });
-                                } else {
-                                    // JIKA MINUS (-): Potong Batch Sesuai Metode
-                                    if (hppMethod === 'FEFO') {
-                                        batches.sort((a, b) => {
-                                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                            if (!a.expiredDate) return 1;
-                                            if (!b.expiredDate) return -1;
-                                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                        });
-                                    } else if (hppMethod === 'LIFO') {
-                                        batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                    } else {
-                                        batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                    }
-
-                                    let reqQty = qtyAbs;
-                                    for (let i = 0; i < batches.length; i++) {
-                                        if (reqQty <= 0) break;
-                                        let b = batches[i];
-                                        let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                        if (available > 0) {
-                                            let taken = Math.min(available, reqQty);
-                                            if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                            if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                            reqQty -= taken;
-                                            
-                                            // MENCATAT BATCH YANG HILANG/RUSAK
-                                            item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
-                                        }
-                                    }
-                                }
-                                prodCopy.variants[vIdx].batches[oId] = batches;
-                            }
+                        if (isPlus) {
+                            let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
+                            let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
+                            let finalExpired = item.expiredDate ? item.expiredDate : '';
+                            
+                            batches.push({ 
+                                batchId: 'OPN-' + id, 
+                                batchNo: finalBatchNo,        
+                                expiredDate: finalExpired,    
+                                tanggalMasuk: new Date().toISOString(), 
+                                qtySisa: qtyAbs, 
+                                hargaModal: cost 
+                            });
                         } else {
-                            // 1. Update Stok Fisik (Non-Varian)
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + item.diff;
-
-                            // 2. Siapkan Array Batches
-                            if (!prodCopy.batches) prodCopy.batches = {};
-                            if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
-                            let batches = prodCopy.batches[oId];
-
-                            if (isPlus) {
-                                // JIKA SURPLUS (+): Buat Batch Baru menggunakan Inputan Kasir
-                                let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
-                                let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                
-                                batches.push({ 
-                                    batchId: 'OPN-' + id, 
-                                    batchNo: finalBatchNo,        // MASUKKAN BATCH DARI FORM
-                                    expiredDate: finalExpired,    // MASUKKAN EXPIRED DARI FORM
-                                    tanggalMasuk: new Date().toISOString(), 
-                                    qtySisa: qtyAbs, 
-                                    hargaModal: cost 
+                            if (hppMethod === 'FEFO') {
+                                batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                    if (!a.expiredDate) return 1;
+                                    if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
                                 });
+                            } else if (hppMethod === 'LIFO') {
+                                batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
                             } else {
-                                // JIKA MINUS (-): Potong Batch Sesuai Metode
-                                if (hppMethod === 'FEFO') {
-                                    batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                        if (!a.expiredDate) return 1;
-                                        if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                } else if (hppMethod === 'LIFO') {
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                } else {
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                }
+                                batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                            }
 
-                                let reqQty = qtyAbs;
-                                for (let i = 0; i < batches.length; i++) {
-                                    if (reqQty <= 0) break;
-                                    let b = batches[i];
-                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                    if (available > 0) {
-                                        let taken = Math.min(available, reqQty);
-                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                        reqQty -= taken;
-                                        
-                                        // MENCATAT BATCH YANG HILANG/RUSAK
-                                        item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
-                                    }
+                            let reqQty = qtyAbs;
+                            for (let i = 0; i < batches.length; i++) {
+                                if (reqQty <= 0) break;
+                                let b = batches[i];
+                                let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                                if (available > 0) {
+                                    let taken = Math.min(available, reqQty);
+                                    if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                    if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                    reqQty -= taken;
+                                    
+                                    item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                 }
                             }
-                            prodCopy.batches[oId] = batches;
                         }
-                        
-                        // 3. Simpan Update ke Firebase
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, batches: prodCopy.batches || {} });
-
-                        // 4. Log Mutasi Stok
-                        await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
-                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qty: item.diff, outletId: opname.outletId, refId: id, note: item.note || 'Approve Dokumen Opname'
-                        });
+                        prodCopy.variants[vIdx].batches[oId] = batches;
                     }
+                } else {
+                    if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                    prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + item.diff;
 
-                    // PENTING: Update array items ke Firebase agar histori cutBatches tersimpan permanen!
-                    if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { status: 'SELESAI', items: opname.items });
-                    
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
-                    Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
-                } catch (err) {
-                    console.error("Gagal Approve:", err);
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
+                    if (!prodCopy.batches) prodCopy.batches = {};
+                    if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
+                    let batches = prodCopy.batches[oId];
+
+                    if (isPlus) {
+                        let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
+                        let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
+                        let finalExpired = item.expiredDate ? item.expiredDate : '';
+                        
+                        batches.push({ 
+                            batchId: 'OPN-' + id, 
+                            batchNo: finalBatchNo,        
+                            expiredDate: finalExpired,    
+                            tanggalMasuk: new Date().toISOString(), 
+                            qtySisa: qtyAbs, 
+                            hargaModal: cost 
+                        });
+                    } else {
+                        if (hppMethod === 'FEFO') {
+                            batches.sort((a, b) => {
+                                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                if (!a.expiredDate) return 1;
+                                if (!b.expiredDate) return -1;
+                                return new Date(a.expiredDate) - new Date(b.expiredDate);
+                            });
+                        } else if (hppMethod === 'LIFO') {
+                            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                        } else {
+                            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                        }
+
+                        let reqQty = qtyAbs;
+                        for (let i = 0; i < batches.length; i++) {
+                            if (reqQty <= 0) break;
+                            let b = batches[i];
+                            let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                            if (available > 0) {
+                                let taken = Math.min(available, reqQty);
+                                if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                reqQty -= taken;
+                                
+                                item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
+                            }
+                        }
+                    }
+                    prodCopy.batches[oId] = batches;
                 }
-                this.isProcessing = false;
-            });
-        },
+                
+                await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, batches: prodCopy.batches || {} });
+
+                // 🌟 FIX BUG 2: UPDATE MEMORI LOKAL AGAR VARIAN BERIKUTNYA TIDAK MENIMPA VARIAN SEBELUMNYA
+                Object.assign(prod, prodCopy);
+
+                await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
+                    productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                    qty: item.diff, outletId: opname.outletId, refId: id, note: item.note || 'Approve Dokumen Opname'
+                });
+            }
+
+            if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { status: 'SELESAI', items: opname.items });
+            opname.status = 'SELESAI'; // Pastikan di memori juga berubah
+            
+            if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+            Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
+        } catch (err) {
+            console.error("Gagal Approve:", err);
+            opname.status = 'PENDING'; // Kembalikan status jika gagal
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
+        }
+        this.isProcessing = false;
+    });
+},
 
         // 3. FUNGSI UN-VOID (Mengaktifkan kembali dokumen yang ter-void)
         async unvoidOpname(id) {
-            let opname = this.opnameHistory.find(o => o.id === id);
-            if (!opname || opname.status !== 'VOID') return;
+    let opname = this.opnameHistory.find(o => o.id === id);
+    if (!opname || opname.status !== 'VOID') return;
 
-            this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen ${id} akan diaktifkan kembali. Lanjutkan?`, async () => {
-                this.isProcessing = true;
-                try {
-                    let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+    this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen ${id} akan diaktifkan kembali. Lanjutkan?`, async () => {
+        
+        // 🌟 FIX BUG 1: KUNCI STATUS
+        if (opname.status !== 'VOID') return;
+        opname.status = 'PROCESSING';
 
-                    for (let item of opname.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod || item.diff === 0) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-                        let qtyAbs = Math.abs(item.diff);
-                        let isPlus = item.diff > 0;
-                        let oId = opname.outletId;
+        this.isProcessing = true;
+        try {
+            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
-                        item.cutBatches = []; // PERBAIKAN: Wajib inisialisasi wadah pencatat batch FEFO
+            for (let item of opname.items) {
+                let prod = this.products.find(x => x.id === item.productId);
+                if (!prod || item.diff === 0) continue;
+                let prodCopy = JSON.parse(JSON.stringify(prod));
+                let qtyAbs = Math.abs(item.diff);
+                let isPlus = item.diff > 0;
+                let oId = opname.outletId;
 
-                        if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
-                            if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
+                item.cutBatches = []; 
 
-                                if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
-                                if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
-                                let batches = prodCopy.variants[vIdx].batches[oId];
+                if (item.isVariant) {
+                    let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                    if (vIdx !== -1) {
+                        if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                        prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
 
-                                if (isPlus) {
-                                    let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    // PERBAIKAN: Masukkan variabel Batch & Expired seperti di approveOpname
-                                    let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
-                                    let finalExpired = item.expiredDate ? item.expiredDate : '';
+                        if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                        if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
+                        let batches = prodCopy.variants[vIdx].batches[oId];
 
-                                    batches.push({ 
-                                        batchId: 'UNVOID-' + id, 
-                                        batchNo: finalBatchNo,
-                                        expiredDate: finalExpired,
-                                        tanggalMasuk: new Date().toISOString(), 
-                                        qtySisa: qtyAbs, 
-                                        hargaModal: cost 
-                                    });
-                                } else {
-                                    // PERBAIKAN: Indentasi blok FEFO dirapikan
-                                    if (hppMethod === 'FEFO') {
-                                        batches.sort((a, b) => {
-                                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                            if (!a.expiredDate) return 1;
-                                            if (!b.expiredDate) return -1;
-                                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                        });
-                                    } else if (hppMethod === 'LIFO') {
-                                        batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                    } else {
-                                        batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                    }
+                        if (isPlus) {
+                            let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
+                            let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
+                            let finalExpired = item.expiredDate ? item.expiredDate : '';
 
-                                    let reqQty = qtyAbs;
-                                    for (let i = 0; i < batches.length; i++) {
-                                        if (reqQty <= 0) break;
-                                        let b = batches[i];
-                                        let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                        if (available > 0) {
-                                            let taken = Math.min(available, reqQty);
-                                            if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                            if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                            reqQty -= taken;
-
-                                            // PERBAIKAN: Catat batch yang terpotong saat un-void
-                                            item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
-                                        }
-                                    }
-                                }
-                                prodCopy.variants[vIdx].batches[oId] = batches;
-                            }
+                            batches.push({ 
+                                batchId: 'UNVOID-' + id, 
+                                batchNo: finalBatchNo,
+                                expiredDate: finalExpired,
+                                tanggalMasuk: new Date().toISOString(), 
+                                qtySisa: qtyAbs, 
+                                hargaModal: cost 
+                            });
                         } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + item.diff;
-
-                            if (!prodCopy.batches) prodCopy.batches = {};
-                            if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
-                            let batches = prodCopy.batches[oId];
-
-                            if (isPlus) {
-                                let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                // PERBAIKAN: Masukkan variabel Batch & Expired
-                                let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
-                                let finalExpired = item.expiredDate ? item.expiredDate : '';
-
-                                batches.push({ 
-                                    batchId: 'UNVOID-' + id, 
-                                    batchNo: finalBatchNo,
-                                    expiredDate: finalExpired,
-                                    tanggalMasuk: new Date().toISOString(), 
-                                    qtySisa: qtyAbs, 
-                                    hargaModal: cost 
+                            if (hppMethod === 'FEFO') {
+                                batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                    if (!a.expiredDate) return 1;
+                                    if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
                                 });
+                            } else if (hppMethod === 'LIFO') {
+                                batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
                             } else {
-                                if (hppMethod === 'FEFO') {
-                                    batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                        if (!a.expiredDate) return 1;
-                                        if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                } else if (hppMethod === 'LIFO') {
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                } else {
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                }
+                                batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                            }
 
-                                let reqQty = qtyAbs;
-                                for (let i = 0; i < batches.length; i++) {
-                                    if (reqQty <= 0) break;
-                                    let b = batches[i];
-                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                    if (available > 0) {
-                                        let taken = Math.min(available, reqQty);
-                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                        reqQty -= taken;
-                                        
-                                        // PERBAIKAN: Catat batch yang terpotong saat un-void
-                                        item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
-                                    }
+                            let reqQty = qtyAbs;
+                            for (let i = 0; i < batches.length; i++) {
+                                if (reqQty <= 0) break;
+                                let b = batches[i];
+                                let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                                if (available > 0) {
+                                    let taken = Math.min(available, reqQty);
+                                    if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                    if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                    reqQty -= taken;
+
+                                    item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                 }
                             }
-                            prodCopy.batches[oId] = batches;
                         }
-                        
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, batches: prodCopy.batches || {} });
-
-                        await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
-                            productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qty: item.diff, outletId: opname.outletId, refId: id + '-UNVOID', note: `UN-VOID REF: ${id}`
-                        });
+                        prodCopy.variants[vIdx].batches[oId] = batches;
                     }
+                } else {
+                    if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                    prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + item.diff;
 
-                    // PERBAIKAN: Update array items ke Firebase agar histori cutBatches dari proses Un-Void ini tersimpan permanen!
-                    if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { 
-                        status: 'SELESAI', 
-                        items: opname.items 
-                    });
+                    if (!prodCopy.batches) prodCopy.batches = {};
+                    if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
+                    let batches = prodCopy.batches[oId];
 
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
-                    Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
-                } catch (err) {
-                    console.error("Gagal memproses Un-Void:", err); // Tambahkan console.error agar terbaca di Inspect Element jika gagal
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Un-Void.'});
+                    if (isPlus) {
+                        let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
+                        let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
+                        let finalExpired = item.expiredDate ? item.expiredDate : '';
+
+                        batches.push({ 
+                            batchId: 'UNVOID-' + id, 
+                            batchNo: finalBatchNo,
+                            expiredDate: finalExpired,
+                            tanggalMasuk: new Date().toISOString(), 
+                            qtySisa: qtyAbs, 
+                            hargaModal: cost 
+                        });
+                    } else {
+                        if (hppMethod === 'FEFO') {
+                            batches.sort((a, b) => {
+                                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                                if (!a.expiredDate) return 1;
+                                if (!b.expiredDate) return -1;
+                                return new Date(a.expiredDate) - new Date(b.expiredDate);
+                            });
+                        } else if (hppMethod === 'LIFO') {
+                            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                        } else {
+                            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                        }
+
+                        let reqQty = qtyAbs;
+                        for (let i = 0; i < batches.length; i++) {
+                            if (reqQty <= 0) break;
+                            let b = batches[i];
+                            let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                            if (available > 0) {
+                                let taken = Math.min(available, reqQty);
+                                if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                reqQty -= taken;
+                                
+                                item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
+                            }
+                        }
+                    }
+                    prodCopy.batches[oId] = batches;
                 }
-                this.isProcessing = false;
+                
+                await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks, batches: prodCopy.batches || {} });
+
+                // 🌟 FIX BUG 2: UPDATE MEMORI LOKAL
+                Object.assign(prod, prodCopy);
+
+                await this.logStock(item.diff > 0 ? 'IN' : 'OUT', {
+                    productId: prod.id, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
+                    qty: item.diff, outletId: opname.outletId, refId: id + '-UNVOID', note: `UN-VOID REF: ${id}`
+                });
+            }
+
+            if (opname.firestoreId) await updateDoc(doc(db, "stockOpnames", opname.firestoreId), { 
+                status: 'SELESAI', 
+                items: opname.items 
             });
-        },
+            opname.status = 'SELESAI'; // Pastikan di memori juga berubah
+
+            if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+            Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
+        } catch (err) {
+            console.error("Gagal memproses Un-Void:", err);
+            opname.status = 'VOID'; // Kembalikan status jika gagal
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Un-Void.'});
+        }
+        this.isProcessing = false;
+    });
+},
 
         } // Penutup utama dari 'methods'
     }); // Penutup dari 'createApp'
