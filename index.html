@@ -6207,24 +6207,37 @@
                     <div class="mb-auto">
                         <h5 class="fw-bold text-dark mb-4"><i class="bi bi-receipt-cutoff me-2"></i>Detail Tagihan</h5>
                         <p class="text-muted small mb-1">Pelanggan: <span class="fw-bold">{{ selectedCustomer ? selectedCustomer.name : 'Umum (Tanpa Nama)' }}</span></p>
-                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom">Rp {{ formatNumber(total) }}</h2>
+                        
+                        <div class="d-flex justify-content-between mb-1 text-muted mt-3" style="font-size: 0.9rem;">
+                            <span class="fw-semibold">Subtotal Tagihan</span>
+                            <span>Rp {{ formatNumber(total) }}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2 text-danger fw-semibold" v-if="getSurchargeAmount() > 0" style="font-size: 0.9rem;">
+                            <span>Surcharge ({{ paymentData.method }})</span>
+                            <span>+ Rp {{ formatNumber(getSurchargeAmount()) }}</span>
+                        </div>
+
+                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom mt-2">
+                            Rp {{ formatNumber(getFinalTotalTagihan()) }}
+                        </h2>
 
                         <div v-if="paymentData.method === 'CASH' || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH') || (!selectedPaymentMethodData && paymentData.method === 'CASH')">
                             <label class="form-label small fw-bold text-dark">Jumlah Uang Diterima</label>
                             
                             <div class="d-flex flex-wrap gap-2 mb-3">
-                                <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 fw-bold py-2" @click="paymentData.amountReceived = total">Uang Pas</button>
+                                <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 fw-bold py-2" @click="paymentData.amountReceived = getFinalTotalTagihan()">Uang Pas</button>
                                 
                                 <button type="button" class="btn btn-sm btn-white shadow-sm border flex-grow-1 fw-bold" 
-                                        v-if="Math.ceil(total / 50000) * 50000 > total" 
-                                        @click="paymentData.amountReceived = Math.ceil(total / 50000) * 50000">
-                                    {{ formatNumber(Math.ceil(total / 50000) * 50000) }}
+                                        v-if="Math.ceil(getFinalTotalTagihan() / 50000) * 50000 > getFinalTotalTagihan()" 
+                                        @click="paymentData.amountReceived = Math.ceil(getFinalTotalTagihan() / 50000) * 50000">
+                                    {{ formatNumber(Math.ceil(getFinalTotalTagihan() / 50000) * 50000) }}
                                 </button>
                                 
                                 <button type="button" class="btn btn-sm btn-white shadow-sm border flex-grow-1 fw-bold" 
-                                        v-if="Math.ceil(total / 100000) * 100000 > Math.ceil(total / 50000) * 50000" 
-                                        @click="paymentData.amountReceived = Math.ceil(total / 100000) * 100000">
-                                    {{ formatNumber(Math.ceil(total / 100000) * 100000) }}
+                                        v-if="Math.ceil(getFinalTotalTagihan() / 100000) * 100000 > Math.ceil(getFinalTotalTagihan() / 50000) * 50000" 
+                                        @click="paymentData.amountReceived = Math.ceil(getFinalTotalTagihan() / 100000) * 100000">
+                                    {{ formatNumber(Math.ceil(getFinalTotalTagihan() / 100000) * 100000) }}
                                 </button>
                             </div>
 
@@ -6232,11 +6245,11 @@
                                 <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
                                 <input type="number" class="form-control border-start-0 fw-bold fs-4 text-end" v-model.number="paymentData.amountReceived" placeholder="0">
                             </div>
-            
+                
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0">
                                 <span class="fw-bold text-muted">Kembalian:</span>
-                                <span class="fw-bold fs-4" :class="paymentData.amountReceived >= total ? 'text-success' : 'text-danger'">
-                                    Rp {{ formatNumber(paymentData.amountReceived - total > 0 ? paymentData.amountReceived - total : 0) }}
+                                <span class="fw-bold fs-4" :class="paymentData.amountReceived >= getFinalTotalTagihan() ? 'text-success' : 'text-danger'">
+                                    Rp {{ formatNumber(paymentData.amountReceived - getFinalTotalTagihan() > 0 ? paymentData.amountReceived - getFinalTotalTagihan() : 0) }}
                                 </span>
                             </div>
                         </div>
@@ -6248,7 +6261,7 @@
                                 <img :src="selectedPaymentMethodData.qrImageUrl" alt="QR Code" style="width: 150px; height: 150px; object-fit: contain;">
                             </div>
                             <div v-else class="bg-light p-2 rounded d-inline-block mb-2 border">
-                                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + total" alt="Dummy QR Code" style="width: 150px; height: 150px;">
+                                <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + getFinalTotalTagihan()" alt="Dummy QR Code" style="width: 150px; height: 150px;">
                             </div>
                             
                             <span class="small text-muted fw-semibold d-block" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
@@ -6291,7 +6304,7 @@
                         <button class="btn btn-light border fw-bold w-50 py-3" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
                         <button class="btn btn-primary-custom fw-bold w-50 py-3 shadow-sm" 
                                 @click="processTransaction" 
-                                :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < total) || !paymentData.method">
+                                :disabled="isProcessing || (!selectedCustomer?.id && paymentData.amountReceived < getFinalTotalTagihan()) || !paymentData.method">
                             <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                             <span v-else><i class="bi bi-printer me-2"></i>Cetak</span>
                         </button>
@@ -8626,6 +8639,27 @@ beforeDestroy() {
             this.openModal('hppExampleModal');
         },
 
+        // 1. Fungsi untuk menghitung nominal Surcharge otomatis
+        getSurchargeAmount() {
+            if (!this.selectedPaymentMethodData) return 0;
+            
+            let pm = this.selectedPaymentMethodData;
+            
+            if (pm.surcharge > 0) {
+                if (pm.surchargeType === 'percent') {
+                    return (this.total * pm.surcharge) / 100;
+                } else {
+                    return Number(pm.surcharge);
+                }
+            }
+            return 0;
+        },
+        
+        // 2. Fungsi untuk menggabungkan Total Tagihan Asli + Surcharge
+        getFinalTotalTagihan() {
+            return (this.total || 0) + this.getSurchargeAmount();
+        },
+          
         resetSalesFilter() {
                 this.transactionStartDate = '';
                 this.transactionEndDate = '';
