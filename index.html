@@ -6235,25 +6235,90 @@
             </div>
         </div>
 
+        <!-- ============================================== -->
+        <!-- AREA INPUT UANG / QRIS / TRANSFER / EDC        -->
+        <!-- ============================================== -->
         <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
-            <label class="form-label small fw-bold text-dark">Jumlah Uang / Nominal</label>
-            <div class="input-group input-group-lg mb-2 shadow-sm">
-                <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
-                <input type="number" class="form-control border-start-0 fw-bold fs-4 text-end" v-model.number="paymentData.amountReceived" placeholder="0">
-            </div>
             
+            <!-- JIKA PILIHAN CASH (Atau belum ada pilihan) -->
+            <div v-if="!paymentData.method || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH')">
+                <label class="form-label small fw-bold text-dark">Jumlah Uang / Nominal</label>
+                <div class="input-group input-group-lg mb-2 shadow-sm">
+                    <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold fs-4 text-end" v-model.number="paymentData.amountReceived" placeholder="0">
+                </div>
+            </div>
+
+            <!-- JIKA PILIHAN QRIS / E-WALLET -->
+            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'QRIS'" class="text-center p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm">
+                <span class="fw-bold d-block text-dark mb-2">{{ paymentData.method }}</span>
+                
+                <div v-if="selectedPaymentMethodData.qrImageUrl" class="bg-light p-2 rounded d-inline-block mb-2 border">
+                    <img :src="selectedPaymentMethodData.qrImageUrl" alt="QR Code" style="width: 150px; height: 150px; object-fit: contain;">
+                </div>
+                <div v-else class="bg-light p-2 rounded d-inline-block mb-2 border">
+                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + (isSplitPayment ? remainingSplitTagihan : getFinalTotalTagihan())" alt="Dummy QR Code" style="width: 150px; height: 150px;">
+                </div>
+                <span class="small text-muted fw-semibold d-block mb-2" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
+                
+                <!-- Input Nominal (Dibikin kecil jika kasir perlu ubah nominal saat Split) -->
+                <div class="input-group input-group-sm mb-1 shadow-sm mt-3">
+                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
+                </div>
+            </div>
+
+            <!-- JIKA PILIHAN TRANSFER / VIRTUAL ACCOUNT -->
+            <div v-else-if="selectedPaymentMethodData && (selectedPaymentMethodData.type === 'TRANSFER' || selectedPaymentMethodData.type === 'VA')" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-center">
+                <i class="bi bi-bank text-primary-custom fs-2 d-block mb-1"></i>
+                <span class="fw-bold d-block text-dark mb-2">{{ paymentData.method }}</span>
+                
+                <div class="p-2 bg-light border rounded mb-3 text-start">
+                    <span class="small text-muted d-block fw-bold mb-1">Informasi Rekening:</span>
+                    <div v-if="selectedPaymentMethodData.accountNumber">
+                        <div class="fw-bold text-dark">{{ selectedPaymentMethodData.bankName || paymentData.method }}</div>
+                        <div class="fs-5 fw-bold text-primary-custom letter-spacing-1">{{ selectedPaymentMethodData.accountNumber }}</div>
+                        <div class="small text-muted">a/n {{ selectedPaymentMethodData.accountName || '-' }}</div>
+                    </div>
+                    <span v-else class="small fw-semibold text-dark" style="white-space: pre-wrap;">Mohon transfer sesuai tagihan ke rekening resmi toko.</span>
+                </div>
+
+                <div class="input-group input-group-sm mb-1 shadow-sm mt-2">
+                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
+                </div>
+            </div>
+
+            <!-- JIKA PILIHAN MESIN EDC -->
+            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'EDC'" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-start">
+                <div class="text-center mb-2">
+                    <i class="bi bi-credit-card-2-front text-primary-custom fs-2 d-block mb-1"></i>
+                    <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                </div>
+                
+                <label class="form-label small fw-bold text-dark mt-2">Nominal Gesek EDC</label>
+                <div class="input-group input-group-sm mb-2 shadow-sm">
+                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
+                </div>
+                
+                <label class="form-label small fw-bold text-dark mt-1">Catatan Kartu (Opsional)</label>
+                <input type="text" class="form-control form-control-sm" v-model="paymentData.note" placeholder="Cth: Debit BCA - Appr 1234">
+            </div>
+
+            <!-- TOMBOL TAMBAH KE SPLIT -->
             <button v-if="isSplitPayment" class="btn btn-outline-primary-custom w-100 mt-2 fw-bold shadow-sm" @click="addSplitPayment" :disabled="!paymentData.method || paymentData.amountReceived <= 0">
                 <i class="bi bi-plus-circle me-1"></i> Tambahkan {{ paymentData.method || 'Pembayaran' }} ke Split
             </button>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0 && !isSplitPayment">
+            <!-- KEMBALIAN (Hanya tampil untuk Cash saat mode Bayar Penuh) -->
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0 && !isSplitPayment && (!selectedPaymentMethodData || selectedPaymentMethodData.type === 'CASH')">
                 <span class="fw-bold text-muted">Kembalian:</span>
                 <span class="fw-bold fs-4" :class="paymentData.amountReceived >= getFinalTotalTagihan() ? 'text-success' : 'text-danger'">
                     Rp {{ formatNumber(paymentData.amountReceived - getFinalTotalTagihan() > 0 ? paymentData.amountReceived - getFinalTotalTagihan() : 0) }}
                 </span>
             </div>
         </div>
-    </div>
 
     <div class="mt-4 pt-3 d-flex gap-2 w-100 border-top">
         <button class="btn btn-light border fw-bold w-50 py-3" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
