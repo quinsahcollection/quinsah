@@ -6221,7 +6221,7 @@
 
                         <div class="d-flex gap-2 mb-3 mt-2">
                             <button class="btn btn-sm flex-grow-1 fw-bold" :class="!isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = false; splitPayments = []">Bayar Penuh</button>
-                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan">Split / Hutang</button>
+                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan + getSurchargeAmount()">Split / Hutang</button>
                         </div>
 
                         <div v-if="isSplitPayment" class="p-3 bg-white border border-primary-custom rounded shadow-sm mb-3">
@@ -6234,9 +6234,11 @@
                                 <button class="btn btn-sm btn-light text-danger py-0 px-2" @click="removeSplitPayment(index)"><i class="bi bi-x-circle"></i></button>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
-                                <span class="fw-bold text-muted">Sisa Tagihan:</span>
-                                <span class="fw-bold fs-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">Rp {{ formatNumber(remainingSplitTagihan) }}</span>
-                            </div>
+    <span class="fw-bold text-muted">Sisa Tagihan:</span>
+    <span class="fw-bold fs-5" :class="(remainingSplitTagihan + getSurchargeAmount()) > 0 ? 'text-danger' : 'text-success'">
+        Rp {{ formatNumber(remainingSplitTagihan + getSurchargeAmount()) }}
+    </span>
+</div>
                         </div>
 
                         <!-- AREA INPUT UANG / QRIS / TRANSFER / EDC -->
@@ -6258,7 +6260,7 @@
                                     <img :src="selectedPaymentMethodData.qrImageUrl" alt="QR Code" style="width: 150px; height: 150px; object-fit: contain;">
                                 </div>
                                 <div v-else class="bg-light p-2 rounded d-inline-block mb-2 border">
-                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + (isSplitPayment ? remainingSplitTagihan : getFinalTotalTagihan())" alt="Dummy QR Code" style="width: 150px; height: 150px;">
+                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + (isSplitPayment ? (remainingSplitTagihan + getSurchargeAmount()) : getFinalTotalTagihan())" alt="Dummy QR Code" style="width: 150px; height: 150px;">
                                 </div>
                                 <span class="small text-muted fw-semibold d-block mb-2" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
                                 
@@ -8642,7 +8644,7 @@ beforeDestroy() {
         deep: true,
         immediate: true
     },
-
+          
     // [TETAP] Logika penguncian outlet berdasarkan role
     outlets(newVal) { 
         if (newVal.length > 0) {
