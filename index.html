@@ -4250,7 +4250,14 @@
                             <i class="bi bi-wallet2 me-1 text-secondary"></i>
                             {{ trx.paymentMethod }}: <span class="text-success">Rp {{ formatNumber(trx.firstPayment !== undefined ? trx.firstPayment : trx.amountReceived) }}</span>
                         </div>
-                        <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1" style="font-size: 0.65rem; line-height: 1.2;">
+                        
+                        <div v-if="trx.paymentMethod === 'SPLIT' && trx.splitPayments && trx.splitPayments.length > 0" class="mb-1">
+                            <div v-for="(sp, sIdx) in trx.splitPayments" :key="sIdx" class="text-muted ps-3" style="font-size: 0.65rem;">
+                                <i class="bi bi-arrow-return-right me-1"></i> {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                            </div>
+                        </div>
+
+                        <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1 mt-1" style="font-size: 0.65rem; line-height: 1.2;">
                             <i class="bi bi-arrow-return-right me-1"></i>
                             {{ pay.method }}: Rp {{ formatNumber(pay.amount) }}
                         </div>
@@ -4315,7 +4322,8 @@
                                     <th class="text-end">Harga Satuan</th>
                                     <th class="text-end">Subtotal</th>
                                 </tr>
-                            </thead> <tbody>
+                            </thead> 
+                            <tbody>
                                 <tr v-for="(item, idx) in activeInvoiceDetail.items" :key="idx">
                                     <td>
                                         <div class="fw-bold text-dark">{{ item.name }}</div>
@@ -4384,7 +4392,14 @@
                             <tbody>
                                 <tr>
                                     <td>{{ activeInvoiceDetail.dateStr }}</td>
-                                    <td>{{ activeInvoiceDetail.paymentMethod }}</td>
+                                    <td>
+                                        <div class="fw-bold">{{ activeInvoiceDetail.paymentMethod }}</div>
+                                        <div v-if="activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments && activeInvoiceDetail.splitPayments.length > 0" class="mt-1">
+                                            <div v-for="(sp, sIdx) in activeInvoiceDetail.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
+                                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td class="text-success text-end fw-bold">
                                         Rp {{ formatNumber(activeInvoiceDetail.firstPayment !== undefined ? activeInvoiceDetail.firstPayment : (activeInvoiceDetail.amountReceived - (activeInvoiceDetail.paymentHistory ? activeInvoiceDetail.paymentHistory.reduce((sum, p) => sum + Number(p.amount), 0) : 0))) }}
                                     </td>
@@ -4392,7 +4407,14 @@
                                 </tr>
                                 <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
                                     <td>{{ pay.date || pay.dateStr }}</td>
-                                    <td>{{ pay.method }}</td>
+                                    <td>
+                                        <div class="fw-bold">{{ pay.method }}</div>
+                                        <div v-if="pay.method === 'SPLIT' && pay.splitPayments && pay.splitPayments.length > 0" class="mt-1">
+                                            <div v-for="(sp, sIdx) in pay.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
+                                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td class="text-success text-end fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
                                     <td class="text-muted">{{ pay.note || '-' }}</td>
                                 </tr>
@@ -4479,6 +4501,7 @@
         </div>
     </div>
 </div>
+      
 <div class="modal fade" id="eReceiptModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Diubah ke modal-lg -->
         <div class="modal-content border-0 shadow-lg">
