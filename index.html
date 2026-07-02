@@ -8647,18 +8647,13 @@ beforeDestroy() {
         },
         
         watch: {
-    // 🌟 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
+    // [TETAP] 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
     userProfile: {
         handler(newProfile) {
-            // Begitu Firebase selesai memuat profil dan companyId valid ditemukan
             if (newProfile && newProfile.companyId) {
-                
-                // Ambil metode pembayaran yang bergantung pada companyId
                 if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
 
-                // Cek user sedang berada di halaman mana saat pertama kali terbuka
                 if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
-                    // 🌟 SOLUSI KOSONG SAAT LOGIN: Beri jeda 150ms agar HTML <canvas> digambar penuh oleh browser
                     setTimeout(() => { this.fetchDashboardData(); }, 150);
                 } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
                     this.fetchTransferHistory();
@@ -8689,9 +8684,8 @@ beforeDestroy() {
         }
     },
     
-    // 🌟 PERBAIKAN: Logika deteksi perpindahan halaman menu
+    // [TETAP] Logika deteksi perpindahan halaman menu
     currentView(newView) {
-        // Buat flag pengaman untuk memastikan profil & companyId sudah siap sebelum fetch data
         const isReady = this.userProfile && this.userProfile.companyId;
 
         if (newView === 'opname') {
@@ -8699,27 +8693,67 @@ beforeDestroy() {
         } else if (newView === 'transfer') {
             if (isReady && typeof this.fetchTransferHistory === 'function') this.fetchTransferHistory();
         } else if (newView === 'pos') {
-            // [TETAP] Tambahan Pengaman: Saat buka halaman POS, paksa arahkan ke outlet kasir
             if (this.userProfile && this.userProfile.role !== 'Admin' && this.userProfile.outletId) {
                 this.posActiveOutletId = this.userProfile.outletId;
             }
         } else if (newView === 'cash_register') {
-            // [TETAP] Filter default kasir non-admin
             if (this.userProfile && this.userProfile.role !== 'Admin') {
                 this.registerFilterOutlet = this.userProfile.outletId || '';
             }
             if (isReady && typeof this.fetchRegisters === 'function') this.fetchRegisters();
         } else if (newView === 'dashboard') {
-            // Ketika tab pindah ke dashboard, langsung fetch data
             if (isReady && typeof this.fetchDashboardData === 'function') {
-                // Beri jeda sangat kecil agar HTML Canvas sempat dimuat (dirender) oleh Vue
-                setTimeout(() => {
-                    this.fetchDashboardData();
-                }, 100);
+                setTimeout(() => { this.fetchDashboardData(); }, 100);
             }
         }
+        },
+
+    'paymentData.method': function(newMethod) {
+        this.$nextTick(() => {
+            let rate = 0;
+
+            // 1. AMBIL RATE DINAMIS DARI DATABASE
+            if (this.paymentMethods && this.paymentMethods.length > 0) {
+                
+                // [DIPERBAIKI] Cari berdasarkan id, code, name, atau nama_metode (mencakup semua kemungkinan)
+                const selectedMethod = this.paymentMethods.find(m => 
+                    m.id === newMethod || 
+                    m.code === newMethod || 
+                    (m.name && m.name.toLowerCase() === newMethod.toLowerCase()) || 
+                    (m.nama && m.nama.toLowerCase() === newMethod.toLowerCase())
+                );
+                
+                // Cek di Console Browser: Apakah metode berhasil ditemukan?
+                console.log("Metode yang di-klik:", newMethod);
+                console.log("Data metode yang ditemukan:", selectedMethod);
+
+                if (selectedMethod) {
+                    // [DIPERBAIKI] Cek berbagai kemungkinan nama kolom surcharge di database Anda
+                    const surchargeValue = selectedMethod.surcharge_percentage || selectedMethod.surcharge || selectedMethod.surcharge_fee || selectedMethod.mdr || 0;
+                    
+                    if (surchargeValue) {
+                        rate = parseFloat(surchargeValue) / 100;
+                    }
+                }
+            }
+
+            console.log("Rate yang akan dihitung:", rate);
+
+            // 2. KALKULASI NET-UP (PEMBAGIAN) + PEMBULATAN
+            if (this.isSplitPayment && this.remainingSplitTagihan > 0) {
+                // Rumus: Sisa Pokok / (1 - rate)
+                this.paymentData.amountReceived = Math.round(this.remainingSplitTagihan / (1 - rate));
+            } else if (!this.isSplitPayment) {
+                // Jika Bayar Penuh
+                if (typeof this.getFinalTotalTagihan === 'function') {
+                    this.paymentData.amountReceived = Math.round(this.getFinalTotalTagihan());
+                } else {
+                    this.paymentData.amountReceived = Math.round(this.invoiceSubtotal / (1 - rate));
+                }
+            }
+        });
     }
-},         
+        },
         
         methods: {
             askConfirm(title, message, callback) {
