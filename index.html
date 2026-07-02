@@ -13884,13 +13884,16 @@ let item = {
                     return; 
                 }
             }
+            
+            // 🌟🌟 SIAPKAN KERANJANG BATCH 🌟🌟
+            const batch = writeBatch(db);
 
             // =================================================================
-            // 1. LOGIKA EDIT
+            // 1. LOGIKA EDIT (Pembatalan dimasukkan ke Batch)
             // =================================================================
             if (this.isEditingInvoice && this.originalEditTrx) {
-                await this.revertPosStock(this.originalEditTrx);
-                await deleteDoc(doc(db, "transactions", this.originalEditTrx.id));
+                await this.revertPosStock(this.originalEditTrx); // Asumsi revert stok berjalan aman
+                batch.delete(doc(db, "transactions", this.originalEditTrx.id)); // Hapus nota lama via Batch
             }
 
             // =================================================================
@@ -13917,7 +13920,7 @@ let item = {
             })));
 
             // =================================================================
-            // 3. LOGIKA MDR, SURCHARGE & UANG DITERIMA (TERMASUK SPLIT PAYMENT) 🌟
+            // 3. LOGIKA MDR, SURCHARGE & UANG DITERIMA (TERMASUK SPLIT PAYMENT) 
             // =================================================================
             let nominalMdr = 0;
             let nominalSurcharge = 0;
@@ -13927,7 +13930,6 @@ let item = {
             let finalSplitPayments = [];
             
             if (this.isSplitPayment) {
-                // JIKA SPLIT: Surcharge adalah hasil jumlah dari semua keranjang split
                 nominalSurcharge = this.splitPayments.reduce((sum, p) => sum + (p.surchargeAmount || 0), 0);
                 uangDiterima = this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
                 let grandTotal = currentTotal + nominalSurcharge;
@@ -13936,7 +13938,6 @@ let item = {
                 finalPaymentMethod = 'SPLIT';
                 finalSplitPayments = JSON.parse(JSON.stringify(this.splitPayments));
                 
-                // Pencatatan otomatis hutang jika pelanggan kurang bayar
                 if (sisaHutang > 0 && this.selectedCustomer && this.selectedCustomer.id) {
                     finalSplitPayments.push({
                         method: 'HUTANG',
@@ -13948,7 +13949,6 @@ let item = {
                     });
                 }
             } else {
-                // JIKA NORMAL
                 if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
                     let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
                     if (pm) {
@@ -13989,11 +13989,11 @@ let item = {
             const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
 
             // =================================================================
-            // 5. PENYUSUNAN DATA TRANSAKSI
+            // 5. PENYUSUNAN DATA TRANSAKSI UTAMA
             // =================================================================
             let trxRaw = {
                 id: currentInvoiceId,
-                companyId: this.userProfile.companyId,
+                companyId: this.userProfile?.companyId || '',
                 dateStr: new Date().toLocaleString('id-ID'),
                 customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
                 customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
@@ -14003,7 +14003,6 @@ let item = {
                 shiftId: finalShiftId,
                 registerName: finalRegisterName,
                 
-                // DATA PEMBAYARAN BARU YANG MENDUKUNG SPLIT 🌟
                 paymentMethod: finalPaymentMethod,
                 splitPayments: finalSplitPayments,
                 totalDebt: sisaHutang,
@@ -14019,20 +14018,20 @@ let item = {
                 taxAmt: currentTaxAmt,
                 serviceAmt: currentServiceAmt,
                 total: grandTotal, 
-                items: cleanItems
+                items: cleanItems // <- Ini akan diperbarui di dalam loop
             };
 
             let trxData = JSON.parse(JSON.stringify(trxRaw));
             trxData.createdAt = serverTimestamp();
             this.posCustomInvoice = trxData.id;
 
-            // Simpan ke Koleksi Transaksi
-            await setDoc(doc(db, "transactions", trxData.id), trxData);
+            // KITA TUNDA setDoc! Jangan masukkan ke Firebase dulu.
 
             // ==========================================
-            // 6. ENGINE POTONG STOK & BATCH (TIDAK ADA YANG DIUBAH)
+            // 6. ENGINE POTONG STOK & BATCH (DIMASUKKAN KE BATCH FIREBASE)
             // ==========================================
             let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+            let dateNowStr = new Date().toLocaleString('id-ID');
 
             for (let i = 0; i < trxData.items.length; i++) {
                 let item = trxData.items[i];
@@ -14141,17 +14140,31 @@ let item = {
 
                 item.totalCogs = totalItemCogs;
 
-                // Eksekusi Update Produk Utama ke Firebase
-                await updateDoc(doc(db, "products", prod.id), {
+                // 🌟 [BATCH 1] Update Produk Utama
+                batch.update(doc(db, "products", prod.id), {
                     variants: prodCopy.variants || [],
                     baseOutletStocks: prodCopy.baseOutletStocks || {},
                     batches: prodCopy.batches || {} 
                 });
 
-                // Log mutasi KELUAR Produk Utama
-                await this.logStock('OUT', {
-                    productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                    qty: -item.qty, outletId: trxData.outletId, refId: trxData.id, note: 'Penjualan Kasir POS'
+                // 🌟 [BATCH 2] Catat Log Mutasi Keluar Produk Utama
+                let logRef = doc(collection(db, "stockLogs"));
+                batch.set(logRef, {
+                    companyId: this.userProfile?.companyId || '',
+                    createdAt: serverTimestamp(),
+                    dateStr: dateNowStr,
+                    type: 'OUT',
+                    productId: prod.id,
+                    sku: prod.sku || '-',
+                    productName: prod.name || '-',
+                    variantSku: item.variantSku || null,
+                    variantName: item.variantName || '-',
+                    qtyChange: -item.qty,
+                    outletId: trxData.outletId,
+                    outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
+                    refId: trxData.id,
+                    userName: finalCashierName,
+                    note: 'Penjualan Kasir POS'
                 });
 
                 // =================================================================
@@ -14204,24 +14217,42 @@ let item = {
                     }
                     linkedProdCopy.batches[outletId] = optBatches;
 
-                    // Update Produk Opsi (Topping) ke Firebase
-                    await updateDoc(doc(db, "products", linkedProd.id), {
+                    // 🌟 [BATCH 3] Update Produk Opsi (Topping)
+                    batch.update(doc(db, "products", linkedProd.id), {
                         baseOutletStocks: linkedProdCopy.baseOutletStocks || {},
                         batches: linkedProdCopy.batches || {}
                     });
                     
-                    // Log mutasi KELUAR untuk Produk Topping
-                    await this.logStock('OUT', {
-                        productId: linkedProd.id, sku: linkedProd.sku || '-', name: linkedProd.name || '-', variantSku: null, variantName: '-',
-                        qty: -requiredOptQty, outletId: trxData.outletId, refId: trxData.id, note: `Terjual sbg Topping di POS`
+                    // 🌟 [BATCH 4] Catat Log Mutasi Topping
+                    let optLogRef = doc(collection(db, "stockLogs"));
+                    batch.set(optLogRef, {
+                        companyId: this.userProfile?.companyId || '',
+                        createdAt: serverTimestamp(),
+                        dateStr: dateNowStr,
+                        type: 'OUT',
+                        productId: linkedProd.id,
+                        sku: linkedProd.sku || '-',
+                        productName: linkedProd.name || '-',
+                        variantSku: null,
+                        variantName: '-',
+                        qtyChange: -requiredOptQty,
+                        outletId: trxData.outletId,
+                        outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
+                        refId: trxData.id,
+                        userName: finalCashierName,
+                        note: `Terjual sbg Topping di POS`
                     });
                 }
             }
 
             // =================================================================
-            // 8. UPDATE FINAL & RESET KASIR
+            // 8. UPDATE FINAL & EKSEKUSI KERANJANG FIREBASE
             // =================================================================
-            await updateDoc(doc(db, "transactions", trxData.id), { items: trxData.items });
+            // 🌟 [BATCH 5] Masukkan data Nota/Transaksi HANYA setelah semua HPP & Batch dihitung di loop atas
+            batch.set(doc(db, "transactions", trxData.id), trxData);
+
+            // 🚀🚀 TEMBAK SEMUANYA KE SERVER DALAM 1 PERINTAH!
+            await batch.commit();
 
             this.activePrintData = trxData;
             this.printMode = 'receipt';
@@ -14239,8 +14270,8 @@ let item = {
             this.globalDiscountType = 'none';
             this.globalDiscountValue = 0;
             this.paymentData = { method: 'CASH', amountReceived: 0, note: '' };
-            this.isSplitPayment = false; // Reset Split Mode
-            this.splitPayments = [];     // Kosongkan Keranjang Split
+            this.isSplitPayment = false; 
+            this.splitPayments = [];     
             
             Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
 
