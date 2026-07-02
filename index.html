@@ -4834,7 +4834,7 @@
                             <h6 class="fw-bold small mb-2"><i class="bi bi-receipt me-1"></i>Histori Transaksi (POS)</h6>
                             <div class="table-responsive" style="max-height: 40vh; overflow-y: auto;">
                                 <table class="table table-sm table-hover align-middle text-nowrap" style="font-size: 0.75rem;">
-                                                                        <thead class="table-light sticky-top">
+                                                                                                <thead class="table-light sticky-top">
                                         <tr>
                                             <th>Tgl Transaksi</th>
                                             <th>No. Invoice</th>
@@ -4860,7 +4860,13 @@
                                                     {{ trx.paymentMethod }}: <span class="text-success">Rp {{ formatNumber(trx.firstPayment !== undefined ? trx.firstPayment : trx.amountReceived) }}</span>
                                                 </div>
                                                 
-                                                <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1" style="font-size: 0.65rem; line-height: 1.2;">
+                                                <div v-if="trx.paymentMethod === 'SPLIT' && trx.splitPayments && trx.splitPayments.length > 0" class="mb-1">
+                                                    <div v-for="(sp, sIdx) in trx.splitPayments" :key="sIdx" class="text-muted ps-3" style="font-size: 0.65rem;">
+                                                        <i class="bi bi-arrow-return-right me-1"></i> {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div v-for="(pay, pIdx) in trx.paymentHistory || []" :key="pIdx" class="text-muted ps-2 border-start border-secondary mb-1 mt-1" style="font-size: 0.65rem; line-height: 1.2;">
                                                     <i class="bi bi-arrow-return-right me-1"></i>
                                                     {{ pay.method }}: Rp {{ formatNumber(pay.amount) }}
                                                 </div>
