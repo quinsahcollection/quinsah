@@ -14414,7 +14414,7 @@ let item = {
             async savePurchase() {
                 this.isSaving = true;
                 try {
-                    // Jika Edit dan status sebelumnya sudah SELESAI, tarik stok dulu sebelum di-update ulang
+                    // Jika Edit dan status sebelumnya sudah SELESAI, tarik stok dulu (Ini sudah aman karena revertPurchaseStock di bawah sudah pakai batch juga)
                     if (this.formPurchase.isEdit && this.formPurchase.originalPo) {
                         await this.revertPurchaseStock(this.formPurchase.originalPo);
                     }
@@ -14430,27 +14430,20 @@ let item = {
                     dataToSave.id = String(this.formPurchase.invoiceNo || '').replace(/\//g, '-');
                     dataToSave.createdAt = serverTimestamp();
                     
-                    // 👇 PERBAIKAN: Gunakan namaLengkap untuk mendeteksi user aktif
                     let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
                     dataToSave.userName = activeUser;
-                    dataToSave.pic = activeUser; // Simpan juga sebagai pic agar HTML gampang membacanya
+                    dataToSave.pic = activeUser; 
                     
-                    // 👇 PENGAMAN CABANG: Pastikan outletId tidak kosong
                     if (!dataToSave.outletId) {
                         dataToSave.outletId = this.outlets.length > 0 ? this.outlets[0].id : '';
                     }
 
-                    // <--- TAMBAHAN MULTI-TENANT
                     dataToSave.companyId = this.userProfile?.companyId || ''; 
-                    // --------------------------
 
-                    // --- TAMBAHAN PENTING: AUTO KALKULASI LUNAS ---
                     if (dataToSave.paymentStatus === 'LUNAS') {
                         dataToSave.paidAmount = dataToSave.total;
                     }
-                    // ----------------------------------------------
 
-                    // Inisialisasi Riwayat Pembayaran (Jika ada DP)
                     if (!dataToSave.paymentHistory) dataToSave.paymentHistory = [];
                     if (dataToSave.paidAmount > 0 && dataToSave.paymentHistory.length === 0) {
                         dataToSave.paymentHistory.push({ 
@@ -14460,7 +14453,11 @@ let item = {
                         });
                     }
 
-                    await setDoc(doc(db, "purchases", dataToSave.id), dataToSave);
+                    // 🌟 1. SIAPKAN KERANJANG BATCH
+                    const batch = writeBatch(db);
+
+                    // 🌟 2. MASUKKAN DOKUMEN PO KE DALAM BATCH (Gantikan setDoc)
+                    batch.set(doc(db, "purchases", dataToSave.id), dataToSave);
 
                     // =========================================================
                     // SINKRONISASI STOK (HANYA BERJALAN JIKA STATUS == 'SELESAI')
@@ -14519,16 +14516,34 @@ let item = {
                                     updatePayload.batches = prodCopy.batches;
                                 }
                                 
-                                await updateDoc(doc(db, "products", prod.id), updatePayload);
+                                // 🌟 3. MASUKKAN UPDATE PRODUK KE BATCH
+                                batch.update(doc(db, "products", prod.id), updatePayload);
                                 
-                                // 👇 PERBAIKAN LOG STOK: Memastikan tercatat dari PIC yang benar
-                                await this.logStock('IN', {
-                                    productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                                    qty: item.qty, outletId: dataToSave.outletId, refId: dataToSave.id, note: 'Pembelian Masuk (PO)'
+                                // 🌟 4. MASUKKAN LOG STOK KE BATCH
+                                let logRef = doc(collection(db, "stockLogs"));
+                                batch.set(logRef, {
+                                    companyId: this.userProfile?.companyId || '',
+                                    createdAt: serverTimestamp(),
+                                    dateStr: new Date().toLocaleString('id-ID'),
+                                    type: 'IN',
+                                    productId: prod.id,
+                                    sku: prod.sku || '-',
+                                    productName: prod.name || '-',
+                                    variantSku: item.variantSku || null,
+                                    variantName: item.variantName || '-',
+                                    qtyChange: item.qty,
+                                    outletId: dataToSave.outletId,
+                                    outletName: this.getOutletName(dataToSave.outletId) || 'Gudang Pusat',
+                                    refId: dataToSave.id,
+                                    userName: activeUser,
+                                    note: 'Pembelian Masuk (PO)'
                                 });
                             }
                         }
                     }
+
+                    // 🌟 5. EKSEKUSI BATCH SERENTAK
+                    await batch.commit();
 
                     this.hideModal('addPurchaseModal');
                     this.formPurchase = { id: null, invoiceNo: this.generateInvoiceNumber('PO'), supplierId:'', outletId: (this.outlets.length>0 ? this.outlets[0].id : ''), items:[], note:'', total:0, paymentStatus: 'LUNAS', paidAmount: 0, dueDate: '', taxAmount: 0, poStatus: 'PENDING', isEdit: false };
@@ -14549,22 +14564,28 @@ let item = {
                         let poCopy = JSON.parse(JSON.stringify(po));
                         poCopy.poStatus = 'SELESAI';
                         
-                        // Gunakan logika fungsi formEdit tapi jangan buka formnya, langsung save di background
                         this.formPurchase = poCopy;
                         this.formPurchase.isEdit = true;
-                        this.formPurchase.originalPo = po; // Karena sebelumnya PENDING, revertPurchaseStock tidak akan merusak stok
+                        this.formPurchase.originalPo = po; 
                         
-                        await this.savePurchase();
+                        await this.savePurchase(); // savePurchase sudah kita lindungi dengan Batch di atas
                         
                     } catch (e) { console.error(e); }
                     this.isProcessing = false;
                 });
             },
 
+            // ---------------------------------------------------------
+            // FUNGSI TARIK MUNDUR STOK PO (REVERT) - FULL BATCH
+            // ---------------------------------------------------------
             async revertPurchaseStock(po) {
-                // SANGAT PENTING: Hanya Tarik Mundur Stok JIKA PO Tersebut Sebelumnya Sudah SELESAI / Masuk Gudang!
                 if (!po || !po.items || po.poStatus !== 'SELESAI') return;
                 
+                // 🌟 SIAPKAN KERANJANG BATCH UNTUK REVERT
+                const batch = writeBatch(db);
+                let dateNowStr = new Date().toLocaleString('id-ID');
+                let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+
                 for (let item of po.items) {
                     let prod = this.products.find(p => p.id === item.productId);
                     if (prod) {
@@ -14620,19 +14641,46 @@ let item = {
                             updatePayload.batches = prodCopy.batches;
                         }
                         
-                        await updateDoc(doc(db, "products", prod.id), updatePayload);
+                        // 🌟 MASUKKAN UPDATE PRODUK KE BATCH
+                        batch.update(doc(db, "products", prod.id), updatePayload);
                         
-                        await this.logStock('OUT', {
-                            productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                            qty: -item.qty, outletId: po.outletId, refId: po.id + ' (BATAL)', note: 'Revisi/Batal Dokumen PO'
+                        // 🌟 MASUKKAN LOG STOK KE BATCH
+                        let logRef = doc(collection(db, "stockLogs"));
+                        batch.set(logRef, {
+                            companyId: this.userProfile?.companyId || '',
+                            createdAt: serverTimestamp(),
+                            dateStr: dateNowStr,
+                            type: 'OUT',
+                            productId: prod.id,
+                            sku: prod.sku || '-',
+                            productName: prod.name || '-',
+                            variantSku: item.variantSku || null,
+                            variantName: item.variantName || '-',
+                            qtyChange: -item.qty,
+                            outletId: po.outletId,
+                            outletName: this.getOutletName(po.outletId) || 'Gudang Pusat',
+                            refId: po.id + ' (BATAL)',
+                            userName: activeUser,
+                            note: 'Revisi/Batal Dokumen PO'
                         });
                     }
                 }
+                
+                // 🌟 EKSEKUSI BATCH REVERT
+                await batch.commit();
             },
 
+            // ---------------------------------------------------------
+            // FUNGSI TARIK MUNDUR STOK POS / KASIR - FULL BATCH
+            // ---------------------------------------------------------
             async revertPosStock(trx) {
                 if (!trx || !trx.items) return;
                 
+                // 🌟 SIAPKAN KERANJANG BATCH UNTUK REVERT POS
+                const batch = writeBatch(db);
+                let dateNowStr = new Date().toLocaleString('id-ID');
+                let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+
                 for (let item of trx.items) {
                     let prod = this.products.find(p => p.id === item.productId);
                     if (prod) {
@@ -14648,17 +14696,37 @@ let item = {
                             prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + item.qty;
                         }
                         
-                        // Update stok produk
-                        await updateDoc(doc(db, "products", prod.id), { variants: prodCopy.variants, baseOutletStocks: prodCopy.baseOutletStocks });
+                        // 🌟 MASUKKAN UPDATE PRODUK KE BATCH
+                        batch.update(doc(db, "products", prod.id), { 
+                            variants: prodCopy.variants, 
+                            baseOutletStocks: prodCopy.baseOutletStocks 
+                        });
                         
-                        // Log mutasi MASUK via Fungsi Pusat
-                    await this.logStock('IN', {
-                        productId: prod.id, sku: prod.sku || '-', name: prod.name || '-', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                        qty: item.qty, outletId: trx.outletId, refId: trx.id + ' (BATAL)', note: 'Revisi/Batal Invoice Kasir'
-                    });
+                        // 🌟 MASUKKAN LOG STOK KE BATCH
+                        let logRef = doc(collection(db, "stockLogs"));
+                        batch.set(logRef, {
+                            companyId: this.userProfile?.companyId || '',
+                            createdAt: serverTimestamp(),
+                            dateStr: dateNowStr,
+                            type: 'IN',
+                            productId: prod.id,
+                            sku: prod.sku || '-',
+                            productName: prod.name || '-',
+                            variantSku: item.variantSku || null,
+                            variantName: item.variantName || '-',
+                            qtyChange: item.qty,
+                            outletId: trx.outletId,
+                            outletName: this.getOutletName(trx.outletId) || 'Gudang Pusat',
+                            refId: trx.id + ' (BATAL)',
+                            userName: activeUser,
+                            note: 'Revisi/Batal Invoice Kasir'
+                        });
+                    }
                 }
-            }
-        },
+                
+                // 🌟 EKSEKUSI BATCH REVERT POS
+                await batch.commit();
+            },
 
             editPurchase(po) {
                 this.askConfirm('Revisi Data PO?', 'Sistem akan memuat data PO ini. Saat Anda klik Simpan, data akan ditimpa ulang (dan stok disesuaikan jika statusnya SELESAI).', () => {
