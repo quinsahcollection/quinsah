@@ -9901,6 +9901,9 @@ async processPoReturn() {
         try {
             // 1. Inisialisasi Firestore Batch
             const batch = writeBatch(db);
+            let dateNowStr = new Date().toLocaleString('id-ID');
+            let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+            let activeCompany = this.userProfile?.companyId || '';
             
             let poIdx = this.purchases.findIndex(p => p.id === this.returnPoForm.id);
             if (poIdx === -1) throw new Error("Dokumen PO tidak ditemukan");
@@ -9915,7 +9918,7 @@ async processPoReturn() {
                 let retItem = this.returnPoForm.items[i];
                 
                 if (retItem.returnQty > 0) {
-                    let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
+                    let variantText = retItem.variantName && retItem.variantName !== '-' ? ` (${retItem.variantName})` : '';
                     let namaLengkap = (retItem.productName || retItem.name || 'Produk') + variantText;
 
                     let prod = this.products.find(p => p.sku === retItem.sku || p.id === retItem.productId);
@@ -9941,29 +9944,45 @@ async processPoReturn() {
                                 }
                             }
 
-                            // Catat Minus ke Log (Log Tetap Berjalan Async)
-                            await this.logStock('OUT', {
+                            // 🌟 PERBAIKAN: Catat Minus ke Log (Via BATCH, bukan await this.logStock)
+                            let logRefOut = doc(collection(db, "stockLogs"));
+                            batch.set(logRefOut, {
+                                companyId: activeCompany,
+                                createdAt: serverTimestamp(),
+                                dateStr: dateNowStr,
+                                type: 'OUT',
                                 productId: prod.id,
                                 sku: retItem.sku || prod.sku || '-',
-                                name: prod.name,
+                                productName: prod.name,
                                 variantSku: retItem.variantSku || null,
                                 variantName: retItem.variantName || '-',
-                                qty: -Math.abs(retItem.returnQty), 
+                                qtyChange: -Math.abs(retItem.returnQty), 
                                 outletId: po.outletId,
+                                outletName: this.getOutletName(po.outletId) || 'Gudang Pusat',
                                 refId: `RETUR-PO-${po.id}`,
+                                userName: activeUser,
                                 note: `Retur ke Supplier: ${this.returnPoForm.reason}`
                             });
                         }
                         
-                        // JIKA TUKAR BARANG LANGSUNG: Stok Tetap. Cukup catat log formalitas.
+                        // JIKA TUKAR BARANG LANGSUNG: Stok Tetap. Cukup catat log formalitas via BATCH.
                         if (isExchange && isReceived) {
-                             await this.logStock('OUT', {
-                                productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
-                                qty: -Math.abs(retItem.returnQty), outletId: po.outletId, refId: `RETUR-PO-${po.id}`, note: `Retur Keluar (Tukar)`
+                             let logRefOutEx = doc(collection(db, "stockLogs"));
+                             batch.set(logRefOutEx, {
+                                companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr, type: 'OUT',
+                                productId: prod.id, sku: retItem.sku || prod.sku || '-', productName: prod.name, 
+                                variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
+                                qtyChange: -Math.abs(retItem.returnQty), outletId: po.outletId, outletName: this.getOutletName(po.outletId) || 'Gudang Pusat',
+                                refId: `RETUR-PO-${po.id}`, userName: activeUser, note: `Retur Keluar (Tukar)`
                             });
-                             await this.logStock('IN', {
-                                productId: prod.id, name: prod.name, variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
-                                qty: Math.abs(retItem.returnQty), outletId: po.outletId, refId: `RETUR-PO-${po.id}`, note: `Retur Masuk (Pengganti)`
+                             
+                             let logRefInEx = doc(collection(db, "stockLogs"));
+                             batch.set(logRefInEx, {
+                                companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr, type: 'IN',
+                                productId: prod.id, sku: retItem.sku || prod.sku || '-', productName: prod.name, 
+                                variantSku: retItem.variantSku || null, variantName: retItem.variantName || '-',
+                                qtyChange: Math.abs(retItem.returnQty), outletId: po.outletId, outletName: this.getOutletName(po.outletId) || 'Gudang Pusat',
+                                refId: `RETUR-PO-${po.id}`, userName: activeUser, note: `Retur Masuk (Pengganti)`
                             });
                         }
                     }
@@ -9977,11 +9996,10 @@ async processPoReturn() {
 
                     let hargaBeli = retItem.basePrice || retItem.cost || retItem.price || 0;
                     
-                    // 🌟 PERBAIKAN UTAMA: Menyimpan ID & SKU secara eksplisit ke dalam histori retur
                     po.returHistory.push({
                         date: new Date().toLocaleString('id-ID'),
-                        productId: retItem.productId || prod?.id || null, // Diikat dengan ID Produk
-                        variantSku: retItem.variantSku || null,          // Diikat dengan SKU Varian
+                        productId: retItem.productId || prod?.id || null, 
+                        variantSku: retItem.variantSku || null,          
                         productName: namaLengkap, 
                         qtyRetur: retItem.returnQty,
                         refundAmount: isRefund ? (retItem.returnQty * hargaBeli) : 0,
@@ -10013,16 +10031,23 @@ async processPoReturn() {
                 po.poStatus = isReceived ? 'SELESAI' : 'RETUR TUKAR';
             }
 
-            // 3. Masukkan perubahan dokumen PO utama ke dalam Batch yang sama
-            const poRef = doc(db, "purchases", po.id);
-            batch.update(poRef, {
+            // 🌟 PERBAIKAN: Buat kerangka update secara dinamis
+            let updatePoPayload = {
                 items: po.items,
-                total: po.total,
-                subtotal: po.subtotal,
-                sisaTagihan: po.sisaTagihan,
                 poStatus: po.poStatus,
                 returHistory: po.returHistory
-            });
+            };
+
+            // Tambahkan update tagihan HANYA jika terjadi Refund
+            if (isRefund) {
+                updatePoPayload.total = po.total || 0;
+                updatePoPayload.subtotal = po.subtotal || 0;
+                updatePoPayload.sisaTagihan = po.sisaTagihan || 0;
+            }
+
+            // 3. Masukkan perubahan dokumen PO utama ke dalam Batch yang sama
+            const poRef = doc(db, "purchases", po.id);
+            batch.update(poRef, updatePoPayload);
 
             // 4. Eksekusi Batch sekaligus (All-or-Nothing)
             await batch.commit();
@@ -10043,7 +10068,7 @@ async processPoReturn() {
     }
 },
         
-        async receiveExchange(po) {
+async receiveExchange(po) {
     const confirm = await Swal.fire({
         title: 'Terima Barang Pengganti?',
         text: 'Barang yang sebelumnya ditukar (Menyusul) sudah tiba dan stok akan ditambahkan kembali ke gudang Anda?',
@@ -10058,6 +10083,9 @@ async processPoReturn() {
         try {
             // 1. Inisialisasi Firestore Batch
             const batch = writeBatch(db);
+            let dateNowStr = new Date().toLocaleString('id-ID');
+            let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+            let activeCompany = this.userProfile?.companyId || '';
 
             let poIdx = this.purchases.findIndex(p => p.id === po.id);
             if (poIdx === -1) throw new Error("PO tidak ditemukan");
@@ -10072,7 +10100,6 @@ async processPoReturn() {
                 
                 if (ret.action === 'Tukar Barang (Menyusul)') {
                     
-                    // 🌟 PERBAIKAN MENCARI ITEM PO: Menggunakan ID & SKU. Jika data lama, fallback ke nama teks.
                     let poItem = updatedPo.items.find(item => {
                         if (ret.productId) {
                             return item.productId === ret.productId && (item.variantSku || null) === (ret.variantSku || null);
@@ -10107,15 +10134,23 @@ async processPoReturn() {
                                 }
                             }
 
-                            // 4. Catat Log Stok (Barang Masuk) secara langsung
-                            await this.logStock('IN', {
+                            // 🌟 PERBAIKAN: Catat Log Stok (Barang Masuk) secara langsung via BATCH
+                            let logRefIn = doc(collection(db, "stockLogs"));
+                            batch.set(logRefIn, {
+                                companyId: activeCompany,
+                                createdAt: serverTimestamp(),
+                                dateStr: dateNowStr,
+                                type: 'IN',
                                 productId: prod.id, 
+                                sku: poItem.sku || prod.sku || '-',
                                 name: prod.name, 
                                 variantSku: poItem.variantSku || null, 
                                 variantName: poItem.variantName || '-',
-                                qty: Math.abs(ret.qtyRetur), 
+                                qtyChange: Math.abs(ret.qtyRetur), 
                                 outletId: updatedPo.outletId, 
+                                outletName: this.getOutletName(updatedPo.outletId) || 'Gudang Pusat',
                                 refId: `TUKAR-PO-${updatedPo.id}`, 
+                                userName: activeUser,
                                 note: `Terima Barang Pengganti`
                             });
                             
