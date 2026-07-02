@@ -11784,94 +11784,77 @@ async fetchRolesFromDatabase() {
         // 1. FUNGSI SIMPAN TRANSFER (Bisa Buat Baru & Simpan Edit)
         // ==========================================
         async saveTransfer() {
-    if (!this.transferForm.fromOutlet || !this.transferForm.toOutlet) return;
-    
-    // 1. PENGAMAN GANDA: Cegah pengiriman ke cabang yang sama
-    if (this.transferForm.fromOutlet === this.transferForm.toOutlet) {
-        Swal.fire('Gagal', 'Cabang asal dan tujuan tidak boleh sama.', 'error');
-        return;
-    }
-    
-    let transferItems = [];
-    this.products.forEach(p => {
-        if (!p.variants || p.variants.length === 0) {
-            let qty = parseInt(this.transferQtyInput[p.id]) || 0;
-            if (qty > 0) transferItems.push({ isVariant: false, productId: p.id, variantSku: null, sku: p.sku || '-', name: p.name, variantName: '-', qty: qty });
-        } else {
-            p.variants.forEach(v => {
-                let qty = parseInt(this.transferQtyInput[v.variantSku]) || 0;
-                if (qty > 0) transferItems.push({ isVariant: true, productId: p.id, variantSku: v.variantSku, sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes, qty: qty });
+            if (!this.transferForm.fromOutlet || !this.transferForm.toOutlet) return;
+            
+            if (this.transferForm.fromOutlet === this.transferForm.toOutlet) {
+                Swal.fire('Gagal', 'Cabang asal dan tujuan tidak boleh sama.', 'error');
+                return;
+            }
+            
+            let transferItems = [];
+            this.products.forEach(p => {
+                if (!p.variants || p.variants.length === 0) {
+                    let qty = parseInt(this.transferQtyInput[p.id]) || 0;
+                    if (qty > 0) transferItems.push({ isVariant: false, productId: p.id, variantSku: null, sku: p.sku || '-', name: p.name, variantName: '-', qty: qty });
+                } else {
+                    p.variants.forEach(v => {
+                        let qty = parseInt(this.transferQtyInput[v.variantSku]) || 0;
+                        if (qty > 0) transferItems.push({ isVariant: true, productId: p.id, variantSku: v.variantSku, sku: v.variantSku || '-', name: p.name, variantName: v.name || v.attributes, qty: qty });
+                    });
+                }
             });
-        }
-    });
 
-    if (transferItems.length === 0) {
-        Swal.fire('Peringatan', 'Anda belum mengisi jumlah qty barang satupun.', 'warning');
-        return;
-    }
-
-    // 2. LOGIKA JUDUL PESAN: Menyesuaikan apakah sedang Edit atau Buat Baru
-    let title = this.isEditingTransfer ? 'Simpan Perubahan Draft?' : 'Ajukan Draft Baru?';
-    
-    this.askConfirm(title, `Dokumen akan disimpan dengan status PENDING. Stok belum dipotong.`, async () => {
-        this.isProcessing = true;
-        try {
-            let nowStr = new Date().toLocaleString('id-ID');
-            
-            // 🌟 PERBAIKAN PELACAKAN NAMA USER
-            // Sistem akan mencari nama asli dari akun yang sedang login di semua kemungkinan kolom
-            let currentUser = 'Admin';
-            if (this.userProfile) {
-                currentUser = this.userProfile.namaLengkap || 
-                              this.userProfile.name || 
-                              this.userProfile.displayName || 
-                              this.userProfile.username || 
-                              this.userProfile.email || 
-                              'Admin';
+            if (transferItems.length === 0) {
+                Swal.fire('Peringatan', 'Anda belum mengisi jumlah qty barang satupun.', 'warning');
+                return;
             }
 
-            // 3. LOGIKA BERCABANG: Update dokumen lama ATAU Buat dokumen baru
-            if (this.isEditingTransfer && this.editTransferId) {
-                // JIKA MODE EDIT
-                await updateDoc(doc(db, "stockTransfers", this.editTransferId), {
-                    fromOutlet: this.transferForm.fromOutlet,
-                    toOutlet: this.transferForm.toOutlet,
-                    note: this.transferForm.note,
-                    items: transferItems,
-                    pic: currentUser // 🌟 Menyimpan nama akun karyawan yang ngedit
-                });
-                Swal.fire({ icon: 'success', title: 'Diperbarui', text: 'Draft transfer berhasil diubah.', timer: 2000, showConfirmButton: false});
-            } else {
-                // JIKA BUAT BARU
-                let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
-                await addDoc(collection(db, "stockTransfers"), {
-                    id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
-                    companyId: this.userProfile?.companyId || '', 
-                    fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
-                    pic: currentUser, // 🌟 Menyimpan nama akun karyawan pembuat
-                    note: this.transferForm.note || 'Pengajuan Transfer',
-                    status: 'PENDING', items: transferItems
-                });
-                Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
-            }
-
-            // 4. BERSIHKAN FORM & MATIKAN MODE EDIT
-            this.isEditingTransfer = false;
-            this.editTransferId = null;
-            this.transferQtyInput = {};
-            this.transferForm.note = '';
-            this.transferForm.fromOutlet = '';
-            this.transferForm.toOutlet = '';
+            let title = this.isEditingTransfer ? 'Simpan Perubahan Draft?' : 'Ajukan Draft Baru?';
             
-            await this.fetchTransferHistory();
-            this.transferView = 'list';
-        } catch (err) { 
-            Swal.fire('Error', 'Gagal memproses pengajuan.', 'error'); 
-            console.error(err);
-        }
-        this.isProcessing = false;
-    });
-},
+            this.askConfirm(title, `Dokumen akan disimpan dengan status PENDING. Stok belum dipotong.`, async () => {
+                this.isProcessing = true;
+                try {
+                    let nowStr = new Date().toLocaleString('id-ID');
+                    let currentUser = this.userProfile?.namaLengkap || this.userProfile?.name || this.userProfile?.displayName || 'Admin';
+
+                    if (this.isEditingTransfer && this.editTransferId) {
+                        await updateDoc(doc(db, "stockTransfers", this.editTransferId), {
+                            fromOutlet: this.transferForm.fromOutlet,
+                            toOutlet: this.transferForm.toOutlet,
+                            note: this.transferForm.note,
+                            items: transferItems,
+                            pic: currentUser 
+                        });
+                        Swal.fire({ icon: 'success', title: 'Diperbarui', text: 'Draft transfer berhasil diubah.', timer: 2000, showConfirmButton: false});
+                    } else {
+                        let batchId = 'TRF-' + Math.floor(Math.random() * 90000 + 10000);
+                        await addDoc(collection(db, "stockTransfers"), {
+                            id: batchId, createdAt: serverTimestamp(), dateStr: nowStr,
+                            companyId: this.userProfile?.companyId || '', 
+                            fromOutlet: this.transferForm.fromOutlet, toOutlet: this.transferForm.toOutlet,
+                            pic: currentUser, 
+                            note: this.transferForm.note || 'Pengajuan Transfer',
+                            status: 'PENDING', items: transferItems
+                        });
+                        Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Status saat ini PENDING.', timer: 2000, showConfirmButton: false});
+                    }
+
+                    this.isEditingTransfer = false;
+                    this.editTransferId = null;
+                    this.transferQtyInput = {};
+                    this.transferForm.note = '';
+                    this.transferForm.fromOutlet = '';
+                    this.transferForm.toOutlet = '';
+                    
+                    await this.fetchTransferHistory();
+                    this.transferView = 'list';
+                } catch (err) { 
+                    Swal.fire('Error', 'Gagal memproses pengajuan.', 'error'); 
+                    console.error(err);
+                }
+                this.isProcessing = false;
+            });
+        },
 
         // 2. FUNGSI BARU: PROSES KIRIM (UBAH PENDING -> DIKIRIM & POTONG STOK ASAL)
         async sendTransfer(id) {
@@ -11882,16 +11865,25 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = true;
                 try {
                     let toOutletName = this.getOutletName(tf.toOutlet);
+                    const batch = writeBatch(db);
+                    let activeCompany = this.userProfile?.companyId || '';
+                    let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+                    let dateNowStr = new Date().toLocaleString('id-ID');
+                    
+                    let updatedProductsMap = {}; 
 
                     for (let item of tf.items) {
-                        let prodRef = doc(db, "products", item.productId);
-                        let prodSnap = await getDoc(prodRef);
-                        if (!prodSnap.exists()) continue;
-                        let prodData = prodSnap.data();
+                        if (!updatedProductsMap[item.productId]) {
+                            let prodSnap = await getDoc(doc(db, "products", item.productId));
+                            if (prodSnap.exists()) updatedProductsMap[item.productId] = prodSnap.data();
+                        }
+                        
+                        let prodData = updatedProductsMap[item.productId];
+                        if (!prodData) continue;
                         
                         let requiredQty = Number(item.qty);
                         let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
-                        item.hppTransferHistory = []; // Wadah untuk mencatat Batch FEFO
+                        item.hppTransferHistory = []; 
 
                         if (item.isVariant) {
                             let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
@@ -11928,7 +11920,6 @@ async fetchRolesFromDatabase() {
                                         if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                         if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                         
-                                        // MENCATAT BATCH & EXPIRED DATE YANG TERPOTONG!
                                         item.hppTransferHistory.push({ qty: taken, hargaModal: b.hargaModal || b.cost || 0, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                         qtyToMove -= taken;
                                     }
@@ -11968,26 +11959,47 @@ async fetchRolesFromDatabase() {
                                     if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                     if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                     
-                                    // MENCATAT BATCH & EXPIRED DATE YANG TERPOTONG!
                                     item.hppTransferHistory.push({ qty: taken, hargaModal: b.hargaModal || b.cost || 0, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                     qtyToMove -= taken;
                                 }
                             }
                             prodData.batches[tf.fromOutlet] = sourceBatches;
                         }
-                        
-                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks, batches: prodData.batches || {} });
 
-                        await this.logStock('OUT', {
-                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qty: -item.qty, outletId: tf.fromOutlet, refId: id, note: `Transfer Dikirim ke ${toOutletName}`
+                        // Catat Log Stok di Batch
+                        let logRef = doc(collection(db, "stockLogs"));
+                        batch.set(logRef, {
+                            companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr,
+                            type: 'OUT', productId: item.productId, sku: item.sku, productName: item.name, 
+                            variantSku: item.variantSku, variantName: item.variantName, qtyChange: -Math.abs(item.qty), 
+                            outletId: tf.fromOutlet, outletName: this.getOutletName(tf.fromOutlet) || '-',
+                            refId: id, userName: activeUser, note: `Transfer Dikirim ke ${toOutletName}`
                         });
                     }
 
-                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DIKIRIM', items: tf.items });
+                    // Tembak semua update Produk ke Batch
+                    for (const prodId in updatedProductsMap) {
+                        batch.update(doc(db, "products", prodId), {
+                            variants: updatedProductsMap[prodId].variants || [],
+                            baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {},
+                            batches: updatedProductsMap[prodId].batches || {}
+                        });
+                    }
+
+                    // Tembak update Dokumen Transfer ke Batch
+                    if (tf.firestoreId) {
+                        batch.update(doc(db, "stockTransfers", tf.firestoreId), { status: 'DIKIRIM', items: tf.items });
+                    }
+
+                    // Eksekusi Batch
+                    await batch.commit();
+                    
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Barang Dikirim', text: 'Stok asal telah terpotong.', timer: 2000, showConfirmButton: false});
-                } catch (err) { console.error(err); Swal.fire('Error', 'Gagal memproses pengiriman.', 'error'); }
+                } catch (err) { 
+                    console.error(err); 
+                    Swal.fire('Error', 'Gagal memproses pengiriman.', 'error'); 
+                }
                 this.isProcessing = false;
             });
         },
@@ -12001,12 +12013,21 @@ async fetchRolesFromDatabase() {
                 this.isProcessing = true;
                 try {
                     let fromName = this.getOutletName(tf.fromOutlet);
+                    const batch = writeBatch(db);
+                    let activeCompany = this.userProfile?.companyId || '';
+                    let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+                    let dateNowStr = new Date().toLocaleString('id-ID');
+                    
+                    let updatedProductsMap = {};
 
                     for (let item of tf.items) {
-                        let prodRef = doc(db, "products", item.productId);
-                        let prodSnap = await getDoc(prodRef);
-                        if (!prodSnap.exists()) continue;
-                        let prodData = prodSnap.data();
+                        if (!updatedProductsMap[item.productId]) {
+                            let prodSnap = await getDoc(doc(db, "products", item.productId));
+                            if (prodSnap.exists()) updatedProductsMap[item.productId] = prodSnap.data();
+                        }
+                        
+                        let prodData = updatedProductsMap[item.productId];
+                        if (!prodData) continue;
 
                         if (item.isVariant) {
                             let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
@@ -12023,8 +12044,8 @@ async fetchRolesFromDatabase() {
                                 hppHistories.forEach(hist => {
                                     destBatches.push({
                                         batchId: 'TRF-' + tf.id,
-                                        batchNo: hist.batchNo || '-', // Membawa Batch FEFO asli ke cabang baru
-                                        expiredDate: hist.expiredDate || '', // Membawa Tgl Expired asli
+                                        batchNo: hist.batchNo || '-', 
+                                        expiredDate: hist.expiredDate || '', 
                                         tanggalMasuk: new Date().toISOString(),
                                         qtySisa: Number(hist.qty),
                                         hargaModal: Number(hist.hargaModal)
@@ -12045,8 +12066,8 @@ async fetchRolesFromDatabase() {
                             hppHistories.forEach(hist => {
                                 destBatches.push({
                                     batchId: 'TRF-' + tf.id,
-                                    batchNo: hist.batchNo || '-', // Membawa Batch FEFO asli ke cabang baru
-                                    expiredDate: hist.expiredDate || '', // Membawa Tgl Expired asli
+                                    batchNo: hist.batchNo || '-', 
+                                    expiredDate: hist.expiredDate || '', 
                                     tanggalMasuk: new Date().toISOString(),
                                     qtySisa: Number(hist.qty),
                                     hargaModal: Number(hist.hargaModal)
@@ -12055,18 +12076,36 @@ async fetchRolesFromDatabase() {
                             prodData.batches[tf.toOutlet] = destBatches;
                         }
                         
-                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks, batches: prodData.batches || {} });
-
-                        await this.logStock('IN', {
-                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qty: item.qty, outletId: tf.toOutlet, refId: id, note: `Terima Transfer dari ${fromName}`
+                        let logRef = doc(collection(db, "stockLogs"));
+                        batch.set(logRef, {
+                            companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr,
+                            type: 'IN', productId: item.productId, sku: item.sku, productName: item.name, 
+                            variantSku: item.variantSku, variantName: item.variantName, qtyChange: Math.abs(item.qty), 
+                            outletId: tf.toOutlet, outletName: this.getOutletName(tf.toOutlet) || '-',
+                            refId: id, userName: activeUser, note: `Terima Transfer dari ${fromName}`
                         });
                     }
 
-                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'DITERIMA' });
+                    for (const prodId in updatedProductsMap) {
+                        batch.update(doc(db, "products", prodId), {
+                            variants: updatedProductsMap[prodId].variants || [],
+                            baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {},
+                            batches: updatedProductsMap[prodId].batches || {}
+                        });
+                    }
+
+                    if (tf.firestoreId) {
+                        batch.update(doc(db, "stockTransfers", tf.firestoreId), { status: 'DITERIMA' });
+                    }
+
+                    await batch.commit();
+                    
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Barang Diterima', text: 'Stok tujuan berhasil masuk.', timer: 2000, showConfirmButton: false});
-                } catch (err) { console.error(err); Swal.fire('Error', 'Gagal memproses penerimaan.', 'error'); }
+                } catch (err) { 
+                    console.error(err); 
+                    Swal.fire('Error', 'Gagal memproses penerimaan.', 'error'); 
+                }
                 this.isProcessing = false;
             });
         },
@@ -12079,12 +12118,22 @@ async fetchRolesFromDatabase() {
             this.askConfirm('Batalkan (VOID) Transfer?', `Dokumen akan dibatalkan secara permanen. Lanjutkan?`, async () => {
                 this.isProcessing = true;
                 try {
+                    const batch = writeBatch(db);
+                    let activeCompany = this.userProfile?.companyId || '';
+                    let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+                    let dateNowStr = new Date().toLocaleString('id-ID');
+                    
+                    let updatedProductsMap = {};
+
                     if (tf.status === 'DIKIRIM' || tf.status === 'DITERIMA') {
                         for (let item of tf.items) {
-                            let prodRef = doc(db, "products", item.productId);
-                            let prodSnap = await getDoc(prodRef);
-                            if (!prodSnap.exists()) continue;
-                            let prodData = prodSnap.data();
+                            if (!updatedProductsMap[item.productId]) {
+                                let prodSnap = await getDoc(doc(db, "products", item.productId));
+                                if (prodSnap.exists()) updatedProductsMap[item.productId] = prodSnap.data();
+                            }
+                            
+                            let prodData = updatedProductsMap[item.productId];
+                            if (!prodData) continue;
                             
                             let isVariant = item.isVariant;
                             let vIdx = isVariant ? prodData.variants.findIndex(x => x.variantSku === item.variantSku) : -1;
@@ -12093,28 +12142,49 @@ async fetchRolesFromDatabase() {
                                 if (isVariant && vIdx !== -1) prodData.variants[vIdx].outletStocks[tf.toOutlet] -= item.qty;
                                 else if (!isVariant) prodData.baseOutletStocks[tf.toOutlet] -= item.qty;
                                 
-                                await this.logStock('OUT', {
-                                    productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                                    qty: -item.qty, outletId: tf.toOutlet, refId: id + '-VOID', note: `Pembatalan (VOID) Penerimaan`
+                                let logRefOut = doc(collection(db, "stockLogs"));
+                                batch.set(logRefOut, {
+                                    companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr,
+                                    type: 'OUT', productId: item.productId, sku: item.sku, productName: item.name, 
+                                    variantSku: item.variantSku, variantName: item.variantName, qtyChange: -Math.abs(item.qty), 
+                                    outletId: tf.toOutlet, outletName: this.getOutletName(tf.toOutlet) || '-',
+                                    refId: id + '-VOID', userName: activeUser, note: `Pembatalan (VOID) Penerimaan`
                                 });
                             }
 
                             if (isVariant && vIdx !== -1) prodData.variants[vIdx].outletStocks[tf.fromOutlet] += item.qty;
                             else if (!isVariant) prodData.baseOutletStocks[tf.fromOutlet] += item.qty;
 
-                            await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
-
-                            await this.logStock('IN', {
-                                productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                                qty: item.qty, outletId: tf.fromOutlet, refId: id + '-VOID', note: `Pengembalian VOID dari Transfer`
+                            let logRefIn = doc(collection(db, "stockLogs"));
+                            batch.set(logRefIn, {
+                                companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr,
+                                type: 'IN', productId: item.productId, sku: item.sku, productName: item.name, 
+                                variantSku: item.variantSku, variantName: item.variantName, qtyChange: Math.abs(item.qty), 
+                                outletId: tf.fromOutlet, outletName: this.getOutletName(tf.fromOutlet) || '-',
+                                refId: id + '-VOID', userName: activeUser, note: `Pengembalian VOID dari Transfer`
                             });
                         }
                     }
 
-                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'VOID' });
+                    for (const prodId in updatedProductsMap) {
+                        batch.update(doc(db, "products", prodId), {
+                            variants: updatedProductsMap[prodId].variants || [],
+                            baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {}
+                        });
+                    }
+
+                    if (tf.firestoreId) {
+                        batch.update(doc(db, "stockTransfers", tf.firestoreId), { status: 'VOID' });
+                    }
+
+                    await batch.commit();
+                    
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Dibatalkan', text: 'Transfer dibatalkan dan stok disesuaikan.', timer: 2000, showConfirmButton: false});
-                } catch (err) { Swal.fire('Error', 'Gagal melakukan VOID.', 'error'); }
+                } catch (err) { 
+                    Swal.fire('Error', 'Gagal melakukan VOID.', 'error'); 
+                    console.error(err);
+                }
                 this.isProcessing = false;
             });
         },
@@ -12123,7 +12193,6 @@ async fetchRolesFromDatabase() {
         // 5. FUNGSI PENANGKAL BUG CABANG SAMA
         // ==========================================
         handleFromOutletChange() {
-            // Jika cabang asal diubah dan ternyata sama dengan cabang tujuan, reset cabang tujuan!
             if (this.transferForm.fromOutlet && this.transferForm.fromOutlet === this.transferForm.toOutlet) {
                 this.transferForm.toOutlet = '';
                 Swal.fire('Info', 'Cabang tujuan di-reset karena tidak boleh sama dengan cabang asal.', 'info');
@@ -12138,9 +12207,8 @@ async fetchRolesFromDatabase() {
             if (!tf || tf.status !== 'PENDING') return;
 
             this.isEditingTransfer = true;
-            this.editTransferId = tf.firestoreId; // Butuh ID asli firebase untuk update
+            this.editTransferId = tf.firestoreId; 
 
-            // Isi kembali form dengan data lama
             this.transferForm.fromOutlet = tf.fromOutlet;
             this.transferForm.toOutlet = tf.toOutlet;
             this.transferForm.note = tf.note;
@@ -12164,11 +12232,21 @@ async fetchRolesFromDatabase() {
             this.askConfirm('Batal Kirim Barang?', `Struk truk akan dibatalkan. Stok barang akan dikembalikan ke cabang Asal.`, async () => {
                 this.isProcessing = true;
                 try {
+                    const batch = writeBatch(db);
+                    let activeCompany = this.userProfile?.companyId || '';
+                    let activeUser = this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin';
+                    let dateNowStr = new Date().toLocaleString('id-ID');
+                    
+                    let updatedProductsMap = {};
+
                     for (let item of tf.items) {
-                        let prodRef = doc(db, "products", item.productId);
-                        let prodSnap = await getDoc(prodRef);
-                        if (!prodSnap.exists()) continue;
-                        let prodData = prodSnap.data();
+                        if (!updatedProductsMap[item.productId]) {
+                            let prodSnap = await getDoc(doc(db, "products", item.productId));
+                            if (prodSnap.exists()) updatedProductsMap[item.productId] = prodSnap.data();
+                        }
+                        
+                        let prodData = updatedProductsMap[item.productId];
+                        if (!prodData) continue;
 
                         if (item.isVariant) {
                             let vIdx = prodData.variants.findIndex(x => x.variantSku === item.variantSku);
@@ -12181,18 +12259,35 @@ async fetchRolesFromDatabase() {
                             prodData.baseOutletStocks[tf.fromOutlet] = (prodData.baseOutletStocks[tf.fromOutlet] || 0) + item.qty;
                         }
                         
-                        await updateDoc(prodRef, { variants: prodData.variants, baseOutletStocks: prodData.baseOutletStocks });
-
-                        await this.logStock('IN', {
-                            productId: item.productId, sku: item.sku, name: item.name, variantSku: item.variantSku, variantName: item.variantName,
-                            qty: item.qty, outletId: tf.fromOutlet, refId: id + '-BATAL', note: `Batal Kirim Transfer`
+                        let logRef = doc(collection(db, "stockLogs"));
+                        batch.set(logRef, {
+                            companyId: activeCompany, createdAt: serverTimestamp(), dateStr: dateNowStr,
+                            type: 'IN', productId: item.productId, sku: item.sku, productName: item.name, 
+                            variantSku: item.variantSku, variantName: item.variantName, qtyChange: Math.abs(item.qty), 
+                            outletId: tf.fromOutlet, outletName: this.getOutletName(tf.fromOutlet) || '-',
+                            refId: id + '-BATAL', userName: activeUser, note: `Batal Kirim Transfer`
                         });
                     }
 
-                    if (tf.firestoreId) await updateDoc(doc(db, "stockTransfers", tf.firestoreId), { status: 'PENDING' });
+                    for (const prodId in updatedProductsMap) {
+                        batch.update(doc(db, "products", prodId), {
+                            variants: updatedProductsMap[prodId].variants || [],
+                            baseOutletStocks: updatedProductsMap[prodId].baseOutletStocks || {}
+                        });
+                    }
+
+                    if (tf.firestoreId) {
+                        batch.update(doc(db, "stockTransfers", tf.firestoreId), { status: 'PENDING' });
+                    }
+
+                    await batch.commit();
+                    
                     await this.fetchTransferHistory();
                     Swal.fire({ icon: 'success', title: 'Batal Kirim Berhasil', text: 'Stok asal telah dikembalikan.', timer: 2500, showConfirmButton: false});
-                } catch (err) { Swal.fire('Error', 'Gagal membatalkan pengiriman.', 'error'); }
+                } catch (err) { 
+                    console.error(err);
+                    Swal.fire('Error', 'Gagal membatalkan pengiriman.', 'error'); 
+                }
                 this.isProcessing = false;
             });
         },
