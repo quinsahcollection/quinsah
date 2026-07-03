@@ -9620,7 +9620,8 @@ if (userActiveShift) {
     }
 },
 
-        async openCloseShiftModal(reg) {
+    // 6. 🌟 ANTI ERROR: Buka Modal Tutup Shift (Dihitung di sisi Client Javascript)
+    async openCloseShiftModal(reg) {
         Swal.fire({ title: 'Menghitung Saldo Laci...', text: 'Mohon tunggu, merekap transaksi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
         
         try {
@@ -9639,47 +9640,26 @@ if (userActiveShift) {
             let totalCardSales = 0;
             let totalTransferSales = 0;
 
-            // Lakukan Filter menggunakan Tali Penghubung (shiftId)
+            // 🌟 LOGIKA BARU: Lakukan Filter menggunakan Tali Penghubung (shiftId)
             snapTrx.forEach(docTrx => {
                 const d = docTrx.data();
                 
                 // PENGAMAN: Gunakan String() agar tidak terjadi missmatch tipe data
                 if (String(d.shiftId) === String(reg.id)) {
                     
+                    // 🌟 PERBAIKAN BUG OMSET: Harus pakai d.total (Nilai asli belanja), BUKAN uang yang diserahkan pelanggan
+                    let nominal = Number(d.total || 0); 
+
+                    // Pilah berdasarkan tipe pembayaran
                     let pMethod = String(d.paymentMethod || '').toUpperCase();
-
-                    // 🌟 PERBAIKAN UTAMA: Jika metodenya SPLIT, bedah isi keranjang splitPayments
-                    if (pMethod === 'SPLIT') {
-                        if (d.splitPayments && Array.isArray(d.splitPayments)) {
-                            d.splitPayments.forEach(sp => {
-                                let spMethod = String(sp.method || '').toUpperCase();
-                                let spAmount = Number(sp.amount || 0);
-
-                                if (spMethod === 'CASH' || spMethod === 'TUNAI') {
-                                    totalCashSales += spAmount;
-                                } else if (spMethod.includes('QRIS')) {
-                                    totalQrisSales += spAmount;
-                                } else if (spMethod.includes('TRANSFER')) {
-                                    totalTransferSales += spAmount;
-                                } else {
-                                    // Mengakomodasi Kartu Debit, Kredit, dll
-                                    totalCardSales += spAmount;
-                                }
-                            });
-                        }
+                    if (pMethod === 'CASH' || pMethod === 'TUNAI') {
+                        totalCashSales += nominal;
+                    } else if (pMethod.includes('QRIS')) {
+                        totalQrisSales += nominal;
+                    } else if (pMethod.includes('TRANSFER')) {
+                        totalTransferSales += nominal;
                     } else {
-                        // JIKA TRANSAKSI NORMAL (BUKAN SPLIT)
-                        let nominal = Number(d.total || 0); 
-                        
-                        if (pMethod === 'CASH' || pMethod === 'TUNAI') {
-                            totalCashSales += nominal;
-                        } else if (pMethod.includes('QRIS')) {
-                            totalQrisSales += nominal;
-                        } else if (pMethod.includes('TRANSFER')) {
-                            totalTransferSales += nominal;
-                        } else {
-                            totalCardSales += nominal;
-                        }
+                        totalCardSales += nominal;
                     }
                 }
             });
@@ -9690,17 +9670,17 @@ if (userActiveShift) {
             this.activeCloseShift = {
                 ...reg,
                 cashSales: totalCashSales,
-                qrisSales: totalQrisSales,         
-                cardSales: totalCardSales,         
-                transferSales: totalTransferSales, 
+                qrisSales: totalQrisSales,         // <-- Tambahan agar laporan cetak lebih kaya data
+                cardSales: totalCardSales,         // <-- Tambahan
+                transferSales: totalTransferSales, // <-- Tambahan
                 expectedCash: expected,
                 actualCash: '',
                 closeNote: ''
             };
 
-            Swal.close();
+                Swal.close();
             
-            // PERBAIKAN BUG LAYAR MENGECIL (PADDDING STACKING)
+            // 🌟 PERBAIKAN BUG LAYAR MENGECIL (PADDDING STACKING)
             const modalEl = document.getElementById('closeShiftModal');
             
             // Ambil instance modal yang sudah ada di memori, jika belum ada baru buat 'new'
@@ -9712,7 +9692,7 @@ if (userActiveShift) {
                 document.body.classList.remove('modal-open');
                 document.body.style.paddingRight = '';
                 document.body.style.overflow = '';
-            }, { once: true }); 
+            }, { once: true }); // 'once: true' sangat penting agar event tidak menumpuk
 
         } catch (err) {
             console.error("Error Hitung Kasir:", err);
@@ -9720,82 +9700,85 @@ if (userActiveShift) {
         }
     },
 
+
     // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
-    async saveCloseShift() {
-        this.isProcessing = true;
-        try {
-            // PROTEKSI KEAMANAN LENGKAP (Cek Hak Akses Tutup Kasir)
-            if (!this.activeCloseShift || !this.activeCloseShift.id) {
-                throw new Error("Data laci kasir tidak ditemukan.");
-            }
+async saveCloseShift() {
+    this.isProcessing = true;
+    try {
+        // 🌟 PROTEKSI KEAMANAN LENGKAP (Cek Hak Akses Tutup Kasir)
+        if (!this.activeCloseShift || !this.activeCloseShift.id) {
+            throw new Error("Data laci kasir tidak ditemukan.");
+        }
 
-            if (!this.canManageShift(this.activeCloseShift)) {
-                this.isProcessing = false;
-                return Swal.fire(
-                    'Akses Ditolak', 
-                    'Tindakan ilegal. Anda tidak berhak menutup laci kasir milik orang lain!', 
-                    'error'
-                );
-            }
+        if (!this.canManageShift(this.activeCloseShift)) {
+            this.isProcessing = false;
+            return Swal.fire(
+                'Akses Ditolak', 
+                'Tindakan ilegal. Anda tidak berhak menutup laci kasir milik orang lain!', 
+                'error'
+            );
+        }
 
-            const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
-            const now = new Date();
-            let actual = Number(this.activeCloseShift.actualCash) || 0;
-            let expected = this.activeCloseShift.expectedCash;
-            let diff = actual - expected;
+        const shiftRef = doc(db, "cash_registers", this.activeCloseShift.id);
+        const now = new Date();
+        let actual = Number(this.activeCloseShift.actualCash) || 0;
+        let expected = this.activeCloseShift.expectedCash;
+        let diff = actual - expected;
 
-            // Kloning data pecahan tutup (jika ada)
-            let closeDenominationsPayload = null;
-            let hasInputPecahanClose = false;
-            for (let key in this.pecahanData) {
-                if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
-            }
-            if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
+        // Kloning data pecahan tutup (jika ada)
+        let closeDenominationsPayload = null;
+        let hasInputPecahanClose = false;
+        for (let key in this.pecahanData) {
+            if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
+        }
+        if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
 
-            // Semua metode pembayaran pecahan hasil split ikut disimpan ke Firebase
-            await updateDoc(shiftRef, {
-                status: 'CLOSED',
-                cashSales: this.activeCloseShift.cashSales,
-                qrisSales: this.activeCloseShift.qrisSales || 0,         
-                cardSales: this.activeCloseShift.cardSales || 0,         
-                transferSales: this.activeCloseShift.transferSales || 0, 
-                expectedCash: expected,
-                actualCash: actual,
-                difference: diff,
-                closeDenominations: closeDenominationsPayload,
-                closeNote: this.activeCloseShift.closeNote || '',
-                closeTime: now,
-                closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
-            });
+        // 🌟 PERBAIKAN UTAMA: Sekarang semua metode pembayaran ikut disimpan ke Firebase
+        await updateDoc(shiftRef, {
+            status: 'CLOSED',
+            cashSales: this.activeCloseShift.cashSales,
+            qrisSales: this.activeCloseShift.qrisSales || 0,         // 🌟 BARU: Simpan data QRIS
+            cardSales: this.activeCloseShift.cardSales || 0,         // 🌟 BARU: Simpan data Debit/Kredit
+            transferSales: this.activeCloseShift.transferSales || 0, // 🌟 BARU: Simpan data Transfer
+            expectedCash: expected,
+            actualCash: actual,
+            difference: diff,
+            closeDenominations: closeDenominationsPayload,
+            closeNote: this.activeCloseShift.closeNote || '',
+            closeTime: now,
+            closeTimeStr: now.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+        });
 
             Swal.fire('Shift Ditutup', 'Data shift berhasil dikunci!', 'success');
-            
-            // Tutup modal dengan instance yang benar
-            const modalEl = document.getElementById('closeShiftModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+        
+        // 🌟 PERBAIKAN: Tutup modal dengan instance yang benar
+        const modalEl = document.getElementById('closeShiftModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
 
-            // PEMBERSIH PAKSA PADDING (ANTI-LAYAR MENGECIL)
-            setTimeout(() => {
-                document.body.classList.remove('modal-open');
-                document.body.style.paddingRight = '';
-                document.body.style.overflow = '';
-                
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                backdrops.forEach(b => b.remove());
-            }, 300); 
+        // 🌟 PEMBERSIH PAKSA PADDING (ANTI-LAYAR MENGECIL)
+        // Kita beri jeda 300ms agar animasi penutupan modal Bootstrap selesai dulu
+        setTimeout(() => {
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
             
-            this.showPecahan = false;
-            this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
-            this.fetchRegisters();
-            
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
-        } finally {
-            this.isProcessing = false;
-        }
-    },
+            // Sapu bersih jika ada sisa background hitam (backdrop) yang nyangkut
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(b => b.remove());
+        }, 300); 
+        
+        this.showPecahan = false;
+        this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
+        this.fetchRegisters();
+        
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
 
           
         // FUNGSI UNTUK MEMBUKA MODAL RINCIAN BATCH (DENGAN FILTER OUTLET, SORTING, & FORMAT TANGGAL)
