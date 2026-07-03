@@ -6250,7 +6250,7 @@
 
                         <div class="d-flex gap-2 mb-3 mt-2">
                             <button class="btn btn-sm flex-grow-1 fw-bold" :class="!isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = false; splitPayments = []">Bayar Penuh</button>
-                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan + getSurchargeAmount()">Split / Hutang</button>
+                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan">Split / Hutang</button>
                         </div>
 
                         <div v-if="isSplitPayment" class="p-3 bg-white border border-primary-custom rounded shadow-sm mb-3">
@@ -6264,8 +6264,8 @@
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
     <span class="fw-bold text-muted">Sisa Tagihan:</span>
-    <span class="fw-bold fs-5" :class="(remainingSplitTagihan + getSurchargeAmount()) > 0 ? 'text-danger' : 'text-success'">
-        Rp {{ formatNumber(remainingSplitTagihan + getSurchargeAmount()) }}
+    <span class="fw-bold fs-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
+        Rp {{ formatNumber(remainingSplitTagihan) }}
     </span>
 </div>
                         </div>
@@ -7691,11 +7691,18 @@ beforeDestroy() {
         },
           
         remainingSplitTagihan() {
-            // Sisa tagihan dihitung dari TOTAL ASLI dikurangi TAGIHAN DASAR yang sudah dibayar
-            let totalBasePaid = this.splitPayments.reduce((sum, p) => sum + Number(p.baseAmount || p.amount), 0);
-            let sisa = (this.total || 0) - totalBasePaid;
-            return sisa > 0 ? sisa : 0;
-        },
+        // 1. Hitung total NILAI DASAR yang benar-benar sudah dibayar dari list split
+        let totalBasePaid = this.splitPayments.reduce((sum, p) => {
+            // Jika p.baseAmount tidak ada, baru gunakan p.amount
+            return sum + Number(p.baseAmount !== undefined ? p.baseAmount : p.amount);
+        }, 0);
+        
+        // 2. Sisa tagihan dasar = Total Subtotal - Yang sudah dibayar
+        let sisa = (this.total || 0) - totalBasePaid;
+        
+        // Gunakan Math.round agar terhindar dari bug angka desimal Javascript (.54)
+        return sisa > 0 ? Math.round(sisa) : 0;
+    },
           
             lowStockItems() {
         let alerts = [];
@@ -8773,33 +8780,40 @@ beforeDestroy() {
         },
 
         addSplitPayment() {
-            if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
-            if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
+    if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
+    if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
 
-            let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
-            let isDebt = pm ? pm.type === 'DEBT' : false;
-            
-            // Hitung Biaya Layanan KHUSUS untuk nominal yang diinput saat ini
-            let baseAmount = Number(this.paymentData.amountReceived);
-            let splitSurcharge = 0;
-            if (pm && pm.surcharge > 0) {
-                splitSurcharge = pm.surchargeType === 'percent' ? (baseAmount * pm.surcharge) / 100 : Number(pm.surcharge);
-            }
+    // (Opsional) Cegah input jika tagihan sebenarnya sudah lunas 0
+    if (this.remainingSplitTagihan <= 0) return Swal.fire('Sudah Lunas', 'Tagihan sudah terbayar penuh.', 'info');
 
-            // Masukkan ke keranjang dengan nominal yang SUDAH ditambah surcharge (Agar tidak jadi hutang)
-            this.splitPayments.push({
-                method: this.paymentData.method,
-                baseAmount: baseAmount, // Tagihan asli yang dicover
-                surchargeAmount: splitSurcharge, // Biaya layanannya
-                amount: baseAmount + splitSurcharge, // Total fisik uang yang harus dibayar customer
-                note: this.paymentData.note || '',
-                isDebt: isDebt
-            });
+    let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
+    let isDebt = pm ? pm.type === 'DEBT' : false;
+    
+    // Hitung Biaya Layanan KHUSUS untuk nominal yang diinput saat ini
+    let baseAmount = Number(this.paymentData.amountReceived);
+    let splitSurcharge = 0;
+    if (pm && pm.surcharge > 0) {
+        // 🌟 PERBAIKAN DI SINI: Gunakan Math.round() agar tidak ada angka desimal berjejer (.897 dll)
+        splitSurcharge = pm.surchargeType === 'percent' 
+            ? Math.round((baseAmount * pm.surcharge) / 100) 
+            : Number(pm.surcharge);
+    }
 
-            this.paymentData.method = '';
-            this.paymentData.amountReceived = this.remainingSplitTagihan; 
-            this.paymentData.note = '';
-        },
+    // Masukkan ke keranjang dengan nominal yang SUDAH ditambah surcharge
+    this.splitPayments.push({
+        method: this.paymentData.method,
+        baseAmount: baseAmount,             // Tagihan asli yang dicover
+        surchargeAmount: splitSurcharge,    // Biaya layanannya (sudah bulat)
+        amount: baseAmount + splitSurcharge,// Total fisik uang yang harus dibayar customer
+        note: this.paymentData.note || '',
+        isDebt: isDebt
+    });
+
+    // Reset dan otomatis isi nilai sisa tagihan untuk pembayaran berikutnya
+    this.paymentData.method = '';
+    this.paymentData.amountReceived = this.remainingSplitTagihan; 
+    this.paymentData.note = '';
+},
     
     removeSplitPayment(index) {
         this.splitPayments.splice(index, 1);
