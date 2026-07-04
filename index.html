@@ -33,7 +33,7 @@
         font-family: 'Inter', sans-serif; 
         background-color: var(--bg-main); 
         color: var(--text-main); 
-        overflow-x: hidden; 
+        overflow-x: hidden; /* Diberi x-hidden agar tidak ada horizontal scroll liar */
     }
     
     [v-cloak] { display: none !important; }
@@ -65,83 +65,10 @@
     .text-primary-custom { color: var(--primary-color) !important; }
 
     /* Variant & Tier Cards */
-    .tier-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-
-    /* ======================================================= */
-    /* 1. PERBAIKAN TOMBOL & KARTU PILIHAN (ANTI PUTIH/BLANK)  */
-    /* ======================================================= */
-    /* Kondisi Normal (Belum Dipilih) */
-    .variant-grid-card, 
-    [class*="payment"], 
-    [class*="metode"], 
-    .btn-check + .btn,
-    .payment-item,
-    .card-payment {
-        background-color: #ffffff !important;
-        color: var(--text-main) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-        padding: 12px;
-        text-align: center;
-    }
-
-    /* Kondisi Hover / Disentuh (Latar merah muda, teks merah bata - TIDAK AKAN PUTIH!) */
-    .variant-grid-card:hover:not(.active):not(.selected),
-    [class*="payment"]:hover:not(.active):not(.selected),
-    [class*="metode"]:hover:not(.active):not(.selected),
-    .btn-check:not(:checked) + .btn:hover {
-        background-color: #fef2f2 !important;
-        border-color: var(--primary-color) !important;
-        color: var(--primary-dark) !important;
-        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.1);
-    }
-    .variant-grid-card:hover:not(.active):not(.selected) *,
-    [class*="payment"]:hover:not(.active):not(.selected) * {
-        color: var(--primary-dark) !important;
-    }
-
-    /* Kondisi AKTIF / TERPILIH (Latar merah tebal, teks & ikon putih bersih) */
-    .variant-grid-card.active, 
-    .variant-grid-card.selected,
-    [class*="payment"].active, 
-    [class*="payment"].selected,
-    [class*="metode"].active, 
-    [class*="metode"].selected,
-    .btn-check:checked + .btn,
-    .btn-check:checked + .variant-grid-card,
-    .active-card,
-    .bg-danger.text-white {
-        background-color: var(--primary-color) !important;
-        border-color: var(--primary-dark) !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
-    }
-
-    /* Pastikan seluruh teks & ikon di dalam tombol yang dipilih ikut berwarna putih */
-    .variant-grid-card.active *, 
-    .variant-grid-card.selected *,
-    [class*="payment"].active *, 
-    [class*="payment"].selected *,
-    [class*="metode"].active *, 
-    [class*="metode"].selected *,
-    .btn-check:checked + .btn *,
-    .active-card * {
-        color: #ffffff !important;
-    }
-
-    /* Pengecualian agar badge kecil (misal +0.7%) di dalam tombol aktif tetap kontras dan terbaca */
-    .variant-grid-card.active .badge,
-    .variant-grid-card.selected .badge,
-    [class*="payment"].active .badge,
-    [class*="payment"].selected .badge,
-    .btn-check:checked + .btn .badge {
-        background-color: #ffffff !important;
-        color: var(--primary-color) !important;
-    }
-
+    .variant-grid-card { border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: 0.2s; padding: 12px; text-align: center; background-color: #fff; }
+    .variant-grid-card:hover { border-color: var(--primary-color); background-color: #fef2f2; box-shadow: 0 4px 10px rgba(220,38,38,0.1); }
     .variant-grid-card.disabled { opacity: 0.5; cursor: not-allowed; border-color: #e5e7eb !important; background-color: #f9fafb !important; }
+    .tier-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 
     /* Cart Elements */
     .cart-item { padding: 10px; border-bottom: 1px solid var(--border-color); transition: background 0.2s; cursor: pointer; }
@@ -159,7 +86,7 @@
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
     /* ======================================================= */
-    /* 2. KONTROL Z-INDEX & FIX SWEETALERT                     */
+    /* 1. KONTROL Z-INDEX & FIX SWEETALERT                     */
     /* ======================================================= */
     .modal { z-index: 1070 !important; }
     .modal-backdrop { z-index: 1065 !important; }
@@ -168,7 +95,7 @@
     .swal2-container { z-index: 999999 !important; }
 
     /* ======================================================= */
-    /* 3. TAMPILAN PC & LAPTOP (MIN-WIDTH: 992px)              */
+    /* 2. TAMPILAN PC & LAPTOP (MIN-WIDTH: 992px)              */
     /* ======================================================= */
     @media (min-width: 992px) {
         body { overflow: hidden; }
@@ -184,6 +111,8 @@
 
         .main-content { flex-grow: 1 !important; height: 100vh !important; display: flex; flex-direction: column; overflow-y: auto !important; padding: 20px 30px; position: relative; }
         .sidebar-right { width: 380px; height: 100vh; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 15px; z-index: 10; flex-shrink: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.02); }
+        
+        .border-start-md { border-left: 1px solid var(--border-color) !important; }
     }
     
     @media (min-width: 992px) and (max-width: 1199px) { 
@@ -191,7 +120,7 @@
     }
 
     /* ======================================================= */
-    /* 4. TAMPILAN MOBILE & TABLET (MAX-WIDTH: 991px)          */
+    /* 3. TAMPILAN MOBILE & TABLET (MAX-WIDTH: 991px)          */
     /* ======================================================= */
     @media (max-width: 991.98px) {
         html, body { font-size: 0.85rem; overflow-y: auto !important; overflow-x: hidden; height: auto !important; } 
@@ -202,7 +131,7 @@
         
         .app-container { flex-direction: column; height: auto; display: block; padding-bottom: 85px !important; }
         
-        /* Sidebar Bawah */
+        /* Sidebar Bawah (Horizontal Navigation) */
         .sidebar-left { 
             position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100vw !important; 
             height: 65px !important; padding: 0 !important; border-top: 1px solid var(--border-color) !important; 
@@ -231,9 +160,11 @@
         .product-card { padding: 8px; }
         .product-img { height: 130px !important; }
         
+        /* Keranjang Mobile Slider dari Kanan */
         .sidebar-right { position: fixed; top: 0; right: -100%; width: 100%; height: 100dvh; max-width: 420px; padding: 15px; padding-bottom: 0 !important; z-index: 1060; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -5px 0 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; background-color: var(--bg-panel); }
         .sidebar-right.show-mobile { right: 0; }
         
+        /* Floating Button untuk Buka Keranjang */
         .fab-cart {
             position: fixed; bottom: 80px; right: 20px; width: 60px; height: 60px; border-radius: 50%;
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
@@ -243,37 +174,33 @@
     }
 
     /* ======================================================= */
-    /* 5. SOLUSI SCROLL MODAL DI HP (ANTI MACET / TERKUNCI)    */
+    /* 4. SOLUSI SCROLL MODAL PEMBAYARAN DI HP & MELEBAR DI PC */
     /* ======================================================= */
-    .modal {
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-    
-    @media (max-width: 991.98px) {
-        .modal-dialog {
-            width: 96% !important;
-            max-width: 100% !important;
-            margin: 10px auto !important;
+    @media (max-width: 767.98px) {
+        .modal-fullscreen-md-down {
+            width: 100vw !important;
+            max-width: none !important;
+            height: 100% !important;
+            margin: 0 !important;
         }
-        .modal-content {
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
-            border-radius: 12px !important;
+        .modal-fullscreen-md-down .modal-content {
+            height: 100% !important;
+            max-height: 100dvh !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
         }
-        .modal-body {
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
+        .modal-fullscreen-md-down .modal-body {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            flex-grow: 1 !important;
             padding: 15px !important;
-            padding-bottom: 40px !important; /* Ruang tambahan di bawah agar tombol tidak mepet layar HP */
         }
     }
 
     /* ======================================================= */
-    /* 6. TAMPILAN INTERAKTIF BARCODE WEB & CETAK              */
+    /* 5. TAMPILAN INTERAKTIF BARCODE WEB                      */
     /* ======================================================= */
     .barcode-print-sheet { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; width: 100%; background: #fff; align-content: flex-start; }
     .barcode-label-box { border: 1px dashed #ccc; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px; text-align: center; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
@@ -287,6 +214,9 @@
     .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
     .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
 
+    /* ======================================================= */
+    /* 6. UKURAN KERTAS & PENGATURAN CETAK (PRINTING)          */
+    /* ======================================================= */
     .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
     .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
     .label-border-box { border: 2px solid #000; padding: 10px; }
@@ -295,6 +225,7 @@
     .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
     .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
 
+    /* Sembunyikan bagian cetak dari layar aplikasi utama */
     #print-section, #temp-print-section { display: none !important; }
 
     @media print {
@@ -312,7 +243,7 @@
         tr, td, th { page-break-inside: avoid !important; }
         table { page-break-inside: auto !important; }
     }
-</style>
+    </style>
 </head>
 <body>
 
