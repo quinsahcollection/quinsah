@@ -6243,66 +6243,88 @@
                         <div class="d-flex justify-content-between mb-1 text-muted mt-3" style="font-size: 0.9rem;">
                             <span class="fw-semibold">Subtotal Tagihan</span><span>Rp {{ formatNumber(total) }}</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2 text-danger fw-semibold" v-if="getSurchargeAmount() > 0" style="font-size: 0.9rem;">
-                            <span>Surcharge ({{ paymentData.method }})</span><span>+ Rp {{ formatNumber(getSurchargeAmount()) }}</span>
+                        
+                        <div class="d-flex justify-content-between mb-2 text-danger fw-semibold" v-if="!isSplitPayment && hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" style="font-size: 0.9rem;">
+                            <span>Surcharge ({{ paymentData.method }})</span>
+                            <span>+ Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}</span>
                         </div>
-                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom mt-2">Rp {{ formatNumber(getFinalTotalTagihan()) }}</h2>
+                        
+                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom mt-2">
+                            Rp {{ formatNumber(isSplitPayment ? remainingSplitTagihan : getTotalBayarDenganAdmin()) }}
+                        </h2>
 
                         <div class="d-flex gap-2 mb-3 mt-2">
-                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="!isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = false; splitPayments = []">Bayar Penuh</button>
+                            <button class="btn btn-sm flex-grow-1 fw-bold" :class="!isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = false; splitPayments = []; paymentData.amountReceived = total">Bayar Penuh</button>
                             <button class="btn btn-sm flex-grow-1 fw-bold" :class="isSplitPayment ? 'btn-primary-custom' : 'btn-outline-secondary'" @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan">Split / Hutang</button>
                         </div>
 
                         <div v-if="isSplitPayment" class="p-3 bg-white border border-primary-custom rounded shadow-sm mb-3">
                             <h6 class="fw-bold text-dark border-bottom pb-2 mb-2">Daftar Pembayaran (Split)</h6>
                             <div v-if="splitPayments.length === 0" class="text-muted small text-center py-2 fst-italic">Belum ada pembayaran ditambahkan.</div>
+                            
                             <div v-for="(split, index) in splitPayments" :key="index" class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
                                 <div>
-                                    <span class="badge bg-secondary me-2">{{ split.method }}</span><span class="fw-bold text-success">Rp {{ formatNumber(split.amount) }}</span>
+                                    <span class="badge bg-secondary me-2">{{ split.method }}</span>
+                                    <span class="fw-bold text-success">Rp {{ formatNumber(split.amount) }}</span>
+                                    <small v-if="split.surchargeAmount > 0" class="text-muted d-block" style="font-size: 0.7rem;">(Pokok: {{ formatNumber(split.baseAmount) }} + Adm: {{ formatNumber(split.surchargeAmount) }})</small>
                                 </div>
                                 <button class="btn btn-sm btn-light text-danger py-0 px-2" @click="removeSplitPayment(index)"><i class="bi bi-x-circle"></i></button>
                             </div>
+                            
                             <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
-    <span class="fw-bold text-muted">Sisa Tagihan:</span>
-    <span class="fw-bold fs-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
-        Rp {{ formatNumber(remainingSplitTagihan) }}
-    </span>
-</div>
+                                <span class="fw-bold text-muted">Sisa Tagihan Pokok:</span>
+                                <span class="fw-bold fs-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
+                                    Rp {{ formatNumber(remainingSplitTagihan) }}
+                                </span>
+                            </div>
                         </div>
 
-                        <!-- AREA INPUT UANG / QRIS / TRANSFER / EDC -->
                         <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
                             
-                            <!-- JIKA PILIHAN CASH -->
                             <div v-if="!paymentData.method || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH')">
-                                <label class="form-label small fw-bold text-dark">Jumlah Uang / Nominal</label>
+                                <label class="form-label small fw-bold text-dark">Jumlah Uang Pokok / Nominal</label>
                                 <div class="input-group input-group-lg mb-2 shadow-sm">
                                     <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
                                     <input type="number" class="form-control border-start-0 fw-bold fs-4 text-end" v-model.number="paymentData.amountReceived" placeholder="0">
                                 </div>
                             </div>
 
-                            <!-- JIKA PILIHAN QRIS -->
                             <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'QRIS'" class="text-center p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm">
-                                <span class="fw-bold d-block text-dark mb-2">{{ paymentData.method }}</span>
+                                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                
+                                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
+                                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                </div>
+                                <div class="fw-bold text-primary mb-2 fs-5">
+                                    Total Scan: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                </div>
+
                                 <div v-if="selectedPaymentMethodData.qrImageUrl" class="bg-light p-2 rounded d-inline-block mb-2 border">
                                     <img :src="selectedPaymentMethodData.qrImageUrl" alt="QR Code" style="width: 150px; height: 150px; object-fit: contain;">
                                 </div>
                                 <div v-else class="bg-light p-2 rounded d-inline-block mb-2 border">
-                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PEMBAYARAN_' + (isSplitPayment ? (remainingSplitTagihan + getSurchargeAmount()) : getFinalTotalTagihan())" alt="Dummy QR Code" style="width: 150px; height: 150px;">
+                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PAY_' + getTotalBayarDenganAdmin()" alt="Dummy QR Code" style="width: 150px; height: 150px;">
                                 </div>
                                 <span class="small text-muted fw-semibold d-block mb-2" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
                                 
-                                <div class="input-group input-group-sm mb-1 shadow-sm mt-3">
+                                <label class="form-label small fw-bold text-dark mt-2 d-block text-start">Nominal Pokok yang Dicover:</label>
+                                <div class="input-group input-group-sm mb-1 shadow-sm">
                                     <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
                                     <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
                                 </div>
                             </div>
 
-                            <!-- JIKA PILIHAN TRANSFER -->
                             <div v-else-if="selectedPaymentMethodData && (selectedPaymentMethodData.type === 'TRANSFER' || selectedPaymentMethodData.type === 'VA')" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-center">
                                 <i class="bi bi-bank text-primary-custom fs-2 d-block mb-1"></i>
-                                <span class="fw-bold d-block text-dark mb-2">{{ paymentData.method }}</span>
+                                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                
+                                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
+                                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                </div>
+                                <div class="fw-bold text-primary mb-2 fs-5">
+                                    Total Transfer: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                </div>
+
                                 <div class="p-2 bg-light border rounded mb-3 text-start">
                                     <span class="small text-muted d-block fw-bold mb-1">Informasi Rekening:</span>
                                     <div v-if="selectedPaymentMethodData.accountNumber">
@@ -6312,19 +6334,27 @@
                                     </div>
                                     <span v-else class="small fw-semibold text-dark" style="white-space: pre-wrap;">Mohon transfer sesuai tagihan ke rekening resmi.</span>
                                 </div>
-                                <div class="input-group input-group-sm mb-1 shadow-sm mt-2">
+                                
+                                <label class="form-label small fw-bold text-dark mt-1 d-block text-start">Nominal Pokok yang Dicover:</label>
+                                <div class="input-group input-group-sm mb-1 shadow-sm">
                                     <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
                                     <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
                                 </div>
                             </div>
 
-                            <!-- JIKA PILIHAN EDC -->
                             <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'EDC'" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-start">
                                 <div class="text-center mb-2">
                                     <i class="bi bi-credit-card-2-front text-primary-custom fs-2 d-block mb-1"></i>
                                     <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                    
+                                    <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-1">
+                                        Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                    </div>
+                                    <div class="fw-bold text-primary mb-1 fs-5">
+                                        Total Gesek: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                    </div>
                                 </div>
-                                <label class="form-label small fw-bold text-dark mt-2">Nominal Gesek EDC</label>
+                                <label class="form-label small fw-bold text-dark mt-2">Nominal Pokok yang Dicover:</label>
                                 <div class="input-group input-group-sm mb-2 shadow-sm">
                                     <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
                                     <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived">
@@ -6333,26 +6363,22 @@
                                 <input type="text" class="form-control form-control-sm" v-model="paymentData.note" placeholder="Cth: Debit BCA - Appr 1234">
                             </div>
 
-                            <!-- TOMBOL TAMBAH SPLIT -->
                             <button v-if="isSplitPayment" class="btn btn-outline-primary-custom w-100 mt-2 fw-bold shadow-sm" @click="addSplitPayment" :disabled="!paymentData.method || paymentData.amountReceived <= 0">
                                 <i class="bi bi-plus-circle me-1"></i> Tambahkan {{ paymentData.method || 'Pembayaran' }} ke Split
                             </button>
 
-                            <!-- KEMBALIAN -->
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0 && !isSplitPayment && (!selectedPaymentMethodData || selectedPaymentMethodData.type === 'CASH')">
                                 <span class="fw-bold text-muted">Kembalian:</span>
-                                <span class="fw-bold fs-4" :class="paymentData.amountReceived >= getFinalTotalTagihan() ? 'text-success' : 'text-danger'">
-                                    Rp {{ formatNumber(paymentData.amountReceived - getFinalTotalTagihan() > 0 ? paymentData.amountReceived - getFinalTotalTagihan() : 0) }}
+                                <span class="fw-bold fs-4" :class="paymentData.amountReceived >= getTotalBayarDenganAdmin() ? 'text-success' : 'text-danger'">
+                                    Rp {{ formatNumber(paymentData.amountReceived - getTotalBayarDenganAdmin() > 0 ? paymentData.amountReceived - getTotalBayarDenganAdmin() : 0) }}
                                 </span>
                             </div>
                             
-                        </div> <!-- PENUTUP v-show input uang -->
-                    </div> <!-- 🌟 INI DIA PENUTUP mb-auto YANG TADI HILANG! -->
-
-                    <div class="mt-4 pt-3 d-flex gap-2 w-100 border-top">
+                        </div> </div> <div class="mt-4 pt-3 d-flex gap-2 w-100 border-top">
                         <button class="btn btn-light border fw-bold w-50 py-3" data-bs-dismiss="modal" :disabled="isProcessing">Batal</button>
+                        
                         <button class="btn btn-primary-custom fw-bold w-50 py-3 shadow-sm" @click="processTransaction" 
-                                :disabled="isProcessing || (!isSplitPayment && !paymentData.method) || (!selectedCustomer?.id && ((!isSplitPayment && paymentData.amountReceived < getFinalTotalTagihan()) || (isSplitPayment && remainingSplitTagihan > 0)))">
+                                :disabled="isProcessing || (!isSplitPayment && !paymentData.method) || (!selectedCustomer?.id && ((!isSplitPayment && paymentData.amountReceived < getTotalBayarDenganAdmin()) || (isSplitPayment && remainingSplitTagihan > 0)))">
                             <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
                             <span v-else><i class="bi bi-printer me-2"></i>Cetak</span>
                         </button>
@@ -7685,23 +7711,20 @@ beforeDestroy() {
                 return items;
             },
           
-    totalSplitPaid() {
-            // Menjumlahkan total uang yang dibayar (sudah termasuk biaya layanan)
-            return this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        },
-          
-        remainingSplitTagihan() {
-        // 1. Hitung total NILAI DASAR yang benar-benar sudah dibayar dari list split
+   remainingSplitTagihan() {
         let totalBasePaid = this.splitPayments.reduce((sum, p) => {
-            // Jika p.baseAmount tidak ada, baru gunakan p.amount
+            // Gunakan baseAmount (pokok). Jika tidak ada, baru fallback ke amount
             return sum + Number(p.baseAmount !== undefined ? p.baseAmount : p.amount);
         }, 0);
         
-        // 2. Sisa tagihan dasar = Total Subtotal - Yang sudah dibayar
         let sisa = (this.total || 0) - totalBasePaid;
-        
-        // Gunakan Math.round agar terhindar dari bug angka desimal Javascript (.54)
+        // Gunakan Math.round untuk mencegah desimal receh Javascript (0.0000001)
         return sisa > 0 ? Math.round(sisa) : 0;
+    },
+
+    // 2. Menjumlahkan total uang fisik (Pokok + Admin) yang sudah masuk di keranjang split
+    totalSplitPaid() {
+        return this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     },
           
             lowStockItems() {
@@ -8716,49 +8739,12 @@ beforeDestroy() {
         },
 
     'paymentData.method': function(newMethod) {
-        this.$nextTick(() => {
-            let rate = 0;
-
-            // 1. AMBIL RATE DINAMIS DARI DATABASE
-            if (this.paymentMethods && this.paymentMethods.length > 0) {
-                
-                // [DIPERBAIKI] Cari berdasarkan id, code, name, atau nama_metode (mencakup semua kemungkinan)
-                const selectedMethod = this.paymentMethods.find(m => 
-                    m.id === newMethod || 
-                    m.code === newMethod || 
-                    (m.name && m.name.toLowerCase() === newMethod.toLowerCase()) || 
-                    (m.nama && m.nama.toLowerCase() === newMethod.toLowerCase())
-                );
-                
-                // Cek di Console Browser: Apakah metode berhasil ditemukan?
-                console.log("Metode yang di-klik:", newMethod);
-                console.log("Data metode yang ditemukan:", selectedMethod);
-
-                if (selectedMethod) {
-                    // [DIPERBAIKI] Cek berbagai kemungkinan nama kolom surcharge di database Anda
-                    const surchargeValue = selectedMethod.surcharge_percentage || selectedMethod.surcharge || selectedMethod.surcharge_fee || selectedMethod.mdr || 0;
-                    
-                    if (surchargeValue) {
-                        rate = parseFloat(surchargeValue) / 100;
-                    }
-                }
-            }
-
-            console.log("Rate yang akan dihitung:", rate);
-
-            // 2. KALKULASI NET-UP (PEMBAGIAN) + PEMBULATAN
-            if (this.isSplitPayment && this.remainingSplitTagihan > 0) {
-                // Rumus: Sisa Pokok / (1 - rate)
-                this.paymentData.amountReceived = Math.round(this.remainingSplitTagihan / (1 - rate));
-            } else if (!this.isSplitPayment) {
-                // Jika Bayar Penuh
-                if (typeof this.getFinalTotalTagihan === 'function') {
-                    this.paymentData.amountReceived = Math.round(this.getFinalTotalTagihan());
-                } else {
-                    this.paymentData.amountReceived = Math.round(this.invoiceSubtotal / (1 - rate));
-                }
-            }
-        });
+        if (newMethod) {
+            this.$nextTick(() => {
+                // Selalu isi kotak input dengan nominal POKOK MURNI, jangan dipotong atau ditambah admin dulu!
+                this.paymentData.amountReceived = this.isSplitPayment ? this.remainingSplitTagihan : (this.total || 0);
+            });
+        }
     }
         },
         
@@ -8779,79 +8765,80 @@ beforeDestroy() {
             this.openModal('hppExampleModal');
         },
 
-        addSplitPayment() {
-    if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
-    if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
+        // 1. FUNGSI PEMBERSIH: Menghitung biaya admin bulat tanpa merubah data input
+    hitungSurcharge(methodName, baseNominal) {
+        if (!methodName || baseNominal <= 0) return 0;
+        
+        let pm = this.activePaymentMethodsForCashier.find(m => 
+            m.name === methodName || m.id === methodName || m.code === methodName || (m.nama && m.nama === methodName)
+        );
+        
+        if (!pm || !pm.surcharge || pm.surcharge <= 0) return 0;
+        
+        if (pm.surchargeType === 'percent') {
+            // WAJIB Math.round agar angka persentase selalu bulat (contoh: Rp 401, bukan Rp 400.89)
+            return Math.round((Number(baseNominal) * pm.surcharge) / 100);
+        } else {
+            return Number(pm.surcharge);
+        }
+    },
 
-    // (Opsional) Cegah input jika tagihan sebenarnya sudah lunas 0
-    if (this.remainingSplitTagihan <= 0) return Swal.fire('Sudah Lunas', 'Tagihan sudah terbayar penuh.', 'info');
+    // 2. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer"
+    getTotalBayarDenganAdmin() {
+        let pokok = Number(this.paymentData.amountReceived || 0);
+        let admin = this.hitungSurcharge(this.paymentData.method, pokok);
+        return pokok + admin;
+    },
 
-    let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
-    let isDebt = pm ? pm.type === 'DEBT' : false;
-    
-    // Hitung Biaya Layanan KHUSUS untuk nominal yang diinput saat ini
-    let baseAmount = Number(this.paymentData.amountReceived);
-    let splitSurcharge = 0;
-    if (pm && pm.surcharge > 0) {
-        // 🌟 PERBAIKAN DI SINI: Gunakan Math.round() agar tidak ada angka desimal berjejer (.897 dll)
-        splitSurcharge = pm.surchargeType === 'percent' 
-            ? Math.round((baseAmount * pm.surcharge) / 100) 
-            : Number(pm.surcharge);
-    }
+    // 3. FUNGSI UTAMA: Menambahkan pembayaran ke keranjang split
+    addSplitPayment() {
+        if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
+        if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
+        if (this.remainingSplitTagihan <= 0) return Swal.fire('Sudah Lunas', 'Tagihan sudah terbayar penuh.', 'info');
 
-    // Masukkan ke keranjang dengan nominal yang SUDAH ditambah surcharge
-    this.splitPayments.push({
-        method: this.paymentData.method,
-        baseAmount: baseAmount,             // Tagihan asli yang dicover
-        surchargeAmount: splitSurcharge,    // Biaya layanannya (sudah bulat)
-        amount: baseAmount + splitSurcharge,// Total fisik uang yang harus dibayar customer
-        note: this.paymentData.note || '',
-        isDebt: isDebt
-    });
+        let baseAmount = Number(this.paymentData.amountReceived);
+        
+        // 🌟 PENGAMAN OVERPAY: Jika kasir ketik kelebihan, otomatis dipas-kan ke sisa tagihan
+        if (baseAmount > this.remainingSplitTagihan) {
+            baseAmount = this.remainingSplitTagihan;
+        }
 
-    // Reset dan otomatis isi nilai sisa tagihan untuk pembayaran berikutnya
-    this.paymentData.method = '';
-    this.paymentData.amountReceived = this.remainingSplitTagihan; 
-    this.paymentData.note = '';
-},
-    
+        // Hitung admin & total untuk metode yang dipilih
+        let surchargeAmount = this.hitungSurcharge(this.paymentData.method, baseAmount);
+        let totalAmount = baseAmount + surchargeAmount;
+
+        let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method || m.id === this.paymentData.method);
+        let isDebt = pm ? pm.type === 'DEBT' : false;
+
+        // MASUKKAN KE KERANJANG SPLIT
+        this.splitPayments.push({
+            method: this.paymentData.method,
+            baseAmount: baseAmount,           // POKOK: Akan mengurangi remainingSplitTagihan
+            surchargeAmount: surchargeAmount, // ADMIN: Untuk dicetak terpisah di struk
+            amount: totalAmount,              // TOTAL: Uang fisik yang dibayar customer
+            note: this.paymentData.note || '',
+            isDebt: isDebt
+        });
+
+        // RESET FORM: Otomatis isi sisa tagihan berikutnya
+        this.paymentData.method = '';
+        this.paymentData.note = '';
+        
+        // Gunakan $nextTick agar Vue selesai memotong sisa tagihan di tabel sebelum mengisi kotak input
+        this.$nextTick(() => {
+            this.paymentData.amountReceived = this.remainingSplitTagihan; 
+        });
+    },
+
+    // 4. FUNGSI HAPUS: Menghapus item dari keranjang split
     removeSplitPayment(index) {
         this.splitPayments.splice(index, 1);
-        this.paymentData.amountReceived = this.remainingSplitTagihan;
+        this.$nextTick(() => {
+            this.paymentData.amountReceived = this.remainingSplitTagihan;
+        });
     },
-          
-        resetSalesFilter() {
-                this.transactionStartDate = '';
-                this.transactionEndDate = '';
-                this.reportSearchQuery = '';
-                this.salesOutletFilter = '';
-                this.salesStatusFilter = '';
-            },
 
-          getSurchargeAmount() {
-            let totalSurcharge = 0;
-            // 1. Surcharge dari keranjang split yang sudah ditambahkan
-            if (this.isSplitPayment && this.splitPayments.length > 0) {
-                totalSurcharge += this.splitPayments.reduce((sum, p) => sum + (p.surchargeAmount || 0), 0);
-            }
-            
-            // 2. Surcharge dari inputan yang sedang diketik (sebelum ditambah)
-            if (this.paymentData.method) {
-                let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
-                if (pm && pm.surcharge > 0) {
-                    // KUNCI: Hitung dari input uang kasir, bukan dari total tagihan
-                    let baseCalc = this.isSplitPayment ? Number(this.paymentData.amountReceived || 0) : (this.total || 0);
-                    totalSurcharge += pm.surchargeType === 'percent' ? (baseCalc * pm.surcharge) / 100 : Number(pm.surcharge);
-                }
-            }
-            return totalSurcharge;
-        },
-          
-        getFinalTotalTagihan() {
-            return (this.total || 0) + this.getSurchargeAmount();
-        },
-
-          async fetchDashboardData() {
+      async fetchDashboardData() {
     if (!this.userProfile || !this.userProfile.companyId) return;
     this.isLoadingDashboard = true;
 
