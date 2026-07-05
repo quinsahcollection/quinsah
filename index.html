@@ -301,10 +301,24 @@
     .swal2-container { z-index: 999999 !important; }
 
     /* ==========================================================================
+       [PERBAIKAN KHUSUS] SYSTEM SCROLL MODAL PEMBAYARAN KASIR
+       ========================================================================== */
+    .modal-payment-scroll-area {
+        max-height: 85vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    @media (min-width: 768px) {
+        .modal-payment-scroll-area {
+            height: 85vh;
+            max-height: 85vh;
+        }
+    }
+
+    /* ==========================================================================
        6. OPTIMASI DESKTOP PC / LAPTOP (SCROLL MANDIRI YANG RAPI)
        ========================================================================== */
     @media (min-width: 992px) {
-        /* Pada PC, kunci body agar tidak ada double scrollbar, biarkan panel yang bergulir */
         html, body { overflow: hidden !important; height: 100vh !important; }
         
         .app-container { 
@@ -369,7 +383,6 @@
     }
     
     @media (max-width: 991px) {
-        /* KUNCI PERBAIKAN SCROLL MOBILE: Aktifkan scroll alami pada body & html */
         html, body { 
             font-size: 0.85rem; 
             overflow-y: auto !important; 
@@ -388,10 +401,9 @@
             min-height: 100svh; 
             height: auto !important; 
             display: block; 
-            padding-bottom: 90px !important; /* Ruang aman untuk menu bawah */
+            padding-bottom: 90px !important; 
         }
         
-        /* Sidebar Menu Bawah Mobile */
         .sidebar-left { 
             position: fixed !important; 
             bottom: 0 !important; 
@@ -437,7 +449,6 @@
         .nav-icon i { font-size: 1.3rem !important; margin-bottom: 2px !important; }
         .mt-auto { margin-top: 0 !important; }
 
-        /* Konten utama di Mobile dibuat bebas bergulir mengikuti body */
         .main-content { 
             padding: 15px; 
             padding-bottom: 40px !important; 
@@ -451,7 +462,6 @@
         .product-card { padding: 12px; }
         .product-img { height: 160px !important; }
         
-        /* Panel Kasir Drawer di Mobile (Mencegah blokir klik & scroll lancar) */
         .sidebar-right { 
             position: fixed; 
             top: 0; 
@@ -478,14 +488,40 @@
             visibility: visible !important;
         }
         
-        .modal-body { 
-            padding: 15px !important; 
-            max-height: 75vh;
+        /* [PERBAIKAN KHUSUS MOBILE] MEMASTIKAN MODAL BISA DI-SCROLL LANCAR SAMPAI TOMBOL BAWAH */
+        #paymentModal .modal-dialog {
+            margin: 0 !important;
+            max-width: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+        }
+        #paymentModal .modal-content {
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
             overflow-y: auto !important;
             -webkit-overflow-scrolling: touch !important;
         }
+        #paymentModal .row.g-0 {
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-payment-scroll-area {
+            max-height: none !important;
+            overflow-y: visible !important;
+            height: auto !important;
+        }
+        #paymentModal .col-md-7,
+        #paymentModal .col-md-5 {
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+        #paymentModal .col-md-5 {
+            padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important;
+        }
         
-        /* Tombol Melayang Keranjang Belanja (FAB) */
         .fab-cart {
             position: fixed; 
             bottom: 80px; 
@@ -6486,7 +6522,7 @@
         <div class="modal-content shadow-lg border-0 overflow-hidden">
             
             <div class="row g-0">
-                <div class="col-md-7 bg-white p-4 border-end" style="max-height: 85vh; overflow-y: auto;">
+                <div class="col-md-7 bg-white p-4 border-end modal-payment-scroll-area">
                     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
                         <h5 class="fw-bold text-dark mb-0"><i class="bi bi-wallet2 me-2"></i>Pilih Pembayaran</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -6565,182 +6601,182 @@
                     </div>
                 </div>
 
-       <!-- ============================================== -->
-                <!-- KOLOM KANAN: DETAIL TAGIHAN & INPUT            -->
-                <!-- ============================================== -->
-                <div class="col-12 col-md-6 col-lg-5 bg-light p-3 p-md-4 d-flex flex-column justify-content-between border-start-md">
-    
-    <div class="mb-auto">
-        <h5 class="fw-bold text-dark mb-3 mb-md-4">
-            <i class="bi bi-receipt-cutoff me-2"></i>Detail Tagihan
-        </h5>
-        <p class="text-muted small mb-1">
-            Pelanggan: <span class="fw-bold text-dark">{{ selectedCustomer ? selectedCustomer.name : 'Umum (Tanpa Nama)' }}</span>
-        </p>
-        
-        <div class="d-flex justify-content-between mb-1 text-muted mt-3" style="font-size: 0.9rem;">
-            <span class="fw-semibold">Subtotal Tagihan</span>
-            <span>Rp {{ formatNumber(total) }}</span>
-        </div>
-        
-        <div class="d-flex justify-content-between mb-2 text-danger fw-semibold" 
-             v-if="!isSplitPayment && hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" 
-             style="font-size: 0.9rem;">
-            <span>Surcharge ({{ paymentData.method }})</span>
-            <span>+ Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}</span>
-        </div>
-        
-        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom mt-2 fs-3 fs-md-2">
-            Rp {{ formatNumber(isSplitPayment ? remainingSplitTagihan : getTotalBayarDenganAdmin()) }}
-        </h2>
-
-        <div class="d-flex gap-2 mb-3 mt-2">
-            <button class="btn btn-sm flex-grow-1 fw-bold py-2" 
-                    :class="!isSplitPayment ? 'btn-primary-custom shadow-sm' : 'btn-outline-secondary'" 
-                    @click="isSplitPayment = false; splitPayments = []; paymentData.amountReceived = total">
-                Bayar Penuh
-            </button>
-            <button class="btn btn-sm flex-grow-1 fw-bold py-2" 
-                    :class="isSplitPayment ? 'btn-primary-custom shadow-sm' : 'btn-outline-secondary'" 
-                    @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan">
-                Split / Hutang
-            </button>
-        </div>
-
-        <div v-if="isSplitPayment" class="p-3 bg-white border border-primary-custom rounded shadow-sm mb-3">
-            <h6 class="fw-bold text-dark border-bottom pb-2 mb-2 small">Daftar Pembayaran (Split)</h6>
-            <div v-if="splitPayments.length === 0" class="text-muted small text-center py-2 fst-italic">
-                Belum ada pembayaran ditambahkan.
-            </div>
-            
-            <div v-for="(split, index) in splitPayments" :key="index" class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
-                <div>
-                    <span class="badge bg-secondary me-2">{{ split.method }}</span>
-                    <span class="fw-bold text-success">Rp {{ formatNumber(split.amount) }}</span>
-                    <small v-if="split.surchargeAmount > 0" class="text-muted d-block" style="font-size: 0.7rem;">
-                        (Pokok: {{ formatNumber(split.baseAmount) }} + Adm: {{ formatNumber(split.surchargeAmount) }})
-                    </small>
-                </div>
-                <button class="btn btn-sm btn-light text-danger py-0 px-2" @click="removeSplitPayment(index)">
-                    <i class="bi bi-x-circle"></i>
-                </button>
-            </div>
-            
-            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
-                <span class="fw-bold text-muted small">Sisa Tagihan Pokok:</span>
-                <span class="fw-bold fs-6 fs-md-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
-                    Rp {{ formatNumber(remainingSplitTagihan) }}
-                </span>
-            </div>
-        </div>
-
-        <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
-            
-            <div v-if="!paymentData.method || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH')">
-                <label class="form-label small fw-bold text-dark">Jumlah Uang Pokok / Nominal</label>
-                <div class="input-group input-group-lg mb-2 shadow-sm">
-                    <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
-                    <input type="number" 
-                           class="form-control border-start-0 fw-bold fs-4 text-end" 
-                           v-model.number="paymentData.amountReceived" 
-                           @input="handleNominalChange"
-                           placeholder="0">
-                </div>
-            </div>
-
-            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'QRIS'" class="text-center p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm">
-                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
-                
-                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
-                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
-                </div>
-                <div class="fw-bold text-primary mb-2 fs-5">
-                    Total Scan: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
-                </div>
-
-                <div class="bg-light p-2 rounded d-inline-block mb-2 border">
-                    <img :src="selectedPaymentMethodData.qrImageUrl || ('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PAY_' + getTotalBayarDenganAdmin())" 
-                         alt="QR Code" style="width: 140px; height: 140px; object-fit: contain;">
-                </div>
-                <span class="small text-muted fw-semibold d-block mb-2" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
-                
-                <label class="form-label small fw-bold text-dark mt-2 d-block text-start">Nominal Pokok yang Dicover:</label>
-                <div class="input-group input-group-sm mb-1 shadow-sm">
-                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
-                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
-                </div>
-            </div>
-
-            <div v-else-if="selectedPaymentMethodData && (selectedPaymentMethodData.type === 'TRANSFER' || selectedPaymentMethodData.type === 'VA')" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-center">
-                <i class="bi bi-bank text-primary-custom fs-2 d-block mb-1"></i>
-                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
-                
-                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
-                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
-                </div>
-                <div class="fw-bold text-primary mb-2 fs-5">
-                    Total Transfer: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
-                </div>
-
-                <div class="p-2 bg-light border rounded mb-3 text-start">
-                    <span class="small text-muted d-block fw-bold mb-1">Informasi Rekening:</span>
-                    <div v-if="selectedPaymentMethodData.accountNumber">
-                        <div class="fw-bold text-dark small">{{ selectedPaymentMethodData.bankName || paymentData.method }}</div>
-                        <div class="fs-5 fw-bold text-primary-custom letter-spacing-1">{{ selectedPaymentMethodData.accountNumber }}</div>
-                        <div class="small text-muted" style="font-size: 0.75rem;">a/n {{ selectedPaymentMethodData.accountName || '-' }}</div>
-                    </div>
-                    <span v-else class="small fw-semibold text-dark d-block" style="white-space: pre-wrap;">Mohon transfer sesuai tagihan ke rekening resmi.</span>
-                </div>
-                
-                <label class="form-label small fw-bold text-dark mt-1 d-block text-start">Nominal Pokok yang Dicover:</label>
-                <div class="input-group input-group-sm mb-1 shadow-sm">
-                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
-                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
-                </div>
-            </div>
-
-            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'EDC'" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-start">
-                <div class="text-center mb-2">
-                    <i class="bi bi-credit-card-2-front text-primary-custom fs-2 d-block mb-1"></i>
-                    <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                <div class="col-12 col-md-5 bg-light p-3 p-md-4 d-flex flex-column justify-content-between border-start-md modal-payment-scroll-area">
                     
-                    <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-1">
-                        Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
-                    </div>
-                    <div class="fw-bold text-primary mb-1 fs-5">
-                        Total Gesek: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
-                    </div>
-                </div>
-                <label class="form-label small fw-bold text-dark mt-2">Nominal Pokok yang Dicover:</label>
-                <div class="input-group input-group-sm mb-2 shadow-sm">
-                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
-                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
-                </div>
-                <label class="form-label small fw-bold text-dark mt-1">Catatan Kartu (Opsional)</label>
-                <input type="text" class="form-control form-control-sm" v-model="paymentData.note" placeholder="Cth: Debit BCA - Appr 1234">
-            </div>
+                    <div class="mb-auto">
+                        <h5 class="fw-bold text-dark mb-3 mb-md-4">
+                            <i class="bi bi-receipt-cutoff me-2"></i>Detail Tagihan
+                        </h5>
+                        <p class="text-muted small mb-1">
+                            Pelanggan: <span class="fw-bold text-dark">{{ selectedCustomer ? selectedCustomer.name : 'Umum (Tanpa Nama)' }}</span>
+                        </p>
+                        
+                        <div class="d-flex justify-content-between mb-1 text-muted mt-3" style="font-size: 0.9rem;">
+                            <span class="fw-semibold">Subtotal Tagihan</span>
+                            <span>Rp {{ formatNumber(total) }}</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2 text-danger fw-semibold" 
+                             v-if="!isSplitPayment && hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" 
+                             style="font-size: 0.9rem;">
+                            <span>Surcharge ({{ paymentData.method }})</span>
+                            <span>+ Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}</span>
+                        </div>
+                        
+                        <h2 class="text-primary-custom fw-bold mb-3 pb-3 border-bottom mt-2 fs-3 fs-md-2">
+                            Rp {{ formatNumber(isSplitPayment ? remainingSplitTagihan : getTotalBayarDenganAdmin()) }}
+                        </h2>
 
-            <button v-if="isSplitPayment" class="btn btn-outline-primary-custom w-100 mt-2 py-2 fw-bold shadow-sm" @click="addSplitPayment" :disabled="!paymentData.method || paymentData.amountReceived <= 0">
-                <i class="bi bi-plus-circle me-1"></i> Tambahkan {{ paymentData.method || 'Pembayaran' }} ke Split
-            </button>
+                        <div class="d-flex gap-2 mb-3 mt-2">
+                            <button class="btn btn-sm flex-grow-1 fw-bold py-2" 
+                                    :class="!isSplitPayment ? 'btn-primary-custom shadow-sm' : 'btn-outline-secondary'" 
+                                    @click="isSplitPayment = false; splitPayments = []; paymentData.amountReceived = total">
+                                Bayar Penuh
+                            </button>
+                            <button class="btn btn-sm flex-grow-1 fw-bold py-2" 
+                                    :class="isSplitPayment ? 'btn-primary-custom shadow-sm' : 'btn-outline-secondary'" 
+                                    @click="isSplitPayment = true; paymentData.amountReceived = remainingSplitTagihan">
+                                Split / Hutang
+                            </button>
+                        </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0 && !isSplitPayment && (!selectedPaymentMethodData || selectedPaymentMethodData.type === 'CASH')">
-                <span class="fw-bold text-muted">Kembalian:</span>
-                <span class="fw-bold fs-5 fs-md-4" :class="paymentData.amountReceived >= getTotalBayarDenganAdmin() ? 'text-success' : 'text-danger'">
-                    Rp {{ formatNumber(paymentData.amountReceived - getTotalBayarDenganAdmin() > 0 ? paymentData.amountReceived - getTotalBayarDenganAdmin() : 0) }}
-                </span>
-            </div>
-            
-        </div> </div> <div class="mt-4 pt-3 d-flex gap-2 w-100 border-top">
-        <button class="btn btn-light border fw-bold w-50 py-2 py-md-3 shadow-sm" data-bs-dismiss="modal" :disabled="isProcessing">
-            Batal
-        </button>
-        
-        <button class="btn btn-primary-custom fw-bold w-50 py-2 py-md-3 shadow-sm" @click="processTransaction" 
-                :disabled="isProcessing || (!isSplitPayment && !paymentData.method) || (!selectedCustomer?.id && ((!isSplitPayment && paymentData.amountReceived < getTotalBayarDenganAdmin()) || (isSplitPayment && remainingSplitTagihan > 0)))">
-            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-            <span v-else><i class="bi bi-printer me-2"></i>Cetak</span>
-        </button>
+                        <div v-if="isSplitPayment" class="p-3 bg-white border border-primary-custom rounded shadow-sm mb-3">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-2 small">Daftar Pembayaran (Split)</h6>
+                            <div v-if="splitPayments.length === 0" class="text-muted small text-center py-2 fst-italic">
+                                Belum ada pembayaran ditambahkan.
+                            </div>
+                            
+                            <div v-for="(split, index) in splitPayments" :key="index" class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
+                                <div>
+                                    <span class="badge bg-secondary me-2">{{ split.method }}</span>
+                                    <span class="fw-bold text-success">Rp {{ formatNumber(split.amount) }}</span>
+                                    <small v-if="split.surchargeAmount > 0" class="text-muted d-block" style="font-size: 0.7rem;">
+                                        (Pokok: {{ formatNumber(split.baseAmount) }} + Adm: {{ formatNumber(split.surchargeAmount) }})
+                                    </small>
+                                </div>
+                                <button class="btn btn-sm btn-light text-danger py-0 px-2" @click="removeSplitPayment(index)">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
+                                <span class="fw-bold text-muted small">Sisa Tagihan Pokok:</span>
+                                <span class="fw-bold fs-6 fs-md-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
+                                    Rp {{ formatNumber(remainingSplitTagihan) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
+                            
+                            <div v-if="!paymentData.method || (selectedPaymentMethodData && selectedPaymentMethodData.type === 'CASH')">
+                                <label class="form-label small fw-bold text-dark">Jumlah Uang Pokok / Nominal</label>
+                                <div class="input-group input-group-lg mb-2 shadow-sm">
+                                    <span class="input-group-text bg-white fw-bold border-end-0">Rp</span>
+                                    <input type="number" 
+                                           class="form-control border-start-0 fw-bold fs-4 text-end" 
+                                           v-model.number="paymentData.amountReceived" 
+                                           @input="handleNominalChange"
+                                           placeholder="0">
+                                </div>
+                            </div>
+
+                            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'QRIS'" class="text-center p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm">
+                                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                
+                                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
+                                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                </div>
+                                <div class="fw-bold text-primary mb-2 fs-5">
+                                    Total Scan: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                </div>
+
+                                <div class="bg-light p-2 rounded d-inline-block mb-2 border">
+                                    <img :src="selectedPaymentMethodData.qrImageUrl || ('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PAY_' + getTotalBayarDenganAdmin())" 
+                                         alt="QR Code" style="width: 140px; height: 140px; object-fit: contain;">
+                                </div>
+                                <span class="small text-muted fw-semibold d-block mb-2" style="font-size: 0.75rem;">Arahkan pelanggan untuk scan kode di atas.</span>
+                                
+                                <label class="form-label small fw-bold text-dark mt-2 d-block text-start">Nominal Pokok yang Dicover:</label>
+                                <div class="input-group input-group-sm mb-1 shadow-sm">
+                                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
+                                </div>
+                            </div>
+
+                            <div v-else-if="selectedPaymentMethodData && (selectedPaymentMethodData.type === 'TRANSFER' || selectedPaymentMethodData.type === 'VA')" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-center">
+                                <i class="bi bi-bank text-primary-custom fs-2 d-block mb-1"></i>
+                                <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                
+                                <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-2">
+                                    Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                </div>
+                                <div class="fw-bold text-primary mb-2 fs-5">
+                                    Total Transfer: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                </div>
+
+                                <div class="p-2 bg-light border rounded mb-3 text-start">
+                                    <span class="small text-muted d-block fw-bold mb-1">Informasi Rekening:</span>
+                                    <div v-if="selectedPaymentMethodData.accountNumber">
+                                        <div class="fw-bold text-dark small">{{ selectedPaymentMethodData.bankName || paymentData.method }}</div>
+                                        <div class="fs-5 fw-bold text-primary-custom letter-spacing-1">{{ selectedPaymentMethodData.accountNumber }}</div>
+                                        <div class="small text-muted" style="font-size: 0.75rem;">a/n {{ selectedPaymentMethodData.accountName || '-' }}</div>
+                                    </div>
+                                    <span v-else class="small fw-semibold text-dark d-block" style="white-space: pre-wrap;">Mohon transfer sesuai tagihan ke rekening resmi.</span>
+                                </div>
+                                
+                                <label class="form-label small fw-bold text-dark mt-1 d-block text-start">Nominal Pokok yang Dicover:</label>
+                                <div class="input-group input-group-sm mb-1 shadow-sm">
+                                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
+                                </div>
+                            </div>
+
+                            <div v-else-if="selectedPaymentMethodData && selectedPaymentMethodData.type === 'EDC'" class="p-3 mt-2 mb-3 bg-white rounded border border-primary border-opacity-25 shadow-sm text-start">
+                                <div class="text-center mb-2">
+                                    <i class="bi bi-credit-card-2-front text-primary-custom fs-2 d-block mb-1"></i>
+                                    <span class="fw-bold d-block text-dark mb-1">{{ paymentData.method }}</span>
+                                    
+                                    <div v-if="hitungSurcharge(paymentData.method, paymentData.amountReceived) > 0" class="badge bg-warning text-dark mb-1">
+                                        Biaya Admin: Rp {{ formatNumber(hitungSurcharge(paymentData.method, paymentData.amountReceived)) }}
+                                    </div>
+                                    <div class="fw-bold text-primary mb-1 fs-5">
+                                        Total Gesek: Rp {{ formatNumber(getTotalBayarDenganAdmin()) }}
+                                    </div>
+                                </div>
+                                <label class="form-label small fw-bold text-dark mt-2">Nominal Pokok yang Dicover:</label>
+                                <div class="input-group input-group-sm mb-2 shadow-sm">
+                                    <span class="input-group-text bg-light fw-bold border-end-0">Rp</span>
+                                    <input type="number" class="form-control border-start-0 fw-bold text-end" v-model.number="paymentData.amountReceived" @input="handleNominalChange">
+                                </div>
+                                <label class="form-label small fw-bold text-dark mt-1">Catatan Kartu (Opsional)</label>
+                                <input type="text" class="form-control form-control-sm" v-model="paymentData.note" placeholder="Cth: Debit BCA - Appr 1234">
+                            </div>
+
+                            <button v-if="isSplitPayment" class="btn btn-outline-primary-custom w-100 mt-2 py-2 fw-bold shadow-sm" @click="addSplitPayment" :disabled="!paymentData.method || paymentData.amountReceived <= 0">
+                                <i class="bi bi-plus-circle me-1"></i> Tambahkan {{ paymentData.method || 'Pembayaran' }} ke Split
+                            </button>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25" v-if="paymentData.amountReceived > 0 && !isSplitPayment && (!selectedPaymentMethodData || selectedPaymentMethodData.type === 'CASH')">
+                                <span class="fw-bold text-muted">Kembalian:</span>
+                                <span class="fw-bold fs-5 fs-md-4" :class="paymentData.amountReceived >= getTotalBayarDenganAdmin() ? 'text-success' : 'text-danger'">
+                                    Rp {{ formatNumber(paymentData.amountReceived - getTotalBayarDenganAdmin() > 0 ? paymentData.amountReceived - getTotalBayarDenganAdmin() : 0) }}
+                                </span>
+                            </div>
+                            
+                        </div> 
+                    </div> 
+
+                    <div class="mt-4 pt-3 d-flex gap-2 w-100 border-top flex-shrink-0">
+                        <button class="btn btn-light border fw-bold w-50 py-2 py-md-3 shadow-sm" data-bs-dismiss="modal" :disabled="isProcessing">
+                            Batal
+                        </button>
+                        
+                        <button class="btn btn-primary-custom fw-bold w-50 py-2 py-md-3 shadow-sm" @click="processTransaction" 
+                                :disabled="isProcessing || (!isSplitPayment && !paymentData.method) || (!selectedCustomer?.id && ((!isSplitPayment && paymentData.amountReceived < getTotalBayarDenganAdmin()) || (isSplitPayment && remainingSplitTagihan > 0)))">
+                            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                            <span v-else><i class="bi bi-printer me-2"></i>Cetak</span>
+                        </button>
                     </div>
                 </div> <!-- PENUTUP col-md-5 -->
                 
