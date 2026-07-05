@@ -16,233 +16,567 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        :root { --primary-color: #dc2626; --primary-dark: #991b1b; --bg-main: #f8f9fa; --bg-panel: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+    /* ==========================================================================
+       1. VARIABEL UTAMA & RESET DASAR
+       ========================================================================== */
+    :root { 
+        --primary-color: #dc2626; 
+        --primary-dark: #991b1b; 
+        --bg-main: #f8f9fa; 
+        --bg-panel: #ffffff; 
+        --text-main: #1f2937; 
+        --text-muted: #6b7280; 
+        --border-color: #e5e7eb; 
+    }
+    
+    /* PERBAIKAN: Hapus overflow: hidden dari global body agar mobile bisa scroll alami */
+    body { 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        background-color: var(--bg-main); 
+        color: var(--text-main); 
+        margin: 0; 
+        padding: 0; 
+        overflow-x: hidden; 
+        -webkit-font-smoothing: antialiased;
+    }
+    
+    [v-cloak] { display: none !important; }
+
+    /* ==========================================================================
+       2. STRUKTUR LAYOUT UTAMA
+       ========================================================================== */
+    .app-container { 
+        display: flex; 
+        min-height: 100svh; 
+        width: 100%;
+        position: relative; 
+    }
+    
+    /* Auth Styles */
+    .auth-wrapper { 
+        min-height: 100svh; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        background: linear-gradient(135deg, #f8f9fa 0%, #e2e8f0 100%); 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%;
+        z-index: 99999; 
+    }
+    .auth-card { 
+        background: #fff; 
+        width: 100%; 
+        max-width: 400px; 
+        padding: 40px; 
+        border-radius: 20px; 
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+    }
+    
+    /* Sidebar Kiri (Menu Navigasi) */
+    .sidebar-left { 
+        width: 90px; 
+        background-color: var(--bg-panel); 
+        border-right: 1px solid var(--border-color); 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        padding: 20px 0; 
+        z-index: 1040; 
+        flex-shrink: 0; 
+    }
+    .logo-icon { 
+        color: var(--primary-color); 
+        font-size: 2rem; 
+        margin-bottom: 20px; 
+    }
+    .nav-icon { 
+        width: 65px; 
+        height: 65px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        border-radius: 12px; 
+        color: var(--text-muted); 
+        margin-bottom: 10px; 
+        cursor: pointer; 
+        font-size: 0.75rem; 
+        font-weight: 500; 
+        transition: all 0.2s ease; 
+        text-align: center; 
+        user-select: none;
+    }
+    .nav-icon i { font-size: 1.5rem; margin-bottom: 4px; }
+    .nav-icon:hover, .nav-icon.active { 
+        background-color: rgba(220, 38, 38, 0.1); 
+        color: var(--primary-color); 
+        font-weight: 600; 
+    }
+    
+    /* Area Konten Tengah (Katalog & Dashboard) */
+    .main-content { 
+        flex-grow: 1; 
+        display: flex; 
+        flex-direction: column; 
+        overflow-y: auto; 
+        overflow-x: hidden;
+        padding: 20px 30px; 
+        position: relative; 
+        z-index: 1; 
+    }
+
+    /* Sidebar Kanan (Panel Kasir / Keranjang) */
+    .sidebar-right { 
+        width: 380px; 
+        background-color: var(--bg-panel); 
+        border-left: 1px solid var(--border-color); 
+        display: flex; 
+        flex-direction: column; 
+        padding: 15px; 
+        z-index: 10; 
+        flex-shrink: 0; 
+        box-shadow: -2px 0 10px rgba(0,0,0,0.02); 
+    }
+    
+    /* ==========================================================================
+       3. ELEMEN UI (KARTU PRODUK, TABEL, FORM, TOMBOL)
+       ========================================================================== */
+    .dashboard-card { 
+        background-color: var(--bg-panel); 
+        border-radius: 16px; 
+        padding: 20px; 
+        border: 1px solid var(--border-color); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+    }
+    
+    .product-card { 
+        background-color: var(--bg-panel); 
+        border-radius: 12px; 
+        padding: 10px; 
+        border: 1px solid var(--border-color); 
+        height: 100%; 
+        display: flex; 
+        flex-direction: column; 
+        cursor: pointer !important; 
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; 
+        position: relative;
+        z-index: 2;
+        pointer-events: auto !important;
+    }
+    .product-card:hover { 
+        transform: translateY(-3px); 
+        border-color: var(--primary-color); 
+        box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15); 
+    }
+    .product-img { 
+        width: 100%; 
+        height: 140px; 
+        object-fit: cover; 
+        border-radius: 8px; 
+        margin-bottom: 10px; 
+        background-color: #f0f0f0; 
+        flex-shrink: 0;
+    }
+    .sku-badge { 
+        font-size: 0.65rem; 
+        background: #fef2f2; 
+        padding: 3px 6px; 
+        border-radius: 4px; 
+        color: var(--primary-dark); 
+        font-weight: 600; 
+        cursor: pointer; 
+        border: 1px solid transparent; 
+        transition: 0.2s; 
+        display: inline-block;
+    }
+    .sku-badge:hover { border-color: var(--primary-color); background: #fecaca; }
+    .cursor-pointer { cursor: pointer !important; }
+
+    .table-custom th { 
+        background-color: #f8fafc; 
+        color: var(--text-muted); 
+        font-size: 0.75rem; 
+        text-transform: uppercase; 
+        border-bottom: 2px solid var(--border-color); 
+        padding: 10px;
+    }
+    .table-custom td { 
+        padding: 10px; 
+        border-bottom: 1px solid var(--border-color); 
+        vertical-align: middle; 
+    }
+    
+    .form-control, .form-select, .input-group-text { 
+        background-color: #fff; 
+        border: 1px solid var(--border-color); 
+        font-size: 0.9rem; 
+    }
+    .form-control:focus, .form-select:focus { 
+        border-color: var(--primary-color); 
+        box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25); 
+    }
+    .btn-primary-custom { 
+        background-color: var(--primary-color); 
+        color: #fff; 
+        border: none; 
+        font-weight: 600; 
+    }
+    .btn-outline-primary-custom { 
+        color: var(--primary-color); 
+        border: 1px solid var(--primary-color); 
+        font-weight: 600; 
+    }
+    .btn-outline-primary-custom:hover { 
+        background-color: var(--primary-color); 
+        color: #fff; 
+    }
+    .text-primary-custom { color: var(--primary-color) !important; }
+
+    /* ==========================================================================
+       4. VARIAN, TIER HARGA & KERANJANG (CART)
+       ========================================================================== */
+    .variant-grid-card { 
+        border: 1px solid var(--border-color); 
+        border-radius: 8px; 
+        cursor: pointer; 
+        transition: 0.2s; 
+        padding: 12px; 
+        text-align: center; 
+        background-color: #fff; 
+    }
+    .variant-grid-card:hover { 
+        border-color: var(--primary-color); 
+        background-color: #fef2f2; 
+        box-shadow: 0 4px 10px rgba(220,38,38,0.1); 
+    }
+    .variant-grid-card.disabled { 
+        opacity: 0.5; 
+        cursor: not-allowed; 
+        border-color: #e5e7eb !important; 
+        background-color: #f9fafb !important; 
+    }
+    .tier-box { 
+        background: #f8fafc; 
+        border: 1px dashed #cbd5e1; 
+        border-radius: 8px; 
+        padding: 10px; 
+        margin-bottom: 10px; 
+    }
+
+    .cart-item { 
+        padding: 10px; 
+        border-bottom: 1px solid var(--border-color); 
+        transition: background 0.2s; 
+        cursor: pointer; 
+    }
+    .cart-item:hover { background-color: #f8fafc; }
+    .cart-item:last-child { border-bottom: none; }
+
+    .badge-out { background-color: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+    .badge-in { background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+
+    #barcode-canvas, #variant-detail-barcode-canvas { 
+        width: 100% !important; 
+        max-width: 100%; 
+        height: auto !important; 
+        object-fit: contain; 
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ==========================================================================
+       5. HIERARKI Z-INDEX & MODAL
+       ========================================================================== */
+    .modal-backdrop { z-index: 1060 !important; }
+    .modal { z-index: 1070 !important; }
+    .quick-add-modal, .variant-detail-modal { z-index: 1085 !important; }
+    #confirmModal, #cameraScannerModal { z-index: 1100 !important; }
+    .swal2-container { z-index: 999999 !important; }
+
+    /* ==========================================================================
+       6. OPTIMASI DESKTOP PC / LAPTOP (SCROLL MANDIRI YANG RAPI)
+       ========================================================================== */
+    @media (min-width: 992px) {
+        /* Pada PC, kunci body agar tidak ada double scrollbar, biarkan panel yang bergulir */
+        html, body { overflow: hidden !important; height: 100vh !important; }
         
-        [v-cloak] { display: none !important; }
-
-        .app-container { display: flex; min-height: 100svh; position: relative; }
-        
-        /* Auth Styles */
-        .auth-wrapper { min-height: 100svh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e2e8f0 100%); position: absolute; top: 0; left: 0; width: 100%; z-index: 9999; }
-        .auth-card { background: #fff; width: 100%; max-width: 400px; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        
-        /* Layout Styles */
-        .sidebar-left { width: 90px; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; align-items: center; padding: 20px 0; z-index: 1040; flex-shrink: 0; }
-        .logo-icon { color: var(--primary-color); font-size: 2rem; margin-bottom: 20px; }
-        .nav-icon { width: 65px; height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; color: var(--text-muted); margin-bottom: 10px; cursor: pointer; font-size: 0.75rem; font-weight: 500; transition: 0.2s; text-align: center; }
-        .nav-icon i { font-size: 1.5rem; margin-bottom: 4px; }
-        .nav-icon:hover, .nav-icon.active { background-color: rgba(220, 38, 38, 0.1); color: var(--primary-color); font-weight: 600; }
-        
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 30px; position: relative; }
-        .sidebar-right { width: 380px; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 15px; z-index: 10; flex-shrink: 0; box-shadow: -2px 0 10px rgba(0,0,0,0.02); }
-        
-        /* UI Elements */
-        .dashboard-card { background-color: var(--bg-panel); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .product-card { background-color: var(--bg-panel); border-radius: 12px; padding: 10px; border: 1px solid var(--border-color); height: 100%; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s; }
-        .product-card:hover { transform: translateY(-3px); border-color: var(--primary-color); box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15); }
-        .product-img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; background-color: #f0f0f0; }
-        .sku-badge { font-size: 0.65rem; background: #fef2f2; padding: 3px 6px; border-radius: 4px; color: var(--primary-dark); font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-        .sku-badge:hover { border-color: var(--primary-color); background: #fecaca; }
-        .cursor-pointer { cursor: pointer; }
-
-        .table-custom th { background-color: #f8fafc; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid var(--border-color); padding: 10px;}
-        .table-custom td { padding: 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        
-        .form-control, .form-select, .input-group-text { background-color: #fff; border: 1px solid var(--border-color); font-size: 0.9rem; }
-        .form-control:focus, .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25); }
-        .btn-primary-custom { background-color: var(--primary-color); color: #fff; border: none; font-weight: 600; }
-        .btn-outline-primary-custom { color: var(--primary-color); border: 1px solid var(--primary-color); font-weight: 600; }
-        .btn-outline-primary-custom:hover { background-color: var(--primary-color); color: #fff; }
-        .text-primary-custom { color: var(--primary-color) !important; }
-
-        /* Variant & Tier Cards */
-        .variant-grid-card { border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: 0.2s; padding: 12px; text-align: center; background-color: #fff; }
-        .variant-grid-card:hover { border-color: var(--primary-color); background-color: #fef2f2; box-shadow: 0 4px 10px rgba(220,38,38,0.1); }
-        .variant-grid-card.disabled { opacity: 0.5; cursor: not-allowed; border-color: #e5e7eb !important; background-color: #f9fafb !important; }
-        .tier-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-
-        /* Cart Elements */
-        .cart-item { padding: 10px; border-bottom: 1px solid var(--border-color); transition: background 0.2s; cursor: pointer; }
-        .cart-item:hover { background-color: #f8fafc; }
-        .cart-item:last-child { border-bottom: none; }
-
-        /* Log Badges */
-        .badge-out { background-color: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
-        .badge-in { background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
-
-        /* Barcode Canvas Auto-scale */
-        #barcode-canvas, #variant-detail-barcode-canvas { width: 100% !important; max-width: 100%; height: auto !important; object-fit: contain; }
-
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        /* Modal Z-Index Fix */
-        .modal { z-index: 1070 !important; }
-        .modal-backdrop { z-index: 1065 !important; }
-        #confirmModal { z-index: 1100 !important; }
-        #cameraScannerModal { z-index: 1100 !important; }
-        .quick-add-modal { z-index: 1085 !important; }
-        .variant-detail-modal { z-index: 1085 !important; }
-
-        /* ELEGANT MOBILE & TABLET OPTIMIZATION */
-        @media (max-width: 1199px) { .sidebar-right { width: 340px; } }
-        @media (max-width: 991px) {
-            body { font-size: 0.85rem; overflow-y: auto; padding-bottom: 80px; } 
-            h4, .h4 { font-size: 1.15rem !important; margin-bottom: 0; }
-            h5, .h5 { font-size: 1rem !important; }
-            h6, .h6 { font-size: 0.9rem !important; }
-            .btn { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
-            
-            .app-container { flex-direction: column; height: auto; display: block; }
-            
-            /* --- PERBAIKAN SIDEBAR MOBILE --- */
-            .sidebar-left { position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: 65px !important; padding: 0 !important; border-top: 1px solid var(--border-color) !important; z-index: 1050 !important; background: #ffffff !important; box-shadow: 0 -2px 10px rgba(0,0,0,0.05) !important; display: block !important; }
-            .logo-icon { display: none !important; }
-            
-            /* Kunci Utama: PASTIKAN NAMANYA .menu-scroll-area (Sesuai HTML Anda) */
-            .menu-scroll-area { display: flex !important; flex-direction: row !important; width: 100% !important; height: 100% !important; overflow-x: auto !important; overflow-y: hidden !important; align-items: center !important; justify-content: flex-start !important; -webkit-overflow-scrolling: touch !important; }
-            .menu-scroll-area::-webkit-scrollbar { display: none !important; } 
-            
-            .nav-icon { flex: 0 0 auto !important; margin-bottom: 0 !important; min-width: 75px !important; height: 100% !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; border-radius: 0 !important; font-size: 0.65rem !important; padding: 5px !important; }
-            .nav-icon i { font-size: 1.3rem !important; margin-bottom: 2px !important; }
-            
-            .mt-auto { margin-top: 0 !important; }
-            /* -------------------------------- */
-
-            .main-content { padding: 15px; padding-bottom: 80px; }
-            .dashboard-card { padding: 15px; }
-            .table-custom th, .table-custom td { padding: 8px; font-size: 0.75rem; white-space: nowrap; }
-            
-            .product-card { padding: 12px; }
-            .product-img { height: 160px !important; }
-            
-            .sidebar-right { position: fixed; top: 0; right: -100%; width: 100%; height: 100dvh; max-width: 420px; padding-bottom: 0 !important; z-index: 1060; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -5px 0 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
-            .sidebar-right.show-mobile { right: 0; }
-            
-            .modal-body { padding: 15px !important; }
-            
-            .fab-cart {
-                position: fixed; bottom: 85px; right: 20px; width: 65px; height: 65px; border-radius: 50%;
-                background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-                color: white; display: flex; align-items: center; justify-content: center;
-                box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4); z-index: 1045; border: 3px solid white; cursor: pointer;
-            }
+        .app-container { 
+            display: flex !important; 
+            height: 100vh !important; 
+            overflow: hidden !important; 
         }
-        @media (max-width: 767px) {
-            .sidebar-right { max-width: 100%; }
-            .product-card { padding: 8px; }
-            .product-img { height: 130px !important; }
-            
-            /* PERBAIKAN MENU BAWAH MOBILE (KIRI-KANAN / HORIZONTAL) */
-            .sidebar-left {
-                position: fixed !important; bottom: 0 !important; left: 0 !important; display: flex !important; 
-                flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; 
-                overflow-y: hidden !important; justify-content: flex-start !important; width: 100vw !important; 
-                -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; background: #fff; 
-                border-top: 1px solid #dee2e6; z-index: 1050;
-            }
-            .sidebar-left::-webkit-scrollbar { display: none !important; }
-            .sidebar-left .nav-icon {
-                flex: 0 0 auto !important; min-width: 80px !important; white-space: nowrap !important; 
-                font-size: 0.75rem !important; padding: 10px 5px !important; 
-            }
-            .app-container { padding-bottom: 85px !important; }
+        .main-content { 
+            flex-grow: 1 !important; 
+            height: 100vh !important; 
+            overflow-y: auto !important;  
+            padding-bottom: 50px !important; 
         }
+        .sidebar-right {
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow-y: auto !important;
+        }
+        .sidebar-left { 
+            width: 80px; 
+            height: 100vh !important; 
+            display: flex !important; 
+            flex-direction: column !important; 
+            background: #ffffff; 
+            border-right: 1px solid #dee2e6; 
+            position: sticky; 
+            top: 0; 
+        }
+        .sidebar-left .logo-icon { 
+            height: 64px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            flex-shrink: 0; 
+            border-bottom: 1px solid #eee; 
+        }
+        .sidebar-left .menu-scroll-area { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto !important; 
+            overflow-x: hidden; 
+            padding: 10px 0; 
+        }
+        .sidebar-left .mt-auto { margin-top: auto !important; }
+        .menu-scroll-area::-webkit-scrollbar { width: 4px; }
+        .menu-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    }
 
-        /* ======================================================= */
-        /* 1. DESAIN UKURAN KERTAS (DIBACA OLEH IFRAME/CLONE)      */
-        /* ======================================================= */
-        .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
+    @media (min-width: 768px) and (max-width: 991px) {
+        .sidebar-left { 
+            position: sticky; top: 0; height: 100vh; overflow-y: auto; padding-bottom: 40px; 
+            scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+        }
+    }
+
+    /* ==========================================================================
+       7. OPTIMASI MOBILE & TABLET (PERBAIKAN TOTAL SCROLL ATAS-BAWAH)
+       ========================================================================== */
+    @media (max-width: 1199px) { 
+        .sidebar-right { width: 340px; } 
+    }
+    
+    @media (max-width: 991px) {
+        /* KUNCI PERBAIKAN SCROLL MOBILE: Aktifkan scroll alami pada body & html */
+        html, body { 
+            font-size: 0.85rem; 
+            overflow-y: auto !important; 
+            overflow-x: hidden !important;
+            height: auto !important;
+            -webkit-overflow-scrolling: touch !important; 
+        } 
         
-        .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
-        .label-border-box { border: 2px solid #000; padding: 10px; }
+        h4, .h4 { font-size: 1.15rem !important; margin-bottom: 0; }
+        h5, .h5 { font-size: 1rem !important; }
+        h6, .h6 { font-size: 0.9rem !important; }
+        .btn { font-size: 0.8rem; padding: 0.4rem 0.75rem; }
         
-        .mode-a4 { width: 100%; max-width: 210mm; padding: 15mm; margin: 0 auto; color: #000; background: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; }
-        .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
-        .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
-
-        /* ======================================================= */
-        /* 2. SEMBUNYIKAN KARDUS CETAKAN DARI LAYAR UTAMA          */
-        /* ======================================================= */
-        /* 🌟 PERBAIKAN: Tambahkan #temp-print-section agar otomatis sembunyi di layar normal */
-        #print-section, #temp-print-section { display: none !important; }
-
-        /* ======================================================= */
-        /* 3. CSS DARURAT: KEMBALIKAN SCROLL PC/LAPTOP             */
-        /* ======================================================= */
-        html, body { overflow: visible !important; }
-
-        @media (min-width: 992px) {
-            .app-container { display: flex !important; height: 100vh !important; overflow: hidden !important; }
-            .main-content { flex-grow: 1 !important; height: 100vh !important; overflow-y: auto !important;  padding-bottom: 50px !important; }
-            
-            /* --- STRUKTUR BARU SIDEBAR --- */
-            .sidebar-left { width: 80px; height: 100vh !important; display: flex !important; flex-direction: column !important; background: #ffffff; border-right: 1px solid #dee2e6; }
-            .sidebar-left .logo-icon { height: 64px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-bottom: 1px solid #eee; }
-            .sidebar-left .menu-scroll-area { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto !important; overflow-x: hidden; padding: 10px 0; }
-            .sidebar-left .mt-auto { margin-top: auto !important; }
-            .menu-scroll-area::-webkit-scrollbar { width: 4px; }
-            .menu-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        }
-
-        /* PERBAIKAN SCROLL SIDEBAR (HANYA UNTUK PC & TABLET) */
-        @media (min-width: 768px) {
-            .sidebar-left { 
-                position: sticky; top: 0; height: 100vh; overflow-y: auto; padding-bottom: 40px; 
-                scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
-            }
-            .sidebar-left::-webkit-scrollbar { width: 5px; background: transparent; }
-            .sidebar-left::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-            .sidebar-left::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        .app-container { 
+            flex-direction: column; 
+            min-height: 100svh; 
+            height: auto !important; 
+            display: block; 
+            padding-bottom: 90px !important; /* Ruang aman untuk menu bawah */
         }
         
-        /* ======================================================= */
-        /* FIX POPUP SWEETALERT TERTUTUP MODAL BOOTSTRAP           */
-        /* ======================================================= */
-        .swal2-container { z-index: 999999 !important; }
-
-        /* ======================================================= */
-        /* TAMPILAN INTERAKTIF DI LAYAR APLIKASI WEB (BARCODE)     */
-        /* ======================================================= */
-        .barcode-print-sheet { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; width: 100%; background: #fff; align-content: flex-start; }
-        .barcode-label-box { border: 1px dashed #ccc; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px; text-align: center; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
-        .barcode-label-box.size-small { width: 140px; height: 80px; font-size: 9px; }
-        .barcode-label-box.size-medium { width: 180px; height: 110px; font-size: 11px; }
-        .barcode-label-box.size-large { width: 240px; height: 140px; font-size: 13px; }
-        .bc-biz-name { font-weight: bold; text-transform: uppercase; color: #555; font-size: 0.85em; white-space: nowrap; }
-        .bc-prod-name { font-weight: bold; color: #000; margin: 2px 0; line-height: 1.1; max-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .barcode-mock-bars { height: 25px; width: 100%; background: linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 7px, transparent 7px, transparent 8px, #000 8px, #000 9px, transparent 9px, transparent 12px, #000 12px, #000 13px, transparent 13px, transparent 14px, #000 14px, #000 17px); background-size: 22px 100%; margin: 2px auto; }
-        .barcode-label-box.size-large .barcode-mock-bars { height: 45px; }
-        .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
-        .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
-
-        /* ======================================================= */
-        /* PENGATURAN CETAK (GABUNGAN IPAD/IOS & THERMAL BARCODE)  */
-        /* ======================================================= */
-        @media print {
-            /* 🌟 PERBAIKAN: Ganti body.safe-print-mode dengan deteksi otomatis CSS murni */
-            body > *:not(#temp-print-section) { display: none !important; }
-            
-            /* Tampilkan area cetak */
-            #temp-print-section { display: block !important; width: 100% !important; position: relative !important; left: 0 !important; top: 0 !important; margin: 0 auto !important; }
-            
-            html, body { overflow: visible !important; height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            @page { margin: 0mm; size: auto; }
-            .no-print-area, #sidebar, .dashboard-card, .btn, .navbar { display: none !important; }
-            
-            /* Pengaturan Barcode saat diprint */
-            .barcode-print-sheet { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; background: #fff !important; padding: 0 !important; margin: 0 !important; gap: 0 !important; width: 100% !important; }
-            .barcode-label-box { border: none !important; page-break-inside: avoid; margin: 0 !important; }
-            
-            /* Mencegah header tabel (nama toko/info) diulang di halaman 2 dst */
-            thead, tfoot { display: table-row-group !important; }
-
-            /* Mencegah isi baris produk terpotong setengah di antara 2 halaman kertas */
-            tr, td, th { page-break-inside: avoid !important; }
-            table { page-break-inside: auto !important; }
+        /* Sidebar Menu Bawah Mobile */
+        .sidebar-left { 
+            position: fixed !important; 
+            bottom: 0 !important; 
+            left: 0 !important; 
+            width: 100% !important; 
+            height: 65px !important; 
+            padding: 0 !important; 
+            border-top: 1px solid var(--border-color) !important; 
+            border-right: none !important;
+            z-index: 1050 !important; 
+            background: #ffffff !important; 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05) !important; 
+            display: block !important; 
         }
+        .logo-icon { display: none !important; }
+        
+        .menu-scroll-area { 
+            display: flex !important; 
+            flex-direction: row !important; 
+            width: 100% !important; 
+            height: 100% !important; 
+            overflow-x: auto !important; 
+            overflow-y: hidden !important; 
+            align-items: center !important; 
+            justify-content: flex-start !important; 
+            -webkit-overflow-scrolling: touch !important; 
+        }
+        .menu-scroll-area::-webkit-scrollbar { display: none !important; } 
+        
+        .nav-icon { 
+            flex: 0 0 auto !important; 
+            margin-bottom: 0 !important; 
+            min-width: 75px !important; 
+            height: 100% !important; 
+            display: flex !important; 
+            flex-direction: column !important; 
+            align-items: center !important; 
+            justify-content: center !important; 
+            border-radius: 0 !important; 
+            font-size: 0.65rem !important; 
+            padding: 5px !important; 
+        }
+        .nav-icon i { font-size: 1.3rem !important; margin-bottom: 2px !important; }
+        .mt-auto { margin-top: 0 !important; }
+
+        /* Konten utama di Mobile dibuat bebas bergulir mengikuti body */
+        .main-content { 
+            padding: 15px; 
+            padding-bottom: 40px !important; 
+            overflow-y: visible !important; 
+            height: auto !important;
+            max-height: none !important;
+        }
+        .dashboard-card { padding: 15px; }
+        .table-custom th, .table-custom td { padding: 8px; font-size: 0.75rem; white-space: nowrap; }
+        
+        .product-card { padding: 12px; }
+        .product-img { height: 160px !important; }
+        
+        /* Panel Kasir Drawer di Mobile (Mencegah blokir klik & scroll lancar) */
+        .sidebar-right { 
+            position: fixed; 
+            top: 0; 
+            right: -100%; 
+            width: 100%; 
+            height: 100dvh; 
+            max-height: 100dvh !important;
+            max-width: 420px; 
+            padding-bottom: 80px !important; 
+            z-index: 1055; 
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: -5px 0 20px rgba(0,0,0,0.2); 
+            display: flex; 
+            flex-direction: column; 
+            background: var(--bg-panel);
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            pointer-events: none; 
+            visibility: hidden;
+        }
+        .sidebar-right.show-mobile { 
+            right: 0 !important; 
+            pointer-events: auto !important; 
+            visibility: visible !important;
+        }
+        
+        .modal-body { 
+            padding: 15px !important; 
+            max-height: 75vh;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        
+        /* Tombol Melayang Keranjang Belanja (FAB) */
+        .fab-cart {
+            position: fixed; 
+            bottom: 80px; 
+            right: 20px; 
+            width: 60px; 
+            height: 60px; 
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4); 
+            z-index: 1045; 
+            border: 3px solid white; 
+            cursor: pointer;
+            pointer-events: auto;
+        }
+    }
+    
+    @media (max-width: 767px) {
+        .sidebar-right { max-width: 100%; }
+        .product-card { padding: 8px; }
+        .product-img { height: 130px !important; }
+        
+        .sidebar-left {
+            position: fixed !important; 
+            bottom: 0 !important; 
+            left: 0 !important; 
+            display: flex !important; 
+            flex-direction: row !important; 
+            flex-wrap: nowrap !important; 
+            overflow-x: auto !important; 
+            overflow-y: hidden !important; 
+            justify-content: flex-start !important; 
+            width: 100vw !important; 
+            -webkit-overflow-scrolling: touch !important; 
+            scrollbar-width: none !important; 
+            background: #fff; 
+            border-top: 1px solid #dee2e6; 
+            z-index: 1050;
+        }
+        .sidebar-left::-webkit-scrollbar { display: none !important; }
+        .sidebar-left .nav-icon {
+            flex: 0 0 auto !important; 
+            min-width: 80px !important; 
+            white-space: nowrap !important; 
+            font-size: 0.75rem !important; 
+            padding: 10px 5px !important; 
+        }
+        .app-container { padding-bottom: 85px !important; }
+    }
+
+    /* ==========================================================================
+       8. PENGATURAN KERTAS & CETAK (STRUK, LABEL, BARCODE, A4)
+       ========================================================================== */
+    .mode-receipt { width: 100%; max-width: 80mm; font-family: 'Courier New', Courier, monospace; color: #000; padding: 5mm; margin: 0 auto; }
+    .mode-label { width: 100%; max-width: 100mm; font-family: 'Inter', sans-serif; color: #000; padding: 5mm; margin: 0 auto; }
+    .label-border-box { border: 2px solid #000; padding: 10px; }
+    
+    .mode-a4 { width: 100%; max-width: 210mm; padding: 15mm; margin: 0 auto; color: #000; background: #fff; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    .mode-a4 table.a4-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .mode-a4 table.a4-table th, .mode-a4 table.a4-table td { border: 1px solid #000; padding: 8px; font-size: 13px; }
+    .mode-a4 table.a4-table th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; text-align: center; }
+
+    #print-section, #temp-print-section { display: none !important; }
+
+    .barcode-print-sheet { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; width: 100%; background: #fff; align-content: flex-start; }
+    .barcode-label-box { border: 1px dashed #ccc; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px; text-align: center; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+    .barcode-label-box.size-small { width: 140px; height: 80px; font-size: 9px; }
+    .barcode-label-box.size-medium { width: 180px; height: 110px; font-size: 11px; }
+    .barcode-label-box.size-large { width: 240px; height: 140px; font-size: 13px; }
+    .bc-biz-name { font-weight: bold; text-transform: uppercase; color: #555; font-size: 0.85em; white-space: nowrap; }
+    .bc-prod-name { font-weight: bold; color: #000; margin: 2px 0; line-height: 1.1; max-height: 2.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .barcode-mock-bars { height: 25px; width: 100%; background: linear-gradient(90deg, #000 0px, #000 2px, transparent 2px, transparent 4px, #000 4px, #000 7px, transparent 7px, transparent 8px, #000 8px, #000 9px, transparent 9px, transparent 12px, #000 12px, #000 13px, transparent 13px, transparent 14px, #000 14px, #000 17px); background-size: 22px 100%; margin: 2px auto; }
+    .barcode-label-box.size-large .barcode-mock-bars { height: 45px; }
+    .bc-sku-code { font-size: 0.8em; letter-spacing: 1px; color: #333; }
+    .bc-price { font-weight: 900; color: #000; border-top: 1px solid #000; width: 100%; padding-top: 1px; font-size: 1em; }
+
+    @media print {
+        body > *:not(#temp-print-section) { display: none !important; }
+        #temp-print-section { display: block !important; width: 100% !important; position: relative !important; left: 0 !important; top: 0 !important; margin: 0 auto !important; }
+        html, body { overflow: visible !important; height: auto !important; background: white !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { margin: 0mm; size: auto; }
+        .no-print-area, #sidebar, .dashboard-card, .btn, .navbar { display: none !important; }
+        .barcode-print-sheet { display: flex !important; flex-wrap: wrap !important; visibility: visible !important; position: relative !important; left: 0 !important; top: 0 !important; background: #fff !important; padding: 0 !important; margin: 0 !important; gap: 0 !important; width: 100% !important; }
+        .barcode-label-box { border: none !important; page-break-inside: avoid; margin: 0 !important; }
+        thead, tfoot { display: table-row-group !important; }
+        tr, td, th { page-break-inside: avoid !important; }
+        table { page-break-inside: auto !important; }
+    }
     </style>
 </head>
 <body>
