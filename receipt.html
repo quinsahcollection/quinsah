@@ -169,6 +169,14 @@
                 <span class="badge bg-secondary text-uppercase px-2 py-1" style="font-size: 0.75rem;"><i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}</span>
             </div>
             
+            <!-- 🌟 PERBAIKAN 1: JABARAN SPLIT JIKA MASUK KE TEMPLATE FALLBACK INI -->
+            <div v-if="ereceiptData.paymentMethod === 'SPLIT' && ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0" class="mb-2 ps-2 border-start border-2 border-secondary">
+                <div v-for="(sp, sIdx) in ereceiptData.splitPayments" :key="'sp-fallback-'+sIdx" class="d-flex justify-content-between text-muted" style="font-size: 0.85em;">
+                    <span>- {{ sp.method }}</span>
+                    <span>Rp {{ formatNumber(sp.amount) }}</span>
+                </div>
+            </div>
+
             <div v-if="ereceiptData.paymentNote" class="d-flex justify-content-between mb-2 text-muted fst-italic" style="font-size: 0.85em;">
                 <span>Catatan :</span>
                 <span class="text-end fw-semibold text-dark">{{ ereceiptData.paymentNote }}</span>
@@ -198,7 +206,16 @@
     
     <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
         <div style="width: 60%;">
-            <strong>Awal ({{ ereceiptData.paymentMethod || 'CASH' }})</strong><br>
+            <strong>Awal ({{ ereceiptData.paymentMethod || 'CASH' }})</strong>
+            
+            <!-- 🌟 PERBAIKAN 2: JABARAN SPLIT DI HISTORI AWAL -->
+            <div v-if="ereceiptData.paymentMethod === 'SPLIT' && ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0" class="mt-1 mb-1 ps-2 border-start border-2 border-secondary">
+                <div v-for="(sp, sIdx) in ereceiptData.splitPayments" :key="'sp-awal-'+sIdx" class="text-muted" style="font-size: 0.85em;">
+                    - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                </div>
+            </div>
+            <br v-else>
+
             <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr ? ereceiptData.dateStr.split(' ')[0] : ereceiptData.date }}</span>
         </div>
         <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
@@ -208,7 +225,16 @@
 
     <div v-for="(pay, idx) in ereceiptData.paymentHistory" :key="'pay-'+idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
         <div style="width: 60%;">
-            <strong>Cicilan Ke-{{ idx + 1 }} ({{ pay.method }})</strong><br>
+            <strong>Cicilan Ke-{{ idx + 1 }} ({{ pay.method }})</strong>
+            
+            <!-- 🌟 PERBAIKAN 3: JABARAN SPLIT DI HISTORI CICILAN -->
+            <div v-if="pay.method === 'SPLIT' && pay.splitPayments && pay.splitPayments.length > 0" class="mt-1 mb-1 ps-2 border-start border-2 border-secondary">
+                <div v-for="(sp, sIdx) in pay.splitPayments" :key="'sp-pay-'+idx+'-'+sIdx" class="text-muted" style="font-size: 0.85em;">
+                    - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                </div>
+            </div>
+            <br v-else>
+
             <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ pay.dateStr || pay.date }}</span>
             <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
         </div>
@@ -381,12 +407,10 @@
         },
         
         computed: {
-            // Mengecek apakah data pelanggan valid untuk dicari riwayatnya (Bukan "Umum" atau Kosong)
             hasValidCustomerData() {
                 if (!this.ereceiptData) return false;
                 const custName = (this.ereceiptData.customer || '').toLowerCase();
                 if (custName === 'umum' || custName === '') {
-                    // Jika namanya umum, cek apakah punya customerId atau phone yang valid
                     return !!(this.ereceiptData.customerId || this.ereceiptData.customerPhone || this.ereceiptData.phone);
                 }
                 return true;
@@ -415,7 +439,6 @@
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            // Menggunakan spread operator (...) agar Vue 3 membaca perubahan data secara reactive
             this.ereceiptData = {
                 ...docSnap.data(),
                 docId: docSnap.id
@@ -425,10 +448,8 @@
                 await this.fetchStoreSettings(this.ereceiptData.companyId);
             }
 
-            // Ambil ID outlet dari field transaksi (bisa 'outlet' atau 'outletId')
             const savedOutletId = this.ereceiptData.outlet || this.ereceiptData.outletId;
             
-            // Pastikan ID-nya ada dan berupa string ID Firebase (bukan teks nama)
             if (savedOutletId && typeof savedOutletId === 'string' && savedOutletId.length > 10) {
                 await this.fetchOutletData(savedOutletId);
             }
@@ -467,13 +488,11 @@
             const namaAsliCabang = data.name || data.nama || data.namaOutlet || data.outletName;
             
             if (namaAsliCabang) {
-                // PAKSA UKIR SEMUA FIELD YANG MUNGKIN DIPANGGIL DI HTML
-                // Apapun yang dipanggil HTML Anda sekarang akan otomatis berubah menjadi Nama Cabang
                 this.ereceiptData = {
                     ...this.ereceiptData,
                     outlet: namaAsliCabang,
                     outletName: namaAsliCabang,
-                    outletId: namaAsliCabang // <-- Menimpa field ID agar ikut berubah menjadi nama
+                    outletId: namaAsliCabang 
                 };
                 console.log("Sukses menerjemahkan ID menjadi:", namaAsliCabang);
             }
@@ -481,20 +500,17 @@
             console.warn("Dokumen tidak ditemukan di collection 'outlets' untuk ID:", outletId);
         }
     } catch (error) {
-        // KEMUNGKINAN 2 AKAN TERCATAT DI SINI
         console.error("Firebase memblokir akses baca ke tabel outlets:", error.message);
     }
 },
 
 
-            // LOGIKA PENCARIAN RIWAYAT DIPERBARUI (BYPASS FIREBASE INDEX & ANTI HURUF KECIL/BESAR)
             async fetchCustomerHistory() {
                 this.showHistory = !this.showHistory;
                 if (!this.showHistory || this.customerHistory.length > 0) return; 
                 
                 this.isLoadingHistory = true;
                 try {
-                    // Menentukan prioritas Field yang digunakan sistem POS/CRM Anda
                     let searchField = null;
                     let searchValue = null;
 
@@ -512,14 +528,12 @@
                         searchValue = this.ereceiptData.customer;
                     }
 
-                    // Jika tetap tidak ditemukan identifier yang valid
                     if (!searchField || !searchValue) {
                         this.customerHistory = [];
                         this.isLoadingHistory = false;
                         return;
                     }
 
-                    // 🌟 TRIK JITU: Query 1 parameter saja ke Firebase agar terhindar dari Error Index
                     const q = query(
                         collection(db, "transactions"), 
                         where(searchField, "==", searchValue)
@@ -528,22 +542,17 @@
                     const querySnapshot = await getDocs(q);
                     const history = [];
                     
-                    // Siapkan data pembanding (Abaikan huruf besar/kecil & spasi ekstra)
                     const detailName = (this.ereceiptData.customer || '').toLowerCase().trim();
                     const detailPhone = (this.ereceiptData.customerPhone || this.ereceiptData.phone || '').trim();
                     
                     querySnapshot.forEach((doc) => {
                         const data = doc.data();
                         
-                        // 🌟 FILTER LAPIS 2: Lakukan pengecekan ID Toko di sini
-                        // Jangan masukkan nota yang sedang dibuka ke dalam daftar riwayat
                         if (data.companyId === this.ereceiptData.companyId && data.id !== this.ereceiptData.id) {
                             
-                            // Pastikan kekuatan pengecekannya sama dengan di tabel CRM Admin
                             const trxCustomerName = (data.customer || '').toLowerCase().trim();
                             const trxCustomerPhone = (data.customerPhone || data.phone || '').trim();
                             
-                            // Cek kecocokan akhir
                             const matchId = data.customerId === searchValue;
                             const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
                             const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
@@ -554,7 +563,6 @@
                         }
                     });
                     
-                    // Urutkan riwayat berdasarkan waktu (terbaru di atas)
                     history.sort((a, b) => {
                         const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
                         const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
