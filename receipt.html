@@ -100,119 +100,141 @@
     </div>
 </div>
 
-                <div class="mt-4" style="font-size: 0.9em;">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Subtotal Produk :</span>
-                        <span>Rp {{ formatNumber(ereceiptData.items.filter(i => i.productId !== 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0)) }}</span>
-                    </div>
-                    <div v-if="ereceiptData.items.some(i => i.productId === 'EXCHANGE')" class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Potongan Tukar Tambah :</span>
-                        <span class="fw-bold">- Rp {{ formatNumber(Math.abs(ereceiptData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</span>
-                    </div>
-                    <div v-if="(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) > 0" class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Diskon Item :</span><span>- Rp {{ formatNumber(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) }}</span>
-                    </div>
-                    <div v-if="ereceiptData.globalDiscountAmt > 0" class="d-flex justify-content-between mb-2 text-danger">
-                        <span>Diskon Invoice :</span><span>- Rp {{ formatNumber(ereceiptData.globalDiscountAmt) }}</span>
-                    </div>
-                    <div v-if="(ereceiptData.taxAmt || ereceiptData.taxAmount || 0) > 0" class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">PPN (Tax) :</span><span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
-                    </div>
-                    <div v-if="ereceiptData.surchargeFee > 0" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span>Biaya Layanan :</span>
-                    <span>Rp {{ formatNumber(ereceiptData.surchargeFee) }}</span>
-                    </div>
-                    <hr class="my-3 border-dark" style="opacity: 0.2;">
-                    <div class="d-flex justify-content-between fw-bold fs-6 mb-3 text-dark">
-                    <span>TOTAL AKHIR :</span>
-                    <span class="text-success">Rp {{ formatNumber(ereceiptData.total + (ereceiptData.surcharge || 0)) }}</span>
-                    </div>
-                    <div class="bg-light p-3 rounded-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Total Sudah Dibayar :</span>
-                                <span class="fw-bold text-success">Rp {{ formatNumber(ereceiptData.amountReceived) }}</span>
-                            </div>
-                            <div v-if="ereceiptData.amountReceived >= ereceiptData.total" class="d-flex justify-content-between mt-2 pt-2 border-top border-light">
-                                <span class="text-muted">Kembalian :</span>
-                                <span class="fw-bold">Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
-                            </div>
-                            <div v-else class="d-flex justify-content-between mt-2 pt-2 border-top border-danger text-danger fw-bold">
-                                <span>Sisa Hutang / Tagihan :</span>
-                                <span>Rp {{ formatNumber(ereceiptData.total - ereceiptData.amountReceived) }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                                   <div v-if="ereceiptData.amountReceived > 0" class="mt-4 p-3 bg-white border border-success rounded-3 shadow-sm" style="font-size: 0.85em;">
-    <div class="fw-bold text-center text-white bg-success rounded-2 py-1 mb-3">
-        <i class="bi bi-wallet2 me-1"></i> DETAIL PEMBAYARAN
+               <div class="mt-4" style="font-size: 0.9em;">
+    <div class="d-flex justify-content-between mb-2">
+        <span class="text-muted">Subtotal Produk :</span>
+        <span>Rp {{ formatNumber(ereceiptData.items.filter(i => i.productId !== 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0)) }}</span>
     </div>
     
-    <template v-if="ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0">
-        <div class="fw-bold mb-2 pb-1 border-bottom border-light text-dark text-uppercase">
-            <i class="bi bi-pie-chart-fill me-1 text-success"></i> Pembayaran (Split) :
-        </div>
-        
-        <div v-for="(split, idx) in ereceiptData.splitPayments" :key="'split-'+idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
-            <div style="width: 60%;">
-                <span class="badge bg-success mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
-                    <i class="bi bi-wallet2 me-1"></i>{{ split.method }}
-                </span>
-                <div class="text-muted fst-italic" style="font-size: 0.8em;">{{ ereceiptData.dateStr || ereceiptData.date }}</div>
-            </div>
-            <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
-                Rp {{ formatNumber(split.amount) }}
-            </div>
-        </div>
-        
-        <div v-if="ereceiptData.totalDebt > 0 || (ereceiptData.total - ereceiptData.amountReceived > 0)" class="d-flex justify-content-between mt-2 pt-1 text-danger fw-bold">
-            <span>Sisa Hutang :</span>
-            <span>Rp {{ formatNumber(ereceiptData.totalDebt || (ereceiptData.total - ereceiptData.amountReceived)) }}</span>
-        </div>
-    </template>
+    <div v-if="ereceiptData.items.some(i => i.productId === 'EXCHANGE')" class="d-flex justify-content-between mb-2 text-danger">
+        <span>Potongan Tukar Tambah :</span>
+        <span class="fw-bold">- Rp {{ formatNumber(Math.abs(ereceiptData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</span>
+    </div>
 
-    <template v-else>
-        <div class="d-flex justify-content-between mb-2 pb-2" :class="{'border-bottom border-light': ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0}">
-            <div style="width: 60%;">
-                <strong>{{ (ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0) ? 'Pembayaran Awal :' : 'Dibayar Dengan :' }}</strong><br>
-                <span class="badge bg-secondary mb-1 mt-1" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                    <i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}
-                </span><br>
-                <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr || ereceiptData.date }}</span>
-                
-                <div v-if="ereceiptData.paymentNote" class="text-dark mt-1 fw-semibold" style="font-size: 0.85em; font-style: italic;">
-                    Ket: {{ ereceiptData.paymentNote }}
+    <div v-if="(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) > 0" class="d-flex justify-content-between mb-2 text-danger">
+        <span>Diskon Item :</span>
+        <span>- Rp {{ formatNumber(ereceiptData.discountAmt - (ereceiptData.globalDiscountAmt || 0)) }}</span>
+    </div>
+
+    <div v-if="ereceiptData.globalDiscountAmt > 0" class="d-flex justify-content-between mb-2 text-danger">
+        <span>Diskon Invoice :</span>
+        <span>- Rp {{ formatNumber(ereceiptData.globalDiscountAmt) }}</span>
+    </div>
+
+    <div v-if="(ereceiptData.taxAmt || ereceiptData.taxAmount || 0) > 0" class="d-flex justify-content-between mb-2">
+        <span class="text-muted">PPN (Tax) :</span>
+        <span>Rp {{ formatNumber(ereceiptData.taxAmt || ereceiptData.taxAmount) }}</span>
+    </div>
+
+    <div v-if="(ereceiptData.surchargeFee || 0) > 0" class="d-flex justify-content-between mb-2">
+        <span class="text-muted">Biaya Layanan :</span>
+        <span>Rp {{ formatNumber(ereceiptData.surchargeFee) }}</span>
+    </div>
+
+    <hr class="my-3 border-dark" style="opacity: 0.2;">
+
+    <div class="d-flex justify-content-between fw-bold fs-6 mb-3 text-dark">
+        <span>TOTAL AKHIR :</span>
+        <span class="text-success fs-5">Rp {{ formatNumber(ereceiptData.total + (ereceiptData.surcharge || 0)) }}</span>
+    </div>
+
+    <div class="bg-light p-3 rounded-3 border shadow-sm">
+        <template v-if="ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0">
+            <div class="fw-bold text-dark text-uppercase mb-2 pb-1 border-bottom" style="font-size: 0.85em; letter-spacing: 0.5px;">
+                <i class="bi bi-pie-chart-fill me-1 text-success"></i> PEMBAYARAN (SPLIT) :
+            </div>
+            <div v-for="(split, idx) in ereceiptData.splitPayments" :key="'split-'+idx" class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <span class="badge bg-success" style="font-size: 0.75rem;"><i class="bi bi-wallet2 me-1"></i>{{ split.method }}</span>
                 </div>
+                <span class="fw-bold text-dark">Rp {{ formatNumber(split.amount) }}</span>
             </div>
-            <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
-                Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - (ereceiptData.paymentHistory ? ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0) : 0))) }}
+            <div class="d-flex justify-content-between mt-2 pt-2 border-top border-secondary small">
+                <span class="text-muted">Total Dibayar :</span>
+                <span class="fw-bold text-success">Rp {{ formatNumber(ereceiptData.amountReceived) }}</span>
             </div>
-        </div>
+            <div v-if="ereceiptData.totalDebt > 0 || (ereceiptData.total - ereceiptData.amountReceived) > 0" class="d-flex justify-content-between mt-1 text-danger fw-bold small">
+                <span>Sisa Hutang :</span>
+                <span>Rp {{ formatNumber(ereceiptData.totalDebt || (ereceiptData.total - ereceiptData.amountReceived)) }}</span>
+            </div>
+            <div v-else class="d-flex justify-content-between mt-1 text-dark fw-bold small">
+                <span>Kembalian :</span>
+                <span>Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
+            </div>
+        </template>
 
-        <div v-for="(pay, idx) in (ereceiptData.paymentHistory || [])" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
-            <div style="width: 60%;">
-                <strong>Cicilan Ke-{{ idx + 1 }}</strong><br>
-                <span class="badge border text-dark mb-1 mt-1" style="font-size: 0.65rem;">
-                    <i class="bi bi-credit-card me-1"></i>{{ pay.method }}
-                </span><br>
-                <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ pay.dateStr || pay.date }}</span>
-                <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
+        <template v-else>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Metode Bayar :</span>
+                <span class="badge bg-secondary text-uppercase px-2 py-1" style="font-size: 0.75rem;"><i class="bi bi-wallet2 me-1"></i>{{ ereceiptData.paymentMethod || 'CASH' }}</span>
             </div>
-            <div class="text-end text-success fw-bold" style="width: 40%;">
-                Rp {{ formatNumber(pay.amount) }}
+            
+            <div v-if="ereceiptData.paymentNote" class="d-flex justify-content-between mb-2 text-muted fst-italic" style="font-size: 0.85em;">
+                <span>Catatan :</span>
+                <span class="text-end fw-semibold text-dark">{{ ereceiptData.paymentNote }}</span>
             </div>
-        </div>
-    </template>
+            
+            <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Total Dibayar :</span>
+                <span class="fw-bold text-success">Rp {{ formatNumber(ereceiptData.amountReceived) }}</span>
+            </div>
+            
+            <div v-if="ereceiptData.amountReceived >= ereceiptData.total" class="d-flex justify-content-between mt-2 pt-2 border-top">
+                <span class="text-muted">Kembalian :</span>
+                <span class="fw-bold text-dark">Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
+            </div>
+            <div v-else class="d-flex justify-content-between mt-2 pt-2 border-top border-danger text-danger fw-bold">
+                <span>Sisa Hutang :</span>
+                <span>Rp {{ formatNumber(ereceiptData.total - ereceiptData.amountReceived) }}</span>
+            </div>
+        </template>
+    </div>
 </div>
 
-                <div v-if="ereceiptData.returHistory && ereceiptData.returHistory.length > 0" class="mt-4 p-3 bg-white border border-danger rounded-3 shadow-sm" style="font-size: 0.85em;">
-                    <div class="fw-bold text-center text-white bg-danger rounded-2 py-1 mb-3"><i class="bi bi-arrow-return-left me-1"></i> INFO RETUR / REFUND</div>
-                    <div v-for="(retur, idx) in ereceiptData.returHistory" :key="idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
-                        <div style="width: 65%;"><strong>{{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br><span class="text-muted fst-italic">Ket: {{ retur.alasan }}</span></div>
-                        <div class="text-end text-danger fw-bold" style="width: 35%;">- Rp {{ formatNumber(retur.refundAmount) }}</div>
-                    </div>
-                    <div class="text-end mt-2 fw-bold text-danger">TOTAL REFUND : <span>- Rp {{ formatNumber(ereceiptData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span></div>
-                </div>
+<div v-if="ereceiptData.paymentHistory && ereceiptData.paymentHistory.length > 0" class="mt-4 p-3 bg-white border border-secondary rounded-3 shadow-sm" style="font-size: 0.85em;">
+    <div class="fw-bold text-center text-white bg-dark rounded-2 py-1 mb-3">
+        <i class="bi bi-clock-history me-1"></i> HISTORI PEMBAYARAN
+    </div>
+    
+    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+        <div style="width: 60%;">
+            <strong>Awal ({{ ereceiptData.paymentMethod || 'CASH' }})</strong><br>
+            <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr ? ereceiptData.dateStr.split(' ')[0] : ereceiptData.date }}</span>
+        </div>
+        <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
+            Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0))) }}
+        </div>
+    </div>
+
+    <div v-for="(pay, idx) in ereceiptData.paymentHistory" :key="'pay-'+idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+        <div style="width: 60%;">
+            <strong>Cicilan Ke-{{ idx + 1 }} ({{ pay.method }})</strong><br>
+            <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ pay.dateStr || pay.date }}</span>
+            <div v-if="pay.note" class="text-muted mt-1" style="font-size: 0.85em;">Ket: {{ pay.note }}</div>
+        </div>
+        <div class="text-end text-success fw-bold" style="width: 40%;">
+            Rp {{ formatNumber(pay.amount) }}
+        </div>
+    </div>
+</div>
+
+<div v-if="ereceiptData.returHistory && ereceiptData.returHistory.length > 0" class="mt-4 p-3 bg-white border border-danger rounded-3 shadow-sm" style="font-size: 0.85em;">
+    <div class="fw-bold text-center text-white bg-danger rounded-2 py-1 mb-3">
+        <i class="bi bi-arrow-return-left me-1"></i> INFO RETUR / REFUND
+        </div>
+    <div v-for="(retur, idx) in ereceiptData.returHistory" :key="'retur-'+idx" class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light">
+        <div style="width: 65%;">
+            <strong>[RETUR] {{ retur.productName }}</strong> ({{ retur.qtyRetur }}x)<br>
+            <span class="text-muted fst-italic">Ket: {{ retur.alasan }}</span>
+        </div>
+        <div class="text-end text-danger fw-bold" style="width: 35%;">
+            - Rp {{ formatNumber(retur.refundAmount) }}
+        </div>
+    </div>
+    <div class="text-end mt-2 fw-bold text-danger" style="font-size: 0.95em;">
+        TOTAL REFUND : <span>- Rp {{ formatNumber(ereceiptData.returHistory.reduce((a, b) => a + b.refundAmount, 0)) }}</span>
+    </div>
+</div>
 
                 <div v-if="appSettings && appSettings.termsAndConditions" class="mt-4 pt-3 border-top" style="font-size: 0.8em; text-align: left;">
                     <div class="fw-bold text-dark text-uppercase mb-1">Syarat & Ketentuan :</div>
