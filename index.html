@@ -29,7 +29,6 @@
     --border-color: #e5e7eb; 
 }
 
-/* PERBAIKAN: Hapus overflow: hidden dari global body agar mobile bisa scroll alami */
 body { 
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
     background-color: var(--bg-main); 
@@ -130,7 +129,7 @@ body.sidebar-open {
     overflow-x: hidden;
     padding: 20px 30px; 
     position: relative; 
-    z-index: 1; 
+    /* 🌟 FIX FATAL: z-index 1 di sini sudah dihapus total agar Modal tidak terkurung */
 }
 
 /* Sidebar Kanan (Panel Kasir / Keranjang) */
@@ -168,7 +167,6 @@ body.sidebar-open {
     cursor: pointer !important; 
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; 
     position: relative;
-    z-index: 2;
     pointer-events: auto !important;
 }
 .product-card:hover { 
@@ -223,16 +221,16 @@ body.sidebar-open {
     border-color: var(--primary-color); 
     box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.25); 
 }
+
 .btn-primary-custom { 
-background-color: var(--primary-color) !important; 
-color: #ffffff !important; 
-border: 1px solid var(--primary-color) !important; 
-font-weight: 600 !important; 
+    background-color: var(--primary-color) !important; 
+    color: #ffffff !important; 
+    border: 1px solid var(--primary-color) !important; 
+    font-weight: 600 !important; 
 }
 
-/* Tambahkan juga ini agar border ngikut jadi merah saat dipilih */
 .border-primary-custom {
-border-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
 }
 
 .btn-outline-primary-custom { 
@@ -303,27 +301,34 @@ border-color: var(--primary-color) !important;
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 /* ==========================================================================
-   5. HIERARKI Z-INDEX & MODAL
+   5. HIERARKI Z-INDEX & MODAL (FIX TOTAL)
    ========================================================================== */
-.modal-backdrop { z-index: 1060 !important; }
-.modal { z-index: 1070 !important; }
-.quick-add-modal, .variant-detail-modal { z-index: 1085 !important; }
-#confirmModal, #cameraScannerModal { z-index: 1100 !important; }
-.swal2-container { z-index: 999999 !important; }
+/* Memastikan layar abu-abu selalu berada di bawah modal */
+.modal-backdrop { 
+    z-index: 1060 !important; 
+}
 
-/* FIX MODAL BERTUMPUK: Paksa modal kecil selalu di atas modal utama */
+/* Modal Normal (Termasuk CRM, Produk Utama, dll) */
+.modal { 
+    z-index: 1070 !important; 
+}
+
+/* Modal Bertingkat 2 (Harus Tampil di Atas Modal Produk) */
 #addCategoryModal, 
 #addUomModal, 
-#addTagModal {
-    z-index: 1080 !important;
+#addTagModal,
+.quick-add-modal, 
+.variant-detail-modal { 
+    z-index: 1085 !important; 
 }
 
-/* FIX MODAL BERTUMPUK: Efek redup (backdrop) modal kedua menutupi modal pertama */
-.modal-backdrop.show:nth-of-type(2) {
-    z-index: 1075 !important;
+/* Modal Alert Tertinggi */
+#confirmModal, 
+#cameraScannerModal { 
+    z-index: 1100 !important; 
 }
-.modal-backdrop.show:nth-of-type(3) {
-    z-index: 1085 !important;
+.swal2-container { 
+    z-index: 999999 !important; 
 }
 
 /* ==========================================================================
@@ -342,7 +347,7 @@ border-color: var(--primary-color) !important;
 }
 
 /* ==========================================================================
-   6. OPTIMASI DESKTOP PC / LAPTOP (SCROLL MANDIRI YANG RAPI)
+   6. OPTIMASI DESKTOP PC / LAPTOP
    ========================================================================== */
 @media (min-width: 992px) {
     html, body { overflow: hidden !important; height: 100vh !important; }
@@ -402,7 +407,7 @@ border-color: var(--primary-color) !important;
 }
 
 /* ==========================================================================
-   7. OPTIMASI MOBILE & TABLET (PERBAIKAN TOTAL SCROLL ATAS-BAWAH)
+   7. OPTIMASI MOBILE & TABLET 
    ========================================================================== */
 @media (max-width: 1199px) { 
     .sidebar-right { width: 340px; } 
@@ -514,7 +519,6 @@ border-color: var(--primary-color) !important;
         visibility: visible !important;
     }
     
-    /* [PERBAIKAN KHUSUS MOBILE] MEMASTIKAN MODAL BISA DI-SCROLL LANCAR SAMPAI TOMBOL BAWAH */
     #paymentModal .modal-dialog {
         margin: 0 !important;
         max-width: 100% !important;
@@ -528,25 +532,11 @@ border-color: var(--primary-color) !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
-    #paymentModal .row.g-0 {
-        display: flex;
-        flex-direction: column;
-    }
-    .modal-payment-scroll-area {
-        max-height: none !important;
-        overflow-y: visible !important;
-        height: auto !important;
-    }
+    #paymentModal .row.g-0 { display: flex; flex-direction: column; }
+    .modal-payment-scroll-area { max-height: none !important; overflow-y: visible !important; height: auto !important; }
     #paymentModal .col-md-7,
-    #paymentModal .col-md-5 {
-        width: 100% !important;
-        height: auto !important;
-        max-height: none !important;
-        overflow-y: visible !important;
-    }
-    #paymentModal .col-md-5 {
-        padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important;
-    }
+    #paymentModal .col-md-5 { width: 100% !important; height: auto !important; max-height: none !important; overflow-y: visible !important; }
+    #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
     
     .fab-cart {
         position: fixed; 
@@ -568,28 +558,11 @@ border-color: var(--primary-color) !important;
     }
 }
 
-/* FIX: CSS REDUNDAN YANG MEMBERATKAN MOBILE DIHAPUS, DISISAKAN YANG PERLU SAJA */
 @media (max-width: 767px) {
     .sidebar-right { max-width: 100%; }
     .product-card { padding: 8px; }
     .product-img { height: 130px !important; }
     .app-container { padding-bottom: 85px !important; }
-}
-
-/* ==========================================================================
-   PERBAIKAN MODAL SHIFT KASIR (ABU-ABU)
-   ========================================================================== */
-body.modal-open .app-container,
-body.modal-open .main-content {
-z-index: auto !important;
-}
-
-.modal {
-z-index: 1070 !important;
-}
-
-.modal-backdrop {
-z-index: 1060 !important;
 }
 
 /* ==========================================================================
