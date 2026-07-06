@@ -11467,34 +11467,126 @@ getEreceiptPhone(trx) {
     return 'Tidak ada nomor HP';
 },
           
-// Kirim URL ke WhatsApp
+// Kirim URL ke WhatsApp dengan Rincian Belanja
 sendEReceiptWA(trx) {
-    // 🌟 OPTIMALKAN: Gunakan fungsi getEreceiptPhone() yang sudah Anda buat di atas
     let nomorMentah = this.getEreceiptPhone(trx);
     let noHp = '';
     
     if (nomorMentah && nomorMentah !== '-' && nomorMentah !== 'Tidak ada nomor HP') {
-        // Hilangkan spasi, strip, atau karakter non-angka lainnya
         let angkaSaja = nomorMentah.replace(/\D/g, '');
-        // Ubah awalan 0 menjadi 62 sesuai standar API WhatsApp
         noHp = angkaSaja.replace(/^0/, '62');
     }
     
     const urlStruk = this.getReceiptUrl(trx.id);
-    const teks = `Halo kak *${trx.customer || 'Pelanggan'}*,\nTerima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}*.\n\nBerikut adalah link E-Receipt (Struk Digital) transaksi Anda:\n${urlStruk}\n\nSemoga harinya menyenangkan! 🙏`;
+    const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num || 0);
+
+    // 1. Susun Daftar Pesanan (Looping Items)
+    let listBarang = '';
+    if (trx.items && trx.items.length > 0) {
+        trx.items.forEach(item => {
+            let namaItem = item.productId === 'EXCHANGE' ? `[TUKAR] ${item.name}` : item.name;
+            let varian = item.variantName ? `\n   Varian: ${item.variantName}` : '';
+            let hargaSatuan = formatRp(item.finalPrice || item.sellPrice);
+            let totalHarga = formatRp(item.qty * (item.finalPrice || item.sellPrice));
+            
+            listBarang += `▪️ *${namaItem}*${varian}\n   ${item.qty} ${item.uom || 'pcs'} x Rp ${hargaSatuan} = *Rp ${totalHarga}*\n`;
+        });
+    } else {
+        listBarang = `   (Tidak ada detail produk)\n`;
+    }
+
+    // 2. Susun Potongan / Diskon / Pajak
+    let diskonText = '';
+    let totalDiskon = (trx.discountAmt || 0) + (trx.globalDiscountAmt || 0);
+    if (totalDiskon > 0) diskonText = `Diskon       : -Rp ${formatRp(totalDiskon)}\n`;
+
+    let biayaText = '';
+    let totalBiaya = (trx.taxAmt || trx.taxAmount || 0) + (trx.surchargeFee || 0);
+    if (totalBiaya > 0) biayaText = `Pajak/Layanan: +Rp ${formatRp(totalBiaya)}\n`;
+
+    // 3. Gabungkan Menjadi Template yang Cantik
+    const teks = 
+`Halo kak *${trx.customer || 'Pelanggan'}*,
+Terima kasih telah berbelanja di *${this.appSettings?.storeName || 'Toko Kami'}* cabang *${trx.outletName || trx.outlet || 'Pusat'}*.
+
+*--- RINCIAN TRANSAKSI ---*
+No Struk : ${trx.id}
+Tanggal  : ${trx.dateStr || trx.date}
+Kasir    : ${trx.cashierName || trx.pic || 'Admin'}
+
+*--- DAFTAR PESANAN ---*
+${listBarang}
+*--- RINGKASAN ---*
+${diskonText}${biayaText}*Total Akhir : Rp ${formatRp(trx.total + (trx.surcharge || 0))}*
+Dibayar      : Rp ${formatRp(trx.amountReceived)}
+Kembalian    : Rp ${formatRp(trx.amountReceived - trx.total > 0 ? trx.amountReceived - trx.total : 0)}
+
+📄 *Lihat & Download E-Receipt Lengkap Anda disini:*
+${urlStruk}
+
+Semoga harinya menyenangkan! 🙏`;
     
     const waLink = `https://wa.me/${noHp}?text=${encodeURIComponent(teks)}`;
     window.open(waLink, '_blank');
 },
 
-// Kirim URL ke Email
+// Kirim URL ke Email dengan Rincian Belanja (Plain Text Format)
 sendEReceiptEmail(trx) {
     const urlStruk = this.getReceiptUrl(trx.id);
-    const subject = encodeURIComponent(`E-Receipt Pembelian: ${trx.id}`);
-    const body = encodeURIComponent(`Halo ${trx.customer},\n\nTerima kasih telah berbelanja. Berikut link E-Receipt Anda:\n${urlStruk}\n\nSalam Hangat,\n${this.appSettings?.storeName || 'Toko Kami'}`);
+    const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num || 0);
+
+    // 1. Susun Daftar Pesanan (Email style tanpa tanda bintang bold)
+    let listBarang = '';
+    if (trx.items && trx.items.length > 0) {
+        trx.items.forEach(item => {
+            let namaItem = item.productId === 'EXCHANGE' ? `[TUKAR] ${item.name}` : item.name;
+            let varian = item.variantName ? `\n   Varian: ${item.variantName}` : '';
+            let hargaSatuan = formatRp(item.finalPrice || item.sellPrice);
+            let totalHarga = formatRp(item.qty * (item.finalPrice || item.sellPrice));
+            
+            listBarang += `- ${namaItem}${varian}\n   ${item.qty} ${item.uom || 'pcs'} x Rp ${hargaSatuan} = Rp ${totalHarga}\n`;
+        });
+    }
+
+    let diskonText = '';
+    let totalDiskon = (trx.discountAmt || 0) + (trx.globalDiscountAmt || 0);
+    if (totalDiskon > 0) diskonText = `Diskon       : -Rp ${formatRp(totalDiskon)}\n`;
+
+    let biayaText = '';
+    let totalBiaya = (trx.taxAmt || trx.taxAmount || 0) + (trx.surchargeFee || 0);
+    if (totalBiaya > 0) biayaText = `Pajak/Layanan: +Rp ${formatRp(totalBiaya)}\n`;
+
+    const subject = encodeURIComponent(`E-Receipt Pembelian: ${trx.id} - ${this.appSettings?.storeName || 'Toko Kami'}`);
     
+    // 2. Gabungkan Body Email
+    const bodyText = 
+`Halo ${trx.customer || 'Pelanggan'},
+
+Terima kasih telah berbelanja di ${this.appSettings?.storeName || 'Toko Kami'} cabang ${trx.outletName || trx.outlet || 'Pusat'}.
+
+--- RINCIAN TRANSAKSI ---
+No Struk : ${trx.id}
+Tanggal  : ${trx.dateStr || trx.date}
+Kasir    : ${trx.cashierName || trx.pic || 'Admin'}
+
+--- DAFTAR PESANAN ---
+${listBarang}
+--- RINGKASAN ---
+${diskonText}${biayaText}TOTAL AKHIR  : Rp ${formatRp(trx.total + (trx.surcharge || 0))}
+Dibayar      : Rp ${formatRp(trx.amountReceived)}
+Kembalian    : Rp ${formatRp(trx.amountReceived - trx.total > 0 ? trx.amountReceived - trx.total : 0)}
+
+Silakan klik link di bawah ini untuk melihat struktur digital lengkap, histori pembayaran, dan men-download format PDF:
+${urlStruk}
+
+Salam Hangat,
+${this.appSettings?.storeName || 'Manajemen'}
+`;
+
+    const body = encodeURIComponent(bodyText);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
 },
+
 
 // Copy URL Struk ke Clipboard
 copyEReceiptLinkOnly(trx) {
