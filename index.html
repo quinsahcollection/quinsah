@@ -7569,15 +7569,35 @@ body.sidebar-open {
 <script type="module">
     // 1. Import Core Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    // 2. Gabungkan writeBatch ke dalam baris ini (Lihat di paling ujung kanan)
-    import { getFirestore, collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    
+    // 2. Import Firestore & Offline Cache
+    import { 
+        getFirestore, initializeFirestore, persistentLocalCache,
+        collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    
     // 3. Import Auth
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
-    const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
+        authDomain: "quinsahcollection-36926.firebaseapp.com", 
+        projectId: "quinsahcollection-36926" 
+    };
     
     const firebaseApp = initializeApp(firebaseConfig);
-    const db = getFirestore(firebaseApp);
+    
+    // 4. Inisialisasi Database dengan Mode Offline
+    let db;
+    try {
+        db = initializeFirestore(firebaseApp, {
+            localCache: persistentLocalCache() 
+        });
+    } catch (error) {
+        console.warn("Gagal inisiasi Offline Cache, beralih ke Standar:", error);
+        db = getFirestore(firebaseApp);
+    }
+
     const auth = getAuth(firebaseApp);
 
     const { createApp } = Vue;
@@ -7590,82 +7610,86 @@ body.sidebar-open {
                 return d.toISOString().slice(0, 10);
             };
             
-            // 🌟 TANGKAP URL DI DETIK KE-0 SEBELUM VUE RENDER (Mencegah Layar Lompat)
+            // TANGKAP URL DI DETIK KE-0 SEBELUM VUE RENDER
             const searchParams = new URLSearchParams(window.location.search);
             let invoiceId = searchParams.get('inv');
             if (!invoiceId) {
-                // Fallback khusus jika GitHub Pages menggunakan hash/routing tertentu
                 const match = window.location.href.match(/[?&]inv=([^&#/]+)/);
                 if (match) invoiceId = match[1];
             }
             const hasInv = invoiceId ? true : false;
             
             return {
-                // 🌟 JIKA ADA PARAMETER ?inv= MAKA LAYAR MEMERIKSA AKSES LANGSUNG DIMATIKAN (TRUE)
+                // INDIKATOR OFFLINE
+                isOffline: !navigator.onLine,
+
+                // SETTING AWAL APLIKASI
                 isAppReady: hasInv ? true : false, 
                 isLoggedIn: false, 
                 userRole: 'Karyawan', 
                 userProfile: null,
                 
-                authMode: 'login', authError: '', isProcessingAuth: false, authUser: { name: '', email: '', password: '', companyName: '' },
+                authMode: 'login', 
+                authError: '', 
+                isProcessingAuth: false, 
+                authUser: { name: '', email: '', password: '', companyName: '' },
                 isRegistering: false,
 
-                // 🌟 JIKA ADA PARAMETER ?inv= MAKA VIEW LANGSUNG DIKUNCI KE 'ereceipt'
-                currentView: hasInv ? 'ereceipt' : 'pos', 
-                catalogTab: 'products', crmTab: 'customers', invTab: 'stocks', settingTab: 'invoice',
-                userRole: 'Admin', // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
-
+                currentView: hasInv ? 'ereceipt' : 'dashboard', 
+                catalogTab: 'products', 
+                crmTab: 'customers', 
+                invTab: 'stocks', 
+                settingTab: 'invoice',
+                
                 _modalListener: null,
                 _printListener: null,
                 _authUnsubscribe: null,
 
-                currentView: 'dashboard', // <--- JADIKAN INI DEFAULT SAAT APLIKASI DIMUAT
-        
-                // State Khusus Dashboard
+                // STATE KHUSUS DASHBOARD
                 isLoadingDashboard: false,
                 dashData: {
-            omzetHariIni: 0,
-            labaHariIni: 0, // 🌟 BARU: Untuk Laba Kotor
-            transaksiHariIni: 0,
-            hutangPO: 0,
-            stokMenipis: 0,
-            topProducts: [],
-            paymentMethods: {}, // 🌟 BARU: Untuk Chart Pembayaran
-            recentTransactions: [] // 🌟 BARU: Tabel Transaksi Terakhir
-        },
-        chartInstance: null,
-        paymentChartInstance: null, // 🌟 BARU: Menyimpan objek doughnut chart
-              
-                // viewTitles diperbarui agar sinkron dengan menu baru
+                    omzetHariIni: 0,
+                    labaHariIni: 0, 
+                    transaksiHariIni: 0,
+                    hutangPO: 0,
+                    stokMenipis: 0,
+                    topProducts: [],
+                    paymentMethods: {}, 
+                    recentTransactions: [] 
+                },
+                chartInstance: null,
+                paymentChartInstance: null, 
+                
                 viewTitles: { 
-                    dashboard: 'Dashboard', cash_register: 'Manajemen Laci Kasir (Shift)', pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Data Master Produk', inventory: 'Inventori & Cek Stok', opname: 'Stok Opname', transfer: 'Transfer Antar Cabang', barcode: 'Cetak Label Barcode', crm: 'Pelanggan (CRM)', outlets: 'Manajemen Cabang / Outlet', sales: 'Riwayat Penjualan', payment: 'Manajemen Keuangan (AR/AP)', reports: 'Laporan Laba/Rugi & Analitik', settings: 'Setelan Sistem & Hak Akses'},
+                    dashboard: 'Dashboard', cash_register: 'Manajemen Laci Kasir (Shift)', pos: 'Pos Kasir', purchase: 'Pembelian & Stok Masuk', catalog: 'Data Master Produk', inventory: 'Inventori & Cek Stok', opname: 'Stok Opname', transfer: 'Transfer Antar Cabang', barcode: 'Cetak Label Barcode', crm: 'Pelanggan (CRM)', outlets: 'Manajemen Cabang / Outlet', sales: 'Riwayat Penjualan', payment: 'Manajemen Keuangan (AR/AP)', reports: 'Laporan Laba/Rugi & Analitik', settings: 'Setelan Sistem & Hak Akses'
+                },
                     
                 paymentTab: 'sales_payment',
                 paymentSearchQuery: '',
-                paymentStartDate: '', // Tambahan untuk filter tgl
+                paymentStartDate: '', 
                 paymentEndDate: '',
 
                 isSplitPayment: false,
                 splitPayments: [],
-              
+                
                 paymentMethods: [],
                 paymentForm: {
-                 id: null,
-                 outletId: '',
-                 type: 'CASH',
-                 name: '',
-                 mdr: 0,
-                 surcharge: 0,
-                 surchargeType: 'nominal', // 'nominal' atau 'percent'
-                 isActive: true
-               },
-              
+                    id: null,
+                    outletId: '',
+                    type: 'CASH',
+                    name: '',
+                    mdr: 0,
+                    surcharge: 0,
+                    surchargeType: 'nominal', 
+                    isActive: true
+                },
+                
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 activeBatchProduct: {},
                 activeBatchVariant: null,
-                activeEReceipt: null, // Untuk menyimpan data transaksi yang akan dikirim E-Receiptnya
-              
+                activeEReceipt: null, 
+                
                 // STATE UNTUK MODAL BATCH HPP
                 batchModalItem: null,
                 batchModalVariant: null,
@@ -7679,26 +7703,26 @@ body.sidebar-open {
                 activeInvoiceDetail: null,
                 installmentForm: { amount: 0, method: 'CASH', note: '' },
 
-                salesOutletFilter: '',  // 🌟 State untuk filter cabang
-                salesStatusFilter: '',  // 🌟 State untuk filter status
-              
+                salesOutletFilter: '',  
+                salesStatusFilter: '',  
+                
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
                 customerPromoFilter: '',
                 supplierSearchQuery: '',
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
 
-                // SETELAN APLIKASI UTAMA (DITAMBAH hppMethod)
+                // SETELAN APLIKASI UTAMA
                 appSettings: { posPrefix: 'INV', posPattern: 'YYYYMMDD', poPrefix: 'PO', poPattern: 'YYYYMMDD', hppMethod: 'STANDARD', allowNegativeInventory: false },
                 activeHppExample: 'FIFO',
                 products: [], categories: [], masterVariants: [], customers: [], memberships: [], outlets: [], transactions: [], stockLogs: [], uoms: [], tags: [], suppliers: [], purchases: [], cart: [], selectedCustomer: null, 
                 tempHppMethod: 'FIFO',
                 
-                isEditingInvoice: false,  // Status penanda apakah sedang mengedit invoice
-                originalEditTrx: null,    // Tempat menyimpan data transaksi asli sebelum diubah
+                isEditingInvoice: false,  
+                originalEditTrx: null,    
                 purchaseStartDate: '',
                 purchaseEndDate: '',
-                // (Tambahkan variabel ini)
+                
                 activePurchaseDetail: null,
                 purchasePaymentForm: { amount: 0, method: 'CASH' },
                 returnPoForm: null,
@@ -7707,12 +7731,8 @@ body.sidebar-open {
                 
                 returnForm: null,
                 
-                // Tambahkan di dalam data()
-                activeInvoiceDetail: null, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
-                installmentForm: { amount: 0, method: 'CASH', note: '' }, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
-
-                posViewMode: 'grid',       // Untuk kontrol tombol Grid/List
-                isSearchFocused: false,    // Untuk kontrol popup search otomatis
+                posViewMode: 'grid',       
+                isSearchFocused: false,    
 
                 showIdentifierModal: false,
                 identifierGroups: [],
@@ -7723,31 +7743,29 @@ body.sidebar-open {
                 posSelectedModifiers: {},
 
                 // Data untuk Cash Register
-                registers: [], // Menyimpan daftar shift dari Firebase
+                registers: [], 
                 registerFilterOutlet: '', 
                 shiftForm: {
-                outletId: '',
-                startingCash: 0
+                    outletId: '',
+                    startingCash: 0
                 },
                 expenseForm: {
-                shiftId: '',
-                amount: 0,
-                note: ''
+                    shiftId: '',
+                    amount: 0,
+                    note: ''
                 },
-                activeCloseShift: {}, // Menampung data shift yang sedang dihitung untuk ditutup
-                viewShiftDetails: { type: '', data: null, expenses: [] }, // Penampung modal riwayat pecahan & pengeluaran
+                activeCloseShift: {}, 
+                viewShiftDetails: { type: '', data: null, expenses: [] }, 
 
-                // 🌟 TAMBAHAN UNTUK PECAHAN UANG
+                // TAMBAHAN UNTUK PECAHAN UANG
                 showPecahan: false,
                 pecahanTarget: '',
                 pecahanData: { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' },
-                pecahanList: [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500],              
-              
-                // ==========================================
+                pecahanList: [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500],             
+                
                 // STATE STOK OPNAME
-                // ==========================================
-                opnameView: 'list', // Mengatur tampilan: 'list' (Riwayat) atau 'form' (Form Baru)
-                opnameHistory: [], // Menyimpan data riwayat opname dari Firebase
+                opnameView: 'list', 
+                opnameHistory: [], 
                 opnameFisik: {},
                 opnameNote: {},
                 opnameForm: {
@@ -7756,21 +7774,19 @@ body.sidebar-open {
                     pic: '',
                     note: '',
                     outletId: '',
-                    items: [] // Nanti diisi barang yang di-opname
+                    items: [] 
                 },
                 
                 // STATE TAB NAVIGASI LAPORAN
-                reportTab: 'keuangan', // Default tab yang terbuka
+                reportTab: 'keuangan', 
                 
                 // STATE FILTER DASHBOARD LAPORAN
                 reportStartDate: '',
                 reportEndDate: '',
-                reportOutletFilter: '', // Untuk menyaring laba rugi per cabang
-                selectedOutletFilter: '', // Tambahkan ini untuk filter outlet metode pembayaran
-              
-                // ==========================================
+                reportOutletFilter: '', 
+                selectedOutletFilter: '', 
+                
                 // STATE TRANSFER STOK ANTAR TOKO
-                // ==========================================
                 isEditingTransfer: false,
                 editTransferId: null,
                 transferView: 'list', 
@@ -7787,15 +7803,13 @@ body.sidebar-open {
                     items: []
                 },
 
-                // ==========================================
                 // STATE CETAK BARCODE LABEL
-                // ==========================================
                 barcodeSettings: {
                     showBusinessName: true,
                     businessName: '',
                     showProductName: true,
                     showPrice: true,
-                    priceType: 'final', // 🟢 BARU: 'final' (diskon) atau 'original' (asli)
+                    priceType: 'final', 
                     showBarcode: true,
                     showDate: true,
                     showBorder: true,
@@ -7804,22 +7818,19 @@ body.sidebar-open {
                 barcodeSelectedItems: [], 
                 barcodeSearchQuery: '',
                 
-                // ... variabel data Anda yang lain ...
-                barcodeAlign: 'text-center', // Untuk rata kiri/tengah/kanan
-                showBarcodeModal: false,     // Untuk menampilkan pop-up cari produk
+                barcodeAlign: 'text-center', 
+                showBarcodeModal: false,     
 
-                // ==========================================
                 // MANAJEMEN HAK AKSES (ERP ROLES)
-                // ==========================================
                 appModules: [
                     { id: 'pos', name: 'Kasir (POS)' },
                     { id: 'sales', name: 'Riwayat Penjualan' },
                     { id: 'purchase', name: 'Pembelian (Purchase)' },
                     { id: 'catalog', name: 'Data Master Produk' },
                     { id: 'inventory', name: 'Inventori & Cek Stok' },
-                    { id: 'opname', name: 'Eksekusi Stok Opname' },      // MODUL BARU
-                    { id: 'transfer', name: 'Transfer Antar Cabang' },   // MODUL BARU
-                    { id: 'barcode', name: 'Cetak Label Barcode' },      // MODUL BARU
+                    { id: 'opname', name: 'Eksekusi Stok Opname' },      
+                    { id: 'transfer', name: 'Transfer Antar Cabang' },   
+                    { id: 'barcode', name: 'Cetak Label Barcode' },      
                     { id: 'crm', name: 'Pelanggan (CRM)' },
                     { id: 'outlets', name: 'Manajemen Cabang / Outlet' },
                     { id: 'reports', name: 'Laporan Laba/Rugi & Analitik' },
@@ -7830,14 +7841,12 @@ body.sidebar-open {
                     { 
                         id: 1, 
                         name: 'Super Admin', 
-                        permissions: {} // Super Admin otomatis bypass semua hak akses
+                        permissions: {} 
                     }
-                    // Role Kasir (dummy) dihapus, sistem akan mengambil murni dari Firebase
                 ],
                 
-                usersList: [], // Array dikosongkan karena data riil ditarik dari Firebase
-                
-                loggedInUser: null, // Diubah menjadi null agar tidak ada akun dummy yang nyangkut
+                usersList: [], 
+                loggedInUser: null, 
                 currentSettingTab: 'hak_akses',
                 formRole: { id: null, name: '', permissions: {} },
                 formUser: { id: null, username: '', email: '', password: '', roleId: null, namaLengkap: '',phone: '', outletId: '' },
@@ -7845,13 +7854,12 @@ body.sidebar-open {
                 isEditingUser: false,
                 user: null,
                 currentOutletId: '',
-              
+                
                 // FILTER INVENTORY & STOCK CARD
                 stockCardSearchQuery: '', stockCardCategoryFilter: '', stockCardProductFilter: '', 
                 stockCardStartDate: getLocalToday(), stockCardEndDate: getLocalToday(), stockCardOutlet: '',
                 invSearchQuery: '', invCategoryFilter: '', invProductFilter: '', invOutletFilter: '',
                 logStartDate: '', logEndDate: '',
-                opnameFisik: {}, opnameNote: {}, // Note: Ini duplikat dari atas, tapi tetap saya biarkan utuh
                 formCategory: { id: null, name: '', parentId: '' },
                 formUom: { id: null, name: '' },
                 formTag: { id: null, name: '' },
@@ -7879,7 +7887,7 @@ body.sidebar-open {
                 isSaving: false, activeProduct: null, printMode: 'receipt', activePrintData: null,
                 isProcessing: false, isMobileCartOpen: false, heldTransactions: [],
                 
-                // 🌟 PENTING: Variabel untuk E-Receipt (Jangan Dihapus)
+                // PENTING: Variabel untuk E-Receipt
                 ereceiptData: null,
                 ereceiptRating: 0,
                 ereceiptReview: '',
