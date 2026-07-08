@@ -16437,6 +16437,18 @@ doActualPrint() {
             });
         },
 
+      if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Mantap! Service Worker berhasil didaftarkan:', registration.scope);
+                    })
+                    .catch(err => {
+                        console.error('Service Worker gagal didaftarkan:', err);
+                    });
+            });
+        },
+            
         } // Penutup utama dari 'methods'
     }); // Penutup dari 'createApp'
 
