@@ -14661,26 +14661,32 @@ let item = {
             }
 
             // =================================================================
-            // PENGAMAN KE FIREBASE / SERVER-SIDE
+            // PENGAMAN KE FIREBASE / SERVER-SIDE (🌟 DIPERBAIKI UNTUK OFFLINE)
             // =================================================================
             const trxRef = doc(db, "transactions", currentInvoiceId);
-            const trxSnap = await getDoc(trxRef);
-
-            if (trxSnap.exists()) {
-                const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
-                if (!isNumpangEdit) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Bentrok Nomor Invoice',
-                        html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
-                        confirmButtonColor: '#dc2626'
-                    });
-                    if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
-                        await this.generateInvoiceNumber(); 
+            
+            // 🌟 DIBUNGKUS TRY-CATCH: Jika offline, getDoc akan error tapi tidak membuat sistem mati
+            try {
+                const trxSnap = await getDoc(trxRef);
+                if (trxSnap.exists()) {
+                    const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
+                    if (!isNumpangEdit) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Bentrok Nomor Invoice',
+                            html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
+                            confirmButtonColor: '#dc2626'
+                        });
+                        if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
+                            await this.generateInvoiceNumber(); 
+                        }
+                        this.isProcessing = false;
+                        return; 
                     }
-                    this.isProcessing = false;
-                    return; 
                 }
+            } catch (networkError) {
+                console.warn("Bypass cek duplikat online karena sedang Mode Offline.", networkError);
+                // Biarkan lanjut ke bawah (menyimpan di cache lokal)
             }
             
             // 🌟🌟 SIAPKAN KERANJANG BATCH 🌟🌟
@@ -15050,13 +15056,14 @@ let item = {
             batch.set(doc(db, "transactions", trxData.id), trxData);
 
             // 🚀🚀 TEMBAK SEMUANYA KE SERVER DALAM 1 PERINTAH!
-            await batch.commit();
+            // 🌟 PERBAIKAN: "await" DIHAPUS. Tidak perlu menunggu Google Server untuk lanjut!
+            batch.commit().catch(err => console.warn("Sinkronisasi tertunda (Mode Offline):", err));
 
             this.activePrintData = trxData;
             this.printMode = 'receipt';
             this.hideModal('paymentModal');
 
-            // MUNCULKAN DIALOG PRINT
+            // MUNCULKAN DIALOG PRINT SEKETIKA
             setTimeout(() => {
                 this.triggerPrint(trxData, 'receipt');
             }, 500); 
@@ -15080,12 +15087,12 @@ let item = {
         this.isProcessing = false;
     },
 
-            holdTransaction() {
+        holdTransaction() {
             if (this.cart.length === 0) return;
             
             // 1. Simpan keranjang ke memori Hold BESERTA Nomor Invoice-nya
             this.heldTransactions.push({
-                invoice: this.posCustomInvoice, // <-- Ini yang sebelumnya kurang
+                invoice: this.posCustomInvoice, 
                 outletId: this.posActiveOutletId,
                 cart: JSON.parse(JSON.stringify(this.cart)),
                 customer: this.selectedCustomer,
@@ -15105,7 +15112,8 @@ let item = {
             
             Swal.fire({ icon: 'success', title: 'Masuk Antrian', text: 'Transaksi disimpan sementara. Kasir siap digunakan kembali.', timer: 1500, showConfirmButton: false });
         },
-            restoreTransaction(index) {
+
+        restoreTransaction(index) {
             // Mencegah transaksi tertimpa jika kasir sedang ada isinya
             if (this.cart.length > 0) {
                 Swal.fire({ icon: 'warning', title: 'Kasir Belum Kosong', text: 'Harap batalkan atau selesaikan transaksi saat ini sebelum memanggil antrian.' });
@@ -15154,7 +15162,7 @@ let item = {
                 }
             });
         },
-
+            
             onPurchaseProductChange() {
                 this.formPurchaseItem.variantSku = '';
                 let p = this.products.find(x => x.id === this.formPurchaseItem.productId);
