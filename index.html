@@ -9327,11 +9327,35 @@ beforeDestroy() {
     handleNominalChange() {
         let val = Number(this.paymentData.amountReceived || 0);
         
-        // PENGAMAN: Jika kasir mengetik lebih dari sisa tagihan, otomatis pas-kan ke angka sisa maksimal
-        if (this.isSplitPayment && val > this.remainingSplitTagihan) {
-            this.paymentData.amountReceived = this.remainingSplitTagihan;
-        } else if (!this.isSplitPayment && val > (this.total || 0)) {
-            this.paymentData.amountReceived = (this.total || 0);
+        // --- TAMBAHAN KODE: Cek apakah pembayaran saat ini adalah TUNAI / CASH ---
+        let pm = null;
+        if (this.activePaymentMethodsForCashier && this.paymentData.method) {
+            pm = this.activePaymentMethodsForCashier.find(m => 
+                m.name === this.paymentData.method || 
+                m.id === this.paymentData.method || 
+                m.code === this.paymentData.method || 
+                (m.nama && m.nama === this.paymentData.method)
+            );
+        }
+        
+        let isCash = false;
+        if (this.selectedPaymentMethodData && this.selectedPaymentMethodData.type === 'CASH') {
+            isCash = true;
+        } else if (pm && pm.type === 'CASH') {
+            isCash = true;
+        } else if (this.paymentData.method === 'CASH' || (typeof this.paymentData.method === 'string' && (this.paymentData.method.toUpperCase().includes('CASH') || this.paymentData.method.toUpperCase().includes('TUNAI')))) {
+            isCash = true;
+        }
+        // --- END TAMBAHAN KODE ---
+
+        // PENGAMAN: HANYA BERLAKU UNTUK NON-CASH (QRIS, Transfer, EDC, VA, dll.)
+        // Khusus CASH / TUNAI pembatasan ini dilewati agar kasir bisa ketik nominal lebih besar untuk kembalian
+        if (!isCash) {
+            if (this.isSplitPayment && val > this.remainingSplitTagihan) {
+                this.paymentData.amountReceived = this.remainingSplitTagihan;
+            } else if (!this.isSplitPayment && val > (this.total || 0)) {
+                this.paymentData.amountReceived = (this.total || 0);
+            }
         }
     },
 
