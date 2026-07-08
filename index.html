@@ -9899,6 +9899,21 @@ async printShiftSummary(reg) {
                     Petugas Kasir: ${reg.cashierName}<br>
                     Waktu Cetak: ${new Date().toLocaleString('id-ID')}
                 </div>
+
+                <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Memanggil file sw.js yang kita buat tadi
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Mantap! Service Worker berhasil didaftarkan dengan scope:', registration.scope);
+                    })
+                    .catch(err => {
+                        console.error('Service Worker gagal didaftarkan:', err);
+                    });
+            });
+        }
+    </script>
             </body>
             </html>
         `);
