@@ -9250,8 +9250,49 @@ beforeDestroy() {
                 this.salesStatusFilter = '';
             },
             
-        // 1. FUNGSI PEMBERSIH: Menghitung biaya admin bulat tanpa merubah data input
+        // 1. FUNGSI PENGAMAN: Saat kasir mengetik nominal pokok baru
+    handleNominalChange() {
+        let val = Number(this.paymentData.amountReceived || 0);
+        
+        // --- Cek apakah pembayaran saat ini adalah TUNAI / CASH ---
+        let pm = null;
+        if (this.activePaymentMethodsForCashier && this.paymentData.method) {
+            pm = this.activePaymentMethodsForCashier.find(m => 
+                m.name === this.paymentData.method || 
+                m.id === this.paymentData.method || 
+                m.code === this.paymentData.method || 
+                (m.nama && m.nama === this.paymentData.method)
+            );
+        }
+        
+        let isCash = false;
+        if (this.selectedPaymentMethodData && this.selectedPaymentMethodData.type === 'CASH') {
+            isCash = true;
+        } else if (pm && pm.type === 'CASH') {
+            isCash = true;
+        } else if (this.paymentData.method === 'CASH' || (typeof this.paymentData.method === 'string' && (this.paymentData.method.toUpperCase().includes('CASH') || this.paymentData.method.toUpperCase().includes('TUNAI')))) {
+            isCash = true;
+        }
+
+        // PENGAMAN NON-CASH (QRIS, Transfer, EDC, dll.)
+        // Khusus CASH / TUNAI pembatasan ini dilewati agar kasir bisa ketik nominal lebih besar untuk kembalian
+        if (!isCash) {
+            if (this.isSplitPayment && val > this.remainingSplitTagihan) {
+                this.paymentData.amountReceived = this.remainingSplitTagihan;
+            } else if (!this.isSplitPayment && val > (this.total || 0)) {
+                this.paymentData.amountReceived = (this.total || 0);
+            }
+        }
+    },
+
+    // 2. FUNGSI PEMBERSIH: Menghitung biaya admin bulat (Surcharge)
     hitungSurcharge(methodName, baseNominal) {
+        // Jika baseNominal tidak dikirim (misal saat dipanggil langsung di layar HTML), 
+        // maka otomatis gunakan tagihan asli (total atau sisa split)
+        if (baseNominal === undefined || baseNominal === null || baseNominal <= 0) {
+            baseNominal = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+        }
+        
         if (!methodName || baseNominal <= 0) return 0;
         
         let pm = this.activePaymentMethodsForCashier.find(m => 
@@ -9261,21 +9302,30 @@ beforeDestroy() {
         if (!pm || !pm.surcharge || pm.surcharge <= 0) return 0;
         
         if (pm.surchargeType === 'percent') {
-            // WAJIB Math.round agar angka persentase selalu bulat (contoh: Rp 401, bukan Rp 400.89)
+            // WAJIB Math.round agar angka persentase selalu bulat (tanpa desimal)
             return Math.round((Number(baseNominal) * pm.surcharge) / 100);
         } else {
             return Number(pm.surcharge);
         }
     },
 
-    // 2. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer"
+    // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-        let pokok = Number(this.paymentData.amountReceived || 0);
+        // PERBAIKAN KRITIS: Gunakan tagihan asli (this.total / sisa split), BUKAN amountReceived (uang kasir)!
+        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
         let admin = this.hitungSurcharge(this.paymentData.method, pokok);
         return pokok + admin;
     },
 
-    // 3. FUNGSI UTAMA: Menambahkan pembayaran ke keranjang split
+    // 4. FUNGSI KEMBALIAN: Menghitung kembalian kasir dengan akurat
+    getKembalian() {
+        let uangDiterima = Number(this.paymentData.amountReceived || 0);
+        let totalTagihan = this.getTotalBayarDenganAdmin();
+        let kembalian = uangDiterima - totalTagihan;
+        return kembalian > 0 ? kembalian : 0;
+    },
+
+    // 5. FUNGSI UTAMA: Menambahkan pembayaran ke keranjang split
     addSplitPayment() {
         if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
         if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
@@ -9283,12 +9333,12 @@ beforeDestroy() {
 
         let baseAmount = Number(this.paymentData.amountReceived);
         
-        // 🌟 PENGAMAN OVERPAY: Jika kasir ketik kelebihan, otomatis dipas-kan ke sisa tagihan
+        // 🌟 PENGAMAN OVERPAY SPLIT: Jika kasir ketik kelebihan, otomatis dipas-kan ke sisa tagihan agar tidak minus
         if (baseAmount > this.remainingSplitTagihan) {
             baseAmount = this.remainingSplitTagihan;
         }
 
-        // Hitung admin & total untuk metode yang dipilih
+        // Hitung admin & total untuk metode yang dipilih dengan parameter baseAmount
         let surchargeAmount = this.hitungSurcharge(this.paymentData.method, baseAmount);
         let totalAmount = baseAmount + surchargeAmount;
 
@@ -9315,86 +9365,12 @@ beforeDestroy() {
         });
     },
 
-    // 4. FUNGSI HAPUS: Menghapus item dari keranjang split
+    // 6. FUNGSI HAPUS: Menghapus item dari keranjang split
     removeSplitPayment(index) {
         this.splitPayments.splice(index, 1);
         this.$nextTick(() => {
             this.paymentData.amountReceived = this.remainingSplitTagihan;
         });
-    },
-
-      // 1. Fungsi saat kasir mengetik nominal pokok baru
-    handleNominalChange() {
-        let val = Number(this.paymentData.amountReceived || 0);
-        
-        // --- TAMBAHAN KODE: Cek apakah pembayaran saat ini adalah TUNAI / CASH ---
-        let pm = null;
-        if (this.activePaymentMethodsForCashier && this.paymentData.method) {
-            pm = this.activePaymentMethodsForCashier.find(m => 
-                m.name === this.paymentData.method || 
-                m.id === this.paymentData.method || 
-                m.code === this.paymentData.method || 
-                (m.nama && m.nama === this.paymentData.method)
-            );
-        }
-        
-        let isCash = false;
-        if (this.selectedPaymentMethodData && this.selectedPaymentMethodData.type === 'CASH') {
-            isCash = true;
-        } else if (pm && pm.type === 'CASH') {
-            isCash = true;
-        } else if (this.paymentData.method === 'CASH' || (typeof this.paymentData.method === 'string' && (this.paymentData.method.toUpperCase().includes('CASH') || this.paymentData.method.toUpperCase().includes('TUNAI')))) {
-            isCash = true;
-        }
-        // --- END TAMBAHAN KODE ---
-
-        // PENGAMAN: HANYA BERLAKU UNTUK NON-CASH (QRIS, Transfer, EDC, VA, dll.)
-        // Khusus CASH / TUNAI pembatasan ini dilewati agar kasir bisa ketik nominal lebih besar untuk kembalian
-        if (!isCash) {
-            if (this.isSplitPayment && val > this.remainingSplitTagihan) {
-                this.paymentData.amountReceived = this.remainingSplitTagihan;
-            } else if (!this.isSplitPayment && val > (this.total || 0)) {
-                this.paymentData.amountReceived = (this.total || 0);
-            }
-        }
-    },
-
-    // 2. Menghitung Biaya Admin (Surcharge) secara Real-time
-    getAdminFee() {
-        // PERBAIKAN: Gunakan tagihan asli (this.total), BUKAN amountReceived (uang kasir)
-        let baseNominal = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
-        if (!this.paymentData.method || baseNominal <= 0) return 0;
-        
-        let pm = this.activePaymentMethodsForCashier.find(m => 
-            m.name === this.paymentData.method || 
-            m.id === this.paymentData.method || 
-            m.code === this.paymentData.method || 
-            (m.nama && m.nama === this.paymentData.method)
-        );
-        
-        if (!pm || !pm.surcharge || pm.surcharge <= 0) return 0;
-        
-        if (pm.surchargeType === 'percent') {
-            // Gunakan Math.round agar pembulatan sempurna tanpa desimal
-            return Math.round((baseNominal * pm.surcharge) / 100);
-        } else {
-            return Number(pm.surcharge);
-        }
-    },
-
-    // 3. Menghitung Total yang Harus Dibayar Customer (Pokok Tagihan Asli + Admin)
-    getTotalTransfer() {
-        // PERBAIKAN: Gunakan tagihan asli (this.total), BUKAN amountReceived (uang kasir)
-        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
-        return pokok + this.getAdminFee();
-    },
-
-    // 4. (TAMBAHAN OPTIONAL) Fungsi untuk menghitung kembalian kasir dengan akurat
-    getKembalian() {
-        let uangDiterima = Number(this.paymentData.amountReceived || 0);
-        let totalTagihan = this.getTotalTransfer();
-        let kembalian = uangDiterima - totalTagihan;
-        return kembalian > 0 ? kembalian : 0;
     },
           
       async fetchDashboardData() {
