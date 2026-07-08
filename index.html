@@ -9361,7 +9361,8 @@ beforeDestroy() {
 
     // 2. Menghitung Biaya Admin (Surcharge) secara Real-time
     getAdminFee() {
-        let baseNominal = Number(this.paymentData.amountReceived || 0);
+        // PERBAIKAN: Gunakan tagihan asli (this.total), BUKAN amountReceived (uang kasir)
+        let baseNominal = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
         if (!this.paymentData.method || baseNominal <= 0) return 0;
         
         let pm = this.activePaymentMethodsForCashier.find(m => 
@@ -9374,17 +9375,26 @@ beforeDestroy() {
         if (!pm || !pm.surcharge || pm.surcharge <= 0) return 0;
         
         if (pm.surchargeType === 'percent') {
-            // Gunakan Math.round agar pembulatan sempurna tanpa desimal (misal: 183)
+            // Gunakan Math.round agar pembulatan sempurna tanpa desimal
             return Math.round((baseNominal * pm.surcharge) / 100);
         } else {
             return Number(pm.surcharge);
         }
     },
 
-    // 3. Menghitung Total yang Harus Dibayar Customer (Pokok + Admin)
+    // 3. Menghitung Total yang Harus Dibayar Customer (Pokok Tagihan Asli + Admin)
     getTotalTransfer() {
-        let pokok = Number(this.paymentData.amountReceived || 0);
+        // PERBAIKAN: Gunakan tagihan asli (this.total), BUKAN amountReceived (uang kasir)
+        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
         return pokok + this.getAdminFee();
+    },
+
+    // 4. (TAMBAHAN OPTIONAL) Fungsi untuk menghitung kembalian kasir dengan akurat
+    getKembalian() {
+        let uangDiterima = Number(this.paymentData.amountReceived || 0);
+        let totalTagihan = this.getTotalTransfer();
+        let kembalian = uangDiterima - totalTagihan;
+        return kembalian > 0 ? kembalian : 0;
     },
           
       async fetchDashboardData() {
