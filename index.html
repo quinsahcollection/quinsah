@@ -12339,51 +12339,81 @@ async fetchRolesFromDatabase() {
             return `${prefix}${prefix && datePart ? '-' : ''}${datePart}${datePart ? '-' : ''}${randomPart}`;
         },
 
-            // 1. Menghitung barang yang nyangkut di Keranjang & Hold
-        getReservedStock(sku, outletId) {
-            if (!sku || !outletId) return 0;
-            let reserved = 0;
-            
-            // Cek di keranjang kasir saat ini (jika outletnya sama)
-            if (this.posActiveOutletId === outletId) {
-                this.cart.forEach(item => {
-                    if (item.variantSku === sku || (!item.variantSku && item.sku === sku)) reserved += item.qty;
-                });
-            }
-            
-            // Cek di daftar Hold / Antrian
-            this.heldTransactions.forEach(trx => {
-                // Pastikan kita mengecek antrian dari cabang yang sama
-                if (trx.outletId === outletId) {
-                    trx.cart.forEach(item => {
-                        if (item.variantSku === sku || (!item.variantSku && item.sku === sku)) reserved += item.qty;
-                    });
+            // 1. Menghitung barang yang nyangkut di Keranjang & Hold (VERSI AMAN & ANTI-CRASH)
+    getReservedStock(sku, outletId) {
+        if (!sku || !outletId) return 0;
+        let reserved = 0;
+        
+        // Pembersihan SKU: Hilangkan spasi tak sengaja dan samakan hurufnya (Case-Insensitive)
+        const targetSku = String(sku).trim().toLowerCase();
+        
+        // PENGAMAN 1: Pastikan array keranjang dan hold tidak undefined/null agar tidak memicu crash .length atau .forEach
+        const currentCart = Array.isArray(this.cart) ? this.cart : [];
+        const currentHeld = Array.isArray(this.heldTransactions) ? this.heldTransactions : [];
+        
+        // Cek di keranjang kasir saat ini (jika outletnya sama)
+        if (this.posActiveOutletId === outletId) {
+            currentCart.forEach(item => {
+                if (!item) return;
+                
+                // Amankan SKU item di keranjang
+                const itemVariantSku = String(item.variantSku || '').trim().toLowerCase();
+                const itemSku = String(item.sku || '').trim().toLowerCase();
+                
+                // Jalankan validasi kecocokan SKU
+                if (itemVariantSku === targetSku || (!item.variantSku && itemSku === targetSku)) {
+                    // PENGAMAN 2: Wajib bungkus dengan Number() agar tidak terjadi error teks menempel (String Concatenation)
+                    reserved += Number(item.qty || 0); 
                 }
             });
-            return reserved;
-        },
-
-        // 2. Mendapatkan STOK TERSEDIA (Stok Fisik dikurangi Stok Ditahan)
-        getAvailableStock(p, v = null, outletId) {
-            if (!outletId) return 0;
-            let fisik = 0;
-            let sku = '';
-
-            // Ambil stok asli di database (Fisik)
-            if (v) {
-                fisik = (v.outletStocks && v.outletStocks[outletId]) ? v.outletStocks[outletId] : 0;
-                sku = v.variantSku;
-            } else {
-                fisik = (p.baseOutletStocks && p.baseOutletStocks[outletId]) ? p.baseOutletStocks[outletId] : 0;
-                sku = p.sku;
-            }
-
-            // Hitung yang ditahan
-            let ditahan = this.getReservedStock(sku, outletId);
+        }
+        
+        // Cek di daftar Hold / Antrian
+        currentHeld.forEach(trx => {
+            if (!trx) return;
             
-            // Kembalikan sisa yang bisa dijual
-            return fisik - ditahan;
-        },
+            // Pastikan kita mengecek antrian dari cabang yang sama
+            if (trx.outletId === outletId) {
+                const heldCart = Array.isArray(trx.cart) ? trx.cart : [];
+                
+                heldCart.forEach(item => {
+                    if (!item) return;
+                    
+                    const itemVariantSku = String(item.variantSku || '').trim().toLowerCase();
+                    const itemSku = String(item.sku || '').trim().toLowerCase();
+                    
+                    if (itemVariantSku === targetSku || (!item.variantSku && itemSku === targetSku)) {
+                        reserved += Number(item.qty || 0);
+                    }
+                });
+            }
+        });
+        
+        return reserved;
+    },
+
+    // 2. Mendapatkan STOK TERSEDIA (Stok Fisik dikurangi Stok Ditahan)
+    getAvailableStock(p, v = null, outletId) {
+        if (!outletId || !p) return 0;
+        let fisik = 0;
+        let sku = '';
+
+        // Ambil stok asli di database (Fisik)
+        if (v) {
+            fisik = (v.outletStocks && v.outletStocks[outletId]) ? Number(v.outletStocks[outletId]) : 0;
+            sku = v.variantSku || v.sku; // Fallback jika variantSku kosong
+        } else {
+            fisik = (p.baseOutletStocks && p.baseOutletStocks[outletId]) ? Number(p.baseOutletStocks[outletId]) : 0;
+            sku = p.sku;
+        }
+
+        // Hitung yang ditahan
+        let ditahan = this.getReservedStock(sku, outletId);
+        
+        // Kembalikan sisa yang bisa dijual (Jika hasilnya minus, bulatkan ke 0 agar tampilan bagus)
+        let hasil = fisik - ditahan;
+        return hasil > 0 ? hasil : 0;
+    },
         
         async fetchTransferHistory() {
             try {
@@ -15745,39 +15775,45 @@ doActualPrint() {
         },
 
             getProductDisplayStock(p) {
-            let s = 0;
-            if (this.posActiveOutletId) {
-                // KITA BERADA DI MODE KASIR (POS)
-                if (p.variants && p.variants.length > 0) {
-                    p.variants.forEach(v => {
-                        let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? v.outletStocks[this.posActiveOutletId] : 0;
-                        // Otomatis kurangi dengan barang yang sedang nyangkut di antrian/keranjang
-                        let ditahan = this.getReservedStock(v.variantSku, this.posActiveOutletId);
-                        s += (fisik - ditahan);
-                    });
-                } else {
-                    let fisik = (p.baseOutletStocks && p.baseOutletStocks[this.posActiveOutletId]) ? p.baseOutletStocks[this.posActiveOutletId] : 0;
-                    // Otomatis kurangi dengan barang yang sedang nyangkut di antrian/keranjang
-                    let ditahan = this.getReservedStock(p.sku, this.posActiveOutletId);
-                    s = (fisik - ditahan);
-                }
+        let s = 0;
+        if (this.posActiveOutletId) {
+            // KITA BERADA DI MODE KASIR (POS)
+            if (p.variants && p.variants.length > 0) {
+                p.variants.forEach(v => {
+                    // PENGAMAN: Bungkus dengan Number() agar pasti terbaca angka
+                    let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? Number(v.outletStocks[this.posActiveOutletId]) : 0;
+                    
+                    // PERBAIKAN: Kirim ID varian ATAU SKU agar pencarian selalu berhasil
+                    let ditahan = this.getReservedStock(v.variantSku || v.id || v.variantId, this.posActiveOutletId);
+                    s += (fisik - ditahan);
+                });
             } else {
-                // MODE GLOBAL / DILUAR KASIR (Tampilkan stok total asli)
-                s = this.getBaseTotalStock(p);
-            }
-            return s;
-        },
-            getVariantDisplayStock(v) {
-            if (this.posActiveOutletId) {
-                // KITA BERADA DI MODE KASIR (POS) - Hitung Stok Tersedia
-                let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? v.outletStocks[this.posActiveOutletId] : 0;
-                let ditahan = this.getReservedStock(v.variantSku, this.posActiveOutletId);
+                let fisik = (p.baseOutletStocks && p.baseOutletStocks[this.posActiveOutletId]) ? Number(p.baseOutletStocks[this.posActiveOutletId]) : 0;
                 
-                return fisik - ditahan;
+                // PERBAIKAN: Kirim SKU ATAU ID Produk
+                let ditahan = this.getReservedStock(p.sku || p.id, this.posActiveOutletId);
+                s += (fisik - ditahan);
             }
-            // MODE GLOBAL / DILUAR KASIR (Tampilkan stok total asli)
-            return this.getVariantTotalStock(v);
-        },
+        } else {
+            // MODE GLOBAL / DILUAR KASIR
+            s = this.getBaseTotalStock(p);
+        }
+        
+        // PENGAMAN VISUAL: Jika hasil hitungan minus, tampilkan 0 di layar kasir
+        return s > 0 ? s : 0;
+    },
+
+    getVariantDisplayStock(v) {
+        if (this.posActiveOutletId) {
+            let fisik = (v.outletStocks && v.outletStocks[this.posActiveOutletId]) ? Number(v.outletStocks[this.posActiveOutletId]) : 0;
+            let ditahan = this.getReservedStock(v.variantSku || v.id || v.variantId, this.posActiveOutletId);
+            let hasil = fisik - ditahan;
+            
+            // PENGAMAN VISUAL: Jika hasil hitungan minus, tampilkan 0 di layar kasir
+            return hasil > 0 ? hasil : 0;
+        }
+        return this.getVariantTotalStock(v);
+    },
         
             getBaseTotalStock(p) {
                 if(p.variants && p.variants.length > 0) {
