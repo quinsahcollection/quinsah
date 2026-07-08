@@ -728,6 +728,12 @@ body.sidebar-open {
         </aside>
 
         <main class="main-content">
+            
+            <div v-if="isOffline" class="alert alert-warning py-2 mb-3 text-center fw-bold shadow-sm" style="border: 2px dashed #d97706; z-index: 1050;">
+                <i class="bi bi-wifi-off me-2"></i> 
+                Koneksi Terputus (Mode Offline). Kasir tetap bisa digunakan, data akan disinkronkan otomatis nanti!
+            </div>
+
             <header class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                 <div>
                     <h4 class="mb-0 fw-bold">{{ viewTitles[currentView] }}</h4>
@@ -7897,6 +7903,35 @@ body.sidebar-open {
         },
 
         async mounted() {
+
+    // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
+        window.addEventListener('offline', () => {
+            this.isOffline = true;
+            Swal.fire({
+                title: 'Anda Sedang Offline ☁️',
+                text: 'Koneksi terputus. Kasir tetap bisa digunakan, data aman di memori lokal.',
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000
+            });
+        });
+
+        // 🌟 DETEKSI OTOMATIS SAAT INTERNET NYALA KEMBALI
+        window.addEventListener('online', () => {
+            this.isOffline = false;
+            Swal.fire({
+                title: 'Kembali Online! 🟢',
+                text: 'Sistem sedang menyinkronkan data yang tertunda ke server...',
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        });
+          
     this.resetPosDate();
     
     // [TETAP] Simpan reference ke fungsi agar bisa dihapus nanti
