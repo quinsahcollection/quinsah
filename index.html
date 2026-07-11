@@ -5321,15 +5321,61 @@ body.sidebar-open {
 
         <!-- MODAL KAMERA SCANNER -->
         <div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg bg-dark">
-                    <div class="modal-header border-bottom-0 p-3">
-                        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-camera me-2"></i>Scanner Barcode Mode Kamera</h6>
+            <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Tambah modal-lg agar lebih lebar -->
+                <div class="modal-content border-0 shadow-lg bg-dark overflow-hidden">
+                    <div class="modal-header border-bottom-0 p-3 pb-2">
+                        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-camera me-2"></i>Scanner Berkelanjutan</h6>
                         <button type="button" class="btn-close btn-close-white" @click="stopCameraScanner"></button>
                     </div>
-                    <div class="modal-body p-0 text-center">
-                        <div id="qr-reader" style="width:100%; border-radius: 0 0 8px 8px; overflow: hidden;"></div>
-                        <p class="text-white-50 small mt-3 mb-3">Arahkan garis merah scanner ke Barcode produk.</p>
+                    <div class="modal-body p-0">
+                        <div class="row g-0">
+                            
+                            <!-- BAGIAN KIRI: Kamera Scanner -->
+                            <div class="col-md-7 d-flex flex-column justify-content-center text-center p-3">
+                                <div id="qr-reader" style="width:100%; border-radius: 8px; overflow: hidden; background: #000;"></div>
+                                <p class="text-white-50 small mt-3 mb-0">Arahkan garis scanner ke barcode. Kamera tidak akan tertutup otomatis.</p>
+                            </div>
+                            
+                            <!-- BAGIAN KANAN: Daftar Antrean Barang -->
+                            <div class="col-md-5 bg-white d-flex flex-column">
+                                <div class="p-3 border-bottom bg-light">
+                                    <h6 class="fw-bold text-dark mb-0 d-flex justify-content-between align-items-center">
+                                        Antrean Scan
+                                        <span class="badge bg-primary rounded-pill">{{ tempScannedItems.length }}</span>
+                                    </h6>
+                                </div>
+                                
+                                <!-- Daftar Barang Scrollable -->
+                                <div class="flex-grow-1 p-0 overflow-auto" style="height: 300px; max-height: 300px;">
+                                    <ul class="list-group list-group-flush" v-if="tempScannedItems.length > 0">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center p-3" v-for="(item, index) in tempScannedItems" :key="index">
+                                            <div class="ms-2 me-auto">
+                                                <!-- Sesuaikan variabel item.nama / item.sku dengan database Anda -->
+                                                <div class="fw-bold text-dark fs-6">{{ item.nama || item.name || 'Produk' }}</div>
+                                                <div class="text-muted small font-monospace">{{ item.sku || item.barcode }}</div>
+                                            </div>
+                                            <span class="badge bg-secondary rounded-pill fs-6 px-2 py-1">{{ item.qty }}x</span>
+                                        </li>
+                                    </ul>
+                                    
+                                    <!-- State Kosong -->
+                                    <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center">
+                                        <i class="bi bi-upc-scan fs-1 mb-2 text-light"></i>
+                                        <small>Belum ada produk yang di-scan.<br>Silakan mulai scan barcode.</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Tombol Masukkan Keranjang -->
+                                <div class="p-3 border-top bg-light">
+                                    <button class="btn bg-gradient-primary text-white w-100 fw-bold py-2 shadow-sm" 
+                                            :disabled="tempScannedItems.length === 0" 
+                                            @click="addAllScannedToCart">
+                                        <i class="bi bi-cart-plus me-2"></i>Masukkan ke Keranjang
+                                    </button>
+                                </div>
+                            </div>
+                            
+                        </div>
                     </div>
                 </div>
             </div>
@@ -7660,6 +7706,8 @@ body.sidebar-open {
                 crmTab: 'customers', 
                 invTab: 'stocks', 
                 settingTab: 'invoice',
+                
+                tempScannedItems: [], // Array untuk menampung scan sementara
                 
                 _modalListener: null,
                 _printListener: null,
@@ -13848,19 +13896,99 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 setTimeout(() => { try { JsBarcode("#barcode-canvas", sku, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } catch(e) { console.error("Barcode Error", e); } }, 200);
             },
 
-            startCameraScanner() {
+           startCameraScanner() {
                 this.showModal('cameraScannerModal');
                 setTimeout(() => {
                     if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
                     const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+                    
                     this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                        this.stopCameraScanner(); this.searchQuery = decodedText; this.posSearchMode = 'scan'; this.handlePosSearchEnter();
-                    }).catch(err => { this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); });
+                        // 1. HAPUS this.stopCameraScanner() di sini agar kamera tidak mati!
+                        // 2. Langsung proses barcode yang didapat ke fungsi antrean
+                        this.handleContinuousScan(decodedText);
+                    }).catch(err => { 
+                        this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); 
+                    });
                 }, 400);
             },
             
             stopCameraScanner() {
-                if(this.html5QrCode) { this.html5QrCode.stop().then(() => { this.hideModal('cameraScannerModal'); }).catch(err => { this.hideModal('cameraScannerModal'); }); } else { this.hideModal('cameraScannerModal'); }
+                // Kosongkan daftar antrean saat modal ditutup agar tidak menumpuk di scan berikutnya
+                this.tempScannedItems = []; 
+                
+                if(this.html5QrCode) { 
+                    this.html5QrCode.stop().then(() => { 
+                        this.hideModal('cameraScannerModal'); 
+                    }).catch(err => { 
+                        this.hideModal('cameraScannerModal'); 
+                    }); 
+                } else { 
+                    this.hideModal('cameraScannerModal'); 
+                }
+            },
+
+            // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
+            handleContinuousScan(decodedText) {
+                const q = decodedText.trim().toLowerCase(); 
+                let foundProduct = null; 
+                let foundVariant = null;
+
+                // Cari produk atau varian yang cocok
+                for (let p of this.products) {
+                    if (p.isActive === false) continue;
+
+                    if (p.sku && p.sku.toLowerCase() === q) { 
+                        foundProduct = p; break; 
+                    }
+                    if (p.variants && p.variants.length > 0) {
+                        let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
+                        if (v) { foundProduct = p; foundVariant = v; break; }
+                    }
+                }
+
+                if (foundProduct) { 
+                    // Jika ketemu, cek apakah barang ini sudah ada di antrean sementara
+                    let existingItem = this.tempScannedItems.find(item => 
+                        item.product.id === foundProduct.id && 
+                        (foundVariant ? (item.variant && item.variant.id === foundVariant.id) : !item.variant)
+                    );
+
+                    if (existingItem) {
+                        existingItem.qty += 1; // Tambah jumlahnya saja
+                    } else {
+                        // Masukkan ke daftar antrean baru
+                        this.tempScannedItems.push({
+                            product: foundProduct,
+                            variant: foundVariant,
+                            qty: 1,
+                            nama: foundProduct.nama || foundProduct.name, // Sesuai HTML sebelumnya
+                            sku: foundVariant ? foundVariant.variantSku : foundProduct.sku // Sesuai HTML sebelumnya
+                        });
+                    }
+                    
+                    // Opsional: Jika Anda punya fungsi bunyi BEEP, taruh di sini (misal: this.playBeep();)
+                } 
+                else { 
+                    // Gunakan peringatan, tetapi kamera tetap berjalan di background
+                    this.askConfirm('Produk Tidak Ditemukan', `Barcode (${decodedText}) tidak terdaftar di sistem.`, null); 
+                }
+            },
+
+            addAllScannedToCart() {
+                // Looping semua barang yang ada di antrean sementara
+                for (let item of this.tempScannedItems) {
+                    // Set activeProduct (sama seperti cara di handlePosSearchEnter)
+                    this.activeProduct = item.product;
+                    
+                    // Karena fungsi addToCart Anda mungkin hanya menambah 1 per klik, 
+                    // kita panggil fungsi addToCart sebanyak qty yang di-scan
+                    for (let i = 0; i < item.qty; i++) {
+                        this.addToCart(item.variant || null);
+                    }
+                }
+                
+                // Setelah semua masuk ke keranjang utama, tutup scanner
+                this.stopCameraScanner(); 
             },
 
             handlePosSearchEnter() {
