@@ -539,6 +539,33 @@ body.sidebar-open {
     #paymentModal .col-md-7,
     #paymentModal .col-md-5 { width: 100% !important; height: auto !important; max-height: none !important; overflow-y: visible !important; }
     #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
+
+    /* Paksa container kamera (abu-abu) agar tingginya rapat & tidak melar ke bawah */
+    #reader, 
+    div[id*="reader"],
+    .html5-qrcode-element { 
+        height: 220px !important;         /* Mengunci tinggi box abu-abu */
+        max-height: 220px !important;
+        min-height: 220px !important;
+        overflow: hidden !important;      /* Memotong kelebihan video kamera */
+        background-color: #212529 !important; /* Warna abu-abu gelap background */
+        border-radius: 8px !important;    /* Menyamakan kelengkungan sudut */
+    }
+
+    /* 2. Paksa video kamera di dalamnya agar fit secara horizontal */
+    #reader video {
+        height: 100% !important;
+        width: 100% !important;
+        object-fit: cover !important;     /* Memotong video agar penuh di dalam 220px */
+    }
+
+    /* 3. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
+    #reader + div, 
+    #reader ~ p,
+    div[id*="reader"]__dashboard_section {
+        margin-top: 8px !important;
+        margin-bottom: 8px !important;
+    }
     
     .fab-cart {
         position: fixed; 
