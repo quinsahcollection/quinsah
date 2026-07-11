@@ -7666,7 +7666,7 @@ body.sidebar-open {
     // 2. Import Firestore & Offline Cache
     import { 
         getFirestore, initializeFirestore, persistentLocalCache,
-        collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch 
+        collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, limit 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
@@ -16323,17 +16323,18 @@ doActualPrint() {
             });
         },
         
-        async fetchOpnameHistory() {
+       async fetchOpnameHistory() {
             try {
                 // 1. Ambil ID Perusahaan
                 const companyId = this.userProfile?.companyId;
                 if (!companyId) return; // Hentikan jika tidak ada ID
 
-                // 2. Tambahkan where() untuk memfilter berdasarkan companyId
+                // 2. 🌟 PERBAIKAN: Tambahkan limit(50) agar loading tidak berat
                 const q = query(
                     collection(db, "stockOpnames"), 
                     where("companyId", "==", companyId), 
-                    orderBy("createdAt", "desc")
+                    orderBy("createdAt", "desc"),
+                    limit(50) // <-- INI KUNCI AGAR LOADING SUPER CEPAT
                 );
                 
                 const querySnapshot = await getDocs(q);
