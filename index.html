@@ -5347,17 +5347,28 @@ body.sidebar-open {
                                 
                                 <!-- Daftar Barang Scrollable -->
                                 <div class="flex-grow-1 p-0 overflow-auto" style="height: 300px; max-height: 300px;">
-                                    <ul class="list-group list-group-flush" v-if="tempScannedItems.length > 0">
-                                        <li class="list-group-item d-flex justify-content-between align-items-center p-3" v-for="(item, index) in tempScannedItems" :key="index">
-                                            <div class="ms-2 me-auto">
-                                                <!-- Sesuaikan variabel item.nama / item.sku dengan database Anda -->
-                                                <div class="fw-bold text-dark fs-6">{{ item.nama || item.name || 'Produk' }}</div>
-                                                <div class="text-muted small font-monospace">{{ item.sku || item.barcode }}</div>
-                                            </div>
-                                            <span class="badge bg-secondary rounded-pill fs-6 px-2 py-1">{{ item.qty }}x</span>
-                                        </li>
-                                    </ul>
-                                    
+    <ul class="list-group list-group-flush" v-if="tempScannedItems.length > 0">
+        
+        <!-- PERBAIKAN: Menambahkan ID, Class Animasi, dan Tombol +/- -->
+        <li class="list-group-item d-flex justify-content-between align-items-center p-3" 
+            v-for="(item, index) in tempScannedItems" 
+            :key="index"
+            :id="'scan-item-' + item.sku"
+            :class="{'bg-warning bg-opacity-25 transition-all': item.highlighted}">
+            
+            <div class="ms-2 me-auto">
+                <div class="fw-bold text-dark fs-6">{{ item.nama || item.name || 'Produk' }}</div>
+                <div class="text-muted small font-monospace">{{ item.sku || item.barcode }}</div>
+            </div>
+            
+            <!-- TOMBOL PLUS MINUS PENGGANTI LABEL QTY -->
+            <div class="input-group input-group-sm ms-2" style="width: 105px; flex-wrap: nowrap;">
+                <button class="btn btn-outline-secondary fw-bold" type="button" @click="kurangiQtyScan(index)">-</button>
+                <input type="text" class="form-control text-center px-1 fw-bold bg-white" :value="item.qty" readonly>
+                <button class="btn btn-outline-secondary fw-bold" type="button" @click="tambahQtyScan(index)">+</button>
+            </div>         
+        </li>
+    </ul>                                    
                                     <!-- State Kosong -->
                                     <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center">
     <!-- Mengganti text-light menjadi text-secondary agar terlihat -->
@@ -13934,53 +13945,84 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             },
 
             // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
-            handleContinuousScan(decodedText) {
-    const q = decodedText.trim().toLowerCase(); 
-    let foundProduct = null; 
-    let foundVariant = null;
+           handleContinuousScan(decodedText) {
+        const q = decodedText.trim().toLowerCase(); 
+        let foundProduct = null; 
+        let foundVariant = null;
 
-    // Cari produk atau varian yang cocok
-    for (let p of this.products) {
-        if (p.isActive === false) continue;
-
-        if (p.sku && p.sku.toLowerCase() === q) { 
-            foundProduct = p; break; 
-        }
-        if (p.variants && p.variants.length > 0) {
-            let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
-            if (v) { foundProduct = p; foundVariant = v; break; }
-        }
-    }
-
-    if (foundProduct) { 
-        // PERBAIKAN: Gunakan SKU sebagai identitas unik, bukan ID Produk
-        let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
-        
-        let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
-
-        if (existingItem) {
-            existingItem.qty += 1; // Jika barang/varian sama persis, tambah jumlahnya
-        } else {
-            // PERBAIKAN: Tampilkan nama varian di layar (Misal: "Kaos - Merah XL")
-            let prodName = foundProduct.nama || foundProduct.name || 'Produk';
-            if (foundVariant) {
-                let varName = foundVariant.nama || foundVariant.name || '';
-                prodName = prodName + (varName ? ' - ' + varName : '');
+        for (let p of this.products) {
+            if (p.isActive === false) continue;
+            if (p.sku && p.sku.toLowerCase() === q) { foundProduct = p; break; }
+            if (p.variants && p.variants.length > 0) {
+                let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
+                if (v) { foundProduct = p; foundVariant = v; break; }
             }
-
-            this.tempScannedItems.push({
-                product: foundProduct,
-                variant: foundVariant,
-                qty: 1,
-                nama: prodName,
-                sku: scannedSku
-            });
         }
-    } 
-    else { 
-        this.askConfirm('Produk Tidak Ditemukan', `Barcode (${decodedText}) tidak terdaftar di sistem.`, null); 
-    }
-},
+
+        if (foundProduct) { 
+            let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
+            let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
+
+            if (existingItem) {
+                // AMAN: Jangan otomatis ditambah. Cukup sorot barangnya agar kasir tahu.
+                this.sorotBarang(existingItem);
+            } else {
+                let prodName = foundProduct.nama || foundProduct.name || 'Produk';
+                if (foundVariant) {
+                    let varName = foundVariant.nama || foundVariant.name || '';
+                    prodName = prodName + (varName ? ' - ' + varName : '');
+                }
+
+                let newItem = {
+                    product: foundProduct,
+                    variant: foundVariant,
+                    qty: 1,
+                    nama: prodName,
+                    sku: scannedSku,
+                    highlighted: false // Menyiapkan variabel untuk warna sorotan
+                };
+                
+                this.tempScannedItems.push(newItem);
+                
+                // Sorot barang yang baru pertama kali masuk
+                this.sorotBarang(newItem);
+            }
+        } 
+        // Hapus atau komentari bagian error barcode agar saat kamera menahan 
+        // barcode kosong tidak terus-terusan muncul alert yang mengganggu.
+    },
+
+    // --- 3 FUNGSI BARU UNTUK KONTROL ANTARMUKA SCAN ---
+    sorotBarang(item) {
+        // Nyalakan warna kuning peringatan
+        item.highlighted = true;
+        
+        // Otomatis scroll ke posisi barang di layar
+        this.$nextTick(() => {
+            let el = document.getElementById('scan-item-' + item.sku);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        // Matikan warna kuning setelah 1.5 detik
+        setTimeout(() => {
+            item.highlighted = false;
+        }, 1500);
+    },
+
+    tambahQtyScan(index) {
+        this.tempScannedItems[index].qty++;
+    },
+
+    kurangiQtyScan(index) {
+        if (this.tempScannedItems[index].qty > 1) {
+            this.tempScannedItems[index].qty--;
+        } else {
+            // Jika qty = 1 dan dikurangi, hapus barang dari antrean
+            this.tempScannedItems.splice(index, 1);
+        }
+    },
 
             addAllScannedToCart() {
                 // Looping semua barang yang ada di antrean sementara
