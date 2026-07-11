@@ -14053,22 +14053,22 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
 
     // --- 3 FUNGSI BARU UNTUK KONTROL ANTARMUKA SCAN ---
     sorotBarang(item) {
-        // Nyalakan warna kuning peringatan
+        // 1. Matikan semua warna kuning di semua barang terlebih dahulu
+        this.tempScannedItems.forEach(i => {
+            i.highlighted = false;
+        });
+        
+        // 2. Nyalakan warna kuning HANYA untuk barang yang baru saja di-scan ini
         item.highlighted = true;
         
-        // Otomatis scroll ke posisi barang di layar
+        // 3. Otomatis gulir (scroll) ke posisi barang tersebut di layar
         this.$nextTick(() => {
             let el = document.getElementById('scan-item-' + item.sku);
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         });
-
-        // Matikan warna kuning setelah 1.5 detik
-        setTimeout(() => {
-            item.highlighted = false;
-        }, 1500);
-    },
+        },
 
     tambahQtyScan(index) {
         this.tempScannedItems[index].qty++;
