@@ -5360,18 +5360,19 @@ body.sidebar-open {
                                     
                                     <!-- State Kosong -->
                                     <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center">
-                                        <i class="bi bi-upc-scan fs-1 mb-2 text-light"></i>
-                                        <small>Belum ada produk yang di-scan.<br>Silakan mulai scan barcode.</small>
-                                    </div>
-                                </div>
-                                
-                                <!-- Tombol Masukkan Keranjang -->
-                                <div class="p-3 border-top bg-light">
-                                    <button class="btn bg-gradient-primary text-white w-100 fw-bold py-2 shadow-sm" 
-                                            :disabled="tempScannedItems.length === 0" 
-                                            @click="addAllScannedToCart">
-                                        <i class="bi bi-cart-plus me-2"></i>Masukkan ke Keranjang
-                                    </button>
+    <!-- Mengganti text-light menjadi text-secondary agar terlihat -->
+    <i class="bi bi-upc-scan fs-1 mb-2 text-secondary"></i>
+    <small>Belum ada produk yang di-scan.<br>Silakan mulai scan barcode.</small>
+</div>
+
+<!-- Tombol Masukkan Keranjang -->
+<div class="p-3 border-top bg-light">
+    <!-- Mengganti bg-gradient-primary menjadi btn-primary -->
+    <button class="btn btn-primary text-white w-100 fw-bold py-2 shadow-sm" 
+            :disabled="tempScannedItems.length === 0" 
+            @click="addAllScannedToCart">
+        <i class="bi bi-cart-plus me-2"></i>Masukkan ke Keranjang
+    </button>
                                 </div>
                             </div>
                             
@@ -13897,20 +13898,24 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             },
 
            startCameraScanner() {
-                this.showModal('cameraScannerModal');
-                setTimeout(() => {
-                    if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
-                    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-                    
-                    this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                        // 1. HAPUS this.stopCameraScanner() di sini agar kamera tidak mati!
-                        // 2. Langsung proses barcode yang didapat ke fungsi antrean
-                        this.handleContinuousScan(decodedText);
-                    }).catch(err => { 
-                        this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); 
-                    });
-                }, 400);
-            },
+    this.showModal('cameraScannerModal');
+    setTimeout(() => {
+        if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
+        
+        // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 320, height: 120 }, 
+            aspectRatio: 1.0 
+        };
+        
+        this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            this.handleContinuousScan(decodedText);
+        }).catch(err => { 
+            this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); 
+        });
+    }, 400);
+},
             
             stopCameraScanner() {
                 // Kosongkan daftar antrean saat modal ditutup agar tidak menumpuk di scan berikutnya
@@ -13929,50 +13934,52 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
 
             // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
             handleContinuousScan(decodedText) {
-                const q = decodedText.trim().toLowerCase(); 
-                let foundProduct = null; 
-                let foundVariant = null;
+    const q = decodedText.trim().toLowerCase(); 
+    let foundProduct = null; 
+    let foundVariant = null;
 
-                // Cari produk atau varian yang cocok
-                for (let p of this.products) {
-                    if (p.isActive === false) continue;
+    // Cari produk atau varian yang cocok
+    for (let p of this.products) {
+        if (p.isActive === false) continue;
 
-                    if (p.sku && p.sku.toLowerCase() === q) { 
-                        foundProduct = p; break; 
-                    }
-                    if (p.variants && p.variants.length > 0) {
-                        let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
-                        if (v) { foundProduct = p; foundVariant = v; break; }
-                    }
-                }
+        if (p.sku && p.sku.toLowerCase() === q) { 
+            foundProduct = p; break; 
+        }
+        if (p.variants && p.variants.length > 0) {
+            let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
+            if (v) { foundProduct = p; foundVariant = v; break; }
+        }
+    }
 
-                if (foundProduct) { 
-                    // Jika ketemu, cek apakah barang ini sudah ada di antrean sementara
-                    let existingItem = this.tempScannedItems.find(item => 
-                        item.product.id === foundProduct.id && 
-                        (foundVariant ? (item.variant && item.variant.id === foundVariant.id) : !item.variant)
-                    );
+    if (foundProduct) { 
+        // PERBAIKAN: Gunakan SKU sebagai identitas unik, bukan ID Produk
+        let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
+        
+        let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
 
-                    if (existingItem) {
-                        existingItem.qty += 1; // Tambah jumlahnya saja
-                    } else {
-                        // Masukkan ke daftar antrean baru
-                        this.tempScannedItems.push({
-                            product: foundProduct,
-                            variant: foundVariant,
-                            qty: 1,
-                            nama: foundProduct.nama || foundProduct.name, // Sesuai HTML sebelumnya
-                            sku: foundVariant ? foundVariant.variantSku : foundProduct.sku // Sesuai HTML sebelumnya
-                        });
-                    }
-                    
-                    // Opsional: Jika Anda punya fungsi bunyi BEEP, taruh di sini (misal: this.playBeep();)
-                } 
-                else { 
-                    // Gunakan peringatan, tetapi kamera tetap berjalan di background
-                    this.askConfirm('Produk Tidak Ditemukan', `Barcode (${decodedText}) tidak terdaftar di sistem.`, null); 
-                }
-            },
+        if (existingItem) {
+            existingItem.qty += 1; // Jika barang/varian sama persis, tambah jumlahnya
+        } else {
+            // PERBAIKAN: Tampilkan nama varian di layar (Misal: "Kaos - Merah XL")
+            let prodName = foundProduct.nama || foundProduct.name || 'Produk';
+            if (foundVariant) {
+                let varName = foundVariant.nama || foundVariant.name || '';
+                prodName = prodName + (varName ? ' - ' + varName : '');
+            }
+
+            this.tempScannedItems.push({
+                product: foundProduct,
+                variant: foundVariant,
+                qty: 1,
+                nama: prodName,
+                sku: scannedSku
+            });
+        }
+    } 
+    else { 
+        this.askConfirm('Produk Tidak Ditemukan', `Barcode (${decodedText}) tidak terdaftar di sistem.`, null); 
+    }
+},
 
             addAllScannedToCart() {
                 // Looping semua barang yang ada di antrean sementara
