@@ -16323,39 +16323,43 @@ doActualPrint() {
             });
         },
         
-       async fetchOpnameHistory() {
+       fetchOpnameHistory() {
             try {
                 // 1. Ambil ID Perusahaan
                 const companyId = this.userProfile?.companyId;
-                if (!companyId) return; // Hentikan jika tidak ada ID
+                if (!companyId) return; 
 
-                // 2. 🌟 PERBAIKAN: Tambahkan limit(50) agar loading tidak berat
                 const q = query(
                     collection(db, "stockOpnames"), 
                     where("companyId", "==", companyId), 
                     orderBy("createdAt", "desc"),
-                    limit(50) // <-- INI KUNCI AGAR LOADING SUPER CEPAT
+                    limit(50) 
                 );
                 
-                const querySnapshot = await getDocs(q);
-                
-                let list = [];
-                querySnapshot.forEach((doc) => {
-                    let data = doc.data();
-                    list.push({
-                        firestoreId: doc.id,
-                        id: data.id,
-                        dateStr: data.dateStr,
-                        outletId: data.outletId,
-                        pic: data.pic,
-                        note: data.note,
-                        status: data.status,
-                        items: data.items || []
+                // 🌟 MENGGUNAKAN ONSNAPSHOT (LIVE CCTV) 
+                // Begitu ada data baru di Firebase, layar langsung otomatis berubah!
+                onSnapshot(q, (querySnapshot) => {
+                    let list = [];
+                    querySnapshot.forEach((doc) => {
+                        let data = doc.data();
+                        list.push({
+                            firestoreId: doc.id,
+                            id: data.id,
+                            dateStr: data.dateStr,
+                            outletId: data.outletId,
+                            pic: data.pic,
+                            note: data.note,
+                            status: data.status,
+                            items: data.items || []
+                        });
                     });
+                    this.opnameHistory = list;
+                }, (error) => {
+                    console.error("Live Sync Opname terputus:", error);
                 });
-                this.opnameHistory = list;
+                
             } catch (err) {
-                console.error("Gagal memuat riwayat opname dari Firebase:", err);
+                console.error("Gagal memasang sinkronisasi live:", err);
             }
         },
         
