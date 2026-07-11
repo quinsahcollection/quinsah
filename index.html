@@ -9228,23 +9228,38 @@ beforeDestroy() {
         watch: {
     // [TETAP] 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
     userProfile: {
-        handler(newProfile) {
-            if (newProfile && newProfile.companyId) {
-                if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
+            handler(newProfile) {
+                // ==========================================
+                // 1. LOGIKA LAMA: Mengambil Data Sesuai View
+                // ==========================================
+                if (newProfile && newProfile.companyId) {
+                    if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
 
-                if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
-                    setTimeout(() => { this.fetchDashboardData(); }, 150);
-                } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
-                    this.fetchTransferHistory();
-                } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
-                    this.fetchOpnameHistory();
-                } else if (this.currentView === 'cash_register' && typeof this.fetchRegisters === 'function') {
-                    this.fetchRegisters();
+                    if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
+                        setTimeout(() => { this.fetchDashboardData(); }, 150);
+                    } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
+                        this.fetchTransferHistory();
+                    } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
+                        this.fetchOpnameHistory();
+                    } else if (this.currentView === 'cash_register' && typeof this.fetchRegisters === 'function') {
+                        this.fetchRegisters();
+                    }
                 }
-            }
-        },
-        deep: true,
-        immediate: true
+
+                // ==========================================
+                // 2. LOGIKA BARU: PWA Dynamic Manifest (KTP Aplikasi)
+                // ==========================================
+                if (newProfile && newProfile.companyData && newProfile.companyData.namaUsaha) {
+                    if (typeof this.updateDynamicManifest === 'function') {
+                        this.updateDynamicManifest(
+                            newProfile.companyData.namaUsaha, 
+                            newProfile.companyData.logoUrl 
+                        );
+                    }
+                }
+            },
+            deep: true,
+            immediate: true
     },
           
     // [TETAP] Logika penguncian outlet berdasarkan role
@@ -9344,6 +9359,50 @@ beforeDestroy() {
             }
         }
     },
+
+        // ==========================================
+        // 🌟 FUNGSI DYNAMIC PWA (KTP APLIKASI OTOMATIS)
+        // ==========================================
+        updateDynamicManifest(namaToko, logoUrl) {
+            // 1. Siapkan kerangka datanya
+            const manifestData = {
+                name: namaToko || "Sistem Kasir POS",
+                short_name: (namaToko || "Kasir").substring(0, 12), // Maksimal 12 huruf untuk di HP
+                start_url: "./",
+                display: "standalone",
+                background_color: "#f8f9fa",
+                theme_color: "#0d6efd",
+                icons: [
+                    {
+                        // Jika toko belum punya logo di database, pakai logo bawaan kita
+                        src: logoUrl || "./logo.png",
+                        sizes: "192x192",
+                        type: "image/png"
+                    },
+                    {
+                        src: logoUrl || "./logo.png",
+                        sizes: "512x512",
+                        type: "image/png"
+                    }
+                ]
+            };
+
+            // 2. Ubah data menjadi file JSON Virtual (Blob)
+            const stringManifest = JSON.stringify(manifestData);
+            const blob = new Blob([stringManifest], { type: 'application/json' });
+            const manifestUrl = URL.createObjectURL(blob);
+
+            // 3. Cari tag <link rel="manifest"> di HTML dan ganti isinya dengan yang baru!
+            let manifestElement = document.querySelector('link[rel="manifest"]');
+            if (!manifestElement) {
+                manifestElement = document.createElement('link');
+                manifestElement.rel = 'manifest';
+                document.head.appendChild(manifestElement);
+            }
+            manifestElement.href = manifestUrl;
+            
+            console.log("KTP Aplikasi (Manifest) berhasil diubah menjadi:", namaToko);
+        },
             
     resetSalesFilter() {
                 this.transactionStartDate = '';
