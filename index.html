@@ -540,26 +540,53 @@ body.sidebar-open {
     #paymentModal .col-md-5 { width: 100% !important; height: auto !important; max-height: none !important; overflow-y: visible !important; }
     #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
 
-    /* Paksa container kamera (abu-abu) agar tingginya rapat & tidak melar ke bawah */
+    /* ==========================================================================
+       PERBAIKAN TOTAL: KAMERA RAPAT & KOTAK SCAN TETAP MUNCUL
+       ========================================================================== */
+
+    /* 1. Atur container luar agar tingginya rapat & tidak melar ke bawah */
     #reader, 
     div[id*="reader"],
     .html5-qrcode-element { 
-        height: 220px !important;         /* Mengunci tinggi box abu-abu */
+        height: 220px !important;         
         max-height: 220px !important;
         min-height: 220px !important;
-        overflow: hidden !important;      /* Memotong kelebihan video kamera */
-        background-color: #212529 !important; /* Warna abu-abu gelap background */
-        border-radius: 8px !important;    /* Menyamakan kelengkungan sudut */
+        background-color: #212529 !important; 
+        border-radius: 8px !important;    
+        position: relative !important;
+        /* OVERFLOW HIDDEN DI SINI DIHAPUS agar kotak scan tidak ikut terpotong */
     }
 
-    /* 2. Paksa video kamera di dalamnya agar fit secara horizontal */
+    /* 2. Pindahkan overflow hidden ke region scan agar video tetap terpotong rapi */
+    #reader__scan_region {
+        height: 100% !important;
+        width: 100% !important;
+        overflow: hidden !important; /* Memotong kelebihan video di sini */
+        border-radius: 8px !important;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* 3. Paksa video kamera di dalamnya agar fit secara horizontal */
     #reader video {
         height: 100% !important;
         width: 100% !important;
-        object-fit: cover !important;     /* Memotong video agar penuh di dalam 220px */
+        object-fit: cover !important;     
     }
 
-    /* 3. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
+    /* 4. Paksa elemen bingkai/garis scan bawaan agar posisinya pas di tengah-tengah kamera */
+    #reader__border_shifter {
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        position: absolute !important;
+        z-index: 10 !important;
+    }
+
+    /* 5. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
     #reader + div, 
     #reader ~ p,
     div[id*="reader"]__dashboard_section {
