@@ -541,7 +541,7 @@ body.sidebar-open {
     #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
 
     /* ==========================================================================
-       PERBAIKAN TOTAL: KAMERA RAPAT & KOTAK SCAN TETAP MUNCUL
+       SOLUSI PASTI: MEMBUAT KOTAK BINGKAI & LASER TIRUAN DENGAN CSS
        ========================================================================== */
 
     /* 1. Atur container luar agar tingginya rapat & tidak melar ke bawah */
@@ -554,14 +554,13 @@ body.sidebar-open {
         background-color: #212529 !important; 
         border-radius: 8px !important;    
         position: relative !important;
-        /* OVERFLOW HIDDEN DI SINI DIHAPUS agar kotak scan tidak ikut terpotong */
     }
 
     /* 2. Pindahkan overflow hidden ke region scan agar video tetap terpotong rapi */
     #reader__scan_region {
         height: 100% !important;
         width: 100% !important;
-        overflow: hidden !important; /* Memotong kelebihan video di sini */
+        overflow: hidden !important; 
         border-radius: 8px !important;
         position: relative !important;
         display: flex !important;
@@ -576,17 +575,44 @@ body.sidebar-open {
         object-fit: cover !important;     
     }
 
-    /* 4. Paksa elemen bingkai/garis scan bawaan agar posisinya pas di tengah-tengah kamera */
-    #reader__border_shifter {
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        margin: 0 !important;
-        position: absolute !important;
-        z-index: 10 !important;
+    /* 4. Menyembunyikan elemen bawaan library yang rusak/hilang */
+    #reader__border_shifter, 
+    #reader canvas {
+        display: none !important; 
     }
 
-    /* 5. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
+    /* 5. MEMBUAT BINGKAI KOTAK SCAN BARCODE BARU DI HP (TIRUAN) */
+    #reader__scan_region::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;           /* Lebar kotak scan (sama seperti config JS) */
+        height: 70px;         /* Tinggi kotak scan tipis khusus barcode */
+        border: 3px solid #ffffff; /* Garis putih solid pembungkus */
+        box-shadow: 0 0 0 500px rgba(0, 0, 0, 0.4); /* Efek background gelap di luar kotak */
+        z-index: 99;          /* Memastikan berada di paling depan */
+        pointer-events: none; /* Agar tidak mengganggu klik atau fokus kamera */
+        border-radius: 4px;
+    }
+
+    /* 6. MEMBUAT GARIS LASER MERAH DI TENGAH KOTAK (OPSIONAL & KEREN) */
+    #reader__scan_region::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 15%;
+        transform: translateY(-50%);
+        width: 70%;
+        height: 2px;
+        background-color: #ff3333; /* Warna laser merah */
+        box-shadow: 0 0 8px #ff3333; /* Efek cahaya laser */
+        z-index: 100;
+        pointer-events: none;
+    }
+
+    /* 7. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
     #reader + div, 
     #reader ~ p,
     div[id*="reader"]__dashboard_section {
