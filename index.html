@@ -5346,29 +5346,43 @@ body.sidebar-open {
                                 </div>
                                 
                                 <!-- Daftar Barang Scrollable -->
-                                <div class="flex-grow-1 p-0 overflow-auto" style="height: 300px; max-height: 300px;">
+                               <div class="flex-grow-1 p-0 overflow-auto" style="height: 300px; max-height: 300px;">
     <ul class="list-group list-group-flush" v-if="tempScannedItems.length > 0">
         
-        <!-- PERBAIKAN: Menambahkan ID, Class Animasi, dan Tombol +/- -->
         <li class="list-group-item d-flex justify-content-between align-items-center p-3" 
             v-for="(item, index) in tempScannedItems" 
             :key="index"
             :id="'scan-item-' + item.sku"
             :class="{'bg-warning bg-opacity-25 transition-all': item.highlighted}">
             
-            <div class="ms-2 me-auto">
-                <div class="fw-bold text-dark fs-6">{{ item.nama || item.name || 'Produk' }}</div>
-                <div class="text-muted small font-monospace">{{ item.sku || item.barcode }}</div>
+            <!-- PERBAIKAN: Bungkus teks dan gambar menjadi satu baris -->
+            <div class="d-flex align-items-center me-auto overflow-hidden">
+                
+                <!-- FOTO PRODUK KECIL (Thumbnail) -->
+                <div class="border rounded bg-light d-flex align-items-center justify-content-center text-secondary" 
+                     style="width: 45px; height: 45px; flex-shrink: 0; overflow: hidden;">
+                     <!-- Jika gambar ada, tampilkan. Jika tidak, tampilkan ikon image bawaan -->
+                    <img v-if="item.gambar" :src="item.gambar" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
+                    <i v-else class="bi bi-image" style="font-size: 1.2rem;"></i>
+                </div>
+                
+                <!-- NAMA & SKU PRODUK -->
+                <div class="ms-3 text-truncate">
+                    <!-- class text-truncate mencegah teks menabrak tombol jika namanya sangat panjang -->
+                    <div class="fw-bold text-dark fs-6 text-truncate">{{ item.nama }}</div>
+                    <div class="text-muted small font-monospace">{{ item.sku }}</div>
+                </div>
+                
             </div>
             
-            <!-- TOMBOL PLUS MINUS PENGGANTI LABEL QTY -->
-            <div class="input-group input-group-sm ms-2" style="width: 105px; flex-wrap: nowrap;">
+            <!-- TOMBOL PLUS MINUS (Tetap sama, tambahkan flex-shrink agar tidak tertekan nama produk) -->
+            <div class="input-group input-group-sm ms-2" style="width: 105px; flex-shrink: 0; flex-wrap: nowrap;">
                 <button class="btn btn-outline-secondary fw-bold" type="button" @click="kurangiQtyScan(index)">-</button>
                 <input type="text" class="form-control text-center px-1 fw-bold bg-white" :value="item.qty" readonly>
                 <button class="btn btn-outline-secondary fw-bold" type="button" @click="tambahQtyScan(index)">+</button>
-            </div>         
+            </div>       
         </li>
-    </ul>                                    
+    </ul>                       
                                     <!-- State Kosong -->
                                     <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center">
     <!-- Mengganti text-light menjadi text-secondary agar terlihat -->
@@ -14023,7 +14037,6 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
 
             if (existingItem) {
-                // AMAN: Jangan otomatis ditambah. Cukup sorot barangnya agar kasir tahu.
                 this.sorotBarang(existingItem);
             } else {
                 let prodName = foundProduct.nama || foundProduct.name || 'Produk';
@@ -14032,23 +14045,29 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     prodName = prodName + (varName ? ' - ' + varName : '');
                 }
 
+                // --- PERBAIKAN: Ambil foto varian atau foto produk utama ---
+                // Sesuaikan 'gambar', 'image', atau 'foto' dengan kolom database Anda
+                let fotoKecil = '';
+                if (foundVariant && (foundVariant.gambar || foundVariant.image)) {
+                    fotoKecil = foundVariant.gambar || foundVariant.image;
+                } else if (foundProduct.gambar || foundProduct.image) {
+                    fotoKecil = foundProduct.gambar || foundProduct.image;
+                }
+
                 let newItem = {
                     product: foundProduct,
                     variant: foundVariant,
                     qty: 1,
                     nama: prodName,
                     sku: scannedSku,
-                    highlighted: false // Menyiapkan variabel untuk warna sorotan
+                    gambar: fotoKecil, // <--- Simpan foto ke memori sementara
+                    highlighted: false 
                 };
                 
                 this.tempScannedItems.push(newItem);
-                
-                // Sorot barang yang baru pertama kali masuk
                 this.sorotBarang(newItem);
             }
         } 
-        // Hapus atau komentari bagian error barcode agar saat kamera menahan 
-        // barcode kosong tidak terus-terusan muncul alert yang mengganggu.
     },
 
     // --- 3 FUNGSI BARU UNTUK KONTROL ANTARMUKA SCAN ---
