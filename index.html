@@ -539,82 +539,6 @@ body.sidebar-open {
     #paymentModal .col-md-7,
     #paymentModal .col-md-5 { width: 100% !important; height: auto !important; max-height: none !important; overflow-y: visible !important; }
     #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
-
-     /* ==========================================================================
-       SOLUSI AKHIR & PASTI: BINGKAI SCAN DI TEMPEL PADA CONTAINER UTAMA
-       ========================================================================== */
-
-    /* 1. Kunci area luar scanner agar rapat di HP */
-    #reader, 
-    div[id*="reader"],
-    .html5-qrcode-element { 
-        height: 220px !important;         
-        max-height: 220px !important;
-        min-height: 220px !important;
-        background-color: #212529 !important; 
-        border-radius: 8px !important;    
-        position: relative !important;
-        overflow: hidden !important; /* Kembalikan ke sini agar memotong sisa video */
-    }
-
-    /* 2. Biarkan area scan internal mengikuti tinggi pembungkusnya */
-    #reader__scan_region {
-        height: 100% !important;
-        width: 100% !important;
-        position: relative !important;
-    }
-
-    /* 3. Paksa video kamera agar fit horizontal dan vertikal */
-    #reader video {
-        height: 100% !important;
-        width: 100% !important;
-        object-fit: cover !important;     
-    }
-
-    /* 4. Sembunyikan elemen bawaan library yang posisinya berantakan */
-    #reader__border_shifter, 
-    #reader canvas {
-        display: none !important; 
-    }
-
-    /* 5. MEMBUAT BINGKAI KOTAK BARCODE BARU (Ditempel langsung di #reader) */
-    #reader::before {
-        content: "";
-        position: absolute;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 80% !important;         /* Lebar kotak bidik barcode */
-        height: 70px !important;       /* Tinggi kotak bidik (tipis untuk barcode) */
-        border: 3px solid #ffffff !important; /* Warna garis kotak putih */
-        box-shadow: 0 0 0 500px rgba(0, 0, 0, 0.4) !important; /* Masking gelap di luar kotak */
-        z-index: 999 !important;       /* Dipaksa paling depan di layar */
-        pointer-events: none !important;
-        border-radius: 4px !important;
-    }
-
-    /* 6. MEMBUAT GARIS LASER MERAH DI TENGAH KOTAK */
-    #reader::after {
-        content: "";
-        position: absolute;
-        top: 50% !important;
-        left: 15% !important;
-        transform: translateY(-50%) !important;
-        width: 70% !important;
-        height: 2px !important;
-        background-color: #ff3333 !important; /* Warna merah laser */
-        box-shadow: 0 0 8px #ff3333 !important;
-        z-index: 1000 !important;      /* Berada di atas kotak putih */
-        pointer-events: none !important;
-    }
-
-    /* 7. Atur teks instruksi di bawah kamera */
-    #reader + div, 
-    #reader ~ p,
-    div[id*="reader"]__dashboard_section {
-        margin-top: 12px !important;
-        margin-bottom: 8px !important;
-    }
     
     .fab-cart {
         position: fixed; 
@@ -13991,23 +13915,11 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
         if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
         
         // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
-        const config = {
-  fps: 15,
-  // Mengunci kamera ke mode landscape agar tidak memanjang ke bawah di HP
-  aspectRatio: 1.7778, 
-  
-  qrbox: (viewfinderWidth, viewfinderHeight) => {
-    // Kotak scan mengambil 85% lebar layar
-    const boxWidth = Math.floor(viewfinderWidth * 0.85);
-    // Tinggi kotak scan dibuat tipis dan pas untuk barcode
-    const boxHeight = Math.floor(boxWidth * 0.3); 
-    
-    return {
-      width: boxWidth,
-      height: boxHeight
-    };
-  }
-};
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 320, height: 120 }, 
+            aspectRatio: 1.0 
+        };
         
         this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
             this.handleContinuousScan(decodedText);
