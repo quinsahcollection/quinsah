@@ -13916,14 +13916,14 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
         
         // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
         const config = {
-  fps: 15, // Dinaikkan ke 15 agar tracking barcode lebih mulus dan cepat
+  fps: 15,
+  // Mengunci kamera ke mode landscape agar tidak memanjang ke bawah di HP
+  aspectRatio: 1.7778, 
   
-  // Membuat kotak scan barcode yang dinamis dan fleksibel
   qrbox: (viewfinderWidth, viewfinderHeight) => {
-    // Lebar kotak scan mengambil 80% dari lebar area kamera
-    const boxWidth = Math.floor(viewfinderWidth * 0.8);
-    
-    // Tinggi kotak scan dibuat tipis (hanya 30% dari lebar kotak) cocok untuk barcode
+    // Kotak scan mengambil 85% lebar layar
+    const boxWidth = Math.floor(viewfinderWidth * 0.85);
+    // Tinggi kotak scan dibuat tipis dan pas untuk barcode
     const boxHeight = Math.floor(boxWidth * 0.3); 
     
     return {
@@ -13931,7 +13931,6 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
       height: boxHeight
     };
   }
-  // Properti aspectRatio DIHAPUS agar video kamera fleksibel mengikuti container
 };
         
         this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
