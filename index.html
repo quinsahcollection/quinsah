@@ -13915,11 +13915,24 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
         if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
         
         // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 320, height: 120 }, 
-            aspectRatio: 1.0 
-        };
+        const config = {
+  fps: 15, // Dinaikkan ke 15 agar tracking barcode lebih mulus dan cepat
+  
+  // Membuat kotak scan barcode yang dinamis dan fleksibel
+  qrbox: (viewfinderWidth, viewfinderHeight) => {
+    // Lebar kotak scan mengambil 80% dari lebar area kamera
+    const boxWidth = Math.floor(viewfinderWidth * 0.8);
+    
+    // Tinggi kotak scan dibuat tipis (hanya 30% dari lebar kotak) cocok untuk barcode
+    const boxHeight = Math.floor(boxWidth * 0.3); 
+    
+    return {
+      width: boxWidth,
+      height: boxHeight
+    };
+  }
+  // Properti aspectRatio DIHAPUS agar video kamera fleksibel mengikuti container
+};
         
         this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
             this.handleContinuousScan(decodedText);
