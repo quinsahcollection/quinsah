@@ -13675,7 +13675,6 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     await batch.commit();
                     
                     opname.status = 'VOID';
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     
                     Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok dikembalikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
@@ -16314,7 +16313,6 @@ doActualPrint() {
 
                     Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Menunggu proses persetujuan (Approve).', timer: 2000, showConfirmButton: false});
                     
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     this.opnameView = 'list';
                 } catch (err) {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan draf.'});
@@ -16569,10 +16567,6 @@ doActualPrint() {
 
                     opname.status = 'SELESAI'; // Pastikan di memori juga berubah
                     
-                    // 🌟 PERBAIKAN: KATA 'await' DIHAPUS DI SINI!
-                    // Refresh berjalan di latar belakang tanpa menahan pop-up sukses.
-                    if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
-                    
                     Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal Approve:", err);
@@ -16762,9 +16756,6 @@ doActualPrint() {
                     await batch.commit();
 
                     opname.status = 'SELESAI'; // Pastikan di memori juga berubah
-
-                    // 🌟 PERBAIKAN: KATA 'await' DIHAPUS DI SINI!
-                    if (typeof this.fetchOpnameHistory === 'function') this.fetchOpnameHistory();
                     
                     Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
