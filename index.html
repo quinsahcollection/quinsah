@@ -14040,32 +14040,31 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 this.sorotBarang(existingItem);
             } else {
                 let prodName = foundProduct.nama || foundProduct.name || 'Produk';
-                if (foundVariant) {
-                    let varName = foundVariant.nama || foundVariant.name || '';
-                    prodName = prodName + (varName ? ' - ' + varName : '');
-                }
+if (foundVariant) {
+    let varName = foundVariant.nama || foundVariant.name || '';
+    prodName = prodName + (varName ? ' - ' + varName : '');
+}
 
-                // --- PERBAIKAN: Ambil foto varian atau foto produk utama ---
-                // Sesuaikan 'gambar', 'image', atau 'foto' dengan kolom database Anda
-                let fotoKecil = '';
-                if (foundVariant && (foundVariant.gambar || foundVariant.image)) {
-                    fotoKecil = foundVariant.gambar || foundVariant.image;
-                } else if (foundProduct.gambar || foundProduct.image) {
-                    fotoKecil = foundProduct.gambar || foundProduct.image;
-                }
+// --- PERBAIKAN: Gunakan variabel imageBase64 sesuai dengan sistem Anda ---
+let fotoKecil = '';
+if (foundVariant && foundVariant.imageBase64) {
+    fotoKecil = foundVariant.imageBase64;
+} else if (foundProduct.imageBase64) {
+    fotoKecil = foundProduct.imageBase64;
+}
 
-                let newItem = {
-                    product: foundProduct,
-                    variant: foundVariant,
-                    qty: 1,
-                    nama: prodName,
-                    sku: scannedSku,
-                    gambar: fotoKecil, // <--- Simpan foto ke memori sementara
-                    highlighted: false 
-                };
-                
-                this.tempScannedItems.push(newItem);
-                this.sorotBarang(newItem);
+let newItem = {
+    product: foundProduct,
+    variant: foundVariant,
+    qty: 1,
+    nama: prodName,
+    sku: scannedSku,
+    gambar: fotoKecil, // <--- Sekarang variabelnya sudah sesuai
+    highlighted: false 
+};
+
+this.tempScannedItems.push(newItem);
+this.sorotBarang(newItem);
             }
         } 
     },
