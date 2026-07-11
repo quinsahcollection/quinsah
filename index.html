@@ -540,11 +540,11 @@ body.sidebar-open {
     #paymentModal .col-md-5 { width: 100% !important; height: auto !important; max-height: none !important; overflow-y: visible !important; }
     #paymentModal .col-md-5 { padding-bottom: calc(40px + env(safe-area-inset-bottom)) !important; }
 
-    /* ==========================================================================
-       SOLUSI PASTI: MEMBUAT KOTAK BINGKAI & LASER TIRUAN DENGAN CSS
+     /* ==========================================================================
+       SOLUSI AKHIR & PASTI: BINGKAI SCAN DI TEMPEL PADA CONTAINER UTAMA
        ========================================================================== */
 
-    /* 1. Atur container luar agar tingginya rapat & tidak melar ke bawah */
+    /* 1. Kunci area luar scanner agar rapat di HP */
     #reader, 
     div[id*="reader"],
     .html5-qrcode-element { 
@@ -554,69 +554,65 @@ body.sidebar-open {
         background-color: #212529 !important; 
         border-radius: 8px !important;    
         position: relative !important;
+        overflow: hidden !important; /* Kembalikan ke sini agar memotong sisa video */
     }
 
-    /* 2. Pindahkan overflow hidden ke region scan agar video tetap terpotong rapi */
+    /* 2. Biarkan area scan internal mengikuti tinggi pembungkusnya */
     #reader__scan_region {
         height: 100% !important;
         width: 100% !important;
-        overflow: hidden !important; 
-        border-radius: 8px !important;
         position: relative !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
     }
 
-    /* 3. Paksa video kamera di dalamnya agar fit secara horizontal */
+    /* 3. Paksa video kamera agar fit horizontal dan vertikal */
     #reader video {
         height: 100% !important;
         width: 100% !important;
         object-fit: cover !important;     
     }
 
-    /* 4. Menyembunyikan elemen bawaan library yang rusak/hilang */
+    /* 4. Sembunyikan elemen bawaan library yang posisinya berantakan */
     #reader__border_shifter, 
     #reader canvas {
         display: none !important; 
     }
 
-    /* 5. MEMBUAT BINGKAI KOTAK SCAN BARCODE BARU DI HP (TIRUAN) */
-    #reader__scan_region::before {
+    /* 5. MEMBUAT BINGKAI KOTAK BARCODE BARU (Ditempel langsung di #reader) */
+    #reader::before {
         content: "";
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;           /* Lebar kotak scan (sama seperti config JS) */
-        height: 70px;         /* Tinggi kotak scan tipis khusus barcode */
-        border: 3px solid #ffffff; /* Garis putih solid pembungkus */
-        box-shadow: 0 0 0 500px rgba(0, 0, 0, 0.4); /* Efek background gelap di luar kotak */
-        z-index: 99;          /* Memastikan berada di paling depan */
-        pointer-events: none; /* Agar tidak mengganggu klik atau fokus kamera */
-        border-radius: 4px;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 80% !important;         /* Lebar kotak bidik barcode */
+        height: 70px !important;       /* Tinggi kotak bidik (tipis untuk barcode) */
+        border: 3px solid #ffffff !important; /* Warna garis kotak putih */
+        box-shadow: 0 0 0 500px rgba(0, 0, 0, 0.4) !important; /* Masking gelap di luar kotak */
+        z-index: 999 !important;       /* Dipaksa paling depan di layar */
+        pointer-events: none !important;
+        border-radius: 4px !important;
     }
 
-    /* 6. MEMBUAT GARIS LASER MERAH DI TENGAH KOTAK (OPSIONAL & KEREN) */
-    #reader__scan_region::after {
+    /* 6. MEMBUAT GARIS LASER MERAH DI TENGAH KOTAK */
+    #reader::after {
         content: "";
         position: absolute;
-        top: 50%;
-        left: 15%;
-        transform: translateY(-50%);
-        width: 70%;
-        height: 2px;
-        background-color: #ff3333; /* Warna laser merah */
-        box-shadow: 0 0 8px #ff3333; /* Efek cahaya laser */
-        z-index: 100;
-        pointer-events: none;
+        top: 50% !important;
+        left: 15% !important;
+        transform: translateY(-50%) !important;
+        width: 70% !important;
+        height: 2px !important;
+        background-color: #ff3333 !important; /* Warna merah laser */
+        box-shadow: 0 0 8px #ff3333 !important;
+        z-index: 1000 !important;      /* Berada di atas kotak putih */
+        pointer-events: none !important;
     }
 
-    /* 7. Atur text petunjuk di bawah kamera agar tidak berjarak terlalu jauh */
+    /* 7. Atur teks instruksi di bawah kamera */
     #reader + div, 
     #reader ~ p,
     div[id*="reader"]__dashboard_section {
-        margin-top: 8px !important;
+        margin-top: 12px !important;
         margin-bottom: 8px !important;
     }
     
