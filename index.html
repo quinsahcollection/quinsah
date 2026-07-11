@@ -16691,5 +16691,20 @@ doActualPrint() {
 
     vueApp.mount('#app');
 </script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Mantap! Service Worker berhasil didaftarkan dengan scope:', registration.scope);
+                })
+                .catch(err => {
+                    console.error('Service Worker gagal didaftarkan:', err);
+                });
+        });
+    }
+</script>
+    
 </body>
 </html>
