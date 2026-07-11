@@ -729,32 +729,43 @@ body.sidebar-open {
 
         <main class="main-content">
             
-            <div v-if="isOffline" class="alert alert-warning py-2 mb-3 text-center fw-bold shadow-sm" style="border: 2px dashed #d97706; z-index: 1050;">
-                <i class="bi bi-wifi-off me-2"></i> 
-                Koneksi Terputus (Mode Offline). Kasir tetap bisa digunakan, data akan disinkronkan otomatis nanti!
-            </div>
-
-            <header class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-    <div>
-        <h4 class="mb-0 fw-bold">{{ viewTitles[currentView] }}</h4>
-        <span class="badge mt-1" :class="userRole === 'Admin' ? 'bg-danger' : 'bg-primary'">Akses: {{ userRole }}</span>
+    <div v-if="isOffline" class="alert alert-warning py-2 mb-3 text-center fw-bold shadow-sm" style="border: 2px dashed #d97706; z-index: 1050;">
+        <i class="bi bi-wifi-off me-2"></i> 
+        Koneksi Terputus (Mode Offline). Kasir tetap bisa digunakan, data akan disinkronkan otomatis nanti!
     </div>
-    
-    <div class="dropdown">
-        <button class="btn dropdown-toggle d-flex align-items-center gap-2 border-0" type="button" id="userProfileMenu" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; box-shadow: none; padding: 0;">
+
+    <header class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <h4 class="mb-0 fw-bold">{{ viewTitles[currentView] }}</h4>
+            <span class="badge mt-1" :class="userRole === 'Admin' ? 'bg-danger' : 'bg-primary'">Akses: {{ userRole }}</span>
+        </div>
+        
+        <!-- BUNGKUSAN BARU: Menyatukan tombol fullscreen dan profil agar sejajar di kanan -->
+        <div class="d-flex align-items-center gap-3">
             
-            <div class="text-end d-none d-sm-block">
-                <div class="fw-bold text-dark fs-6 lh-1" style="text-decoration: none;">{{ userProfile.namaLengkap || userProfile.name || 'User' }}</div>
-                
-                <small :class="isOffline ? 'text-danger' : 'text-success'" class="fw-bold" style="font-size: 0.75rem;">
-                    <i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>{{ isOffline ? 'Offline' : 'Online' }}
-                </small>
-            </div>
+            <!-- TOMBOL FULLSCREEN -->
+            <button class="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" 
+                    style="width: 38px; height: 38px;" 
+                    @click="toggleFullScreen()" 
+                    title="Mode Layar Penuh">
+                <i class="bi bi-arrows-fullscreen text-secondary" id="icon-fullscreen"></i>
+            </button>
             
-            <div class="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 38px; height: 38px; font-weight: bold; font-size: 1.2rem;">
-                {{ (userProfile.namaLengkap || userProfile.name || 'U').charAt(0).toUpperCase() }}
-            </div>
-            
+            <!-- PROFIL USER -->
+            <div class="dropdown">
+                <button class="btn dropdown-toggle d-flex align-items-center gap-2 border-0" type="button" id="userProfileMenu" data-bs-toggle="dropdown" aria-expanded="false" style="background: transparent; box-shadow: none; padding: 0;">
+                    
+                    <div class="text-end d-none d-sm-block">
+                        <div class="fw-bold text-dark fs-6 lh-1" style="text-decoration: none;">{{ userProfile.namaLengkap || userProfile.name || 'User' }}</div>
+                        
+                        <small :class="isOffline ? 'text-danger' : 'text-success'" class="fw-bold" style="font-size: 0.75rem;">
+                            <i class="bi bi-circle-fill me-1" style="font-size: 0.4rem;"></i>{{ isOffline ? 'Offline' : 'Online' }}
+                        </small>
+                    </div>
+                    
+                    <div class="bg-primary text-white d-flex align-items-center justify-content-center rounded-circle shadow-sm" style="width: 38px; height: 38px; font-weight: bold; font-size: 1.2rem;">
+                        {{ (userProfile.namaLengkap || userProfile.name || 'U').charAt(0).toUpperCase() }}
+                    </div>            
         </button>
         
         <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="userProfileMenu" style="width: 280px; border-radius: 12px; margin-top: 15px;">
@@ -5310,15 +5321,88 @@ body.sidebar-open {
 
         <!-- MODAL KAMERA SCANNER -->
         <div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-lg bg-dark">
-                    <div class="modal-header border-bottom-0 p-3">
-                        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-camera me-2"></i>Scanner Barcode Mode Kamera</h6>
+            <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Tambah modal-lg agar lebih lebar -->
+                <div class="modal-content border-0 shadow-lg bg-dark overflow-hidden">
+                    <div class="modal-header border-bottom-0 p-3 pb-2">
+                        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-camera me-2"></i>Scanner Berkelanjutan</h6>
                         <button type="button" class="btn-close btn-close-white" @click="stopCameraScanner"></button>
                     </div>
-                    <div class="modal-body p-0 text-center">
-                        <div id="qr-reader" style="width:100%; border-radius: 0 0 8px 8px; overflow: hidden;"></div>
-                        <p class="text-white-50 small mt-3 mb-3">Arahkan garis merah scanner ke Barcode produk.</p>
+                    <div class="modal-body p-0">
+                        <div class="row g-0">
+                            
+                            <!-- BAGIAN KIRI: Kamera Scanner -->
+                            <div class="col-md-7 d-flex flex-column justify-content-center text-center p-3">
+                                <div id="qr-reader" style="width:100%; border-radius: 8px; overflow: hidden; background: #000;"></div>
+                                <p class="text-white-50 small mt-3 mb-0">Arahkan garis scanner ke barcode. Kamera tidak akan tertutup otomatis.</p>
+                            </div>
+                            
+                            <!-- BAGIAN KANAN: Daftar Antrean Barang -->
+                            <div class="col-md-5 bg-white d-flex flex-column">
+                                <div class="p-3 border-bottom bg-light">
+                                    <h6 class="fw-bold text-dark mb-0 d-flex justify-content-between align-items-center">
+                                        Antrean Scan
+                                        <span class="badge bg-primary rounded-pill">{{ tempScannedItems.length }}</span>
+                                    </h6>
+                                </div>
+                                
+                                <!-- Daftar Barang Scrollable -->
+                               <div class="flex-grow-1 p-0 overflow-auto" style="height: 300px; max-height: 300px;">
+    <ul class="list-group list-group-flush" v-if="tempScannedItems.length > 0">
+        
+        <li class="list-group-item d-flex justify-content-between align-items-center p-3" 
+            v-for="(item, index) in tempScannedItems" 
+            :key="index"
+            :id="'scan-item-' + item.sku"
+            :class="{'bg-warning bg-opacity-25 transition-all': item.highlighted}">
+            
+            <!-- PERBAIKAN: Bungkus teks dan gambar menjadi satu baris -->
+            <div class="d-flex align-items-center me-auto overflow-hidden">
+                
+                <!-- FOTO PRODUK KECIL (Thumbnail) -->
+                <div class="border rounded bg-light d-flex align-items-center justify-content-center text-secondary" 
+                     style="width: 45px; height: 45px; flex-shrink: 0; overflow: hidden;">
+                     <!-- Jika gambar ada, tampilkan. Jika tidak, tampilkan ikon image bawaan -->
+                    <img v-if="item.gambar" :src="item.gambar" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
+                    <i v-else class="bi bi-image" style="font-size: 1.2rem;"></i>
+                </div>
+                
+                <!-- NAMA & SKU PRODUK -->
+                <div class="ms-3 text-truncate">
+                    <!-- class text-truncate mencegah teks menabrak tombol jika namanya sangat panjang -->
+                    <div class="fw-bold text-dark fs-6 text-truncate">{{ item.nama }}</div>
+                    <div class="text-muted small font-monospace">{{ item.sku }}</div>
+                </div>
+                
+            </div>
+            
+            <!-- TOMBOL PLUS MINUS (Tetap sama, tambahkan flex-shrink agar tidak tertekan nama produk) -->
+            <div class="input-group input-group-sm ms-2" style="width: 105px; flex-shrink: 0; flex-wrap: nowrap;">
+                <button class="btn btn-outline-secondary fw-bold" type="button" @click="kurangiQtyScan(index)">-</button>
+                <input type="text" class="form-control text-center px-1 fw-bold bg-white" :value="item.qty" readonly>
+                <button class="btn btn-outline-secondary fw-bold" type="button" @click="tambahQtyScan(index)">+</button>
+            </div>       
+        </li>
+    </ul>                       
+                                    <!-- State Kosong -->
+                                    <div v-else class="h-100 d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center">
+    <!-- Mengganti text-light menjadi text-secondary agar terlihat -->
+    <i class="bi bi-upc-scan fs-1 mb-2 text-secondary"></i>
+    <small>Belum ada produk yang di-scan.<br>Silakan mulai scan barcode.</small>
+</div>
+</div>                                    
+
+<!-- Tombol Masukkan Keranjang -->
+<div class="p-3 border-top bg-light">
+    <!-- Mengganti bg-gradient-primary menjadi btn-primary -->
+    <button class="btn btn-primary text-white w-100 fw-bold py-2 shadow-sm" 
+            :disabled="tempScannedItems.length === 0" 
+            @click="addAllScannedToCart">
+        <i class="bi bi-cart-plus me-2"></i>Masukkan ke Keranjang
+    </button>
+                                </div>
+                            </div>
+                            
+                        </div>
                     </div>
                 </div>
             </div>
@@ -7582,7 +7666,7 @@ body.sidebar-open {
     // 2. Import Firestore & Offline Cache
     import { 
         getFirestore, initializeFirestore, persistentLocalCache,
-        collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch 
+        collection, getDocs, addDoc, updateDoc, doc, setDoc, getDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch, limit 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
@@ -7649,6 +7733,8 @@ body.sidebar-open {
                 crmTab: 'customers', 
                 invTab: 'stocks', 
                 settingTab: 'invoice',
+                
+                tempScannedItems: [], // Array untuk menampung scan sementara
                 
                 _modalListener: null,
                 _printListener: null,
@@ -9156,23 +9242,38 @@ beforeDestroy() {
         watch: {
     // [TETAP] 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
     userProfile: {
-        handler(newProfile) {
-            if (newProfile && newProfile.companyId) {
-                if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
+            handler(newProfile) {
+                // ==========================================
+                // 1. LOGIKA LAMA: Mengambil Data Sesuai View
+                // ==========================================
+                if (newProfile && newProfile.companyId) {
+                    if (typeof this.fetchPaymentMethods === 'function') this.fetchPaymentMethods();
 
-                if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
-                    setTimeout(() => { this.fetchDashboardData(); }, 150);
-                } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
-                    this.fetchTransferHistory();
-                } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
-                    this.fetchOpnameHistory();
-                } else if (this.currentView === 'cash_register' && typeof this.fetchRegisters === 'function') {
-                    this.fetchRegisters();
+                    if (this.currentView === 'dashboard' && typeof this.fetchDashboardData === 'function') {
+                        setTimeout(() => { this.fetchDashboardData(); }, 150);
+                    } else if (this.currentView === 'transfer' && typeof this.fetchTransferHistory === 'function') {
+                        this.fetchTransferHistory();
+                    } else if (this.currentView === 'opname' && typeof this.fetchOpnameHistory === 'function') {
+                        this.fetchOpnameHistory();
+                    } else if (this.currentView === 'cash_register' && typeof this.fetchRegisters === 'function') {
+                        this.fetchRegisters();
+                    }
                 }
-            }
-        },
-        deep: true,
-        immediate: true
+
+                // ==========================================
+                // 2. LOGIKA BARU: PWA Dynamic Manifest (KTP Aplikasi)
+                // ==========================================
+                if (newProfile && newProfile.companyData && newProfile.companyData.namaUsaha) {
+                    if (typeof this.updateDynamicManifest === 'function') {
+                        this.updateDynamicManifest(
+                            newProfile.companyData.namaUsaha, 
+                            newProfile.companyData.logoUrl 
+                        );
+                    }
+                }
+            },
+            deep: true,
+            immediate: true
     },
           
     // [TETAP] Logika penguncian outlet berdasarkan role
@@ -9242,6 +9343,81 @@ beforeDestroy() {
             this.openModal('hppExampleModal');
         },
 
+    toggleFullScreen() {
+        var doc = window.document;
+        var docEl = doc.documentElement;
+
+        // Mendukung berbagai macam browser
+        var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+        var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+        var iconElement = document.getElementById("icon-fullscreen");
+
+        if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+            // Masuk mode fullscreen
+            if (requestFullScreen) {
+                requestFullScreen.call(docEl);
+            }
+            // Ganti ikon menjadi 'exit fullscreen'
+            if (iconElement) {
+                iconElement.classList.replace("bi-arrows-fullscreen", "bi-fullscreen-exit");
+            }
+        } else {
+            // Keluar mode fullscreen
+            if (cancelFullScreen) {
+                cancelFullScreen.call(doc);
+            }
+            // Kembalikan ikon ke bentuk semula
+            if (iconElement) {
+                iconElement.classList.replace("bi-fullscreen-exit", "bi-arrows-fullscreen");
+            }
+        }
+    },
+
+        // ==========================================
+        // 🌟 FUNGSI DYNAMIC PWA (KTP APLIKASI OTOMATIS)
+        // ==========================================
+        updateDynamicManifest(namaToko, logoUrl) {
+            // 1. Siapkan kerangka datanya
+            const manifestData = {
+                name: namaToko || "Sistem Kasir POS",
+                short_name: (namaToko || "Kasir").substring(0, 12), // Maksimal 12 huruf untuk di HP
+                start_url: "./",
+                display: "standalone",
+                background_color: "#f8f9fa",
+                theme_color: "#0d6efd",
+                icons: [
+                    {
+                        // Jika toko belum punya logo di database, pakai logo bawaan kita
+                        src: logoUrl || "./logo.png",
+                        sizes: "192x192",
+                        type: "image/png"
+                    },
+                    {
+                        src: logoUrl || "./logo.png",
+                        sizes: "512x512",
+                        type: "image/png"
+                    }
+                ]
+            };
+
+            // 2. Ubah data menjadi file JSON Virtual (Blob)
+            const stringManifest = JSON.stringify(manifestData);
+            const blob = new Blob([stringManifest], { type: 'application/json' });
+            const manifestUrl = URL.createObjectURL(blob);
+
+            // 3. Cari tag <link rel="manifest"> di HTML dan ganti isinya dengan yang baru!
+            let manifestElement = document.querySelector('link[rel="manifest"]');
+            if (!manifestElement) {
+                manifestElement = document.createElement('link');
+                manifestElement.rel = 'manifest';
+                document.head.appendChild(manifestElement);
+            }
+            manifestElement.href = manifestUrl;
+            
+            console.log("KTP Aplikasi (Manifest) berhasil diubah menjadi:", namaToko);
+        },
+            
     resetSalesFilter() {
                 this.transactionStartDate = '';
                 this.transactionEndDate = '';
@@ -13499,7 +13675,6 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                     await batch.commit();
                     
                     opname.status = 'VOID';
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     
                     Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok dikembalikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
@@ -13806,19 +13981,140 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 setTimeout(() => { try { JsBarcode("#barcode-canvas", sku, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } catch(e) { console.error("Barcode Error", e); } }, 200);
             },
 
-            startCameraScanner() {
-                this.showModal('cameraScannerModal');
-                setTimeout(() => {
-                    if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
-                    const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-                    this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                        this.stopCameraScanner(); this.searchQuery = decodedText; this.posSearchMode = 'scan'; this.handlePosSearchEnter();
-                    }).catch(err => { this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); });
-                }, 400);
-            },
+           startCameraScanner() {
+    this.showModal('cameraScannerModal');
+    setTimeout(() => {
+        if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
+        
+        // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 320, height: 120 }, 
+            aspectRatio: 1.0 
+        };
+        
+        this.html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            this.handleContinuousScan(decodedText);
+        }).catch(err => { 
+            this.askConfirm('Error Kamera', 'Kamera tidak dapat diakses atau diblokir browser. Izinkan akses kamera terlebih dahulu.', () => { this.stopCameraScanner(); }); 
+        });
+    }, 400);
+},
             
             stopCameraScanner() {
-                if(this.html5QrCode) { this.html5QrCode.stop().then(() => { this.hideModal('cameraScannerModal'); }).catch(err => { this.hideModal('cameraScannerModal'); }); } else { this.hideModal('cameraScannerModal'); }
+                // Kosongkan daftar antrean saat modal ditutup agar tidak menumpuk di scan berikutnya
+                this.tempScannedItems = []; 
+                
+                if(this.html5QrCode) { 
+                    this.html5QrCode.stop().then(() => { 
+                        this.hideModal('cameraScannerModal'); 
+                    }).catch(err => { 
+                        this.hideModal('cameraScannerModal'); 
+                    }); 
+                } else { 
+                    this.hideModal('cameraScannerModal'); 
+                }
+            },
+
+            // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
+           handleContinuousScan(decodedText) {
+        const q = decodedText.trim().toLowerCase(); 
+        let foundProduct = null; 
+        let foundVariant = null;
+
+        for (let p of this.products) {
+            if (p.isActive === false) continue;
+            if (p.sku && p.sku.toLowerCase() === q) { foundProduct = p; break; }
+            if (p.variants && p.variants.length > 0) {
+                let v = p.variants.find(vx => vx.variantSku && vx.variantSku.toLowerCase() === q);
+                if (v) { foundProduct = p; foundVariant = v; break; }
+            }
+        }
+
+        if (foundProduct) { 
+            let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
+            let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
+
+            if (existingItem) {
+                this.sorotBarang(existingItem);
+            } else {
+                let prodName = foundProduct.nama || foundProduct.name || 'Produk';
+if (foundVariant) {
+    let varName = foundVariant.nama || foundVariant.name || '';
+    prodName = prodName + (varName ? ' - ' + varName : '');
+}
+
+// --- PERBAIKAN: Gunakan variabel imageBase64 sesuai dengan sistem Anda ---
+let fotoKecil = '';
+if (foundVariant && foundVariant.imageBase64) {
+    fotoKecil = foundVariant.imageBase64;
+} else if (foundProduct.imageBase64) {
+    fotoKecil = foundProduct.imageBase64;
+}
+
+let newItem = {
+    product: foundProduct,
+    variant: foundVariant,
+    qty: 1,
+    nama: prodName,
+    sku: scannedSku,
+    gambar: fotoKecil, // <--- Sekarang variabelnya sudah sesuai
+    highlighted: false 
+};
+
+this.tempScannedItems.push(newItem);
+this.sorotBarang(newItem);
+            }
+        } 
+    },
+
+    // --- 3 FUNGSI BARU UNTUK KONTROL ANTARMUKA SCAN ---
+    sorotBarang(item) {
+        // 1. Matikan semua warna kuning di semua barang terlebih dahulu
+        this.tempScannedItems.forEach(i => {
+            i.highlighted = false;
+        });
+        
+        // 2. Nyalakan warna kuning HANYA untuk barang yang baru saja di-scan ini
+        item.highlighted = true;
+        
+        // 3. Otomatis gulir (scroll) ke posisi barang tersebut di layar
+        this.$nextTick(() => {
+            let el = document.getElementById('scan-item-' + item.sku);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+        },
+
+    tambahQtyScan(index) {
+        this.tempScannedItems[index].qty++;
+    },
+
+    kurangiQtyScan(index) {
+        if (this.tempScannedItems[index].qty > 1) {
+            this.tempScannedItems[index].qty--;
+        } else {
+            // Jika qty = 1 dan dikurangi, hapus barang dari antrean
+            this.tempScannedItems.splice(index, 1);
+        }
+    },
+
+            addAllScannedToCart() {
+                // Looping semua barang yang ada di antrean sementara
+                for (let item of this.tempScannedItems) {
+                    // Set activeProduct (sama seperti cara di handlePosSearchEnter)
+                    this.activeProduct = item.product;
+                    
+                    // Karena fungsi addToCart Anda mungkin hanya menambah 1 per klik, 
+                    // kita panggil fungsi addToCart sebanyak qty yang di-scan
+                    for (let i = 0; i < item.qty; i++) {
+                        this.addToCart(item.variant || null);
+                    }
+                }
+                
+                // Setelah semua masuk ke keranjang utama, tutup scanner
+                this.stopCameraScanner(); 
             },
 
             handlePosSearchEnter() {
@@ -15830,103 +16126,6 @@ doActualPrint() {
                 return p.baseOutletStocks && p.baseOutletStocks[outletId] ? p.baseOutletStocks[outletId] : 0;
             },
             
-            openStockOpnameModal() {
-                // Reset form opname ke kondisi kosong awal
-                this.formOpname = { 
-                    productId: '', 
-                    variantSku: '', 
-                    outletId: this.outlets.length > 0 ? this.outlets[0].id : '', 
-                    currentQty: 0, 
-                    actualQty: 0, 
-                    notes: '' 
-                };
-                this.showModal('stockOpnameModal');
-            },
-
-            handleOpnameProductOrOutletChange() {
-    this.formOpname.currentQty = 0;
-    if (!this.formOpname.productId || !this.formOpname.outletId) return;
-
-    const p = this.products.find(x => x.id === this.formOpname.productId);
-    if (!p) return;
-
-    // Jika produk memiliki varian, reset pilihan varian jika tidak cocok
-    if (p.variants && p.variants.length > 0) {
-        // Jika belum pilih varian, biarkan 0 dulu sampai varian dipilih
-        if (!this.formOpname.variantSku) return;
-        
-        let v = p.variants.find(vx => vx.variantSku === this.formOpname.variantSku);
-        this.formOpname.currentQty = (v && v.outletStocks) ? (v.outletStocks[this.formOpname.outletId] || 0) : 0;
-    } else {
-        // Jika produk tunggal tanpa varian
-        this.formOpname.variantSku = '';
-        this.formOpname.currentQty = (p.baseOutletStocks) ? (p.baseOutletStocks[this.formOpname.outletId] || 0) : 0;
-    }
-},
-
-            async submitStockOpname() {
-    if (this.isProcessing) return;
-
-    // Validasi Input
-    if (!this.formOpname.productId || !this.formOpname.outletId) {
-        Swal.fire({ icon: 'warning', title: 'Gagal', text: 'Silakan pilih Produk dan Outlet terlebih dahulu!' });
-        return;
-    }
-
-    this.isProcessing = true;
-
-    try {
-        // Hitung selisih mutasi (Fisik - Sistem)
-        let diff = Number(this.formOpname.actualQty) - Number(this.formOpname.currentQty);
-        
-        if (diff === 0) {
-            Swal.fire({ icon: 'info', title: 'Tidak Ada Perubahan', text: 'Stok fisik yang Anda masukkan sama dengan jumlah di sistem.' });
-            this.isProcessing = false;
-            return;
-        }
-
-        let prod = this.products.find(p => p.id === this.formOpname.productId);
-        let prodCopy = JSON.parse(JSON.stringify(prod));
-        let oId = this.formOpname.outletId;
-
-        // Eksekusi pembaruan struktur stok produk
-        if (this.formOpname.variantSku) {
-            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === this.formOpname.variantSku);
-            if (vIdx !== -1) {
-                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                prodCopy.variants[vIdx].outletStocks[oId] = Number(this.formOpname.actualQty);
-            }
-        } else {
-            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-            prodCopy.baseOutletStocks[oId] = Number(this.formOpname.actualQty);
-        }
-
-        // 1. Simpan perubahan stok fisik baru ke Firebase master produk
-        await updateDoc(doc(db, "products", prod.id), {
-            variants: prodCopy.variants,
-            baseOutletStocks: prodCopy.baseOutletStocks
-        });
-
-        // 2. Tulis laporan audit trail ke koleksi stockLogs
-        let targetVariant = this.formOpname.variantSku ? prod.variants.find(v => v.variantSku === this.formOpname.variantSku) : null;
-        
-        // Log Mutasi ADJUST via Fungsi Pusat
-        await this.logStock(diff > 0 ? 'IN' : 'OUT', {
-            productId: prod.id, sku: this.formOpname.variantSku || prod.sku || '-', name: prod.name || '-', variantSku: this.formOpname.variantSku || null, variantName: targetVariant ? (targetVariant.name || targetVariant.attributes) : '-',
-            qty: diff, outletId: oId, refId: 'STOCK OPNAME', note: this.formOpname.notes ? `Opname: ${this.formOpname.notes}` : 'Penyesuaian Fisik Berkala'
-        });
-
-        Swal.fire({ icon: 'success', title: 'Opname Berhasil', text: 'Stok berhasil disesuaikan dan terekam di Kartu Stok!', timer: 2000, showConfirmButton: false });
-        this.hideModal('stockOpnameModal');
-
-    } catch (error) {
-        console.error("Gagal Opname:", error);
-        Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Gagal melakukan sinkronisasi opname ke server cloud.' });
-    } finally {
-        this.isProcessing = false;
-    }
-},
-            
             resetStockFilter() {
     // Mengambil tanggal hari ini dengan format YYYY-MM-DD
     const today = new Date().toISOString().split('T')[0];
@@ -16016,7 +16215,6 @@ doActualPrint() {
 
                     Swal.fire({ icon: 'success', title: 'Draft Disimpan', text: 'Menunggu proses persetujuan (Approve).', timer: 2000, showConfirmButton: false});
                     
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     this.opnameView = 'list';
                 } catch (err) {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal menyimpan draf.'});
@@ -16025,38 +16223,43 @@ doActualPrint() {
             });
         },
         
-        async fetchOpnameHistory() {
+       fetchOpnameHistory() {
             try {
                 // 1. Ambil ID Perusahaan
                 const companyId = this.userProfile?.companyId;
-                if (!companyId) return; // Hentikan jika tidak ada ID
+                if (!companyId) return; 
 
-                // 2. Tambahkan where() untuk memfilter berdasarkan companyId
                 const q = query(
                     collection(db, "stockOpnames"), 
                     where("companyId", "==", companyId), 
-                    orderBy("createdAt", "desc")
+                    orderBy("createdAt", "desc"),
+                    limit(50) 
                 );
                 
-                const querySnapshot = await getDocs(q);
-                
-                let list = [];
-                querySnapshot.forEach((doc) => {
-                    let data = doc.data();
-                    list.push({
-                        firestoreId: doc.id,
-                        id: data.id,
-                        dateStr: data.dateStr,
-                        outletId: data.outletId,
-                        pic: data.pic,
-                        note: data.note,
-                        status: data.status,
-                        items: data.items || []
+                // 🌟 MENGGUNAKAN ONSNAPSHOT (LIVE CCTV) 
+                // Begitu ada data baru di Firebase, layar langsung otomatis berubah!
+                onSnapshot(q, (querySnapshot) => {
+                    let list = [];
+                    querySnapshot.forEach((doc) => {
+                        let data = doc.data();
+                        list.push({
+                            firestoreId: doc.id,
+                            id: data.id,
+                            dateStr: data.dateStr,
+                            outletId: data.outletId,
+                            pic: data.pic,
+                            note: data.note,
+                            status: data.status,
+                            items: data.items || []
+                        });
                     });
+                    this.opnameHistory = list;
+                }, (error) => {
+                    console.error("Live Sync Opname terputus:", error);
                 });
-                this.opnameHistory = list;
+                
             } catch (err) {
-                console.error("Gagal memuat riwayat opname dari Firebase:", err);
+                console.error("Gagal memasang sinkronisasi live:", err);
             }
         },
         
@@ -16226,8 +16429,9 @@ doActualPrint() {
                         // 🌟 BATCH 1: MASUKKAN UPDATE PRODUK KE KERANJANG
                         let prodRef = doc(db, "products", prod.id);
                         batch.update(prodRef, { 
-                            variants: prodCopy.variants, 
-                            baseOutletStocks: prodCopy.baseOutletStocks, 
+                            // 🌟 PERBAIKAN: Tambahkan pengaman Anti-Undefined
+                            variants: prodCopy.variants || [], 
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
                             batches: prodCopy.batches || {} 
                         });
 
@@ -16265,7 +16469,6 @@ doActualPrint() {
 
                     opname.status = 'SELESAI'; // Pastikan di memori juga berubah
                     
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
                     Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal Approve:", err);
@@ -16416,8 +16619,9 @@ doActualPrint() {
                         // 🌟 BATCH 1: MASUKKAN UPDATE PRODUK KE KERANJANG
                         let prodRef = doc(db, "products", prod.id);
                         batch.update(prodRef, { 
-                            variants: prodCopy.variants, 
-                            baseOutletStocks: prodCopy.baseOutletStocks, 
+                            // 🌟 PERBAIKAN: Tambahkan pengaman Anti-Undefined
+                            variants: prodCopy.variants || [], 
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
                             batches: prodCopy.batches || {} 
                         });
 
@@ -16454,8 +16658,7 @@ doActualPrint() {
                     await batch.commit();
 
                     opname.status = 'SELESAI'; // Pastikan di memori juga berubah
-
-                    if (typeof this.fetchOpnameHistory === 'function') await this.fetchOpnameHistory();
+                    
                     Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal memproses Un-Void:", err);
@@ -16471,5 +16674,20 @@ doActualPrint() {
 
     vueApp.mount('#app');
 </script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Mantap! Service Worker berhasil didaftarkan dengan scope:', registration.scope);
+                })
+                .catch(err => {
+                    console.error('Service Worker gagal didaftarkan:', err);
+                });
+        });
+    }
+</script>
+    
 </body>
 </html>
