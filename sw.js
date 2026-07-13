@@ -5,6 +5,7 @@ const urlsToCache = [
     './',
     './index.html',
     './manifest.json' // Bagus jika manifest dimasukkan juga agar PWA stabil
+    './logo.png'
 ];
 
 // 1. Proses Install
