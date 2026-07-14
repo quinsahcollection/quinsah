@@ -13554,17 +13554,24 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
 },
 
         // ==========================================
-        // 2. FUNGSI VOID / BATALKAN OPNAME (FULL BATCH)
+        // 2. FUNGSI VOID / BATALKAN OPNAME (ANTI LIMIT 10MB)
         // ==========================================
         async voidOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname) return;
-            if (opname.status === 'VOID') return Swal.fire('Info', 'Dokumen ini sudah di-void sebelumnya.', 'info');
+            if (opname.status === 'VOID') return Swal.fire('Info', 'Dokumen sudah di-void.', 'info');
 
-            this.askConfirm('Batalkan (Void) Opname?', `Dokumen ${id} akan dibatalkan. Seluruh stok produk akan dikembalikan (reverse) ke angka semula.`, async () => {
+            this.askConfirm('Batalkan (Void)?', `Seluruh stok akan dikembalikan (reverse) ke angka semula.`, async () => {
                 this.isProcessing = true;
                 try {
-                    const batch = writeBatch(db);
+                    let batchesArray = [];
+                    let currentBatch = writeBatch(db);
+                    let opCount = 0;
+                    
+                    const checkBatchLimit = () => {
+                        if (opCount >= 200) { batchesArray.push(currentBatch); currentBatch = writeBatch(db); opCount = 0; }
+                    };
+
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
                     let companyIdSafe = this.userProfile?.companyId || '';
 
@@ -13594,18 +13601,13 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
                                     batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                                 } else {
-                                    if (hppMethod === 'FEFO') {
-                                        batches.sort((a, b) => {
-                                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                            if (!a.expiredDate) return 1;
-                                            if (!b.expiredDate) return -1;
-                                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                        });
-                                    } else if (hppMethod === 'LIFO') {
-                                        batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                    } else {
-                                        batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                    }
+                                    if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                        if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                    });
+                                    else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                    else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -13634,18 +13636,13 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
                                 batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                             } else {
-                                if (hppMethod === 'FEFO') {
-                                    batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                        if (!a.expiredDate) return 1;
-                                        if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                } else if (hppMethod === 'LIFO') {
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                } else {
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                }
+                                if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                    if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                });
+                                else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
@@ -13664,48 +13661,39 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                         }
                         
                         let prodRef = doc(db, "products", prod.id);
-                        batch.update(prodRef, { 
-                            variants: prodCopy.variants || [], 
-                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
-                            batches: prodCopy.batches || {} 
-                        });
+                        currentBatch.update(prodRef, { variants: prodCopy.variants || [], baseOutletStocks: prodCopy.baseOutletStocks || {}, batches: prodCopy.batches || {} });
+                        opCount++; checkBatchLimit();
 
                         Object.assign(prod, prodCopy); 
 
                         let logRef = doc(collection(db, "stockLogs"));
-                        batch.set(logRef, {
-                            companyId: companyIdSafe,
-                            createdAt: serverTimestamp(),
-                            dateStr: new Date().toLocaleString('id-ID'),
-                            type: reverseDiff > 0 ? 'IN' : 'OUT',
-                            productId: prod.id,
-                            sku: item.sku || '-',
-                            productName: item.name || 'Produk',
-                            variantSku: item.variantSku || null,
-                            variantName: item.variantName || '-',
-                            qtyChange: reverseDiff,
-                            outletId: oId,
-                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
-                            refId: id + '-VOID',
-                            userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
-                            note: `VOID REF: ${id}`
+                        currentBatch.set(logRef, {
+                            companyId: companyIdSafe, createdAt: serverTimestamp(), dateStr: new Date().toLocaleString('id-ID'),
+                            type: reverseDiff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku || '-',
+                            productName: item.name || 'Produk', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qtyChange: reverseDiff, outletId: oId, outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang',
+                            refId: id + '-VOID', userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin', note: `VOID REF: ${id}`
                         });
+                        opCount++; checkBatchLimit();
                     }
 
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
-                        batch.update(opnameRef, { status: 'VOID' });
+                        currentBatch.update(opnameRef, { status: 'VOID' });
+                        opCount++;
                     }
                     
-                    await batch.commit();
+                    if (opCount > 0) batchesArray.push(currentBatch);
+                    for (let b of batchesArray) { await b.commit(); }
+
                     opname.status = 'VOID';
-                    
-                    Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok dikembalikan.', timer: 2000, showConfirmButton: false});
+                    Swal.close();
+                    Swal.fire({ icon: 'success', title: 'Void Sukses', text: 'Stok dikembalikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal Void:", err);
-                    Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat memproses Void.'});
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Void.'});
                 } finally {
-                    // 🌟 Kunci reset loading
                     this.isProcessing = false;
                 }
             });
@@ -16316,23 +16304,34 @@ doActualPrint() {
         },
 
         // ==========================================
-        // 1. FUNGSI APPROVE OPNAME (FULL BATCH - BEBAS LOADING)
+        // 1. FUNGSI APPROVE OPNAME (FULL BATCH - ANTI LIMIT 10MB)
         // ==========================================
         async approveOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname || opname.status !== 'PENDING') return;
 
             this.askConfirm('Setujui Opname?', `Stok sistem & riwayat Batch akan disesuaikan secara permanen sesuai dokumen ${id}. Lanjutkan?`, async () => {
-                
                 if (opname.status !== 'PENDING') return; 
                 opname.status = 'PROCESSING'; 
                 this.isProcessing = true;
                 
                 try {
-                    const batch = writeBatch(db);
+                    // 🌟 SISTEM PEMECAH BATCH (CHUNKING)
+                    let batchesArray = [];
+                    let currentBatch = writeBatch(db);
+                    let opCount = 0;
+                    
+                    const checkBatchLimit = () => {
+                        if (opCount >= 200) { // Jika sudah 200 data, bungkus jadi 1 paket
+                            batchesArray.push(currentBatch);
+                            currentBatch = writeBatch(db);
+                            opCount = 0;
+                        }
+                    };
+
                     let nowStr = new Date().toLocaleString('id-ID');
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
-                    let companyIdSafe = this.userProfile?.companyId || ''; // 🌟 Pelindung Company ID
+                    let companyIdSafe = this.userProfile?.companyId || '';
 
                     for (let item of opname.items) {
                         let prod = this.products.find(x => x.id === item.productId);
@@ -16357,30 +16356,19 @@ doActualPrint() {
 
                                 if (isPlus) {
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
-                                    let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                    
                                     batches.push({ 
-                                        batchId: 'OPN-' + id, 
-                                        batchNo: finalBatchNo,        
-                                        expiredDate: finalExpired,    
-                                        tanggalMasuk: new Date().toISOString(), 
-                                        qtySisa: qtyAbs, 
-                                        hargaModal: cost 
+                                        batchId: 'OPN-' + id, batchNo: item.batchNo || ('OPN-' + id),        
+                                        expiredDate: item.expiredDate || '', tanggalMasuk: new Date().toISOString(), 
+                                        qtySisa: qtyAbs, hargaModal: cost 
                                     });
                                 } else {
-                                    if (hppMethod === 'FEFO') {
-                                        batches.sort((a, b) => {
-                                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                            if (!a.expiredDate) return 1;
-                                            if (!b.expiredDate) return -1;
-                                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                        });
-                                    } else if (hppMethod === 'LIFO') {
-                                        batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                    } else {
-                                        batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                    }
+                                    if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                        if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                    });
+                                    else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                    else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -16392,7 +16380,6 @@ doActualPrint() {
                                             if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                             if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                             reqQty -= taken;
-                                            
                                             item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                         }
                                     }
@@ -16409,30 +16396,19 @@ doActualPrint() {
 
                             if (isPlus) {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                let finalBatchNo = item.batchNo ? item.batchNo : ('OPN-' + id);
-                                let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                
                                 batches.push({ 
-                                    batchId: 'OPN-' + id, 
-                                    batchNo: finalBatchNo,        
-                                    expiredDate: finalExpired,    
-                                    tanggalMasuk: new Date().toISOString(), 
-                                    qtySisa: qtyAbs, 
-                                    hargaModal: cost 
+                                    batchId: 'OPN-' + id, batchNo: item.batchNo || ('OPN-' + id),        
+                                    expiredDate: item.expiredDate || '', tanggalMasuk: new Date().toISOString(), 
+                                    qtySisa: qtyAbs, hargaModal: cost 
                                 });
                             } else {
-                                if (hppMethod === 'FEFO') {
-                                    batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                        if (!a.expiredDate) return 1;
-                                        if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                } else if (hppMethod === 'LIFO') {
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                } else {
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                }
+                                if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                    if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                });
+                                else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
@@ -16444,7 +16420,6 @@ doActualPrint() {
                                         if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                         if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                         reqQty -= taken;
-                                        
                                         item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                     }
                                 }
@@ -16453,70 +16428,70 @@ doActualPrint() {
                         }
                         
                         let prodRef = doc(db, "products", prod.id);
-                        batch.update(prodRef, { 
-                            variants: prodCopy.variants || [], 
-                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
-                            batches: prodCopy.batches || {} 
-                        });
+                        currentBatch.update(prodRef, { variants: prodCopy.variants || [], baseOutletStocks: prodCopy.baseOutletStocks || {}, batches: prodCopy.batches || {} });
+                        opCount++; checkBatchLimit(); // Cek Limit
 
                         Object.assign(prod, prodCopy);
 
                         let logRef = doc(collection(db, "stockLogs"));
-                        batch.set(logRef, {
-                            companyId: companyIdSafe,
-                            createdAt: serverTimestamp(),
-                            dateStr: nowStr,
-                            type: item.diff > 0 ? 'IN' : 'OUT',
-                            productId: prod.id,
-                            sku: item.sku || '-', // 🌟 Pelindung Anti-Undefined
-                            productName: item.name || 'Produk',
-                            variantSku: item.variantSku || null,
-                            variantName: item.variantName || '-',
-                            qtyChange: item.diff,
-                            outletId: oId,
-                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
-                            refId: id,
-                            userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
+                        currentBatch.set(logRef, {
+                            companyId: companyIdSafe, createdAt: serverTimestamp(), dateStr: nowStr,
+                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku || '-',
+                            productName: item.name || 'Produk', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qtyChange: item.diff, outletId: oId, outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang',
+                            refId: id, userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
                             note: item.note || 'Approve Dokumen Opname'
                         });
+                        opCount++; checkBatchLimit(); // Cek Limit
                     }
 
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
-                        // 🌟 Trik Pembersihan JSON agar tidak ada Undefined tersembunyi
                         let sanitizedItems = JSON.parse(JSON.stringify(opname.items));
-                        batch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
+                        currentBatch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
+                        opCount++;
                     }
                     
-                    await batch.commit();
+                    // Eksekusi semua paket yang sudah dipecah secara bergiliran
+                    if (opCount > 0) batchesArray.push(currentBatch);
+                    for (let b of batchesArray) { await b.commit(); }
+
                     opname.status = 'SELESAI'; 
                     
-                    Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
+                    Swal.close(); // 🌟 Matikan pop-up loading bawaan askConfirm
+                    Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal Approve:", err);
                     opname.status = 'PENDING'; 
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
+                    Swal.close(); // 🌟 Pastikan loading mati saat error!
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen. Hubungi Admin.'});
                 } finally {
-                    // 🌟 Kunci agar loading PASTI mati dalam kondisi gagal/sukses apapun
                     this.isProcessing = false;
                 }
             });
         },
 
         // ==========================================
-        // 3. FUNGSI UN-VOID (FULL BATCH)
+        // 3. FUNGSI UN-VOID (ANTI LIMIT 10MB)
         // ==========================================
         async unvoidOpname(id) {
             let opname = this.opnameHistory.find(o => o.id === id);
             if (!opname || opname.status !== 'VOID') return;
 
-            this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen ${id} akan diaktifkan kembali. Lanjutkan?`, async () => {
+            this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen akan diaktifkan kembali.`, async () => {
                 if (opname.status !== 'VOID') return;
                 opname.status = 'PROCESSING';
                 this.isProcessing = true;
                 
                 try {
-                    const batch = writeBatch(db);
+                    let batchesArray = [];
+                    let currentBatch = writeBatch(db);
+                    let opCount = 0;
+                    
+                    const checkBatchLimit = () => {
+                        if (opCount >= 200) { batchesArray.push(currentBatch); currentBatch = writeBatch(db); opCount = 0; }
+                    };
+
                     let companyIdSafe = this.userProfile?.companyId || '';
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
@@ -16543,30 +16518,15 @@ doActualPrint() {
 
                                 if (isPlus) {
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
-                                    let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                    
-                                    batches.push({ 
-                                        batchId: 'UNVOID-' + id, 
-                                        batchNo: finalBatchNo,
-                                        expiredDate: finalExpired,
-                                        tanggalMasuk: new Date().toISOString(), 
-                                        qtySisa: qtyAbs, 
-                                        hargaModal: cost 
-                                    });
+                                    batches.push({ batchId: 'UNVOID-' + id, batchNo: item.batchNo || ('UNVOID-' + id), expiredDate: item.expiredDate || '', tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                                 } else {
-                                    if (hppMethod === 'FEFO') {
-                                        batches.sort((a, b) => {
-                                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                            if (!a.expiredDate) return 1;
-                                            if (!b.expiredDate) return -1;
-                                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                        });
-                                    } else if (hppMethod === 'LIFO') {
-                                        batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                    } else {
-                                        batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                    }
+                                    if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                        if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                    });
+                                    else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                    else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                     let reqQty = qtyAbs;
                                     for (let i = 0; i < batches.length; i++) {
@@ -16578,7 +16538,6 @@ doActualPrint() {
                                             if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                             if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                             reqQty -= taken;
-                                            
                                             item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                         }
                                     }
@@ -16595,30 +16554,15 @@ doActualPrint() {
 
                             if (isPlus) {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
-                                let finalExpired = item.expiredDate ? item.expiredDate : '';
-                                
-                                batches.push({ 
-                                    batchId: 'UNVOID-' + id, 
-                                    batchNo: finalBatchNo,
-                                    expiredDate: finalExpired,
-                                    tanggalMasuk: new Date().toISOString(), 
-                                    qtySisa: qtyAbs, 
-                                    hargaModal: cost 
-                                });
+                                batches.push({ batchId: 'UNVOID-' + id, batchNo: item.batchNo || ('UNVOID-' + id), expiredDate: item.expiredDate || '', tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
                             } else {
-                                if (hppMethod === 'FEFO') {
-                                    batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                        if (!a.expiredDate) return 1;
-                                        if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                } else if (hppMethod === 'LIFO') {
-                                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                                } else {
-                                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                                }
+                                if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                    if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                });
+                                else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
 
                                 let reqQty = qtyAbs;
                                 for (let i = 0; i < batches.length; i++) {
@@ -16630,7 +16574,6 @@ doActualPrint() {
                                         if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                         if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                         reqQty -= taken;
-                                        
                                         item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                     }
                                 }
@@ -16639,47 +16582,39 @@ doActualPrint() {
                         }
                         
                         let prodRef = doc(db, "products", prod.id);
-                        batch.update(prodRef, { 
-                            variants: prodCopy.variants || [], 
-                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
-                            batches: prodCopy.batches || {} 
-                        });
+                        currentBatch.update(prodRef, { variants: prodCopy.variants || [], baseOutletStocks: prodCopy.baseOutletStocks || {}, batches: prodCopy.batches || {} });
+                        opCount++; checkBatchLimit();
 
                         Object.assign(prod, prodCopy);
 
                         let logRef = doc(collection(db, "stockLogs"));
-                        batch.set(logRef, {
-                            companyId: companyIdSafe,
-                            createdAt: serverTimestamp(),
-                            dateStr: new Date().toLocaleString('id-ID'),
-                            type: item.diff > 0 ? 'IN' : 'OUT',
-                            productId: prod.id,
-                            sku: item.sku || '-',
-                            productName: item.name || 'Produk',
-                            variantSku: item.variantSku || null,
-                            variantName: item.variantName || '-',
-                            qtyChange: item.diff,
-                            outletId: oId,
-                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
-                            refId: id + '-UNVOID',
-                            userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
-                            note: `UN-VOID REF: ${id}`
+                        currentBatch.set(logRef, {
+                            companyId: companyIdSafe, createdAt: serverTimestamp(), dateStr: new Date().toLocaleString('id-ID'),
+                            type: item.diff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku || '-',
+                            productName: item.name || 'Produk', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qtyChange: item.diff, outletId: oId, outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang',
+                            refId: id + '-UNVOID', userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin', note: `UN-VOID REF: ${id}`
                         });
+                        opCount++; checkBatchLimit();
                     }
 
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
                         let sanitizedItems = JSON.parse(JSON.stringify(opname.items));
-                        batch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
+                        currentBatch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
+                        opCount++;
                     }
                     
-                    await batch.commit();
-                    opname.status = 'SELESAI'; 
+                    if (opCount > 0) batchesArray.push(currentBatch);
+                    for (let b of batchesArray) { await b.commit(); }
 
-                    Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
+                    opname.status = 'SELESAI'; 
+                    Swal.close();
+                    Swal.fire({ icon: 'success', title: 'Un-Void Sukses', text: 'Dokumen diaktifkan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
-                    console.error("Gagal memproses Un-Void:", err);
+                    console.error("Gagal Un-Void:", err);
                     opname.status = 'VOID'; 
+                    Swal.close();
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Un-Void.'});
                 } finally {
                     this.isProcessing = false;
