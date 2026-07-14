@@ -5113,7 +5113,7 @@ body.sidebar-open {
     <input type="text" 
            class="form-control fw-semibold border-danger" 
            placeholder="Ketik Nama atau No Telp..." 
-           v-model="searchCustomerQuery" 
+           v-model="customerSearchQuery" 
            @focus="showCustomerDropdown = true" 
            @blur="hideCustomerDropdown" 
            autocomplete="off">
@@ -7873,12 +7873,11 @@ body.sidebar-open {
                 salesOutletFilter: '',  
                 salesStatusFilter: '',  
 
-                selectedCustomer: null,
-                searchCustomerQuery: '',
+                selectedCustomer: null, 
+                customerSearchQuery: '', 
                 showCustomerDropdown: false, // Mengontrol tampil/hilangnya list pencarian
                 
                 // Variabel Pencarian & Filter
-                customerSearchQuery: '',
                 customerPromoFilter: '',
                 supplierSearchQuery: '',
                 confirmTitle: '', confirmMessage: '', confirmCallback: null,
@@ -8239,29 +8238,6 @@ beforeDestroy() {
                 return isMethodActive && isOutletMatch;
             });
         },
-
-        // Fungsi ini akan menyaring secara real-time berdasarkan Nama ATAU No Telp
-    filteredCustomers() {
-        // Jika kolom pencarian kosong, tampilkan semua pelanggan
-        if (!this.searchCustomerQuery) {
-            return this.customers;
-        }
-        
-        // Bersihkan spasi dan ubah ke huruf kecil semua
-        const query = this.searchCustomerQuery.toLowerCase().trim();
-        
-        return this.customers.filter(cust => {
-            // Pastikan nama ada dan ubah ke huruf kecil
-            const nameMatch = cust.name && cust.name.toLowerCase().includes(query);
-            
-            // PENGAMAN UTAMA: Paksa nomor telepon menjadi String agar pencarian angka tidak crash
-            const phoneStr = cust.phone ? String(cust.phone) : '';
-            const phoneMatch = phoneStr.includes(query);
-            
-            // Kembalikan data yang cocok dengan Nama ATAU Nomor Telepon
-            return nameMatch || phoneMatch;
-        });
-    },
             
         groupedPaymentMethodsByOutlet() {
         if (!this.paymentMethods || this.paymentMethods.length === 0) return {};
@@ -8436,33 +8412,38 @@ beforeDestroy() {
             },
 
         filteredCustomers() {
-            // Jika data customers belum dimuat, kembalikan array kosong
-            if (!this.customers) return [];
+    // Jika data customers belum dimuat, kembalikan array kosong
+    if (!this.customers) return [];
+    
+    return this.customers.filter(c => {
+        // 1. LOGIKA PENCARIAN TEKS (SANGAT AMAN ANTI-CRASH)
+        // Pastikan tidak error meskipun customerSearchQuery kosong
+        const q = (this.customerSearchQuery || '').toLowerCase().trim();
+        
+        // Ubah semua data menjadi String dulu agar pencarian angka (No Telp) tidak error
+        const nameStr = c.name ? String(c.name).toLowerCase() : '';
+        const phoneStr = c.phone ? String(c.phone).toLowerCase() : '';
+        const addressStr = c.address ? String(c.address).toLowerCase() : '';
+
+        // Cocokkan ketikan dengan Nama, No Telp, ATAU Alamat
+        const matchSearch = nameStr.includes(q) || phoneStr.includes(q) || addressStr.includes(q);
+
+        // 2. LOGIKA FILTER PROMO (TETAP DIPERTAHANKAN)
+        let matchPromo = true;
+        if (this.customerPromoFilter === 'ada') {
+            // Ambil nilai diskon, jika lebih dari 0 berarti ADA PROMO
+            const discount = this.getMembershipDiscount(c.membershipId) || 0;
+            matchPromo = discount > 0; 
             
-            return this.customers.filter(c => {
-                // 1. Logika Pencarian Teks (Nama, Telp, Alamat)
-                const q = this.customerSearchQuery.toLowerCase();
-                const matchSearch = 
-                    (c.name && c.name.toLowerCase().includes(q)) ||
-                    (c.phone && c.phone.toLowerCase().includes(q)) ||
-                    (c.address && c.address.toLowerCase().includes(q));
+        } else if (this.customerPromoFilter === 'tidak') {
+            // Ambil nilai diskon, jika 0 (atau tidak punya membership) berarti PELANGGAN BIASA
+            const discount = this.getMembershipDiscount(c.membershipId) || 0;
+            matchPromo = discount === 0; 
+        }
 
-                // 2. Logika Filter Promo (Cek nilai diskon dari membership-nya)
-                let matchPromo = true;
-                if (this.customerPromoFilter === 'ada') {
-                    // Ambil nilai diskon, jika lebih dari 0 berarti ADA PROMO
-                    const discount = this.getMembershipDiscount(c.membershipId) || 0;
-                    matchPromo = discount > 0; 
-                    
-                } else if (this.customerPromoFilter === 'tidak') {
-                    // Ambil nilai diskon, jika 0 (atau tidak punya membership) berarti PELANGGAN BIASA
-                    const discount = this.getMembershipDiscount(c.membershipId) || 0;
-                    matchPromo = discount === 0; 
-                }
-
-                return matchSearch && matchPromo;
-            });
-        },
+        return matchSearch && matchPromo;
+    });
+},
 
         filteredSuppliers() {
             if (!this.suppliers) return [];
@@ -9434,7 +9415,7 @@ beforeDestroy() {
         // ==========================================
         // TAMBAHAN BARU: Pantau Input Pencarian Pelanggan
         // ==========================================
-        searchCustomerQuery(newVal) {
+        customerSearchQuery(newVal) {
             if (this.selectedCustomer) {
                 const expectedText = `${this.selectedCustomer.name} - ${this.selectedCustomer.phone}`;
                 // Jika kasir menghapus atau mengubah teks yang sudah terpilih, batalkan pilihan (set ke null)
