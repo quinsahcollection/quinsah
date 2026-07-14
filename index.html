@@ -13563,24 +13563,24 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
             this.askConfirm('Batalkan (Void) Opname?', `Dokumen ${id} akan dibatalkan. Seluruh stok produk akan dikembalikan (reverse) ke angka semula.`, async () => {
                 this.isProcessing = true;
                 try {
-                    // 🌟 SIAPKAN KERANJANG BATCH
                     const batch = writeBatch(db);
-                    
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+                    let companyIdSafe = this.userProfile?.companyId || '';
 
                     for (let item of opname.items) {
                         let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod) continue;
+                        if (!prod || !item.diff) continue;
                         let prodCopy = JSON.parse(JSON.stringify(prod));
 
-                        // REVERSE: Plus jadi Minus, Minus jadi Plus
                         let reverseDiff = item.diff * -1; 
+                        if (reverseDiff === 0) continue;
+                        
                         let qtyAbs = Math.abs(reverseDiff);
                         let isPlus = reverseDiff > 0;
-                        let oId = opname.outletId;
+                        let oId = opname.outletId || '';
 
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = (prodCopy.variants || []).findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + reverseDiff;
@@ -13662,53 +13662,51 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                             prodCopy.batches[oId] = batches;
                         }
                         
-                        // 🌟 BATCH 1: MASUKKAN UPDATE PRODUK KE KERANJANG
                         let prodRef = doc(db, "products", prod.id);
                         batch.update(prodRef, { 
-                            variants: prodCopy.variants, 
-                            baseOutletStocks: prodCopy.baseOutletStocks, 
+                            variants: prodCopy.variants || [], 
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}, 
                             batches: prodCopy.batches || {} 
                         });
 
-                        Object.assign(prod, prodCopy); // Update lokal
+                        Object.assign(prod, prodCopy); 
 
-                        // 🌟 BATCH 2: MASUKKAN LOG STOK KE KERANJANG
                         let logRef = doc(collection(db, "stockLogs"));
                         batch.set(logRef, {
-                            companyId: this.userProfile.companyId,
+                            companyId: companyIdSafe,
                             createdAt: serverTimestamp(),
                             dateStr: new Date().toLocaleString('id-ID'),
                             type: reverseDiff > 0 ? 'IN' : 'OUT',
                             productId: prod.id,
-                            sku: item.sku,
-                            productName: item.name,
+                            sku: item.sku || '-',
+                            productName: item.name || 'Produk',
                             variantSku: item.variantSku || null,
                             variantName: item.variantName || '-',
                             qtyChange: reverseDiff,
-                            outletId: opname.outletId,
-                            outletName: this.getOutletName(opname.outletId) || 'Gudang Pusat',
+                            outletId: oId,
+                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
                             refId: id + '-VOID',
                             userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
                             note: `VOID REF: ${id}`
                         });
                     }
 
-                    // 🌟 BATCH 3: UPDATE STATUS DOKUMEN KE VOID
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
                         batch.update(opnameRef, { status: 'VOID' });
                     }
                     
-                    // 🌟 TEMBAKKAN SEMUA DATA
                     await batch.commit();
-                    
                     opname.status = 'VOID';
                     
                     Swal.fire({ icon: 'success', title: 'Berhasil di-Void', text: 'Dokumen dibatalkan dan seluruh stok dikembalikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
+                    console.error("Gagal Void:", err);
                     Swal.fire({ icon: 'error', title: 'Sistem Error', text: 'Terjadi kesalahan saat memproses Void.'});
+                } finally {
+                    // 🌟 Kunci reset loading
+                    this.isProcessing = false;
                 }
-                this.isProcessing = false;
             });
         },
 
@@ -16325,30 +16323,29 @@ doActualPrint() {
 
             this.askConfirm('Setujui Opname?', `Stok sistem & riwayat Batch akan disesuaikan secara permanen sesuai dokumen ${id}. Lanjutkan?`, async () => {
                 
-                // KUNCI STATUS SECARA LOKAL AGAR TIDAK BISA DI-SPAM KLIK
                 if (opname.status !== 'PENDING') return; 
                 opname.status = 'PROCESSING'; 
-                
                 this.isProcessing = true;
+                
                 try {
-                    // 🌟 SIAPKAN KERANJANG BATCH
                     const batch = writeBatch(db);
-                    
                     let nowStr = new Date().toLocaleString('id-ID');
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+                    let companyIdSafe = this.userProfile?.companyId || ''; // 🌟 Pelindung Company ID
 
                     for (let item of opname.items) {
                         let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod || item.diff === 0) continue; 
+                        if (!prod || !item.diff || item.diff === 0) continue; 
+                        
                         let prodCopy = JSON.parse(JSON.stringify(prod));
                         let qtyAbs = Math.abs(item.diff);
                         let isPlus = item.diff > 0;
-                        let oId = opname.outletId;
+                        let oId = opname.outletId || '';
                         
                         item.cutBatches = []; 
 
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = (prodCopy.variants || []).findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
@@ -16454,10 +16451,8 @@ doActualPrint() {
                             prodCopy.batches[oId] = batches;
                         }
                         
-                        // 🌟 BATCH 1: MASUKKAN UPDATE PRODUK KE KERANJANG
                         let prodRef = doc(db, "products", prod.id);
                         batch.update(prodRef, { 
-                            // 🌟 PERBAIKAN: Tambahkan pengaman Anti-Undefined
                             variants: prodCopy.variants || [], 
                             baseOutletStocks: prodCopy.baseOutletStocks || {}, 
                             batches: prodCopy.batches || {} 
@@ -16465,45 +16460,45 @@ doActualPrint() {
 
                         Object.assign(prod, prodCopy);
 
-                        // 🌟 BATCH 2: MASUKKAN LOG STOK KE KERANJANG
-                        let logRef = doc(collection(db, "stockLogs")); // Buat ID log otomatis
+                        let logRef = doc(collection(db, "stockLogs"));
                         batch.set(logRef, {
-                            companyId: this.userProfile.companyId,
+                            companyId: companyIdSafe,
                             createdAt: serverTimestamp(),
                             dateStr: nowStr,
                             type: item.diff > 0 ? 'IN' : 'OUT',
                             productId: prod.id,
-                            sku: item.sku,
-                            productName: item.name,
+                            sku: item.sku || '-', // 🌟 Pelindung Anti-Undefined
+                            productName: item.name || 'Produk',
                             variantSku: item.variantSku || null,
                             variantName: item.variantName || '-',
                             qtyChange: item.diff,
-                            outletId: opname.outletId,
-                            outletName: this.getOutletName(opname.outletId) || 'Gudang Pusat',
+                            outletId: oId,
+                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
                             refId: id,
                             userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
                             note: item.note || 'Approve Dokumen Opname'
                         });
                     }
 
-                    // 🌟 BATCH 3: MASUKKAN UPDATE STATUS OPNAME KE KERANJANG
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
-                        batch.update(opnameRef, { status: 'SELESAI', items: opname.items });
+                        // 🌟 Trik Pembersihan JSON agar tidak ada Undefined tersembunyi
+                        let sanitizedItems = JSON.parse(JSON.stringify(opname.items));
+                        batch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
                     }
                     
-                    // 🌟 TEMBAKKAN SEMUA DATA KE FIREBASE SERENTAK (NO LOADING!)
                     await batch.commit();
-
-                    opname.status = 'SELESAI'; // Pastikan di memori juga berubah
+                    opname.status = 'SELESAI'; 
                     
                     Swal.fire({ icon: 'success', title: 'Disetujui', text: 'Stok fisik & Batch berhasil disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal Approve:", err);
-                    opname.status = 'PENDING'; // Kembalikan status jika gagal
+                    opname.status = 'PENDING'; 
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal approve dokumen.'});
+                } finally {
+                    // 🌟 Kunci agar loading PASTI mati dalam kondisi gagal/sukses apapun
+                    this.isProcessing = false;
                 }
-                this.isProcessing = false;
             });
         },
 
@@ -16515,30 +16510,28 @@ doActualPrint() {
             if (!opname || opname.status !== 'VOID') return;
 
             this.askConfirm('Batalkan Void (Un-Void)?', `Dokumen ${id} akan diaktifkan kembali. Lanjutkan?`, async () => {
-                
-                // KUNCI STATUS
                 if (opname.status !== 'VOID') return;
                 opname.status = 'PROCESSING';
-
                 this.isProcessing = true;
+                
                 try {
-                    // 🌟 SIAPKAN KERANJANG BATCH
                     const batch = writeBatch(db);
-                    
+                    let companyIdSafe = this.userProfile?.companyId || '';
                     let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
 
                     for (let item of opname.items) {
                         let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod || item.diff === 0) continue;
+                        if (!prod || !item.diff || item.diff === 0) continue;
+                        
                         let prodCopy = JSON.parse(JSON.stringify(prod));
                         let qtyAbs = Math.abs(item.diff);
                         let isPlus = item.diff > 0;
-                        let oId = opname.outletId;
+                        let oId = opname.outletId || '';
 
                         item.cutBatches = []; 
 
                         if (item.isVariant) {
-                            let vIdx = prodCopy.variants.findIndex(x => x.variantSku === item.variantSku);
+                            let vIdx = (prodCopy.variants || []).findIndex(x => x.variantSku === item.variantSku);
                             if (vIdx !== -1) {
                                 if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                                 prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + item.diff;
@@ -16551,7 +16544,7 @@ doActualPrint() {
                                     let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
                                     let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
                                     let finalExpired = item.expiredDate ? item.expiredDate : '';
-
+                                    
                                     batches.push({ 
                                         batchId: 'UNVOID-' + id, 
                                         batchNo: finalBatchNo,
@@ -16584,7 +16577,7 @@ doActualPrint() {
                                             if (b.qty_remain !== undefined) b.qty_remain -= taken;
                                             if (b.qtySisa !== undefined) b.qtySisa -= taken;
                                             reqQty -= taken;
-
+                                            
                                             item.cutBatches.push({ qty: taken, batchNo: b.batchNo || '-', expiredDate: b.expiredDate || '' });
                                         }
                                     }
@@ -16603,7 +16596,7 @@ doActualPrint() {
                                 let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
                                 let finalBatchNo = item.batchNo ? item.batchNo : ('UNVOID-' + id);
                                 let finalExpired = item.expiredDate ? item.expiredDate : '';
-
+                                
                                 batches.push({ 
                                     batchId: 'UNVOID-' + id, 
                                     batchNo: finalBatchNo,
@@ -16644,56 +16637,52 @@ doActualPrint() {
                             prodCopy.batches[oId] = batches;
                         }
                         
-                        // 🌟 BATCH 1: MASUKKAN UPDATE PRODUK KE KERANJANG
                         let prodRef = doc(db, "products", prod.id);
                         batch.update(prodRef, { 
-                            // 🌟 PERBAIKAN: Tambahkan pengaman Anti-Undefined
                             variants: prodCopy.variants || [], 
                             baseOutletStocks: prodCopy.baseOutletStocks || {}, 
                             batches: prodCopy.batches || {} 
                         });
 
-                        Object.assign(prod, prodCopy); // Update lokal
+                        Object.assign(prod, prodCopy);
 
-                        // 🌟 BATCH 2: MASUKKAN LOG STOK KE KERANJANG
                         let logRef = doc(collection(db, "stockLogs"));
                         batch.set(logRef, {
-                            companyId: this.userProfile.companyId,
+                            companyId: companyIdSafe,
                             createdAt: serverTimestamp(),
                             dateStr: new Date().toLocaleString('id-ID'),
                             type: item.diff > 0 ? 'IN' : 'OUT',
                             productId: prod.id,
-                            sku: item.sku,
-                            productName: item.name,
+                            sku: item.sku || '-',
+                            productName: item.name || 'Produk',
                             variantSku: item.variantSku || null,
                             variantName: item.variantName || '-',
                             qtyChange: item.diff,
-                            outletId: opname.outletId,
-                            outletName: this.getOutletName(opname.outletId) || 'Gudang Pusat',
+                            outletId: oId,
+                            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang Pusat',
                             refId: id + '-UNVOID',
                             userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin',
                             note: `UN-VOID REF: ${id}`
                         });
                     }
 
-                    // 🌟 BATCH 3: UPDATE STATUS DOKUMEN KE SELESAI
                     if (opname.firestoreId) {
                         let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
-                        batch.update(opnameRef, { status: 'SELESAI', items: opname.items });
+                        let sanitizedItems = JSON.parse(JSON.stringify(opname.items));
+                        batch.update(opnameRef, { status: 'SELESAI', items: sanitizedItems });
                     }
                     
-                    // 🌟 TEMBAKKAN SEMUA DATA
                     await batch.commit();
+                    opname.status = 'SELESAI'; 
 
-                    opname.status = 'SELESAI'; // Pastikan di memori juga berubah
-                    
                     Swal.fire({ icon: 'success', title: 'Berhasil Un-Void', text: 'Dokumen diaktifkan dan stok telah disesuaikan.', timer: 2000, showConfirmButton: false});
                 } catch (err) {
                     console.error("Gagal memproses Un-Void:", err);
-                    opname.status = 'VOID'; // Kembalikan status jika gagal
+                    opname.status = 'VOID'; 
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Un-Void.'});
+                } finally {
+                    this.isProcessing = false;
                 }
-                this.isProcessing = false;
             });
         },
    
