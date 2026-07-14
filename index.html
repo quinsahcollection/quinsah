@@ -5114,6 +5114,7 @@ body.sidebar-open {
            class="form-control fw-semibold border-danger" 
            placeholder="Ketik Nama atau No Telp..." 
            v-model="customerSearchQuery" 
+           @input="showCustomerDropdown = true"
            @focus="showCustomerDropdown = true" 
            @blur="hideCustomerDropdown" 
            autocomplete="off">
@@ -8412,38 +8413,37 @@ beforeDestroy() {
             },
 
         filteredCustomers() {
-        // Jika data customers belum dimuat, kembalikan array kosong
-        if (!this.customers) return [];
+    // Jika data customers belum dimuat, kembalikan array kosong
+    if (!this.customers) return [];
+    
+    // 🌟 PERBAIKAN UTAMA: Hilangkan .trim() agar ketikan 1 huruf langsung aktif merespon
+    const q = (this.customerSearchQuery || '').toLowerCase();
+    
+    return this.customers.filter(c => {
+        // 1. LOGIKA PENCARIAN TEKS (Mulai dari huruf awal / substring)
+        const nameStr = c.name ? String(c.name).toLowerCase() : '';
+        const phoneStr = c.phone ? String(c.phone).toLowerCase() : '';
+        const addressStr = c.address ? String(c.address).toLowerCase() : '';
+
+        // Menggunakan .includes() murni tanpa hambatan trim
+        const matchSearch = nameStr.includes(q) || phoneStr.includes(q) || addressStr.includes(q);
+
+        // 2. LOGIKA FILTER PROMO (Tetap Aman)
+        let matchPromo = true;
+        const hasDiscountMethod = typeof this.getMembershipDiscount === 'function';
         
-        return this.customers.filter(c => {
-            // 1. LOGIKA PENCARIAN TEKS (SANGAT AMAN ANTI-CRASH)
-            const q = (this.customerSearchQuery || '').toLowerCase().trim();
+        if (this.customerPromoFilter === 'ada') {
+            const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
+            matchPromo = discount > 0; 
             
-            // Konversi paksa ke String agar nomor telepon bertipe Number tidak membuat sistem crash
-            const nameStr = c.name ? String(c.name).toLowerCase() : '';
-            const phoneStr = c.phone ? String(c.phone).toLowerCase() : '';
-            const addressStr = c.address ? String(c.address).toLowerCase() : '';
+        } else if (this.customerPromoFilter === 'tidak') {
+            const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
+            matchPromo = discount === 0; 
+        }
 
-            const matchSearch = nameStr.includes(q) || phoneStr.includes(q) || addressStr.includes(q);
-
-            // 2. LOGIKA FILTER PROMO (DENGAN SECURITY CHECK AGAR TIDAK CRASH)
-            let matchPromo = true;
-            
-            // Pastikan fungsi diskon terdefinisi sebelum dieksekusi
-            const hasDiscountMethod = typeof this.getMembershipDiscount === 'function';
-            
-            if (this.customerPromoFilter === 'ada') {
-                const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
-                matchPromo = discount > 0; 
-                
-            } else if (this.customerPromoFilter === 'tidak') {
-                const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
-                matchPromo = discount === 0; 
-            }
-
-            return matchSearch && matchPromo;
-        });
-    },
+        return matchSearch && matchPromo;
+    });
+},
 
         filteredSuppliers() {
             if (!this.suppliers) return [];
