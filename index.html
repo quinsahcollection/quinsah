@@ -7097,18 +7097,25 @@ body.sidebar-open {
                     <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <template v-if="activePrintData.splitPayments && activePrintData.splitPayments.length > 0">
-                        <tr>
-                            <td colspan="2" style="padding-top:5px; font-weight:bold; font-size:0.9em; text-transform:uppercase;">PEMBAYARAN (SPLIT):</td>
-                        </tr>
-                        <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
-                            <td style="padding-top:2px; font-size:0.9em; padding-left: 5px;">- {{ split.method }}</td>
-                            <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
-                        </tr>
-                        <tr v-if="activePrintData.totalDebt > 0">
-                            <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
-                            <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.totalDebt) }}</td>
-                        </tr>
-                    </template>
+    <tr>
+        <td colspan="2" style="padding-top:5px; font-weight:bold; font-size:0.9em; text-transform:uppercase;">PEMBAYARAN (SPLIT):</td>
+    </tr>
+    <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
+        <td style="padding-top:2px; font-size:0.9em; padding-left: 5px;">- {{ split.method }}</td>
+        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
+    </tr>
+    
+    <!-- KODE PERBAIKAN: Menghitung sisa hutang secara dinamis (Total - Jumlah Dibayar) -->
+    <tr v-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+        <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
+    </tr>
+    <!-- Opsi tambahan: Memunculkan tulisan LUNAS jika hutang sudah dibayar penuh -->
+    <tr v-else-if="activePrintData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')">
+        <td style="padding-top:2px; font-weight:bold; color:green;">STATUS</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">LUNAS</td>
+    </tr>
+</template>
 
                     <template v-else>
                         <tr><td style="padding-top:5px; text-transform:uppercase; font-size:0.9em; color:#333;">METODE BAYAR</td><td style="text-align: right; padding-top:5px; font-weight:bold; text-transform:uppercase;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -7309,18 +7316,24 @@ body.sidebar-open {
                     <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <template v-if="activePrintData.splitPayments && activePrintData.splitPayments.length > 0">
-                        <tr>
-                            <td colspan="2" style="padding: 8px 10px; color: #6b7280; font-size: 12px; font-weight: bold; border-bottom: 1px dashed #e5e7eb;">RINCIAN PEMBAYARAN (SPLIT):</td>
-                        </tr>
-                        <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
-                            <td style="padding: 4px 10px 4px 20px; font-size: 13px;">- {{ split.method }}</td>
-                            <td style="padding: 4px 10px; text-align: right; font-weight: bold;">Rp {{ formatNumber(split.amount) }}</td>
-                        </tr>
-                        <tr v-if="activePrintData.totalDebt > 0">
-                            <td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td>
-                            <td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.totalDebt) }}</td>
-                        </tr>
-                    </template>
+    <tr>
+        <td colspan="2" style="padding: 8px 10px; color: #6b7280; font-size: 12px; font-weight: bold; border-bottom: 1px dashed #e5e7eb;">RINCIAN PEMBAYARAN (SPLIT):</td>
+    </tr>
+    <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
+        <td style="padding: 4px 10px 4px 20px; font-size: 13px;">- {{ split.method }}</td>
+        <td style="padding: 4px 10px; text-align: right; font-weight: bold;">Rp {{ formatNumber(split.amount) }}</td>
+    </tr>
+    
+    <!-- KODE PERBAIKAN -->
+    <tr v-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+        <td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td>
+        <td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
+    </tr>
+    <tr v-else-if="activePrintData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')">
+        <td style="padding: 8px 10px; font-weight: 800; color: #16a34a;">Status Pembayaran</td>
+        <td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #16a34a;">LUNAS</td>
+    </tr>
+</template>
                     
                     <template v-else>
                         <tr><td style="padding: 8px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb;">Metode Pembayaran</td><td style="padding: 8px 10px; text-align: right; font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
