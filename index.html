@@ -13551,152 +13551,6 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
     });
 },
 
-        // ==========================================
-        // 2. FUNGSI VOID / BATALKAN OPNAME (ANTI LIMIT 10MB)
-        // ==========================================
-        async voidOpname(id) {
-            let opname = this.opnameHistory.find(o => o.id === id);
-            if (!opname) return;
-            if (opname.status === 'VOID') return Swal.fire('Info', 'Dokumen sudah di-void.', 'info');
-
-            this.askConfirm('Batalkan (Void)?', `Seluruh stok akan dikembalikan (reverse) ke angka semula.`, async () => {
-                this.isProcessing = true;
-                try {
-                    let batchesArray = [];
-                    let currentBatch = writeBatch(db);
-                    let opCount = 0;
-                    
-                    const checkBatchLimit = () => {
-                        if (opCount >= 50) { batchesArray.push(currentBatch); currentBatch = writeBatch(db); opCount = 0; }
-                    };
-
-                    let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
-                    let companyIdSafe = this.userProfile?.companyId || '';
-
-                    for (let item of opname.items) {
-                        let prod = this.products.find(x => x.id === item.productId);
-                        if (!prod || !item.diff) continue;
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-
-                        let reverseDiff = item.diff * -1; 
-                        if (reverseDiff === 0) continue;
-                        
-                        let qtyAbs = Math.abs(reverseDiff);
-                        let isPlus = reverseDiff > 0;
-                        let oId = opname.outletId || '';
-
-                        if (item.isVariant) {
-                            let vIdx = (prodCopy.variants || []).findIndex(x => x.variantSku === item.variantSku);
-                            if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + reverseDiff;
-
-                                if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
-                                if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
-                                let batches = prodCopy.variants[vIdx].batches[oId];
-
-                                if (isPlus) {
-                                    let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
-                                    batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
-                                } else {
-                                    if (hppMethod === 'FEFO') batches.sort((a, b) => {
-                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
-                                        if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
-                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                    });
-                                    else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
-                                    else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
-
-                                    let reqQty = qtyAbs;
-                                    for (let i = 0; i < batches.length; i++) {
-                                        if (reqQty <= 0) break;
-                                        let b = batches[i];
-                                        let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                        if (available > 0) {
-                                            let taken = Math.min(available, reqQty);
-                                            if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                            if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                            reqQty -= taken;
-                                        }
-                                    }
-                                }
-                                prodCopy.variants[vIdx].batches[oId] = batches;
-                            }
-                        } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + reverseDiff;
-
-                            if (!prodCopy.batches) prodCopy.batches = {};
-                            if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
-                            let batches = prodCopy.batches[oId];
-
-                            if (isPlus) {
-                                let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
-                                batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
-                            } else {
-                                if (hppMethod === 'FEFO') batches.sort((a, b) => {
-                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
-                                    if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
-                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
-                                });
-                                else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
-                                else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
-
-                                let reqQty = qtyAbs;
-                                for (let i = 0; i < batches.length; i++) {
-                                    if (reqQty <= 0) break;
-                                    let b = batches[i];
-                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                                    if (available > 0) {
-                                        let taken = Math.min(available, reqQty);
-                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                        reqQty -= taken;
-                                    }
-                                }
-                            }
-                            prodCopy.batches[oId] = batches;
-                        }
-                        
-                        let prodRef = doc(db, "products", prod.id);
-                        currentBatch.update(prodRef, { variants: prodCopy.variants || [], baseOutletStocks: prodCopy.baseOutletStocks || {}, batches: prodCopy.batches || {} });
-                        opCount++; checkBatchLimit();
-
-                        Object.assign(prod, prodCopy); 
-
-                        let logRef = doc(collection(db, "stockLogs"));
-                        currentBatch.set(logRef, {
-                            companyId: companyIdSafe, createdAt: serverTimestamp(), dateStr: new Date().toLocaleString('id-ID'),
-                            type: reverseDiff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku || '-',
-                            productName: item.name || 'Produk', variantSku: item.variantSku || null, variantName: item.variantName || '-',
-                            qtyChange: reverseDiff, outletId: oId, outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang',
-                            refId: id + '-VOID', userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin', note: `VOID REF: ${id}`
-                        });
-                        opCount++; checkBatchLimit();
-                    }
-
-                    if (opname.firestoreId) {
-                        let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
-                        currentBatch.update(opnameRef, { status: 'VOID' });
-                        opCount++;
-                    }
-                    
-                    if (opCount > 0) batchesArray.push(currentBatch);
-                    for (let b of batchesArray) { await b.commit(); }
-
-                    opname.status = 'VOID';
-                    Swal.close();
-                    Swal.fire({ icon: 'success', title: 'Void Sukses', text: 'Stok dikembalikan.', timer: 2000, showConfirmButton: false});
-                } catch (err) {
-                    console.error("Gagal Void:", err);
-                    Swal.close();
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Void.'});
-                } finally {
-                    this.isProcessing = false;
-                }
-            });
-        },
-
             getEmptyProductForm() { 
                 return { 
                     id: null, sku: '', name: '', categoryId: '', categoryId_L1: '', categoryId_L2: '', categoryId_L3: '', 
@@ -16469,6 +16323,152 @@ doActualPrint() {
             });
         },
 
+        // ==========================================
+        // 2. FUNGSI VOID / BATALKAN OPNAME (ANTI LIMIT 10MB)
+        // ==========================================
+        async voidOpname(id) {
+            let opname = this.opnameHistory.find(o => o.id === id);
+            if (!opname) return;
+            if (opname.status === 'VOID') return Swal.fire('Info', 'Dokumen sudah di-void.', 'info');
+
+            this.askConfirm('Batalkan (Void)?', `Seluruh stok akan dikembalikan (reverse) ke angka semula.`, async () => {
+                this.isProcessing = true;
+                try {
+                    let batchesArray = [];
+                    let currentBatch = writeBatch(db);
+                    let opCount = 0;
+                    
+                    const checkBatchLimit = () => {
+                        if (opCount >= 50) { batchesArray.push(currentBatch); currentBatch = writeBatch(db); opCount = 0; }
+                    };
+
+                    let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+                    let companyIdSafe = this.userProfile?.companyId || '';
+
+                    for (let item of opname.items) {
+                        let prod = this.products.find(x => x.id === item.productId);
+                        if (!prod || !item.diff) continue;
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+
+                        let reverseDiff = item.diff * -1; 
+                        if (reverseDiff === 0) continue;
+                        
+                        let qtyAbs = Math.abs(reverseDiff);
+                        let isPlus = reverseDiff > 0;
+                        let oId = opname.outletId || '';
+
+                        if (item.isVariant) {
+                            let vIdx = (prodCopy.variants || []).findIndex(x => x.variantSku === item.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[oId] = (prodCopy.variants[vIdx].outletStocks[oId] || 0) + reverseDiff;
+
+                                if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                                if (!prodCopy.variants[vIdx].batches[oId]) prodCopy.variants[vIdx].batches[oId] = [];
+                                let batches = prodCopy.variants[vIdx].batches[oId];
+
+                                if (isPlus) {
+                                    let cost = prodCopy.variants[vIdx].hppPrice || prodCopy.variants[vIdx].averageCost || prodCopy.hppPrice || 0;
+                                    batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
+                                } else {
+                                    if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                        if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                    });
+                                    else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                    else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
+
+                                    let reqQty = qtyAbs;
+                                    for (let i = 0; i < batches.length; i++) {
+                                        if (reqQty <= 0) break;
+                                        let b = batches[i];
+                                        let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                                        if (available > 0) {
+                                            let taken = Math.min(available, reqQty);
+                                            if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                            if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                            reqQty -= taken;
+                                        }
+                                    }
+                                }
+                                prodCopy.variants[vIdx].batches[oId] = batches;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[oId] = (prodCopy.baseOutletStocks[oId] || 0) + reverseDiff;
+
+                            if (!prodCopy.batches) prodCopy.batches = {};
+                            if (!prodCopy.batches[oId]) prodCopy.batches[oId] = [];
+                            let batches = prodCopy.batches[oId];
+
+                            if (isPlus) {
+                                let cost = prodCopy.hppPrice || prodCopy.averageCost || 0;
+                                batches.push({ batchId: 'VOID-' + id, tanggalMasuk: new Date().toISOString(), qtySisa: qtyAbs, hargaModal: cost });
+                            } else {
+                                if (hppMethod === 'FEFO') batches.sort((a, b) => {
+                                    if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0);
+                                    if (!a.expiredDate) return 1; if (!b.expiredDate) return -1;
+                                    return new Date(a.expiredDate) - new Date(b.expiredDate);
+                                });
+                                else if (hppMethod === 'LIFO') batches.sort((a, b) => new Date(b.tanggalMasuk || 0) - new Date(a.tanggalMasuk || 0));
+                                else batches.sort((a, b) => new Date(a.tanggalMasuk || 0) - new Date(b.tanggalMasuk || 0));
+
+                                let reqQty = qtyAbs;
+                                for (let i = 0; i < batches.length; i++) {
+                                    if (reqQty <= 0) break;
+                                    let b = batches[i];
+                                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                                    if (available > 0) {
+                                        let taken = Math.min(available, reqQty);
+                                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                                        reqQty -= taken;
+                                    }
+                                }
+                            }
+                            prodCopy.batches[oId] = batches;
+                        }
+                        
+                        let prodRef = doc(db, "products", prod.id);
+                        currentBatch.update(prodRef, { variants: prodCopy.variants || [], baseOutletStocks: prodCopy.baseOutletStocks || {}, batches: prodCopy.batches || {} });
+                        opCount++; checkBatchLimit();
+
+                        Object.assign(prod, prodCopy); 
+
+                        let logRef = doc(collection(db, "stockLogs"));
+                        currentBatch.set(logRef, {
+                            companyId: companyIdSafe, createdAt: serverTimestamp(), dateStr: new Date().toLocaleString('id-ID'),
+                            type: reverseDiff > 0 ? 'IN' : 'OUT', productId: prod.id, sku: item.sku || '-',
+                            productName: item.name || 'Produk', variantSku: item.variantSku || null, variantName: item.variantName || '-',
+                            qtyChange: reverseDiff, outletId: oId, outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oId) : oId) || 'Gudang',
+                            refId: id + '-VOID', userName: this.userProfile?.namaLengkap || this.userProfile?.name || 'Admin', note: `VOID REF: ${id}`
+                        });
+                        opCount++; checkBatchLimit();
+                    }
+
+                    if (opname.firestoreId) {
+                        let opnameRef = doc(db, "stockOpnames", opname.firestoreId);
+                        currentBatch.update(opnameRef, { status: 'VOID' });
+                        opCount++;
+                    }
+                    
+                    if (opCount > 0) batchesArray.push(currentBatch);
+                    for (let b of batchesArray) { await b.commit(); }
+
+                    opname.status = 'VOID';
+                    Swal.close();
+                    Swal.fire({ icon: 'success', title: 'Void Sukses', text: 'Stok dikembalikan.', timer: 2000, showConfirmButton: false});
+                } catch (err) {
+                    console.error("Gagal Void:", err);
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Gagal memproses Void.'});
+                } finally {
+                    this.isProcessing = false;
+                }
+            });
+        },
+            
         // ==========================================
         // 3. FUNGSI UN-VOID (ANTI LIMIT 10MB)
         // ==========================================
