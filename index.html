@@ -8242,16 +8242,24 @@ beforeDestroy() {
 
         // Fungsi ini akan menyaring secara real-time berdasarkan Nama ATAU No Telp
     filteredCustomers() {
+        // Jika kolom pencarian kosong, tampilkan semua pelanggan
         if (!this.searchCustomerQuery) {
-            return this.customers; // Tampilkan semua jika input masih kosong
+            return this.customers;
         }
         
-        const query = this.searchCustomerQuery.toLowerCase();
+        // Bersihkan spasi dan ubah ke huruf kecil semua
+        const query = this.searchCustomerQuery.toLowerCase().trim();
         
         return this.customers.filter(cust => {
+            // Pastikan nama ada dan ubah ke huruf kecil
             const nameMatch = cust.name && cust.name.toLowerCase().includes(query);
-            const phoneMatch = cust.phone && cust.phone.includes(query);
-            return nameMatch || phoneMatch; // Filter sukses jika nama ATAU telp cocok
+            
+            // PENGAMAN UTAMA: Paksa nomor telepon menjadi String agar pencarian angka tidak crash
+            const phoneStr = cust.phone ? String(cust.phone) : '';
+            const phoneMatch = phoneStr.includes(query);
+            
+            // Kembalikan data yang cocok dengan Nama ATAU Nomor Telepon
+            return nameMatch || phoneMatch;
         });
     },
             
