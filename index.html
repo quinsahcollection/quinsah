@@ -5108,42 +5108,45 @@ body.sidebar-open {
                     <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
                     <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="No Invoice" :disabled="isEditingInvoice">
                 </div>
-                <div class="input-group input-group-sm">
-    <!-- Custom Searchable Dropdown -->
-    <div class="dropdown flex-grow-1">
-        <button class="form-select text-start fw-semibold border-danger w-100 d-flex justify-content-between align-items-center" 
-                type="button" 
-                data-bs-toggle="dropdown" 
-                data-bs-auto-close="outside">
-            <!-- Menampilkan Nama & Telp jika sudah terpilih -->
-            <span v-if="selectedCustomer">
-                {{ selectedCustomer.name }} <span class="text-muted small fw-normal ms-1">({{ selectedCustomer.phone }})</span>
-            </span>
-            <span v-else>Pilih Pelanggan (Wajib)</span>
-        </button>
+                <div class="input-group input-group-sm position-relative">
+    <!-- Input Text Pengganti Select -->
+    <input type="text" 
+           class="form-control fw-semibold border-danger" 
+           placeholder="Ketik Nama atau No Telp..." 
+           v-model="searchCustomerQuery" 
+           @focus="showCustomerDropdown = true" 
+           @blur="hideCustomerDropdown" 
+           autocomplete="off">
+
+    <!-- Tombol 'X' untuk mereset pelanggan jika sudah terpilih -->
+    <button v-if="selectedCustomer" class="btn btn-outline-secondary" type="button" @click="clearCustomer" title="Hapus Pilihan">
+        <i class="bi bi-x-lg"></i>
+    </button>
+
+    <!-- Tombol Tambah Pelanggan Baru -->
+    <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru">
+        <i class="bi bi-person-plus-fill"></i>
+    </button>
+
+    <!-- Dropdown Hasil Pencarian (Otomatis muncul saat fokus/mengetik) -->
+    <ul v-if="showCustomerDropdown" 
+        class="dropdown-menu show w-100 position-absolute shadow-sm p-1" 
+        style="top: 100%; left: 0; z-index: 1050; max-height: 250px; overflow-y: auto; margin-top: 2px;">
         
-        <ul class="dropdown-menu w-100 p-2 shadow-sm" style="max-height: 250px; overflow-y: auto;">
-            <!-- Kolom Pencarian -->
-            <li class="mb-2 sticky-top bg-white">
-                <input type="text" 
-                       class="form-control form-control-sm border-primary-custom" 
-                       placeholder="Cari nama atau no WA..." 
-                       v-model="searchCustomerQuery">
-            </li>
-            <!-- Jika tidak ditemukan -->
-            <li v-if="filteredCustomers.length === 0" class="text-center text-muted small p-2">
-                Pelanggan tidak ditemukan
-            </li>
-            <!-- List Pelanggan -->
-            <li v-for="cust in filteredCustomers" :key="cust.id">
-                <a class="dropdown-item cursor-pointer rounded mb-1" 
-                   @click="selectCustomer(cust)">
-                    <div class="fw-bold">{{ cust.name }}</div>
-                    <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ cust.phone }}</div>
-                </a>
-            </li>
-        </ul>
-    </div>
+        <!-- Jika diketik tapi tidak ada hasil -->
+        <li v-if="filteredCustomers.length === 0" class="text-center text-muted small p-2">
+            Pelanggan tidak ditemukan
+        </li>
+
+        <!-- List hasil filter (Otomatis menyaring) -->
+        <li v-for="cust in filteredCustomers" :key="cust.id">
+            <a class="dropdown-item cursor-pointer rounded mb-1" @mousedown.prevent="selectCustomer(cust)">
+                <div class="fw-bold">{{ cust.name }}</div>
+                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ cust.phone }}</div>
+            </a>
+        </li>
+    </ul>
+</div>
     
     <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru">
         <i class="bi bi-person-plus-fill"></i>
@@ -7878,6 +7881,7 @@ body.sidebar-open {
 
                 selectedCustomer: null,
                 searchCustomerQuery: '',
+                showCustomerDropdown: false, // Mengontrol tampil/hilangnya list pencarian
                 
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
@@ -8242,16 +8246,18 @@ beforeDestroy() {
             });
         },
 
-        // Fungsi ini akan menyaring pelanggan berdasarkan Nama atau No Telp
+        // Fungsi ini akan menyaring secara real-time berdasarkan Nama ATAU No Telp
     filteredCustomers() {
         if (!this.searchCustomerQuery) {
-            return this.customers;
+            return this.customers; // Tampilkan semua jika input masih kosong
         }
+        
         const query = this.searchCustomerQuery.toLowerCase();
+        
         return this.customers.filter(cust => {
             const nameMatch = cust.name && cust.name.toLowerCase().includes(query);
             const phoneMatch = cust.phone && cust.phone.includes(query);
-            return nameMatch || phoneMatch;
+            return nameMatch || phoneMatch; // Filter sukses jika nama ATAU telp cocok
         });
     },
             
@@ -9422,7 +9428,19 @@ beforeDestroy() {
                 this.paymentData.amountReceived = this.isSplitPayment ? this.remainingSplitTagihan : (this.total || 0);
             });
         }
-    }
+    },
+        // ==========================================
+        // TAMBAHAN BARU: Pantau Input Pencarian Pelanggan
+        // ==========================================
+        searchCustomerQuery(newVal) {
+            if (this.selectedCustomer) {
+                const expectedText = `${this.selectedCustomer.name} - ${this.selectedCustomer.phone}`;
+                // Jika kasir menghapus atau mengubah teks yang sudah terpilih, batalkan pilihan (set ke null)
+                if (newVal !== expectedText) {
+                    this.selectedCustomer = null; 
+                }
+            }
+        }
         },
         
         methods: {
@@ -14158,14 +14176,24 @@ this.sorotBarang(newItem);
             // Fungsi untuk memilih pelanggan dari dropdown dan menutup dropdown
     selectCustomer(cust) {
         this.selectedCustomer = cust;
-        this.searchCustomerQuery = ''; // Reset pencarian
-        
-        // Menutup dropdown Bootstrap secara manual (opsional, tergantung versi BS Anda)
-        const dropdownEl = document.querySelector('.dropdown-toggle');
-        if(dropdownEl) {
-           let dropdown = bootstrap.Dropdown.getInstance(dropdownEl);
-           if(dropdown) dropdown.hide();
-        }
+        // Ubah teks di dalam kotak input menjadi format "Nama - No Telp"
+        this.searchCustomerQuery = `${cust.name} - ${cust.phone}`;
+        this.showCustomerDropdown = false; // Sembunyikan dropdown
+    },
+
+    // Tombol X untuk mereset pilihan
+    clearCustomer() {
+        this.selectedCustomer = null;
+        this.searchCustomerQuery = '';
+        this.showCustomerDropdown = true; // Munculkan list lagi jika ingin mencari yang lain
+    },
+
+    // Menghilangkan dropdown saat kasir mengklik di luar area input
+    hideCustomerDropdown() {
+        // Gunakan timeout agar event @mousedown pada list (saat diklik) sempat dieksekusi sebelum dropdown hilang
+        setTimeout(() => {
+            this.showCustomerDropdown = false;
+        }, 150);
     },
     
             async saveData(colName, formObj, modalId) {
