@@ -5659,72 +5659,6 @@ body.sidebar-open {
             </div>
         </div>
 
-        <div class="modal fade" id="stockOpnameModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-dark text-white py-3">
-                    <h5 class="modal-title fw-bold" style="font-size: 1rem;"><i class="bi bi-sliders me-2"></i>Formulir Penyesuaian Stok (Stock Opname)</h5>
-                    <button type="button" class="btn-close btn-close-white" @click="hideModal('stockOpnameModal')"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <form @submit.prevent="submitStockOpname">
-                        
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Lokasi Toko / Outlet</label>
-                            <select class="form-select border-secondary shadow-none" v-model="formOpname.outletId" @change="handleOpnameProductOrOutletChange">
-                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Pilih Produk</label>
-                            <select class="form-select border-secondary shadow-none" v-model="formOpname.productId" @change="handleOpnameProductOrOutletChange">
-                                <option value="">-- Pilih Barang --</option>
-                                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3" v-if="formOpname.productId && products.find(x => x.id === formOpname.productId)?.variants?.length > 0">
-                            <label class="form-label small fw-bold text-warning"><i class="bi bi-tags me-1"></i>Spesifikasi Varian Produk</label>
-                            <select class="form-select border-warning shadow-none" v-model="formOpname.variantSku" @change="handleOpnameProductOrOutletChange">
-                                <option value="">-- Pilih Ukuran/Warna Varian --</option>
-                                <option v-for="v in products.find(x => x.id === formOpname.productId).variants" :key="v.variantSku" :value="v.variantSku">
-                                    {{ v.name || v.attributes }} ({{ v.variantSku }})
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="row g-3 mb-3 bg-light p-3 border rounded shadow-sm">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted d-block text-center">Stok Di Sistem</label>
-                                <div class="text-center fs-3 fw-bold text-secondary">{{ formOpname.currentQty }}</div>
-                                <small class="text-center d-block text-muted" style="font-size: 0.65rem;">Terhitung komputer</small>
-                            </div>
-                            <div class="col-6 border-start">
-                                <label class="form-label small fw-bold text-primary d-block text-center">Stok Fisik (Nyata)</label>
-                                <input type="number" class="form-control form-control-lg text-center fw-bold border-primary shadow-none" v-model.number="formOpname.actualQty" min="0" placeholder="0">
-                                <small class="text-center d-block text-muted" style="font-size: 0.65rem;">Ketik jumlah asli di rak</small>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-muted">Keterangan / Alasan Koreksi</label>
-                            <input type="text" class="form-control border-secondary shadow-none" v-model="formOpname.notes" placeholder="Cth: Barang Tikus, Salah Hitung, Rusak Basah...">
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary w-50 fw-bold" @click="hideModal('stockOpnameModal')">Batal</button>
-                            <button type="submit" class="btn btn-dark w-50 fw-bold" :disabled="isProcessing">
-                                <span v-if="isProcessing"><span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...</span>
-                                <span v-else><i class="bi bi-check-lg me-1"></i>Simpan Perubahan</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
         <!-- MODAL PEMBELIAN (PURCHASE) -->
         <div class="modal fade" id="addPurchaseModal" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -7767,9 +7701,14 @@ body.sidebar-open {
                 // =========================================================
             // 🌟 1. TARUH VARIABEL DATA DI SINI (Di dalam return)
             // =========================================================
-            currentAppVersion: '1.0.3', 
+            currentAppVersion: '1.0.4', 
             showUpdateBanner: false,
             updateLogs: [
+                { 
+                    version: '1.0.4', 
+                    date: '14 Juli 2026', // Sesuaikan tanggal
+                    desc: '• Memperbaiki masalah stock opname.' 
+                },
                 { 
                     version: '1.0.3', 
                     date: '13 Juli 2026', 
