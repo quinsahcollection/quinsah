@@ -5109,12 +5109,46 @@ body.sidebar-open {
                     <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="No Invoice" :disabled="isEditingInvoice">
                 </div>
                 <div class="input-group input-group-sm">
-                    <select class="form-select fw-semibold border-danger" v-model="selectedCustomer">
-                        <option :value="null">Pilih Pelanggan (Wajib)</option>
-                        <option v-for="cust in customers" :value="cust">{{ cust.name }}</option>
-                    </select>
-                    <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru"><i class="bi bi-person-plus-fill"></i></button>
-                </div>
+    <!-- Custom Searchable Dropdown -->
+    <div class="dropdown flex-grow-1">
+        <button class="form-select text-start fw-semibold border-danger w-100 d-flex justify-content-between align-items-center" 
+                type="button" 
+                data-bs-toggle="dropdown" 
+                data-bs-auto-close="outside">
+            <!-- Menampilkan Nama & Telp jika sudah terpilih -->
+            <span v-if="selectedCustomer">
+                {{ selectedCustomer.name }} <span class="text-muted small fw-normal ms-1">({{ selectedCustomer.phone }})</span>
+            </span>
+            <span v-else>Pilih Pelanggan (Wajib)</span>
+        </button>
+        
+        <ul class="dropdown-menu w-100 p-2 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+            <!-- Kolom Pencarian -->
+            <li class="mb-2 sticky-top bg-white">
+                <input type="text" 
+                       class="form-control form-control-sm border-primary-custom" 
+                       placeholder="Cari nama atau no WA..." 
+                       v-model="searchCustomerQuery">
+            </li>
+            <!-- Jika tidak ditemukan -->
+            <li v-if="filteredCustomers.length === 0" class="text-center text-muted small p-2">
+                Pelanggan tidak ditemukan
+            </li>
+            <!-- List Pelanggan -->
+            <li v-for="cust in filteredCustomers" :key="cust.id">
+                <a class="dropdown-item cursor-pointer rounded mb-1" 
+                   @click="selectCustomer(cust)">
+                    <div class="fw-bold">{{ cust.name }}</div>
+                    <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ cust.phone }}</div>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru">
+        <i class="bi bi-person-plus-fill"></i>
+    </button>
+</div>
             </div>
 
             
@@ -6135,13 +6169,15 @@ body.sidebar-open {
                         <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="bi bi-person-plus text-primary-custom me-2"></i>Data Pelanggan Baru</h6>
                         
                         <div class="mb-2">
-                            <label class="form-label small fw-bold">Nama Lengkap</label>
-                            <input type="text" class="form-control form-control-sm" v-model="formCustomer.name" placeholder="Ketik nama pelanggan...">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label small fw-bold">No. Handphone (WA)</label>
-                            <input type="text" class="form-control form-control-sm" v-model="formCustomer.phone" placeholder="08xxxxxx">
-                        </div>
+    <!-- Tambahkan tag "required" dan tanda bintang merah (opsional) untuk penanda visual -->
+    <label class="form-label small fw-bold">Nama Lengkap <span class="text-danger">*</span></label>
+    <input type="text" class="form-control form-control-sm" v-model="formCustomer.name" placeholder="Ketik nama pelanggan..." required>
+</div>
+<div class="mb-2">
+    <label class="form-label small fw-bold">No. Handphone (WA) <span class="text-danger">*</span></label>
+    <!-- Tambahkan event @input dengan regex untuk memblokir karakter selain angka secara real-time -->
+    <input type="text" class="form-control form-control-sm" v-model="formCustomer.phone" placeholder="08xxxxxx" @input="formCustomer.phone = formCustomer.phone.replace(/[^0-9]/g, '')" required>
+</div>
                         <div class="mb-2">
                             <label class="form-label small fw-bold">Alamat Lengkap</label>
                             <textarea class="form-control form-control-sm" v-model="formCustomer.address" rows="2" placeholder="Alamat rumah/pengiriman pelanggan..."></textarea>
@@ -7839,6 +7875,9 @@ body.sidebar-open {
 
                 salesOutletFilter: '',  
                 salesStatusFilter: '',  
+
+                selectedCustomer: null,
+                searchCustomerQuery: '',
                 
                 // Variabel Pencarian & Filter
                 customerSearchQuery: '',
@@ -8203,6 +8242,19 @@ beforeDestroy() {
             });
         },
 
+        // Fungsi ini akan menyaring pelanggan berdasarkan Nama atau No Telp
+    filteredCustomers() {
+        if (!this.searchCustomerQuery) {
+            return this.customers;
+        }
+        const query = this.searchCustomerQuery.toLowerCase();
+        return this.customers.filter(cust => {
+            const nameMatch = cust.name && cust.name.toLowerCase().includes(query);
+            const phoneMatch = cust.phone && cust.phone.includes(query);
+            return nameMatch || phoneMatch;
+        });
+    },
+            
         groupedPaymentMethodsByOutlet() {
         if (!this.paymentMethods || this.paymentMethods.length === 0) return {};
 
@@ -14102,99 +14154,155 @@ this.sorotBarang(newItem);
                     }
                 });
             },
-            
+
+            // Fungsi untuk memilih pelanggan dari dropdown dan menutup dropdown
+    selectCustomer(cust) {
+        this.selectedCustomer = cust;
+        this.searchCustomerQuery = ''; // Reset pencarian
+        
+        // Menutup dropdown Bootstrap secara manual (opsional, tergantung versi BS Anda)
+        const dropdownEl = document.querySelector('.dropdown-toggle');
+        if(dropdownEl) {
+           let dropdown = bootstrap.Dropdown.getInstance(dropdownEl);
+           if(dropdown) dropdown.hide();
+        }
+    },
+    
             async saveData(colName, formObj, modalId) {
-            // 1. PENCEGAH DOUBLE KLIK
-            if (this.isSaving) return;
+    // 1. PENCEGAH DOUBLE KLIK
+    if (this.isSaving) return;
 
-            // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI
-            let duplikat = null;
+    // ==========================================
+    // TAMBAHAN: VALIDASI WAJIB ISI (NAMA & NO TELP)
+    // ==========================================
+    if (colName === 'customers' || colName === 'suppliers') {
+        // Cek Nama (Tidak boleh kosong)
+        if (!formObj.name || formObj.name.trim() === '') {
+            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nama Lengkap wajib diisi.' });
+        }
+        // Cek Nomor Telepon (Tidak boleh kosong)
+        if (!formObj.phone || formObj.phone.trim() === '') {
+            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nomor Handphone wajib diisi.' });
+        }
+        // Cek Keamanan Ekstra (Jika user bypass HTML, pastikan JS menolak huruf)
+        if (!/^\d+$/.test(formObj.phone)) {
+            return Swal.fire({ icon: 'warning', title: 'Format Salah!', text: 'Nomor Handphone hanya boleh berisi angka.' });
+        }
+    }
+
+    // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI
+    let duplikat = null;
+    
+    if (colName === 'customers' || colName === 'suppliers') {
+        // Pelanggan & Supplier -> Cek Nomor Telepon
+        let daftarData = colName === 'customers' ? this.customers : this.suppliers;
+        duplikat = daftarData.find(item => 
+            item.phone === formObj.phone && 
+            item.id !== formObj.id
+        );
+        if (duplikat) {
+            return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
+        }
+    } 
+    else if (colName === 'memberships') {
+        // Membership -> Cek Nama Tier
+        duplikat = this.memberships.find(m => 
+            m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
+            m.id !== formObj.id
+        );
+        if (duplikat) {
+            return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
+        }
+    }
+    else if (colName === 'outlets') {
+        // Wajib isi kode dan nama
+        if (!formObj.code || !formObj.name) {
+            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Kode Cabang dan Nama Toko/Cabang wajib diisi.' });
+        }
+        
+        // Outlet -> Cek Kode Cabang
+        let duplikatKode = this.outlets.find(o => 
+            o.code.toUpperCase() === formObj.code.toUpperCase() && 
+            o.id !== formObj.id
+        );
+        if (duplikatKode) {
+            return Swal.fire({ icon: 'warning', title: 'Kode Terpakai!', text: `Kode cabang "${formObj.code.toUpperCase()}" sudah dipakai oleh ${duplikatKode.name}.` });
+        }
+
+        // ==========================================
+        // TAMBAHAN BARU: Cek Duplikat Nama Outlet
+        // ==========================================
+        let duplikatNama = this.outlets.find(o => 
+            o.name.toLowerCase() === formObj.name.toLowerCase() && 
+            o.id !== formObj.id
+        );
+        if (duplikatNama) {
+            return Swal.fire({ icon: 'warning', title: 'Nama Terpakai!', text: `Nama cabang "${formObj.name}" sudah terdaftar di database. Silakan bedakan namanya (misal: Quinsah Cab. A).` });
+        }
+        
+        // Rapikan kode menjadi huruf besar semua sebelum disimpan
+        formObj.code = formObj.code.toUpperCase();
+    }
+
+    // 3. KUNCI TOMBOL (Mulai Proses)
+    this.isSaving = true;
+    
+    try {
+        const dataToSave = { ...formObj };
+        dataToSave.updatedBy = this.userProfile?.name || 'Admin';
+        dataToSave.companyId = this.userProfile?.companyId || ''; 
+        let finalDocId = null;
+        let isNewRecord = false; // Penanda untuk mendeteksi data baru
+
+        if (!dataToSave.id) { 
+            delete dataToSave.id; 
+            dataToSave.createdAt = serverTimestamp(); 
+            dataToSave.createdBy = this.userProfile?.name || 'Admin';
+            const addedDoc = await addDoc(collection(db, colName), dataToSave); 
+            finalDocId = addedDoc.id;
+            isNewRecord = true; // Tandai bahwa ini adalah insert baru
+        } else { 
+            finalDocId = dataToSave.id; 
+            delete dataToSave.id; 
+            await updateDoc(doc(db, colName, finalDocId), dataToSave); 
+        }
+
+        if (colName === 'products') {
+            await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
+        }
+
+        // ==========================================
+        // TAMBAHAN: AUTO-SELECT PELANGGAN BARU KE POS
+        // ==========================================
+        if (colName === 'customers' && isNewRecord) {
+            // Buat objek pelanggan yang sudah punya ID dari Firebase
+            const newCustomerForPOS = {
+                id: finalDocId,
+                ...formObj
+            };
             
-            if (colName === 'customers' || colName === 'suppliers') {
-                // Pelanggan & Supplier -> Cek Nomor Telepon
-                let daftarData = colName === 'customers' ? this.customers : this.suppliers;
-                duplikat = daftarData.find(item => 
-                    item.phone === formObj.phone && 
-                    item.id !== formObj.id
-                );
-                if (duplikat) {
-                    return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
-                }
-            } 
-            else if (colName === 'memberships') {
-                // Membership -> Cek Nama Tier
-                duplikat = this.memberships.find(m => 
-                    m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
-                    m.id !== formObj.id
-                );
-                if (duplikat) {
-                    return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
-                }
-            }
-            else if (colName === 'outlets') {
-                // Wajib isi kode dan nama
-                if (!formObj.code || !formObj.name) {
-                    return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Kode Cabang dan Nama Toko/Cabang wajib diisi.' });
-                }
-                
-                // Outlet -> Cek Kode Cabang
-                let duplikatKode = this.outlets.find(o => 
-                    o.code.toUpperCase() === formObj.code.toUpperCase() && 
-                    o.id !== formObj.id
-                );
-                if (duplikatKode) {
-                    return Swal.fire({ icon: 'warning', title: 'Kode Terpakai!', text: `Kode cabang "${formObj.code.toUpperCase()}" sudah dipakai oleh ${duplikatKode.name}.` });
-                }
-
-                // ==========================================
-                // TAMBAHAN BARU: Cek Duplikat Nama Outlet
-                // ==========================================
-                let duplikatNama = this.outlets.find(o => 
-                    o.name.toLowerCase() === formObj.name.toLowerCase() && 
-                    o.id !== formObj.id
-                );
-                if (duplikatNama) {
-                    return Swal.fire({ icon: 'warning', title: 'Nama Terpakai!', text: `Nama cabang "${formObj.name}" sudah terdaftar di database. Silakan bedakan namanya (misal: Quinsah Cab. A).` });
-                }
-                
-                // Rapikan kode menjadi huruf besar semua sebelum disimpan
-                formObj.code = formObj.code.toUpperCase();
-            }
-
-            // 3. KUNCI TOMBOL (Mulai Proses)
-            this.isSaving = true;
+            // Masukkan langsung ke selectedCustomer agar otomatis terpilih di halaman kasir
+            this.selectedCustomer = newCustomerForPOS;
             
-            try {
-                const dataToSave = { ...formObj };
-                dataToSave.updatedBy = this.userProfile?.name || 'Admin';
-                dataToSave.companyId = this.userProfile?.companyId || ''; 
-                let finalDocId = null;
-
-                if (!dataToSave.id) { 
-                    delete dataToSave.id; 
-                    dataToSave.createdAt = serverTimestamp(); 
-                    dataToSave.createdBy = this.userProfile?.name || 'Admin';
-                    const addedDoc = await addDoc(collection(db, colName), dataToSave); 
-                    finalDocId = addedDoc.id;
-                } else { 
-                    finalDocId = dataToSave.id; 
-                    delete dataToSave.id; 
-                    await updateDoc(doc(db, colName, finalDocId), dataToSave); 
-                }
-
-                if (colName === 'products') {
-                    await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
-                }
-
-                this.hideModal(modalId);
-            } catch(e) { 
-                console.error("Gagal Save Data", e);
-                this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
-            } finally {
-                // 4. BUKA KUNCI TOMBOL SETELAH SELESAI / ERROR
-                this.isSaving = false;
+            // Kosongkan ulang form pelanggan setelah sukses disimpan
+            if (this.formCustomer) {
+                this.formCustomer = { name: '', phone: '', address: '', membershipId: '' };
             }
-        },
+        }
+
+        this.hideModal(modalId);
+        
+        // Opsional: Berikan notifikasi sukses agar user tahu data tersimpan
+        // Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Data berhasil disimpan.', timer: 1500, showConfirmButton: false });
+
+    } catch(e) { 
+        console.error("Gagal Save Data", e);
+        this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+    } finally {
+        // 4. BUKA KUNCI TOMBOL SETELAH SELESAI / ERROR
+        this.isSaving = false;
+    }
+},
 
             async logProductStockDifferences(oldP, newP, productId) {
                 const currentUser = this.userProfile.name || 'Admin';
