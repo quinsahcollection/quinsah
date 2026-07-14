@@ -10263,18 +10263,47 @@ async printShiftSummary(reg) {
     // 2. Membuka Modal Buka Shift
     openShiftModal() {
     let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
-    
+    let targetOutlet = userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : '');
+    let targetRegisterName = 'Kasir 1';
+
+    // =======================================================
+    // 🌟 PENGAMAN UTAMA: Cek Shift yang Masih Buka (Double Shift Blocker)
+    // =======================================================
+    // Pastikan nama variabel 'this.registers' sesuai dengan variabel array 
+    // tempat Anda menyimpan data history laci kasir yang tampil di layar.
+    if (this.registers && this.registers.length > 0) {
+        // Cari apakah ada shift di cabang tersebut, dengan nama kasir tersebut, yang statusnya masih belum ditutup
+        const isShiftStillOpen = this.registers.some(shift => 
+            shift.outletId === targetOutlet && 
+            shift.registerName === targetRegisterName && 
+            shift.status === 'open' // Asumsi status shift aktif Anda bernama 'open'
+        );
+
+        if (isShiftStillOpen) {
+            // Tampilkan pesan error dan HENTIKAN proses (modal tidak akan terbuka)
+            alert("GAGAL: Masih ada Shift yang berstatus Buka/Aktif. Harap tutup shift sebelumnya terlebih dahulu.");
+            
+            // Opsional: Jika Anda punya fungsi alert khusus, gunakan itu, contoh:
+            // this.askConfirm("Gagal", "Masih ada Shift yang aktif. Tutup shift sebelumnya terlebih dahulu.", "error");
+            
+            return; 
+        }
+    }
+
+    // =======================================================
+    // JIKA LOLOS PENGECEKAN, LANJUTKAN BUKA MODAL
+    // =======================================================
     this.shiftForm = {
-        outletId: userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : ''),
-        registerName: 'Kasir 1', // Default pilih Kasir 1
+        outletId: targetOutlet,
+        registerName: targetRegisterName, 
         startingCash: 0
     };
 
-    // 🌟 TAMBAHAN: Reset form pecahan agar tidak bentrok dengan shift sebelumnya
+    // Reset form pecahan agar tidak bentrok dengan shift sebelumnya
     this.showPecahan = false;
     this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
 
-    // 🌟 PERBAIKAN: Gunakan instance yang sudah ada agar tidak error saat di-hide
+    // Gunakan instance yang sudah ada agar tidak error saat di-hide
     const modalElement = document.getElementById('openShiftModal');
     const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
     modal.show();
