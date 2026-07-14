@@ -24,9 +24,12 @@ self.addEventListener('install', event => {
 
 // 2. Proses Fetch (Mengambil data)
 self.addEventListener('fetch', event => {
-    // PENGAMAN: Hanya proses request dengan method GET (ambil data/file). 
+    // PENGAMAN 1: Hanya proses request dengan method GET (ambil data/file). 
     // Jangan cache request POST/PUT/DELETE (simpan/edit data ke database).
     if (event.request.method !== 'GET') return;
+
+    // 🌟 PENGAMAN 2 (PERBAIKAN ERROR): Abaikan request dari ekstensi Chrome (hanya izinkan http/https)
+    if (!event.request.url.startsWith('http')) return;
 
     event.respondWith(
         fetch(event.request)
