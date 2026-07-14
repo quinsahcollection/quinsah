@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quinsah Collection ERP - Full Enterprise V6.5</title>
+    <title>Queen POS - Full Enterprise </title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -244,6 +244,32 @@ body.sidebar-open {
 }
 .text-primary-custom { color: var(--primary-color) !important; }
 
+/* --------------------------------------------------------------------------
+   TAMBAHAN: ANIMASI GRAFIK PEAK HOUR & TOOLTIP
+   -------------------------------------------------------------------------- */
+/* Sembunyikan tooltip secara default */
+.hover-tooltip {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Tampilkan tooltip SAAT tiang di-hover */
+.grafik-tiang-wrapper:hover .hover-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -10px) !important;
+}
+
+/* Atur opacity grafik bar bawaan */
+.grafik-bar {
+    opacity: 0.75;
+}
+
+/* Terangkan warna grafik bar SAAT tiang di-hover */
+.grafik-tiang-wrapper:hover .grafik-bar {
+    opacity: 1;
+}
+        
 /* ==========================================================================
    4. VARIAN, TIER HARGA & KERANJANG (CART)
    ========================================================================== */
@@ -4530,26 +4556,25 @@ body.sidebar-open {
                                 <div class="d-flex align-items-end justify-content-between pt-4" style="height: 380px; gap: 8px; min-width: 900px; padding: 0 10px;">
                                     
                                     <div v-for="h in analyticsData.peakHours" :key="h.jam" 
-                                         class="d-flex flex-column align-items-center justify-content-end flex-fill h-100" style="cursor: pointer;"
-                                         onmouseover="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='1'; t.style.visibility='visible'; t.style.transform='translate(-50%, -10px)'; } let b = this.querySelector('.grafik-bar'); if(b) b.classList.replace('opacity-75', 'opacity-100');"
-                                         onmouseout="let t = this.querySelector('.hover-tooltip'); if(t){ t.style.opacity='0'; t.style.visibility='hidden'; t.style.transform='translate(-50%, 0)'; } let b = this.querySelector('.grafik-bar'); if(b) b.classList.replace('opacity-100', 'opacity-75');">
-                                        
-                                        <div class="w-100 position-relative d-flex align-items-end justify-content-center" 
-                                             :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 60) + '%' : '0%' }">
-                                             
-                                             <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
-                                                  style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease-in-out; pointer-events: none;">
-                                                 <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
-                                                 <div class="small fw-semibold">{{ h.count }} Transaksi</div>
-                                                 <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
-                                                 <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
-                                             </div>
+     class="grafik-tiang-wrapper d-flex flex-column align-items-center justify-content-end flex-fill h-100" style="cursor: pointer;">
+    
+    <div class="w-100 position-relative d-flex align-items-end justify-content-center" 
+         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 60) + '%' : '0%' }">
+         
+         <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
+              style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; transition: all 0.2s ease-in-out; pointer-events: none;">
+             <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
+             <div class="small fw-semibold">{{ h.count }} Transaksi</div>
+             <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
+             <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
+         </div>
 
-                                             <div class="grafik-bar bg-warning w-100 h-100 rounded-top opacity-75 anim-scale-up" style="transform-origin: bottom;"></div>
-                                        </div>
-                                        
-                                        <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
-                                    </div>
+         <!-- Tambahkan class grafik-bar di sini -->
+         <div class="grafik-bar bg-warning w-100 h-100 rounded-top anim-scale-up" style="transform-origin: bottom; transition: 0.2s;"></div>
+    </div>
+    
+    <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
+</div>
                                     
                                 </div>
                             </div>
