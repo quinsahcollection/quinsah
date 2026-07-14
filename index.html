@@ -11394,180 +11394,83 @@ async deletePaymentMethod(id) {
 
     // 2. Konfirmasi ke Kasir
     Swal.fire({
-        title: 'Tukar Tambah?',
-        text: 'Barang ini akan diretur dan saldo uangnya akan dibawa ke layar Kasir untuk memotong harga barang baru.',
+        title: 'Bawa ke Kasir?',
+        text: 'Saldo uangnya akan dibawa ke layar Kasir untuk memotong harga barang baru. Retur belum akan masuk ke database sampai transaksi Kasir dibayar lunas.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#f59e0b',
         confirmButtonText: 'Ya, Bawa ke Kasir'
-    }).then(async (result) => {
+    }).then((result) => {
         if (result.isConfirmed) {
-            if (this.isProcessing) return;
-            this.isProcessing = true;
+            
+            let trxIdx = this.transactions.findIndex(t => t.id === this.returnForm.id);
+            if (trxIdx === -1) return Swal.fire('Error', 'Transaksi tidak ditemukan', 'error');
+            
+            let trx = JSON.parse(JSON.stringify(this.transactions[trxIdx]));
+            let daftarNamaBarangTukar = [];
+            let itemYangDiretur = [];
 
-            try {
-                let trxIdx = this.transactions.findIndex(t => t.id === this.returnForm.id);
-                if (trxIdx === -1) throw new Error("Transaksi tidak ditemukan");
-                let trx = JSON.parse(JSON.stringify(this.transactions[trxIdx]));
-                
-                if (!trx.returHistory) trx.returHistory = []; 
-                let daftarNamaBarangTukar = [];
-
-                // 🌟 SAMA KAN DENGAN PROSES RETURN: Gunakan wadah antrean paralel untuk mencegah data corrupt
-                let firebaseUpdates = [];
-
-                // 3. LOOPING BARANG YANG DIKEMBALIKAN
-                for (let i = 0; i < this.returnForm.items.length; i++) {
-                    let retItem = this.returnForm.items[i];
-                    
-                    if (retItem.returnQty > 0) {
-                        let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
-                        let namaLengkap = retItem.name + variantText;
-                        daftarNamaBarangTukar.push(namaLengkap);
-
-                        // A. Kembalikan Stok ke Gudang/Cabang
-                        let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
-                        if (prod) {
-                            let prodCopy = JSON.parse(JSON.stringify(prod));
-                            if (retItem.variantSku) {
-                                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
-                                if (vIdx !== -1) {
-                                    if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                    prodCopy.variants[vIdx].outletStocks[trx.outletId] = (prodCopy.variants[vIdx].outletStocks[trx.outletId] || 0) + retItem.returnQty;
-                                }
-                            } else {
-                                if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                                prodCopy.baseOutletStocks[trx.outletId] = (prodCopy.baseOutletStocks[trx.outletId] || 0) + retItem.returnQty;
-                            }
-
-                            // Masukkan ke antrean, jangan di-await langsung di dalam loop
-                            firebaseUpdates.push(
-                                updateDoc(doc(db, "products", prod.id), {
-                                    variants: prodCopy.variants || [],
-                                    baseOutletStocks: prodCopy.baseOutletStocks || {}
-                                })
-                            );
-
-                            firebaseUpdates.push(
-                                this.logStock('IN', {
-                                    productId: prod.id,
-                                    sku: retItem.sku || prod.sku || '-',
-                                    name: prod.name,
-                                    variantSku: retItem.variantSku || null,
-                                    variantName: retItem.variantName || '-',
-                                    qty: retItem.returnQty,
-                                    outletId: trx.outletId,
-                                    refId: `TUKAR-${trx.id}`,
-                                    note: `Tukar dari Inv: ${trx.id}`
-                                })
-                            );
-                        }
-
-                        // B. Potong Invoice Lama & Masukkan ke History Struk
-                        let invItem = trx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
-                        if (invItem) {
-                            invItem.qty -= retItem.returnQty;
-                            invItem.isReturned = true;
-
-                            trx.returHistory.push({
-                                date: new Date().toLocaleString('id-ID'),
-                                productName: namaLengkap,
-                                qtyRetur: retItem.returnQty,
-                                refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
-                                alasan: this.returnForm.reason || 'Tukar Tambah'
-                            });
-                        }
-                    }
-                } // Tutup For Loop
-
-                // 🌟 JALANKAN UPDATE FIREBASE SECARA PARALEL (Di luar loop)
-                if (firebaseUpdates.length > 0) {
-                    await Promise.all(firebaseUpdates);
+            // 3. Kumpulkan barang yang akan ditukar TAPI JANGAN update Firebase dulu
+            for (let i = 0; i < this.returnForm.items.length; i++) {
+                let retItem = this.returnForm.items[i];
+                if (retItem.returnQty > 0) {
+                    let variantText = retItem.variantName ? ` (${retItem.variantName})` : '';
+                    daftarNamaBarangTukar.push(retItem.name + variantText);
+                    itemYangDiretur.push(retItem); // Simpan untuk dieksekusi nanti
                 }
-
-                // 4. Update Sisa Tagihan Invoice Lama
-                trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || 0)), 0);
-                trx.total -= refundTotal;
-                if (trx.total < 0) trx.total = 0;
-                trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
-
-                let isSisaBarangAda = trx.items.some(i => i.qty > 0);
-                trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-                trx.status = trx.paymentStatus; 
-
-                trx.paymentHistory = trx.paymentHistory || [];
-                trx.paymentHistory.push({
-                    date: new Date().toLocaleString('id-ID'),
-                    method: 'SALDO TUKAR',
-                    amount: -refundTotal,
-                    note: 'Potongan Tukar Tambah'
-                });
-
-                // Simpan transaksi ke Firebase
-                await updateDoc(doc(db, "transactions", trx.id), {
-                    items: trx.items,
-                    total: trx.total,
-                    subtotal: trx.subtotal,
-                    sisaTagihan: trx.sisaTagihan,
-                    paymentStatus: trx.paymentStatus,
-                    status: trx.status,
-                    paymentHistory: trx.paymentHistory,
-                    returHistory: trx.returHistory 
-                });
-
-                this.transactions[trxIdx] = trx;
-                if (this.activeInvoiceDetail && this.activeInvoiceDetail.id === trx.id) {
-                     this.activeInvoiceDetail = JSON.parse(JSON.stringify(trx));
-                }
-
-                // 5. BAWA SALDO MINUS KE KERANJANG KASIR SEBAGAI POTONGAN
-                let itemTukar = {
-                    cartId: 'EXC-' + Date.now(),
-                    productId: 'EXCHANGE', 
-                    name: `[SALDO TUKAR] ${daftarNamaBarangTukar.join(', ')}`,
-                    sku: 'TUKAR-01',
-                    uom: '-',
-                    qty: 1,
-                    basePrice: 0,
-                    sellPrice: -refundTotal, 
-                    promoPrice: -refundTotal,
-                    posDiscountType: 'none', 
-                    posDiscountValue: 0,
-                    note: `Saldo tukar dari Inv: ${trx.id}`,
-                    isSeparated: true
-                };
-
-                this.cart = []; 
-                this.cart.push(itemTukar);
-
-                if (trx.customer) {
-                    let cust = this.customers.find(c => c.name === trx.customer);
-                    this.selectedCustomer = cust || { name: trx.customer };
-                }
-
-                let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
-                if (returnModal) returnModal.hide();
-
-                let invModal = document.getElementById('invoiceDetailModal');
-                if(invModal) {
-                    let im = bootstrap.Modal.getInstance(invModal);
-                    if (im) im.hide();
-                }
-                
-                this.currentView = 'pos';
-                
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Silakan Pilih Barang Baru',
-                    text: `Saldo senilai (-Rp ${this.formatNumber(refundTotal)}) telah masuk ke keranjang kasir untuk memotong harga barang baru.`
-                });
-
-            } catch (error) {
-                console.error("Gagal Tukar:", error);
-                Swal.fire('Error', 'Gagal memproses tukar tambah: ' + error.message, 'error');
-            } finally {
-                this.isProcessing = false;
             }
+
+            // 4. SIMPAN DATA KE VARIABEL SEMENTARA
+            // Variabel ini nanti dipanggil saat Kasir menekan tombol "Bayar"
+            this.pendingTradeIn = {
+                originalInvoice: trx,
+                itemsToReturn: itemYangDiretur,
+                refundAmount: refundTotal,
+                reason: this.returnForm.reason || 'Tukar Tambah'
+            };
+
+            // 5. BAWA SALDO MINUS KE KERANJANG KASIR
+            let itemTukar = {
+                cartId: 'EXC-' + Date.now(),
+                productId: 'EXCHANGE', 
+                name: `[SALDO TUKAR] ${daftarNamaBarangTukar.join(', ')}`,
+                sku: 'TUKAR-01',
+                uom: '-',
+                qty: 1,
+                basePrice: 0,
+                sellPrice: -refundTotal, 
+                promoPrice: -refundTotal,
+                posDiscountType: 'none', 
+                posDiscountValue: 0,
+                note: `Saldo tukar dari Inv: ${trx.id}`,
+                isSeparated: true
+            };
+
+            this.cart = []; 
+            this.cart.push(itemTukar);
+
+            if (trx.customer) {
+                let cust = this.customers.find(c => c.name === trx.customer);
+                this.selectedCustomer = cust || { name: trx.customer };
+            }
+
+            // 6. TUTUP MODAL & PINDAH KE LAYAR POS
+            let returnModal = bootstrap.Modal.getInstance(document.getElementById('returnInvoiceModal'));
+            if (returnModal) returnModal.hide();
+
+            let invModal = document.getElementById('invoiceDetailModal');
+            if(invModal) {
+                let im = bootstrap.Modal.getInstance(invModal);
+                if (im) im.hide();
+            }
+            
+            this.currentView = 'pos';
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Silakan Pilih Barang Baru',
+                text: `Saldo senilai (-Rp ${this.formatNumber(refundTotal)}) telah masuk ke keranjang kasir. Retur baru akan memotong invoice lama setelah Anda memproses pembayaran.`
+            });
         }
     });
 },
@@ -15265,6 +15168,102 @@ let item = {
             }
 
             // =================================================================
+            // 🌟 7.5 EKSEKUSI TUKAR TAMBAH (JIKA ADA PENDING TRADE-IN)
+            // =================================================================
+            if (this.pendingTradeIn && this.pendingTradeIn.originalInvoice) {
+                let oldTrx = this.pendingTradeIn.originalInvoice;
+                let refundTotal = this.pendingTradeIn.refundAmount;
+
+                // A. Update Status dan Total Invoice Lama
+                oldTrx.total -= refundTotal;
+                if (oldTrx.total < 0) oldTrx.total = 0;
+                oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
+
+                let isSisaBarangAda = oldTrx.items.some(i => i.qty > 0);
+                oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+                oldTrx.status = oldTrx.paymentStatus;
+
+                oldTrx.paymentHistory = oldTrx.paymentHistory || [];
+                oldTrx.paymentHistory.push({
+                    date: new Date().toLocaleString('id-ID'),
+                    method: 'SALDO TUKAR',
+                    amount: -refundTotal,
+                    note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
+                });
+
+                // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
+                for (let retItem of this.pendingTradeIn.itemsToReturn) {
+                    let invItem = oldTrx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+                    if (invItem) {
+                        invItem.qty -= retItem.returnQty;
+                        invItem.isReturned = true;
+
+                        oldTrx.returHistory = oldTrx.returHistory || [];
+                        oldTrx.returHistory.push({
+                            date: new Date().toLocaleString('id-ID'),
+                            productName: retItem.name + (retItem.variantName ? ` (${retItem.variantName})` : ''),
+                            qtyRetur: retItem.returnQty,
+                            refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                            alasan: this.pendingTradeIn.reason || 'Tukar Tambah'
+                        });
+                    }
+
+                    // Kembalikan Stok (Membonceng ke fungsi Batch Kasir)
+                    let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                    if (prod) {
+                        let prodCopy = JSON.parse(JSON.stringify(prod));
+                        if (retItem.variantSku) {
+                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                            if (vIdx !== -1) {
+                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                                prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] = (prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
+                            }
+                        } else {
+                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                            prodCopy.baseOutletStocks[oldTrx.outletId] = (prodCopy.baseOutletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
+                        }
+
+                        // Masukkan update stok ke Batch
+                        batch.update(doc(db, "products", prod.id), {
+                            variants: prodCopy.variants || [],
+                            baseOutletStocks: prodCopy.baseOutletStocks || {}
+                        });
+
+                        // Catat ke Log Mutasi Stok (IN)
+                        let tradeLogRef = doc(collection(db, "stockLogs"));
+                        batch.set(tradeLogRef, {
+                            companyId: this.userProfile?.companyId || '',
+                            createdAt: serverTimestamp(),
+                            dateStr: dateNowStr,
+                            type: 'IN',
+                            productId: prod.id,
+                            sku: retItem.sku || prod.sku || '-',
+                            productName: prod.name,
+                            variantSku: retItem.variantSku || null,
+                            variantName: retItem.variantName || '-',
+                            qtyChange: retItem.returnQty,
+                            outletId: oldTrx.outletId,
+                            outletName: this.getOutletName(oldTrx.outletId) || 'Toko',
+                            refId: `TUKAR-${oldTrx.id}`,
+                            userName: finalCashierName,
+                            note: `Retur Tukar Tambah dari Inv: ${oldTrx.id}`
+                        });
+                    }
+                }
+
+                // C. Masukkan Update Invoice Lama ke Batch Firebase
+                batch.update(doc(db, "transactions", oldTrx.id), {
+                    items: oldTrx.items,
+                    total: oldTrx.total,
+                    sisaTagihan: oldTrx.sisaTagihan,
+                    paymentStatus: oldTrx.paymentStatus,
+                    status: oldTrx.status,
+                    paymentHistory: oldTrx.paymentHistory,
+                    returHistory: oldTrx.returHistory
+                });
+            }
+            
+            // =================================================================
             // 8. UPDATE FINAL & EKSEKUSI KERANJANG FIREBASE
             // =================================================================
             // 🌟 [BATCH 5] Masukkan data Nota/Transaksi HANYA setelah semua HPP & Batch dihitung di loop atas
@@ -15286,6 +15285,7 @@ let item = {
             // RESET FORM KASIR KE KONDISI AWAL
             this.posCustomInvoice = this.generateInvoiceNumber('POS');
             this.cart = [];
+            this.pendingTradeIn = null; // KOSONGKAN memori tukar tambah setelah sukses dibayar
             this.selectedCustomer = null;
             this.globalDiscountType = 'none';
             this.globalDiscountValue = 0;
