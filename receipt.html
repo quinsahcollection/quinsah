@@ -39,15 +39,16 @@
                 <div class="small opacity-75 mb-1">{{ ereceiptData.id }}</div>
 
                 <div class="mt-2 mb-2">
-                    <span v-if="(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : ereceiptData.amountReceived) >= ereceiptData.total" 
-                          class="badge bg-success text-white px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
-                        <i class="bi bi-check-circle-fill me-1"></i> LUNAS
-                    </span>
-                    <span v-else 
-                          class="badge bg-warning text-dark px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i> BELUM LUNAS
-                    </span>
-                </div>
+    <!-- PERBAIKAN BADGE LUNAS -->
+    <span v-if="ereceiptData.amountReceived >= ereceiptData.total" 
+          class="badge bg-success text-white px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
+        <i class="bi bi-check-circle-fill me-1"></i> LUNAS
+    </span>
+    <span v-else 
+          class="badge bg-warning text-dark px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
+        <i class="bi bi-exclamation-circle-fill me-1"></i> BELUM LUNAS
+    </span>
+</div>
             </div>
             
             <div class="card-body p-4">
@@ -156,14 +157,18 @@
                 <span class="text-muted">Total Dibayar :</span>
                 <span class="fw-bold text-success">Rp {{ formatNumber(ereceiptData.amountReceived) }}</span>
             </div>
-            <div v-if="ereceiptData.totalDebt > 0 || (ereceiptData.total - ereceiptData.amountReceived) > 0" class="d-flex justify-content-between mt-1 text-danger fw-bold small">
-                <span>Sisa Hutang :</span>
-                <span>Rp {{ formatNumber(ereceiptData.totalDebt || (ereceiptData.total - ereceiptData.amountReceived)) }}</span>
-            </div>
-            <div v-else class="d-flex justify-content-between mt-1 text-dark fw-bold small">
-                <span>Kembalian :</span>
-                <span>Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
-            </div>
+           <div v-if="(ereceiptData.total - ereceiptData.amountReceived) > 0" class="d-flex justify-content-between mt-1 text-danger fw-bold small">
+    <span>Sisa Hutang :</span>
+    <span>Rp {{ formatNumber(ereceiptData.total - ereceiptData.amountReceived) }}</span>
+</div>
+<div v-else-if="ereceiptData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')" class="d-flex justify-content-between mt-1 text-success fw-bold small">
+    <span>Status Pembayaran :</span>
+    <span>LUNAS</span>
+</div>
+<div v-else class="d-flex justify-content-between mt-1 text-dark fw-bold small">
+    <span>Kembalian :</span>
+    <span>Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
+</div>
         </template>
 
         <template v-else>
