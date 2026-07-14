@@ -8412,38 +8412,38 @@ beforeDestroy() {
             },
 
         filteredCustomers() {
-    // Jika data customers belum dimuat, kembalikan array kosong
-    if (!this.customers) return [];
-    
-    return this.customers.filter(c => {
-        // 1. LOGIKA PENCARIAN TEKS (SANGAT AMAN ANTI-CRASH)
-        // Pastikan tidak error meskipun customerSearchQuery kosong
-        const q = (this.customerSearchQuery || '').toLowerCase().trim();
+        // Jika data customers belum dimuat, kembalikan array kosong
+        if (!this.customers) return [];
         
-        // Ubah semua data menjadi String dulu agar pencarian angka (No Telp) tidak error
-        const nameStr = c.name ? String(c.name).toLowerCase() : '';
-        const phoneStr = c.phone ? String(c.phone).toLowerCase() : '';
-        const addressStr = c.address ? String(c.address).toLowerCase() : '';
-
-        // Cocokkan ketikan dengan Nama, No Telp, ATAU Alamat
-        const matchSearch = nameStr.includes(q) || phoneStr.includes(q) || addressStr.includes(q);
-
-        // 2. LOGIKA FILTER PROMO (TETAP DIPERTAHANKAN)
-        let matchPromo = true;
-        if (this.customerPromoFilter === 'ada') {
-            // Ambil nilai diskon, jika lebih dari 0 berarti ADA PROMO
-            const discount = this.getMembershipDiscount(c.membershipId) || 0;
-            matchPromo = discount > 0; 
+        return this.customers.filter(c => {
+            // 1. LOGIKA PENCARIAN TEKS (SANGAT AMAN ANTI-CRASH)
+            const q = (this.customerSearchQuery || '').toLowerCase().trim();
             
-        } else if (this.customerPromoFilter === 'tidak') {
-            // Ambil nilai diskon, jika 0 (atau tidak punya membership) berarti PELANGGAN BIASA
-            const discount = this.getMembershipDiscount(c.membershipId) || 0;
-            matchPromo = discount === 0; 
-        }
+            // Konversi paksa ke String agar nomor telepon bertipe Number tidak membuat sistem crash
+            const nameStr = c.name ? String(c.name).toLowerCase() : '';
+            const phoneStr = c.phone ? String(c.phone).toLowerCase() : '';
+            const addressStr = c.address ? String(c.address).toLowerCase() : '';
 
-        return matchSearch && matchPromo;
-    });
-},
+            const matchSearch = nameStr.includes(q) || phoneStr.includes(q) || addressStr.includes(q);
+
+            // 2. LOGIKA FILTER PROMO (DENGAN SECURITY CHECK AGAR TIDAK CRASH)
+            let matchPromo = true;
+            
+            // Pastikan fungsi diskon terdefinisi sebelum dieksekusi
+            const hasDiscountMethod = typeof this.getMembershipDiscount === 'function';
+            
+            if (this.customerPromoFilter === 'ada') {
+                const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
+                matchPromo = discount > 0; 
+                
+            } else if (this.customerPromoFilter === 'tidak') {
+                const discount = hasDiscountMethod ? (this.getMembershipDiscount(c.membershipId) || 0) : 0;
+                matchPromo = discount === 0; 
+            }
+
+            return matchSearch && matchPromo;
+        });
+    },
 
         filteredSuppliers() {
             if (!this.suppliers) return [];
@@ -14160,14 +14160,14 @@ this.sorotBarang(newItem);
     selectCustomer(cust) {
         this.selectedCustomer = cust;
         // Ubah teks di dalam kotak input menjadi format "Nama - No Telp"
-        this.searchCustomerQuery = `${cust.name} - ${cust.phone}`;
+        this.customerSearchQuery = `${cust.name} - ${cust.phone}`;
         this.showCustomerDropdown = false; // Sembunyikan dropdown
     },
 
     // Tombol X untuk mereset pilihan
     clearCustomer() {
         this.selectedCustomer = null;
-        this.searchCustomerQuery = '';
+        this.customerSearchQuery = '';
         this.showCustomerDropdown = true; // Munculkan list lagi jika ingin mencari yang lain
     },
 
@@ -14257,63 +14257,66 @@ this.sorotBarang(newItem);
 
     // 3. KUNCI TOMBOL (Mulai Proses)
     this.isSaving = true;
-    
-    try {
-        const dataToSave = { ...formObj };
-        dataToSave.updatedBy = this.userProfile?.name || 'Admin';
-        dataToSave.companyId = this.userProfile?.companyId || ''; 
-        let finalDocId = null;
-        let isNewRecord = false; // Penanda untuk mendeteksi data baru
+   
+try {
+    const dataToSave = { ...formObj };
+    dataToSave.updatedBy = this.userProfile?.name || 'Admin';
+    dataToSave.companyId = this.userProfile?.companyId || ''; 
+    let finalDocId = null;
+    let isNewRecord = false; 
 
-        if (!dataToSave.id) { 
-            delete dataToSave.id; 
-            dataToSave.createdAt = serverTimestamp(); 
-            dataToSave.createdBy = this.userProfile?.name || 'Admin';
-            const addedDoc = await addDoc(collection(db, colName), dataToSave); 
-            finalDocId = addedDoc.id;
-            isNewRecord = true; // Tandai bahwa ini adalah insert baru
-        } else { 
-            finalDocId = dataToSave.id; 
-            delete dataToSave.id; 
-            await updateDoc(doc(db, colName, finalDocId), dataToSave); 
-        }
+    if (!dataToSave.id) { 
+        delete dataToSave.id; 
+        dataToSave.createdAt = serverTimestamp(); 
+        dataToSave.createdBy = this.userProfile?.name || 'Admin';
+        const addedDoc = await addDoc(collection(db, colName), dataToSave); 
+        finalDocId = addedDoc.id;
+        isNewRecord = true; 
+    } else { 
+        finalDocId = dataToSave.id; 
+        delete dataToSave.id; 
+        await updateDoc(doc(db, colName, finalDocId), dataToSave); 
+    }
 
-        if (colName === 'products') {
-            await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
-        }
+    if (colName === 'products') {
+        await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
+    }
 
-        // ==========================================
-        // TAMBAHAN: AUTO-SELECT PELANGGAN BARU KE POS
-        // ==========================================
-        if (colName === 'customers' && isNewRecord) {
-            // Buat objek pelanggan yang sudah punya ID dari Firebase
-            const newCustomerForPOS = {
-                id: finalDocId,
-                ...formObj
-            };
-            
-            // Masukkan langsung ke selectedCustomer agar otomatis terpilih di halaman kasir
-            this.selectedCustomer = newCustomerForPOS;
-            
-            // Kosongkan ulang form pelanggan setelah sukses disimpan
-            if (this.formCustomer) {
-                this.formCustomer = { name: '', phone: '', address: '', membershipId: '' };
+    // =========================================================
+    // PERBAIKAN UTAMA: AUTO-SELECT & REAL-TIME SINKRONISASI POS
+    // =========================================================
+    if (colName === 'customers' && isNewRecord) {
+        // PERBAIKAN: Taruh 'id: finalDocId' di akhir agar tidak tertimpa string kosong dari formObj
+        const newCustomerForPOS = {
+            ...formObj,
+            id: finalDocId
+        };
+        
+        // Masukkan langsung ke list data lokal agar bisa langsung dicari tanpa reload halaman
+        if (this.customers && Array.isArray(this.customers)) {
+            const isExist = this.customers.some(c => c.id === finalDocId);
+            if (!isExist) {
+                this.customers.push(newCustomerForPOS);
             }
         }
-
-        this.hideModal(modalId);
         
-        // Opsional: Berikan notifikasi sukses agar user tahu data tersimpan
-        // Swal.fire({ icon: 'success', title: 'Berhasil', text: 'Data berhasil disimpan.', timer: 1500, showConfirmButton: false });
-
-    } catch(e) { 
-        console.error("Gagal Save Data", e);
-        this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
-    } finally {
-        // 4. BUKA KUNCI TOMBOL SETELAH SELESAI / ERROR
-        this.isSaving = false;
+        // Panggil fungsi selectCustomer yang sudah diperbaiki nama variabelnya
+        this.selectCustomer(newCustomerForPOS);
+        
+        // Kosongkan form input modal
+        if (this.formCustomer) {
+            this.formCustomer = { name: '', phone: '', address: '', membershipId: '' };
+        }
     }
-},
+
+    this.hideModal(modalId);
+} catch(e) { 
+    console.error("Gagal Save Data", e);
+    this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+} finally {
+    this.isSaving = false;
+}
+    }, 
 
             async logProductStockDifferences(oldP, newP, productId) {
                 const currentUser = this.userProfile.name || 'Admin';
