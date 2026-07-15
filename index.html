@@ -690,7 +690,7 @@ body.sidebar-open {
     
     <div class="menu-scroll-area">
         
-        <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'">
+        <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'" v-if="userProfile?.role === 'Admin' || String(userProfile?.roleId) === '1'">
     <i class="bi bi-speedometer2"></i> Dashboard
 </div>
 
@@ -12225,17 +12225,14 @@ getPaymentBreakdown(trx) {
             return true; 
         }
 
-        // 🌟 2. CARI WADAH ROLE BERDASARKAN ID
-        let userRole = null;
-        if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
-            userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
-        }
-        if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
-            userRole = this.rolesList.find(r => String(r.id) === String(profile.roleId));
-        }
+       // 🌟 2. CARI WADAH ROLE BERDASARKAN ID
+let userRole = null;
+if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
+    userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
+}
 
-        // Jika Role tidak ditemukan atau belum punya konfigurasi izin
-        if (!userRole || !userRole.permissions) return false;
+// Jika Role tidak ditemukan atau belum punya konfigurasi izin
+if (!userRole || !userRole.permissions) return false;
 
         // 🌟 3. AMBIL NILAI CENTANG DARI DATABASE
         const perm = userRole.permissions[moduleId];
