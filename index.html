@@ -12208,50 +12208,47 @@ getPaymentBreakdown(trx) {
         },
 
         hasAccess(moduleId, action = 'read') {
-            try {
-                const profile = this.userProfile || this.loggedInUser;
-                if (!profile) return false;
+    try {
+        const profile = this.userProfile || this.loggedInUser;
+        if (!profile) return false;
+        if (profile.roleId === 'pending') return false;
 
-                // 1. KUNCI BOS (Otomatis buka semua)
-                if (profile.role === 'Admin' || profile.role === 'Super Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
-                    return true; 
-                }
+        // 🌟 1. KUNCI BOS (DIPERKETAT)
+        // Hanya gunakan ID '1' mutlak sebagai Super Admin agar tidak tertipu field teks lawas.
+        if (String(profile.roleId) === '1') {
+            return true; 
+        }
 
-                if (profile.roleId === 'pending') return false;
+        // 🌟 2. CARI WADAH ROLE BERDASARKAN ID
+        let userRole = null;
+        if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
+            userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
+        }
+        if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
+            userRole = this.rolesList.find(r => String(r.id) === String(profile.roleId));
+        }
 
-                // 2. Tentukan Wadah Role
-                let userRole = null;
-                if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
-                    userRole = this.roles.find(r => r.id == profile.roleId);
-                }
-                if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
-                    userRole = this.rolesList.find(r => r.id == profile.roleId);
-                }
+        // Jika Role tidak ditemukan atau belum punya konfigurasi izin
+        if (!userRole || !userRole.permissions) return false;
 
-                // Jika tidak ketemu
-                if (!userRole || !userRole.permissions) return false;
+        // 🌟 3. AMBIL NILAI CENTANG DARI DATABASE
+        const perm = userRole.permissions[moduleId];
+        // Jika modul ini belum pernah dicentang/disimpan sebelumnya (undefined)
+        if (!perm) return false; 
 
-                // 3. Ambil nilai centang dari database
-                const perm = userRole.permissions[moduleId];
-                if (perm === undefined || perm === null) return false;
+        // 🌟 4. EVALUASI IZIN
+        let isRead = perm.read === true || perm.read === "true" || perm.read == 1 || perm.read === "on";
+        let isWrite = perm.write === true || perm.write === "true" || perm.write == 1 || perm.write === "on";
 
-                // 4. PENYELAMAT BUG VUE (Membaca semua jenis centang: Boolean, Text, Angka)
-                if (typeof perm === 'object') {
-                    let isRead = perm.read === true || perm.read == "true" || perm.read == 1 || perm.read === "on";
-                    let isWrite = perm.write === true || perm.write == "true" || perm.write == 1 || perm.write === "on";
+        if (action === 'read') return isRead || isWrite;
+        if (action === 'write') return isWrite;
 
-                    if (action === 'read') return isRead || isWrite;
-                    if (action === 'write') return isWrite;
-                } else {
-                    return perm === true || perm == "true" || perm == 1 || perm === "on";
-                }
-
-                return false;
-            } catch (e) {
-                console.error("RBAC Check Error:", e);
-                return false; // 🌟 FIX KRITIS: Fail-Closed jika error
-            }
-        },
+        return false;
+    } catch (e) {
+        console.error("RBAC Check Error:", e);
+        return false; // Fail-Closed: Jika error, tutup semua akses
+    }
+},
 
         getRoleName(roleId) {
             if (!this.roles || !Array.isArray(this.roles)) return 'Tidak Ada Role';
