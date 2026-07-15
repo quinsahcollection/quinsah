@@ -13976,12 +13976,25 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 setTimeout(() => { try { JsBarcode("#barcode-canvas", sku, { format: "CODE128", lineColor: "#000", width: 2, height: 60, displayValue: false }); } catch(e) { console.error("Barcode Error", e); } }, 200);
             },
 
-               startCameraScanner() {
+                  startCameraScanner() {
         this.showModal('cameraScannerModal');
+        
+        // 🔊 --- TRIK MEMANCING IZIN AUDIO BROWSER HP --- 🔊
+        const beepSound = document.getElementById('scan-beep-sound');
+        if (beepSound) {
+            // Kita putar dan langsung pause dalam sepersekian detik 
+            // saat user klik tombol, agar browser memberi izin "Play" selanjutnya
+            beepSound.play().then(() => {
+                beepSound.pause();
+                beepSound.currentTime = 0;
+            }).catch(err => console.log("Audio terblokir sementara:", err));
+        }
+        // ------------------------------------------------
+
         setTimeout(() => {
             if(!this.html5QrCode) this.html5QrCode = new Html5Qrcode("qr-reader");
             
-            // PERBAIKAN: Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
+            // Rasio kamera 1:1 agar tidak terlalu tinggi, dan kotak scanner dilebarkan
             const config = { 
                 fps: 10, 
                 qrbox: { width: 320, height: 120 }, 
