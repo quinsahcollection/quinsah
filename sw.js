@@ -25,10 +25,9 @@ self.addEventListener('install', event => {
 // 2. Proses Fetch (Mengambil data)
 self.addEventListener('fetch', event => {
     // PENGAMAN 1: Hanya proses request dengan method GET (ambil data/file). 
-    // Jangan cache request POST/PUT/DELETE (simpan/edit data ke database).
     if (event.request.method !== 'GET') return;
 
-    // 🌟 PENGAMAN 2 (PERBAIKAN ERROR): Abaikan request dari ekstensi Chrome (hanya izinkan http/https)
+    // PENGAMAN 2: Abaikan request dari ekstensi Chrome
     if (!event.request.url.startsWith('http')) return;
 
     event.respondWith(
@@ -45,7 +44,11 @@ self.addEventListener('fetch', event => {
                 return response;
             })
             .catch(() => {
-                return caches.match(event.request);
+                // 🌟 PERBAIKAN: Jika gagal dan tidak ada di cache, buat respons kosong yang valid
+                // Ini mencegah error "Failed to convert value to Response"
+                return caches.match(event.request).then(cachedResponse => {
+                    return cachedResponse || new Response('', { status: 404, statusText: 'Not Found' });
+                });
             })
     );
 });
