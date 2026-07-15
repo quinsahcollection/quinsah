@@ -10344,6 +10344,17 @@ async printShiftSummary(reg) {
             // Ambil nama lengkap yang paling valid
             activeUserName = uData.namaLengkap || uData.name || uData.displayName || uData.username || activeUserName;
             activeUserPhone = uData.phone || uData.phoneNumber || '-';
+
+            // 🌟 BARU: VALIDASI KUNCI AKSES OUTLET
+            // Jika user punya outletId spesifik DAN tidak sama dengan outlet yang mau dibuka shift-nya
+            if (uData.outletId && uData.outletId !== this.shiftForm.outletId) {
+                this.isProcessing = false;
+                return Swal.fire(
+                    'Akses Ditolak', 
+                    'Akun Anda dikunci dan hanya diizinkan untuk membuka shift di outlet yang telah ditetapkan.', 
+                    'error'
+                );
+            }
         }
 
         // 🌟 1. CEK BENTROKAN PERANGKAT (Sudah ada di kode Anda)
