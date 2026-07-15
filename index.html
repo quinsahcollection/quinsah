@@ -3088,116 +3088,135 @@ body.sidebar-open {
         </div>
     </div>
 </div>
-            <!-- CATALOG VIEW -->
-            <div v-if="currentView === 'catalog'">
-                <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
-                    <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Master Produk</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='variants', 'bg-primary-custom': catalogTab==='variants'}" href="#" @click.prevent="catalogTab='variants'">Daftar SKU Varian</a></li>
-                    <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='categories', 'bg-primary-custom': catalogTab==='categories'}" href="#" @click.prevent="catalogTab='categories'">Struktur Kategori</a></li>
-                </ul>
+            
+          <!-- CATALOG VIEW -->
+<div v-if="currentView === 'catalog'">
+    <ul class="nav nav-pills mb-3 gap-2 border-bottom pb-2 flex-nowrap overflow-auto" style="white-space: nowrap;">
+        <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='products', 'bg-primary-custom': catalogTab==='products'}" href="#" @click.prevent="catalogTab='products'">Master Produk</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='variants', 'bg-primary-custom': catalogTab==='variants'}" href="#" @click.prevent="catalogTab='variants'">Daftar SKU Varian</a></li>
+        <li class="nav-item"><a class="nav-link" :class="{active: catalogTab==='categories', 'bg-primary-custom': catalogTab==='categories'}" href="#" @click.prevent="catalogTab='categories'">Struktur Kategori</a></li>
+    </ul>
 
-                <div v-if="catalogTab==='products'" class="dashboard-card">
-                    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0">Daftar Induk Produk</h6>
-                        <div class="d-flex gap-2 align-items-center">
-                            <input type="text" class="form-control form-control-sm" v-model="catalogProductSearch" placeholder="Cari Produk / SKU...">
-                            <button class="btn btn-sm btn-primary-custom" @click="openModal('addProductModal')" style="white-space: nowrap;"><i class="bi bi-plus-lg me-1"></i> Tambah Baru</button>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr>
-                                <th>Kode Produk</th>
-                                <th>Foto</th>
-                                <th>Nama Produk</th>
-                                <th>Daftar Varian (Klik Lihat Detail)</th>
-                                <th>HPP (Modal)</th>
-                                <th>Hrg Jual</th>
-                                <th>Aksi</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr v-for="p in filteredCatalogProducts" :key="p.id">
-                                    <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
-                                    <td><img :src="p.imageBase64 || 'https://via.placeholder.com/50'" width="40" height="40" class="rounded object-fit-cover shadow-sm"></td>
-                                    <td class="fw-bold">
-                                        {{ p.name || '-' }}
-                                        
-                                        <span v-if="p.isActive === false" class="badge bg-danger ms-2" style="font-size: 0.6rem;">Discontinue</span>
+    <div v-if="catalogTab==='products'" class="dashboard-card">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Daftar Induk Produk</h6>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control form-control-sm" v-model="catalogProductSearch" placeholder="Cari Produk / SKU...">
+                <button class="btn btn-sm btn-primary-custom" @click="openModal('addProductModal')" style="white-space: nowrap;"><i class="bi bi-plus-lg me-1"></i> Tambah Baru</button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle text-nowrap">
+                <thead><tr>
+                    <th>Kode Produk</th>
+                    <th>Foto</th>
+                    <th>Nama Produk</th>
+                    <th>Daftar Varian (Klik Lihat Detail)</th>
+                    <th>HPP (Modal)</th>
+                    <th>Hrg Jual</th>
+                    <th>Aksi</th>
+                </tr></thead>
+                <tbody>
+                    <tr v-for="p in filteredCatalogProducts" :key="p.id">
+                        <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
+                        <td>
+                            <template v-if="p.imageBase64 && p.imageBase64.trim() !== ''">
+                                <img :src="p.imageBase64" width="40" height="40" class="rounded object-fit-cover shadow-sm">
+                            </template>
+                            <template v-else>
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-box-seam text-muted" style="font-size: 0.8rem;"></i>
+                                </div>
+                            </template>
+                        </td>
+                        <td class="fw-bold">
+                            {{ p.name || '-' }}
+                            
+                            <span v-if="p.isActive === false" class="badge bg-danger ms-2" style="font-size: 0.6rem;">Discontinue</span>
 
-                                        <div class="mt-1" v-if="p.productTags && p.productTags.length > 0">
-                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size:0.6rem;" v-for="(t,i) in p.productTags" :key="i">{{ t }}</span>
-                                        </div>
-                                        <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ getCategoryPath(p) }}</div>
-                                    </td>
-                                    <td>
-                                        <div v-if="!p.variants || p.variants.length === 0" class="text-muted small">- Tanpa Varian -</div>
-                                        <div v-else class="d-flex flex-column gap-1">
-                                            <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal cursor-pointer" style="font-size: 0.65rem; transition: 0.2s;" onmouseover="this.classList.replace('bg-light','bg-primary'); this.classList.replace('text-dark','text-white')" onmouseout="this.classList.replace('bg-primary','bg-light'); this.classList.replace('text-white','text-dark')" @click="openVariantDetail(p, v, idx)">
-                                                <i class="bi bi-info-circle me-1"></i>{{ v.name || v.attributes }} <span class="fw-bold ms-1">({{ v.variantSku || '-' }})</span>
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="fw-semibold text-muted small">{{ getProductPriceRange(p, 'hpp') }}</td>
-                                    <td>
-                                        <div class="fw-semibold text-success">{{ getProductPriceRange(p, 'sell') }}</div>
-                                        <span class="badge bg-warning text-dark border mt-1" v-if="p.discountValue > 0" style="font-size: 0.6rem;">Promo Induk Aktif</span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-light border text-primary me-1" @click="editData('products', p, 'formProduct', 'addProductModal')" title="Edit Keseluruhan Produk"><i class="bi bi-pencil"></i></button>
-                                        
-                                        <button v-if="p.isActive !== false" class="btn btn-sm btn-light border text-warning" @click="toggleProductStatus(p)" title="Nonaktifkan Produk (Discontinue)" :disabled="isProcessing">
-                                            <i class="bi bi-archive"></i>
-                                        </button>
-                                        <button v-else class="btn btn-sm btn-light border text-success" @click="toggleProductStatus(p)" title="Aktifkan Kembali Produk" :disabled="isProcessing">
-                                            <i class="bi bi-check-circle"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="filteredCatalogProducts.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada produk sesuai pencarian.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            <div class="mt-1" v-if="p.productTags && p.productTags.length > 0">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size:0.6rem;" v-for="(t,i) in p.productTags" :key="i">{{ t }}</span>
+                            </div>
+                            <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ getCategoryPath(p) }}</div>
+                        </td>
+                        <td>
+                            <div v-if="!p.variants || p.variants.length === 0" class="text-muted small">- Tanpa Varian -</div>
+                            <div v-else class="d-flex flex-column gap-1">
+                                <span v-for="(v, idx) in p.variants" :key="idx" class="badge bg-light text-dark border text-start fw-normal cursor-pointer" style="font-size: 0.65rem; transition: 0.2s;" onmouseover="this.classList.replace('bg-light','bg-primary'); this.classList.replace('text-dark','text-white')" onmouseout="this.classList.replace('bg-primary','bg-light'); this.classList.replace('text-white','text-dark')" @click="openVariantDetail(p, v, idx)">
+                                    <i class="bi bi-info-circle me-1"></i>{{ v.name || v.attributes }} <span class="fw-bold ms-1">({{ v.variantSku || '-' }})</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="fw-semibold text-muted small">{{ getProductPriceRange(p, 'hpp') }}</td>
+                        <td>
+                            <div class="fw-semibold text-success">{{ getProductPriceRange(p, 'sell') }}</div>
+                            <span class="badge bg-warning text-dark border mt-1" v-if="p.discountValue > 0" style="font-size: 0.6rem;">Promo Induk Aktif</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary me-1" @click="editData('products', p, 'formProduct', 'addProductModal')" title="Edit Keseluruhan Produk"><i class="bi bi-pencil"></i></button>
+                            
+                            <button v-if="p.isActive !== false" class="btn btn-sm btn-light border text-warning" @click="toggleProductStatus(p)" title="Nonaktifkan Produk (Discontinue)" :disabled="isProcessing">
+                                <i class="bi bi-archive"></i>
+                            </button>
+                            <button v-else class="btn btn-sm btn-light border text-success" @click="toggleProductStatus(p)" title="Aktifkan Kembali Produk" :disabled="isProcessing">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr v-if="filteredCatalogProducts.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Tidak ada produk sesuai pencarian.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-                <div v-if="catalogTab==='variants'" class="dashboard-card">
-                    <div class="row g-2 mb-3 bg-light p-2 rounded border align-items-center">
-                        <div class="col-md-4">
-                            <h6 class="fw-bold mb-0">Database SKU Varian</h6>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" class="form-control form-control-sm" v-model="catalogVariantSearch" placeholder="Cari Varian / SKU / Induk...">
-                        </div>
-                        <div class="col-md-4">
-                            <select class="form-select form-select-sm fw-semibold" v-model="catalogVariantOutletFilter">
-                                <option value="">-- Semua Outlet (Total Stok) --</option>
-                                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-custom align-middle text-nowrap">
-                            <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>{{ catalogVariantOutletFilter ? 'Stok Outlet' : 'Stok Total' }}</th></tr></thead>
-                            <tbody>
-                                <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
-                                    <td><img :src="v.imageBase64 || 'https://via.placeholder.com/40'" width="35" height="35" class="rounded object-fit-cover"></td>
-                                    <td class="text-muted fw-semibold small">
-                                        {{ v.parentName }}
-                                        <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ v.categoryPath }}</div>
-                                    </td>
-                                    <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
-                                    <td><span class="sku-badge bg-dark text-white" title="Klik lihat barcode" @click="showBarcode(v.sku)"><i class="bi bi-upc-scan me-1"></i>{{ v.sku }}</span></td>
-                                    <td class="text-muted fw-semibold small">Rp {{ formatNumber(v.hpp) }}</td>
-                                    <td>
-                                        <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
-                                        <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
-                                    </td>
-                                    <td><span class="badge" :class="getDisplayVariantStock(v) > 0 ? 'bg-success' : 'bg-danger'">{{ getDisplayVariantStock(v) }}</span></td>
-                                </tr>
-                                <tr v-if="filteredAllVariantsList.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Belum ada varian produk sesuai filter.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div v-if="catalogTab==='variants'" class="dashboard-card">
+        <div class="row g-2 mb-3 bg-light p-2 rounded border align-items-center">
+            <div class="col-md-4">
+                <h6 class="fw-bold mb-0">Database SKU Varian</h6>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" v-model="catalogVariantSearch" placeholder="Cari Varian / SKU / Induk...">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select form-select-sm fw-semibold" v-model="catalogVariantOutletFilter">
+                    <option value="">-- Semua Outlet (Total Stok) --</option>
+                    <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-custom align-middle text-nowrap">
+                <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>{{ catalogVariantOutletFilter ? 'Stok Outlet' : 'Stok Total' }}</th></tr></thead>
+                <tbody>
+                    <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
+                        <td>
+                            <template v-if="v.imageBase64 && v.imageBase64.trim() !== ''">
+                                <img :src="v.imageBase64" width="35" height="35" class="rounded object-fit-cover">
+                            </template>
+                            <template v-else>
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded" style="width: 35px; height: 35px;">
+                                    <i class="bi bi-box-seam text-muted" style="font-size: 0.7rem;"></i>
+                                </div>
+                            </template>
+                        </td>
+                        <td class="text-muted fw-semibold small">
+                            {{ v.parentName }}
+                            <div class="text-muted fw-normal mt-1" style="font-size: 0.65rem;"><i class="bi bi-folder2-open me-1"></i>{{ v.categoryPath }}</div>
+                        </td>
+                        <td class="fw-bold text-primary-custom small">{{ v.name }}</td>
+                        <td><span class="sku-badge bg-dark text-white" title="Klik lihat barcode" @click="showBarcode(v.sku)"><i class="bi bi-upc-scan me-1"></i>{{ v.sku }}</span></td>
+                        <td class="text-muted fw-semibold small">Rp {{ formatNumber(v.hpp) }}</td>
+                        <td>
+                            <div class="text-muted text-decoration-line-through" style="font-size:0.65rem;" v-if="v.sell < v.base">Rp {{ formatNumber(v.base) }}</div>
+                            <div class="text-success fw-bold small">Rp {{ formatNumber(v.sell) }}</div>
+                        </td>
+                        <td><span class="badge" :class="getDisplayVariantStock(v) > 0 ? 'bg-success' : 'bg-danger'">{{ getDisplayVariantStock(v) }}</span></td>
+                    </tr>
+                    <tr v-if="filteredAllVariantsList.length === 0"><td colspan="7" class="text-center py-4 text-muted small">Belum ada varian produk sesuai filter.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
                 <div v-if="catalogTab==='categories'" class="dashboard-card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
