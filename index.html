@@ -5498,12 +5498,7 @@ body.sidebar-open {
         
                             <!-- MODAL KAMERA SCANNER -->
         <div class="modal fade" id="cameraScannerModal" tabindex="-1" data-bs-backdrop="static">
-            
-            <!-- 🌟 TAMBAHAN: Tag Audio Tersembunyi untuk Suara Beep -->
-            <audio id="scan-beep-sound" preload="auto">
-                <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_79ef947af7.mp3" type="audio/mpeg">
-            </audio>
-
+           
             <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Tambah modal-lg agar lebih lebar -->
                 <div class="modal-content border-0 shadow-lg bg-dark overflow-hidden">
                     <div class="modal-header border-bottom-0 p-3 pb-2">
@@ -9560,6 +9555,27 @@ beforeDestroy() {
             // Simpan versi saat ini ke penyimpanan HP agar banner tidak muncul terus
             localStorage.setItem('queen_pos_last_version', this.currentAppVersion);
         },
+
+    playBeep() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+
+        oscillator.type = 'sine'; // Tipe gelombang suara
+        oscillator.frequency.value = 880; // Nada tinggi (seperti scanner kasir)
+        gain.gain.value = 0.1; // Volume (0.1 cukup agar tidak terlalu kencang)
+
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.1); // Bunyi selama 0.1 detik saja
+    } catch (e) {
+        console.log("Audio tidak didukung di browser ini:", e);
+    }
+},
             
             askConfirm(title, message, callback) {
                 this.confirmTitle = title;
@@ -14041,13 +14057,9 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
 
         if (foundProduct) { 
             
-            // 🔊 --- KODE SUARA BEEP --- 🔊
-            const beepSound = document.getElementById('scan-beep-sound');
-            if (beepSound) {
-                beepSound.currentTime = 0; // Reset agar bisa bunyi cepat beruntun
-                beepSound.play().catch(err => console.log("Gagal putar suara:", err));
-            }
-            // -----------------------------
+            // 🔊 --- PANGGIL FUNGSI BEEP SYNTHETIC --- 🔊
+        this.playBeep();
+        // ------------------------------------------
 
             let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
             let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
