@@ -5246,9 +5246,10 @@ body.sidebar-open {
     </ul>
 </div>
 </div>
-            
-            <div class="flex-grow-1 overflow-auto pe-1 mb-2">
-            <div v-if="isEditingInvoice" class="alert alert-warning py-2 px-3 mb-2 d-flex justify-content-between align-items-center shadow-sm border-warning">
+                        <!-- AREA LIST PRODUK (Biar bisa di-scroll) -->
+            <div class="flex-grow-1 overflow-auto pe-2 mb-2 pb-3">
+                
+                <div v-if="isEditingInvoice" class="alert alert-warning py-2 px-3 mb-2 d-flex justify-content-between align-items-center shadow-sm border-warning">
                     <div style="font-size: 0.8rem;">
                         <i class="bi bi-pencil-square fw-bold me-1"></i> Mode Edit: <strong>{{ originalEditTrx?.id }}</strong>
                     </div>
@@ -5257,44 +5258,67 @@ body.sidebar-open {
                     </button>
                 </div>
                 
-                <div v-if="cart.length===0" class="text-center text-muted mt-5"><i class="bi bi-cart-x fs-2 mb-2 d-block"></i><small>Kosong</small></div>
-                
-                <div class="cart-item" v-for="item in cart" :key="item.cartId">
-                        <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
-                            <div class="fw-bold text-truncate" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
-                            <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
-                        </div>
-                        <div class="d-flex flex-column gap-1 mb-2" v-if="item.variantName">
-                            <div class="text-muted fw-semibold lh-sm" style="font-size: 0.75rem;">
-                                <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}
-                            </div>
-                            <div>
-                                <span class="badge bg-dark text-white px-2 py-1 shadow-sm" style="font-size: 0.65rem; letter-spacing: 0.5px; border-radius: 4px;">
-                                    {{ item.variantSku }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
-                            <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex flex-column">
-                                <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
-                                <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
-                            </div>
-                            <div class="d-flex align-items-center bg-light border p-0 rounded">
-                                <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
-                                <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
-                                <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
-                            </div>
-                        </div>
-                    </div>
+                <div v-if="cart.length===0" class="text-center text-muted mt-5">
+                    <i class="bi bi-cart-x fs-2 mb-2 d-block"></i>
+                    <small>Kosong</small>
                 </div>
                 
-                <!-- AREA LIST PRODUK (Biar bisa di-scroll) -->
-<div class="flex-grow-1 overflow-auto pb-3">
-    <!-- List produk keranjang Anda biarkan di sini -->
-</div>
+                <!-- DAFTAR ITEM KERANJANG -->
+                <div class="cart-item mb-2 pb-2 border-bottom" v-for="item in cart" :key="item.cartId">
+                    <div class="d-flex gap-2">
+                        
+                        <!-- 📸 KOTAK FOTO PRODUK KIRI -->
+                        <div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
+                            <template v-if="item.imageBase64 && item.imageBase64.trim() !== ''">
+                                <img :src="item.imageBase64" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" class="border shadow-sm" @error="item.imageBase64 = ''">
+                            </template>
+                            <template v-else>
+                                <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
+                                    <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
+                                    <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- 📝 KOTAK INFO PRODUK KANAN -->
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
+                                <div class="fw-bold text-truncate cursor-pointer" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
+                                <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
+                            </div>
+                            
+                            <div class="d-flex flex-column gap-1 mb-2" v-if="item.variantName">
+                                <div class="text-muted fw-semibold lh-sm" style="font-size: 0.75rem;">
+                                    <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}
+                                </div>
+                                <div>
+                                    <span class="badge bg-dark text-white px-2 py-1 shadow-sm" style="font-size: 0.65rem; letter-spacing: 0.5px; border-radius: 4px;">
+                                        {{ item.variantSku }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
+                                <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div class="d-flex flex-column">
+                                    <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
+                                    <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
+                                </div>
+                                <div class="d-flex align-items-center bg-light border p-0 rounded">
+                                    <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
+                                    <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
+                                    <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
 
 <!-- BLOK PEMBAYARAN (Otomatis terdorong ke paling bawah karena mt-auto) -->
 <div class="mt-auto bg-white pt-2 border-top shadow-lg z-3">
