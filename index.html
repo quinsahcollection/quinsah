@@ -1155,7 +1155,7 @@ body.sidebar-open {
                             <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                         </div>
                         <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
-                            {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : getProductDisplayStock(product) }}
+                        {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : 'Stok: ' + getProductDisplayStock(product) }}
                         </span>
                     </div>
                 </div>
@@ -12215,47 +12215,43 @@ getPaymentBreakdown(trx) {
         },
 
         hasAccess(moduleId, action = 'read') {
-    try {
-        const profile = this.userProfile || this.loggedInUser;
-        if (!profile) return false;
-        if (profile.roleId === 'pending') return false;
+            try {
+                const profile = this.userProfile || this.loggedInUser;
+                if (!profile) return false;
+                if (profile.roleId === 'pending') return false;
 
-        // 🌟 1. KUNCI BOS (DIPERKETAT)
-        // Hanya gunakan ID '1' mutlak sebagai Super Admin agar tidak tertipu field teks lawas.
-        if (String(profile.roleId) === '1') {
-            return true; 
-        }
+                // 🌟 PERBAIKAN 1: Samakan dengan logika menu Dashboard
+                // Jika dia Admin atau roleId = 1, langsung loloskan tanpa ba-bi-bu!
+                if (String(profile.roleId) === '1' || profile.role === 'Admin') {
+                    return true; 
+                }
 
-        // 🌟 2. CARI WADAH ROLE BERDASARKAN ID
-        let userRole = null;
-        if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
-            userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
-        }
-        if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
-            userRole = this.rolesList.find(r => String(r.id) === String(profile.roleId));
-        }
+                // 🌟 PERBAIKAN 2: Hapus 'rolesList' agar tidak muncul error kuning
+                let userRole = null;
+                if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
+                    userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
+                }
 
-        // Jika Role tidak ditemukan atau belum punya konfigurasi izin
-        if (!userRole || !userRole.permissions) return false;
+                // Jika Role tidak ditemukan atau belum punya konfigurasi izin
+                if (!userRole || !userRole.permissions) return false;
 
-        // 🌟 3. AMBIL NILAI CENTANG DARI DATABASE
-        const perm = userRole.permissions[moduleId];
-        // Jika modul ini belum pernah dicentang/disimpan sebelumnya (undefined)
-        if (!perm) return false; 
+                // 🌟 3. AMBIL NILAI CENTANG DARI DATABASE
+                const perm = userRole.permissions[moduleId];
+                if (!perm) return false; 
 
-        // 🌟 4. EVALUASI IZIN
-        let isRead = perm.read === true || perm.read === "true" || perm.read == 1 || perm.read === "on";
-        let isWrite = perm.write === true || perm.write === "true" || perm.write == 1 || perm.write === "on";
+                // 🌟 4. EVALUASI IZIN
+                let isRead = perm.read === true || perm.read === "true" || perm.read == 1 || perm.read === "on";
+                let isWrite = perm.write === true || perm.write === "true" || perm.write == 1 || perm.write === "on";
 
-        if (action === 'read') return isRead || isWrite;
-        if (action === 'write') return isWrite;
+                if (action === 'read') return isRead || isWrite;
+                if (action === 'write') return isWrite;
 
-        return false;
-    } catch (e) {
-        console.error("RBAC Check Error:", e);
-        return false; // Fail-Closed: Jika error, tutup semua akses
-    }
-},
+                return false;
+            } catch (e) {
+                console.error("RBAC Check Error:", e);
+                return false; 
+            }
+        },
 
         getRoleName(roleId) {
             if (!this.roles || !Array.isArray(this.roles)) return 'Tidak Ada Role';
