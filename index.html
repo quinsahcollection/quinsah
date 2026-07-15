@@ -1068,7 +1068,7 @@ body.sidebar-open {
     </div>
 
 
-    <div v-else class="h-100 d-flex flex-column">
+        <div v-else class="h-100 d-flex flex-column">
         
         <div class="row g-2 mb-3 align-items-center">
             
@@ -1096,17 +1096,41 @@ body.sidebar-open {
                 
                 <div class="position-absolute bg-white shadow-lg rounded border w-100 mt-1" style="z-index: 1050; top: 100%; left: 0; max-height: 65vh; overflow-y: auto;" v-show="searchQuery && posSearchMode === 'text' && isSearchFocused">
                     <template v-for="prod in filteredProducts.slice(0, 15)">
+                        
+                        <!-- PRODUK TANPA VARIAN -->
                         <div v-if="!prod.variants || prod.variants.length === 0" :key="'sp-'+prod.id" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
-                            <img :src="prod.imageBase64 || 'https://via.placeholder.com/50'" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
+                            
+                            <template v-if="prod.imageBase64 && prod.imageBase64.trim() !== ''">
+                                <img :src="prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="prod.imageBase64 = ''">
+                            </template>
+                            <template v-else>
+                                <div class="product-img-placeholder me-3 border shadow-sm" style="width: 45px; height: 45px; min-width: 45px; border-radius: 6px;">
+                                    <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 2px;"></i>
+                                    <span style="font-size: 0.45rem; font-weight: 500;">NO IMAGE</span>
+                                </div>
+                            </template>
+
                             <div class="flex-grow-1 overflow-hidden pe-2">
                                 <div class="fw-bold text-dark lh-sm mb-1" style="font-size: 0.85rem;">{{ prod.name }}</div>
                                 <div class="text-muted" style="font-size: 0.65rem;">SKU: {{ prod.sku || 'N/A' }}</div>
                             </div>
                             <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(prod)) }}</div>
                         </div>
+                        
+                        <!-- PRODUK DENGAN VARIAN -->
                         <template v-else>
                             <div v-for="(v, vIdx) in prod.variants" :key="'sv-'+prod.id+'-'+vIdx" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
-                                <img :src="v.imageBase64 || prod.imageBase64 || 'https://via.placeholder.com/50'" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
+                                
+                                <template v-if="(v.imageBase64 || prod.imageBase64) && (v.imageBase64 || prod.imageBase64).trim() !== ''">
+                                    <img :src="v.imageBase64 || prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageBase64 = ''; prod.imageBase64 = ''">
+                                </template>
+                                <template v-else>
+                                    <div class="product-img-placeholder me-3 border shadow-sm" style="width: 45px; height: 45px; min-width: 45px; border-radius: 6px;">
+                                        <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 2px;"></i>
+                                        <span style="font-size: 0.45rem; font-weight: 500;">NO IMAGE</span>
+                                    </div>
+                                </template>
+
                                 <div class="flex-grow-1 overflow-hidden pe-2">
                                     <div class="fw-bold text-dark lh-sm mb-1" style="font-size: 0.85rem;">{{ prod.name }}</div>
                                     <div class="text-primary fw-semibold" style="font-size: 0.7rem;"><i class="bi bi-arrow-return-right me-1"></i>Varian: {{ v.name }}</div>
@@ -1114,6 +1138,7 @@ body.sidebar-open {
                                 <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveVariantPrice(prod, v) || v.sellPrice || prod.sellPrice) }}</div>
                             </div>
                         </template>
+                        
                     </template>
                     <div class="p-3 text-center bg-white text-primary cursor-pointer fw-bold border-top sticky-bottom shadow-sm" style="font-size:0.8rem;" v-if="filteredProducts.length > 15" @click="isSearchFocused = false">
                         <i class="bi bi-search me-1"></i>Tampilkan Hasil Lainnya ({{ filteredProducts.length }} Produk)
@@ -1121,6 +1146,7 @@ body.sidebar-open {
                     <div class="p-3 text-center text-muted small" v-if="filteredProducts.length === 0">Tidak ada produk atau varian yang sesuai.</div>
                 </div>
             </div>
+
 
             <div class="col-4 col-md-3">
                 <div class="dropdown h-100 w-100">
