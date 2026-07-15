@@ -4,7 +4,7 @@ const CACHE_NAME = 'kasir-offline-v3';
 const urlsToCache = [
     './',
     './index.html',
-    './manifest.json' // Bagus jika manifest dimasukkan juga agar PWA stabil
+    './manifest.json', // Bagus jika manifest dimasukkan juga agar PWA stabil
     './logo.png'
 ];
 
