@@ -690,14 +690,16 @@ body.sidebar-open {
     
     <div class="menu-scroll-area">
         
+        <!-- Asumsi: Dashboard tidak ada di matriks, mungkin bisa dibiarkan 'dashboard' asal Admin saja yg bisa -->
         <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'" v-if="hasAccess('dashboard', 'read')">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </div>
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </div>
 
         <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
             <i class="bi bi-display"></i> POS
         </div>
 
+        <!-- Jika POS & Kasir adalah modul yang sama, biarkan ID-nya sama. Tapi jika beda baris di matriks, pisahkan! -->
         <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
             <i class="bi bi-cash-coin"></i> Kasir
         </div>
@@ -714,14 +716,17 @@ body.sidebar-open {
             <i class="bi bi-box-seam"></i> Inventori
         </div>
 
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'opname' atau ID yg sesuai di appModules -->
         <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('opname', 'read')">
             <i class="bi bi-clipboard2-check"></i> Opname
         </div>
 
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'transfer' -->
         <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('transfer', 'read')">
             <i class="bi bi-arrow-left-right"></i> Transfer
         </div>
 
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'barcode' -->
         <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('barcode', 'read')">
             <i class="bi bi-qr-code-scan"></i> Barcode
         </div>
@@ -738,6 +743,7 @@ body.sidebar-open {
             <i class="bi bi-receipt"></i> Penjualan
         </div>
         
+        <!-- 🌟 PERBAIKAN: Jika Payment beda baris di matriks, ganti 'sales' jadi 'payment' -->
         <div class="nav-icon" :class="{'active': currentView === 'payment'}" @click="currentView = 'payment'" v-if="hasAccess('payment', 'read')">
             <i class="bi bi-bank"></i> Payment
         </div>
@@ -1130,6 +1136,7 @@ body.sidebar-open {
             </div>
         </div>
         
+        <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
         <template v-if="posViewMode === 'grid'">
             <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
                 <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
@@ -1148,8 +1155,7 @@ body.sidebar-open {
                             <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                         </div>
                         <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
-                            <!-- PERBAIKAN DI BARIS BAWAH INI -->
-                            {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : 'Stok: ' + getProductDisplayStock(product) }}
+                            {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : getProductDisplayStock(product) }}
                         </span>
                     </div>
                 </div>
@@ -9801,71 +9807,92 @@ beforeDestroy() {
     this.isLoadingDashboard = false;
 },
 
+// 🌟 FUNGSI BARU: Untuk menggambar Grafik Donat (Metode Pembayaran)
 renderPaymentChart(paymentData) {
-        // 🌟 PENGAMAN GANDA: Jika layarnya bukan dashboard, JANGAN GAMBAR!
-        if (this.currentView !== 'dashboard') return; 
+    const ctx = document.getElementById('paymentChart');
+    if (!ctx) return;
 
-        const ctx = document.getElementById('paymentChart');
-        if (!ctx) return;
+    if (this.paymentChartInstance) {
+        this.paymentChartInstance.destroy();
+    }
 
-        if (this.paymentChartInstance) {
-            this.paymentChartInstance.destroy();
-        }
+    let labels = Object.keys(paymentData);
+    let dataPoin = Object.values(paymentData);
 
-        let labels = Object.keys(paymentData);
-        let dataPoin = Object.values(paymentData);
+    // Jika belum ada transaksi hari ini, tampilkan data kosong abu-abu
+    if (labels.length === 0) {
+        labels = ['Belum ada transaksi'];
+        dataPoin = [1];
+    }
 
-        if (labels.length === 0) {
-            labels = ['Belum ada transaksi'];
-            dataPoin = [1];
-        }
-
-        this.paymentChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: dataPoin,
-                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#e2e8f0'],
-                    borderWidth: 0,
-                    hoverOffset: 4
-                }]
+    this.paymentChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dataPoin,
+                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#e2e8f0'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }, cutout: '70%' }
-        });
-    },
-
-    renderChart(salesData) {
-        // 🌟 PENGAMAN GANDA: Jika layarnya bukan dashboard, JANGAN GAMBAR!
-        if (this.currentView !== 'dashboard') return;
-
-        const ctx = document.getElementById('salesChart');
-        if (!ctx) return;
-
-        if (this.chartInstance) {
-            this.chartInstance.destroy();
+            cutout: '70%' // Membuat lubang donat sedikit lebih besar agar terlihat elegan
         }
+    });
+},
 
-        let labels = [];
-        let dataPoin = [];
-        for (let i = 6; i >= 0; i--) {
-            let d = new Date();
-            d.setDate(d.getDate() - i);
-            labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
-            dataPoin.push(salesData[i] || 0);
-        }
+renderChart(salesData) {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
 
-        this.chartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Omzet Penjualan (Rp)', data: dataPoin, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', borderWidth: 3, pointBackgroundColor: '#0d6efd', fill: true, tension: 0.4 
-                }]
+    // Hancurkan grafik lama jika di-refresh agar tidak tumpang tindih
+    if (this.chartInstance) {
+        this.chartInstance.destroy();
+    }
+
+    // Buat Label Hari (H-6 sampai H-0)
+    let labels = [];
+    let dataPoin = [];
+    for (let i = 6; i >= 0; i--) {
+        let d = new Date();
+        d.setDate(d.getDate() - i);
+        labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
+        dataPoin.push(salesData[i] || 0);
+    }
+
+    this.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Omzet Penjualan (Rp)',
+                data: dataPoin,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: '#0d6efd',
+                fill: true,
+                tension: 0.4 // Membuat garisnya melengkung halus (smooth curve)
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-        });
-    },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+},
 
       async saveIdentifierGroup() {
         // 1. Validasi Input Kosong
@@ -12188,50 +12215,47 @@ getPaymentBreakdown(trx) {
         },
 
         hasAccess(moduleId, action = 'read') {
-            try {
-                const profile = this.userProfile || this.loggedInUser;
-                if (!profile) return false;
+    try {
+        const profile = this.userProfile || this.loggedInUser;
+        if (!profile) return false;
+        if (profile.roleId === 'pending') return false;
 
-                // 1. KUNCI BOS (Otomatis buka semua)
-                if (profile.role === 'Admin' || profile.role === 'Super Admin' || this.userRole === 'Admin' || profile.roleId == 1) {
-                    return true; 
-                }
+        // 🌟 1. KUNCI BOS (DIPERKETAT)
+        // Hanya gunakan ID '1' mutlak sebagai Super Admin agar tidak tertipu field teks lawas.
+        if (String(profile.roleId) === '1') {
+            return true; 
+        }
 
-                if (profile.roleId === 'pending') return false;
+        // 🌟 2. CARI WADAH ROLE BERDASARKAN ID
+        let userRole = null;
+        if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
+            userRole = this.roles.find(r => String(r.id) === String(profile.roleId));
+        }
+        if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
+            userRole = this.rolesList.find(r => String(r.id) === String(profile.roleId));
+        }
 
-                // 2. Tentukan Wadah Role
-                let userRole = null;
-                if (this.roles && Array.isArray(this.roles) && this.roles.length > 0) {
-                    userRole = this.roles.find(r => r.id == profile.roleId);
-                }
-                if (!userRole && this.rolesList && Array.isArray(this.rolesList) && this.rolesList.length > 0) {
-                    userRole = this.rolesList.find(r => r.id == profile.roleId);
-                }
+        // Jika Role tidak ditemukan atau belum punya konfigurasi izin
+        if (!userRole || !userRole.permissions) return false;
 
-                // Jika tidak ketemu
-                if (!userRole || !userRole.permissions) return false;
+        // 🌟 3. AMBIL NILAI CENTANG DARI DATABASE
+        const perm = userRole.permissions[moduleId];
+        // Jika modul ini belum pernah dicentang/disimpan sebelumnya (undefined)
+        if (!perm) return false; 
 
-                // 3. Ambil nilai centang dari database
-                const perm = userRole.permissions[moduleId];
-                if (perm === undefined || perm === null) return false;
+        // 🌟 4. EVALUASI IZIN
+        let isRead = perm.read === true || perm.read === "true" || perm.read == 1 || perm.read === "on";
+        let isWrite = perm.write === true || perm.write === "true" || perm.write == 1 || perm.write === "on";
 
-                // 4. PENYELAMAT BUG VUE (Membaca semua jenis centang: Boolean, Text, Angka)
-                if (typeof perm === 'object') {
-                    let isRead = perm.read === true || perm.read == "true" || perm.read == 1 || perm.read === "on";
-                    let isWrite = perm.write === true || perm.write == "true" || perm.write == 1 || perm.write === "on";
+        if (action === 'read') return isRead || isWrite;
+        if (action === 'write') return isWrite;
 
-                    if (action === 'read') return isRead || isWrite;
-                    if (action === 'write') return isWrite;
-                } else {
-                    return perm === true || perm == "true" || perm == 1 || perm === "on";
-                }
-
-                return false;
-            } catch (e) {
-                console.error("RBAC Check Error:", e);
-                return false; // 🌟 FIX KRITIS: Fail-Closed jika error
-            }
-        },
+        return false;
+    } catch (e) {
+        console.error("RBAC Check Error:", e);
+        return false; // Fail-Closed: Jika error, tutup semua akses
+    }
+},
 
         getRoleName(roleId) {
             if (!this.roles || !Array.isArray(this.roles)) return 'Tidak Ada Role';
