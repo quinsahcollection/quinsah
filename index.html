@@ -175,12 +175,28 @@ body.sidebar-open {
     box-shadow: 0 8px 15px rgba(220, 38, 38, 0.15); 
 }
 .product-img { 
-    width: 100%; 
-    aspect-ratio: 1 / 1; /* Ini menggantikan height agar selalu kotak sempurna 1:1 */
-    object-fit: cover; /* Mencegah gambar menjadi gepeng */
+    width: 100% !important; 
+    aspect-ratio: 1 / 1 !important; /* Paksa kotak sempurna */
+    object-fit: cover !important;   /* Gambar tidak akan gepeng */
     border-radius: 8px; 
     margin-bottom: 10px; 
-    background-color: #f0f0f0; 
+    background-color: #f8fafc; 
+    flex-shrink: 0;
+}
+
+/* 🌟 KELAS BARU: JIKA PRODUK TIDAK MEMILIKI FOTO */
+.product-img-placeholder {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background-color: #f1f5f9;      /* Abu-abu soft modern */
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #cbd5e1;     /* Garis putus-putus tipis ala aplikasi pro */
+    color: #94a3b8;
     flex-shrink: 0;
 }
 
@@ -1137,58 +1153,84 @@ body.sidebar-open {
         </div>
         
         <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
-        <template v-if="posViewMode === 'grid'">
-            <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
-                <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
-                    <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" class="product-img">
-                    
-                    <h6 class="mb-1 fw-bold text-dark lh-sm" style="font-size: 0.85rem;">{{ product.name || 'Tanpa Nama' }}</h6>
-                    <div class="mb-1"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
-                    
-                    <div class="mb-2" v-if="product.productTags && product.productTags.length > 0">
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
+    <!-- ==========================================
+       TAMPILAN GRID MODAL POS KASIR
+       ========================================== -->
+    <template v-if="posViewMode === 'grid'">
+        <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
+            <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
+                
+                <!-- 🌟 PERBAIKAN FOTO GRID: Gunakan placeholder jika kosong atau error -->
+                <template v-if="product.imageBase64 && product.imageBase64.trim() !== ''">
+                    <img :src="product.imageBase64" class="product-img" @error="product.imageBase64 = ''">
+                </template>
+                <template v-else>
+                    <div class="product-img-placeholder">
+                        <i class="bi bi-box-seam" style="font-size: 1.8rem; margin-bottom: 4px;"></i>
+                        <span style="font-size: 0.65rem; font-weight: 500; letter-spacing: 0.5px;">NO IMAGE</span>
                     </div>
+                </template>
+                
+                <h6 class="mb-1 fw-bold text-dark lh-sm" style="font-size: 0.85rem;">{{ product.name || 'Tanpa Nama' }}</h6>
+                <div class="mb-1"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
+                
+                <div class="mb-2" v-if="product.productTags && product.productTags.length > 0">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
+                </div>
 
-                    <div class="mt-auto d-flex justify-content-between align-items-center">
-                        <div class="d-flex flex-column">
-                            <span class="text-muted text-decoration-line-through lh-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</span>
-                            <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
-                        </div>
-                        <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                    <div class="d-flex flex-column">
+                        <span class="text-muted text-decoration-line-through lh-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</span>
+                        <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
+                    </div>
+                    <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
                         {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : 'Stok: ' + getProductDisplayStock(product) }}
-                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ==========================================
+       TAMPILAN LIST MODAL POS KASIR
+       ========================================== -->
+    <template v-else>
+        <div class="col-12 col-md-6" v-for="product in filteredProducts" :key="'list-'+product.id">
+            <div class="card border-0 shadow-sm cursor-pointer mb-1" @click="openPosModifier(product)">
+                <div class="card-body p-2 d-flex align-items-center bg-white rounded border border-light">
+                    
+                    <!-- 🌟 PERBAIKAN FOTO LIST: Gunakan placeholder jika kosong atau error -->
+                    <template v-if="product.imageBase64 && product.imageBase64.trim() !== ''">
+                        <img :src="product.imageBase64" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="product.imageBase64 = ''">
+                    </template>
+                    <template v-else>
+                        <div class="product-img-placeholder me-3 border shadow-sm" style="width: 60px; height: 60px; min-width: 60px;">
+                            <i class="bi bi-box-seam" style="font-size: 1.1rem; margin-bottom: 2px;"></i>
+                            <span style="font-size: 0.5rem; font-weight: 500;">NO IMAGE</span>
+                        </div>
+                    </template>
+
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-1 fw-bold text-dark lh-sm" style="font-size: 0.85rem;">{{ product.name || 'Tanpa Nama' }}</h6>
+                        
+                        <div v-if="product.productTags && product.productTags.length > 0" class="mb-1">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
+                        </div>
+
+                        <div class="d-flex align-items-center mt-1 gap-1 flex-wrap">
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.6rem;">{{ product.sku || 'N/A' }}</span>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.6rem;" v-if="product.variants && product.variants.length > 0">{{ product.variants.length }} Varian</span>
+                            <span class="badge bg-light text-dark border fw-normal" style="font-size: 0.6rem;" v-else>Stok: {{ getProductDisplayStock(product) }}</span>
+                        </div>
+                    </div>
+                    <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
+                        <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</div>
+                        <div class="text-primary-custom fw-bold lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</div>
                     </div>
                 </div>
             </div>
-        </template>
-
-        <template v-else>
-            <div class="col-12 col-md-6" v-for="product in filteredProducts" :key="'list-'+product.id">
-                <div class="card border-0 shadow-sm cursor-pointer mb-1" @click="openPosModifier(product)">
-                    <div class="card-body p-2 d-flex align-items-center bg-white rounded border border-light">
-                        <img :src="product.imageBase64 || 'https://via.placeholder.com/300x300?text=No+Image'" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
-                        <div class="flex-grow-1 overflow-hidden">
-                            
-                            <h6 class="mb-1 fw-bold text-dark lh-sm" style="font-size: 0.85rem;">{{ product.name || 'Tanpa Nama' }}</h6>
-                            
-                            <div v-if="product.productTags && product.productTags.length > 0" class="mb-1">
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1 fw-normal" style="font-size: 0.60rem;" v-for="(tag, tIdx) in product.productTags.slice(0, 2)" :key="tIdx">{{ tag }}</span>
-                            </div>
-
-                            <div class="d-flex align-items-center mt-1 gap-1 flex-wrap">
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.6rem;">{{ product.sku || 'N/A' }}</span>
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.6rem;" v-if="product.variants && product.variants.length > 0">{{ product.variants.length }} Varian</span>
-                                <span class="badge bg-light text-dark border fw-normal" style="font-size: 0.6rem;" v-else>Stok: {{ getProductDisplayStock(product) }}</span>
-                            </div>
-                        </div>
-                        <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
-                            <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.65rem;" v-if="getEffectiveBasePrice(product) < (product.sellPrice || product.basePrice)">Rp {{ formatNumber(product.sellPrice || product.basePrice) }}</div>
-                            <div class="text-primary-custom fw-bold lh-1" style="font-size: 0.9rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </template>
+        </div>
+    </template>
 
         <div v-if="filteredProducts.length === 0" class="col-12 text-center text-muted mt-5 py-5">
             <i class="bi bi-search fs-1 mb-2 d-block"></i>
@@ -6272,7 +6314,10 @@ body.sidebar-open {
     </div>
 </div>
 
-        <div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
+       <!-- ==========================================
+   MODAL TAMBAH / EDIT PRODUK UTAMA
+   ========================================== -->
+<div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-light border-bottom p-3">
@@ -6332,14 +6377,14 @@ body.sidebar-open {
                     </div>
 
                     <div class="col-md-3">
-                    <label class="form-label small fw-bold">Tampil di Kasir (POS)</label>
-                    <div class="form-check form-switch mt-2">
-                    <input class="form-check-input" type="checkbox" v-model="formProduct.isSellable" id="isSellable">
-                    <label class="form-check-label small" for="isSellable">
-            {{ formProduct.isSellable ? 'Aktif (Muncul di POS)' : 'Disembunyikan' }}
-        </label>
-    </div>
-</div>
+                        <label class="form-label small fw-bold">Tampil di Kasir (POS)</label>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" v-model="formProduct.isSellable" id="isSellable">
+                            <label class="form-check-label small" for="isSellable">
+                                {{ formProduct.isSellable ? 'Aktif (Muncul di POS)' : 'Disembunyikan' }}
+                            </label>
+                        </div>
+                    </div>
 
                     <div class="col-md-6" v-if="formProduct.variants.length === 0">
                         <label class="form-label small fw-bold text-danger"><i class="bi bi-bell-fill me-1"></i>Min. Stock (Alert)</label>
@@ -6893,63 +6938,76 @@ body.sidebar-open {
     </div> <!-- PENUTUP modal-dialog -->
 </div> <!-- PENUTUP paymentModal -->
             
-                   <div class="modal fade" id="posModifierModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow">
-                <template v-if="activeProduct">
-                    <div class="modal-header bg-light border-bottom p-3">
-                        <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
-                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+        <!-- ==========================================
+             MODAL PILIH VARIAN (POS MODIFIER MODAL)
+             ========================================== -->
+<div class="modal fade" id="posModifierModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <template v-if="activeProduct">
+                <div class="modal-header bg-light border-bottom p-3">
+                    <h6 class="modal-title fw-bold text-primary-custom mb-0"><i class="bi bi-box-seam me-2"></i>{{ activeProduct.name || '' }}</h6>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body bg-white p-3 border-top" v-if="(activeProduct.variants && activeProduct.variants.length > 0) && posModifierStep === 1">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
+                        <span class="badge bg-primary bg-opacity-10 text-primary">{{ activeProduct.variants.length }} Opsi Tersedia</span>
                     </div>
                     
-                    <div class="modal-body bg-white p-3 border-top" v-if="(activeProduct.variants && activeProduct.variants.length > 0) && posModifierStep === 1">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <p class="text-muted fw-bold mb-0" style="font-size: 0.85rem;"><i class="bi bi-info-circle me-1"></i> PILIH VARIAN :</p>
-                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ activeProduct.variants.length }} Opsi Tersedia</span>
-                        </div>
-                        
-                        <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
-                            <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
-                                
-                                <div class="card border shadow-sm cursor-pointer hover-shadow" 
-                                     :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0 && !appSettings.allowNegativeInventory}" 
-                                     @click="(getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory) ? selectVariantNextStep(v) : null">
-                                     
-                                    <div class="card-body p-2 d-flex align-items-center">
-                                        <img :src="v.imageBase64 || activeProduct.imageBase64 || 'https://via.placeholder.com/80'" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm">
-                                        
-                                        <div class="flex-grow-1 overflow-hidden">
-                                            <h6 class="mb-1 fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
-                                                {{ v.name || v.attributes || 'Varian '+(idx+1) }}
-                                            </h6>
-                                            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</span>
-                                                <span class="badge fw-normal" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-danger'" style="font-size: 0.65rem;">
-                                                    Sisa: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}
-                                                </span>
-                                            </div>
+                    <div class="row g-2" style="max-height: 60vh; overflow-y: auto;">
+                        <div class="col-12" v-for="(v, idx) in activeProduct.variants" :key="idx">
+                            
+                            <div class="card border shadow-sm cursor-pointer hover-shadow" 
+                                 :class="{'opacity-50 bg-light': getVariantDisplayStock(v) <= 0 && !appSettings.allowNegativeInventory}" 
+                                 @click="(getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory) ? selectVariantNextStep(v) : null">
+                                 
+                                <div class="card-body p-2 d-flex align-items-center">
+                                    
+                                    <!-- 🌟 PERBAIKAN FOTO VARIAN: Gunakan placeholder jika kosong atau error -->
+                                    <template v-if="v.imageBase64 || activeProduct.imageBase64">
+                                        <img :src="v.imageBase64 || activeProduct.imageBase64" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageBase64 = ''; activeProduct.imageBase64 = ''">
+                                    </template>
+                                    <template v-else>
+                                        <div class="product-img-placeholder me-3 border shadow-sm" style="width: 55px; height: 55px; min-width: 55px;">
+                                            <i class="bi bi-box-seam" style="font-size: 1rem; margin-bottom: 2px;"></i>
+                                            <span style="font-size: 0.45rem; font-weight: 500;">NO IMAGE</span>
+                                        </div>
+                                    </template>
+                                    
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <h6 class="mb-1 fw-bold text-dark text-truncate" style="font-size: 0.9rem;">
+                                            {{ v.name || v.attributes || 'Varian '+(idx+1) }}
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size: 0.65rem;">SKU: {{ v.variantSku || v.sku || '-' }}</span>
+                                            <span class="badge fw-normal" :class="getVariantDisplayStock(v) > 0 ? 'bg-success' : 'bg-danger'" style="font-size: 0.65rem;">
+                                                Sisa: {{ getVariantDisplayStock(v) }} {{ activeProduct.uom || 'Pcs' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
+                                        <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">
+                                            Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}
+                                        </div>
+                                        <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
+                                            Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
                                         </div>
                                         
-                                        <div class="text-end ms-2 d-flex flex-column justify-content-center min-w-max">
-                                            <div class="text-muted text-decoration-line-through lh-1 mb-1" style="font-size: 0.7rem;" v-if="getEffectiveVariantPrice(activeProduct, v) < (v.sellPrice || activeProduct.sellPrice)">
-                                                Rp {{ formatNumber(v.sellPrice || activeProduct.sellPrice) }}
-                                            </div>
-                                            <div class="text-primary-custom fw-bold lh-1 mb-1" style="font-size: 0.95rem;">
-                                                Rp {{ formatNumber(getEffectiveVariantPrice(activeProduct, v)) }}
-                                            </div>
-                                            
-                                            <div class="mt-1" v-if="getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory">
-                                                <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
-                                            </div>
-                                            <div class="mt-1" v-else>
-                                                <span class="text-danger small fw-bold">Habis</span>
-                                            </div>     
+                                        <div class="mt-1" v-if="getVariantDisplayStock(v) > 0 || appSettings.allowNegativeInventory">
+                                            <span class="text-primary-custom small fw-bold"><i class="bi bi-cart-plus me-1"></i>Pilih</span>
                                         </div>
+                                        <div class="mt-1" v-else>
+                                            <span class="text-danger small fw-bold">Habis</span>
+                                        </div>     
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
                     <div class="modal-body bg-white p-4 border-top" v-if="posModifierStep === 2">
                         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
