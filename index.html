@@ -1136,6 +1136,7 @@ body.sidebar-open {
             </div>
         </div>
         
+        <div class="row g-2 overflow-auto flex-grow-1 align-content-start pb-4">
         <template v-if="posViewMode === 'grid'">
             <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 col-6" v-for="product in filteredProducts" :key="product.id">
                 <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
@@ -1154,8 +1155,7 @@ body.sidebar-open {
                             <span class="text-primary-custom fw-bold lh-1" style="font-size: 0.85rem;">Rp {{ formatNumber(getEffectiveBasePrice(product)) }}</span>
                         </div>
                         <span class="badge bg-light text-dark border" style="font-size: 0.65rem;">
-                            <!-- PERBAIKAN DI BARIS BAWAH INI -->
-                            {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : 'Stok: ' + getProductDisplayStock(product) }}
+                            {{ product.variants && product.variants.length > 0 ? product.variants.length+' Opsi' : getProductDisplayStock(product) }}
                         </span>
                     </div>
                 </div>
