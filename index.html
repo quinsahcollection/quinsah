@@ -9806,92 +9806,71 @@ beforeDestroy() {
     this.isLoadingDashboard = false;
 },
 
-// 🌟 FUNGSI BARU: Untuk menggambar Grafik Donat (Metode Pembayaran)
 renderPaymentChart(paymentData) {
-    const ctx = document.getElementById('paymentChart');
-    if (!ctx) return;
+        // 🌟 PENGAMAN GANDA: Jika layarnya bukan dashboard, JANGAN GAMBAR!
+        if (this.currentView !== 'dashboard') return; 
 
-    if (this.paymentChartInstance) {
-        this.paymentChartInstance.destroy();
-    }
+        const ctx = document.getElementById('paymentChart');
+        if (!ctx) return;
 
-    let labels = Object.keys(paymentData);
-    let dataPoin = Object.values(paymentData);
-
-    // Jika belum ada transaksi hari ini, tampilkan data kosong abu-abu
-    if (labels.length === 0) {
-        labels = ['Belum ada transaksi'];
-        dataPoin = [1];
-    }
-
-    this.paymentChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: dataPoin,
-                backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#e2e8f0'],
-                borderWidth: 0,
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
-            },
-            cutout: '70%' // Membuat lubang donat sedikit lebih besar agar terlihat elegan
+        if (this.paymentChartInstance) {
+            this.paymentChartInstance.destroy();
         }
-    });
-},
 
-renderChart(salesData) {
-    const ctx = document.getElementById('salesChart');
-    if (!ctx) return;
+        let labels = Object.keys(paymentData);
+        let dataPoin = Object.values(paymentData);
 
-    // Hancurkan grafik lama jika di-refresh agar tidak tumpang tindih
-    if (this.chartInstance) {
-        this.chartInstance.destroy();
-    }
-
-    // Buat Label Hari (H-6 sampai H-0)
-    let labels = [];
-    let dataPoin = [];
-    for (let i = 6; i >= 0; i--) {
-        let d = new Date();
-        d.setDate(d.getDate() - i);
-        labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
-        dataPoin.push(salesData[i] || 0);
-    }
-
-    this.chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Omzet Penjualan (Rp)',
-                data: dataPoin,
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                borderWidth: 3,
-                pointBackgroundColor: '#0d6efd',
-                fill: true,
-                tension: 0.4 // Membuat garisnya melengkung halus (smooth curve)
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: { beginAtZero: true }
-            }
+        if (labels.length === 0) {
+            labels = ['Belum ada transaksi'];
+            dataPoin = [1];
         }
-    });
-},
+
+        this.paymentChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataPoin,
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#e2e8f0'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } }, cutout: '70%' }
+        });
+    },
+
+    renderChart(salesData) {
+        // 🌟 PENGAMAN GANDA: Jika layarnya bukan dashboard, JANGAN GAMBAR!
+        if (this.currentView !== 'dashboard') return;
+
+        const ctx = document.getElementById('salesChart');
+        if (!ctx) return;
+
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+        }
+
+        let labels = [];
+        let dataPoin = [];
+        for (let i = 6; i >= 0; i--) {
+            let d = new Date();
+            d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }));
+            dataPoin.push(salesData[i] || 0);
+        }
+
+        this.chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Omzet Penjualan (Rp)', data: dataPoin, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', borderWidth: 3, pointBackgroundColor: '#0d6efd', fill: true, tension: 0.4 
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    },
 
       async saveIdentifierGroup() {
         // 1. Validasi Input Kosong
