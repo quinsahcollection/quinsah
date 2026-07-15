@@ -686,70 +686,77 @@ body.sidebar-open {
     <div v-else class="app-container d-print-none">
         
         <aside class="sidebar-left">
-            <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
-            
-            <div class="menu-scroll-area">
-                
-                <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'" v-if="hasAccess('dashboard', 'read')">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </div>
-                <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
-                    <i class="bi bi-display"></i> POS
-                </div>
+    <div class="logo-icon fw-bold"><i class="bi bi-gem"></i></div>
+    
+    <div class="menu-scroll-area">
+        
+        <!-- Asumsi: Dashboard tidak ada di matriks, mungkin bisa dibiarkan 'dashboard' asal Admin saja yg bisa -->
+        <div class="nav-icon" :class="{'active': currentView === 'dashboard'}" @click="currentView = 'dashboard'" v-if="hasAccess('dashboard', 'read')">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </div>
 
-                <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
-                    <i class="bi bi-cash-coin"></i> Kasir
-                </div>
-              
-                <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
-                    <i class="bi bi-cart-plus"></i> Pembelian
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="hasAccess('catalog', 'read')">
-                    <i class="bi bi-tags"></i> Master
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
-                    <i class="bi bi-box-seam"></i> Inventori
-                </div>
+        <div class="nav-icon" :class="{'active': currentView === 'pos'}" @click="currentView = 'pos'" v-if="hasAccess('pos', 'read')">
+            <i class="bi bi-display"></i> POS
+        </div>
 
-                <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('inventory', 'read')">
-                    <i class="bi bi-clipboard2-check"></i> Opname
-                </div>
+        <!-- Jika POS & Kasir adalah modul yang sama, biarkan ID-nya sama. Tapi jika beda baris di matriks, pisahkan! -->
+        <div class="nav-icon" :class="{'active': currentView === 'cash_register'}" @click="currentView = 'cash_register'" v-if="hasAccess('pos', 'read')">
+            <i class="bi bi-cash-coin"></i> Kasir
+        </div>
+      
+        <div class="nav-icon" :class="{'active': currentView === 'purchase'}" @click="currentView = 'purchase'" v-if="hasAccess('purchase', 'read')">
+            <i class="bi bi-cart-plus"></i> Pembelian
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'catalog'}" @click="currentView = 'catalog'" v-if="hasAccess('catalog', 'read')">
+            <i class="bi bi-tags"></i> Master
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'inventory'}" @click="currentView = 'inventory'" v-if="hasAccess('inventory', 'read')">
+            <i class="bi bi-box-seam"></i> Inventori
+        </div>
 
-                <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('inventory', 'read')">
-                    <i class="bi bi-arrow-left-right"></i> Transfer
-                </div>
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'opname' atau ID yg sesuai di appModules -->
+        <div class="nav-icon" :class="{'active': currentView === 'opname'}" @click="currentView = 'opname'" v-if="hasAccess('opname', 'read')">
+            <i class="bi bi-clipboard2-check"></i> Opname
+        </div>
 
-                <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('inventory', 'read')">
-                    <i class="bi bi-qr-code-scan"></i> Barcode
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
-                    <i class="bi bi-people"></i> CRM
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="hasAccess('outlets', 'read')">
-                    <i class="bi bi-shop"></i> Outlets
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'sales'}" @click="currentView = 'sales'" v-if="hasAccess('sales', 'read')">
-                    <i class="bi bi-receipt"></i> Penjualan
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'payment'}" @click="currentView = 'payment'" v-if="hasAccess('sales', 'read')">
-                    <i class="bi bi-bank"></i> Payment
-                </div>
-                
-                <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
-                    <i class="bi bi-graph-up-arrow"></i> Laporan
-                </div>
-                
-                <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
-                    <i class="bi bi-gear"></i> Setelan
-                </div>
-            </div>
-        </aside>
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'transfer' -->
+        <div class="nav-icon" :class="{'active': currentView === 'transfer'}" @click="currentView = 'transfer'" v-if="hasAccess('transfer', 'read')">
+            <i class="bi bi-arrow-left-right"></i> Transfer
+        </div>
+
+        <!-- 🌟 PERBAIKAN: Ganti 'inventory' jadi 'barcode' -->
+        <div class="nav-icon" :class="{'active': currentView === 'barcode'}" @click="currentView = 'barcode'" v-if="hasAccess('barcode', 'read')">
+            <i class="bi bi-qr-code-scan"></i> Barcode
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'crm'}" @click="currentView = 'crm'" v-if="hasAccess('crm', 'read')">
+            <i class="bi bi-people"></i> Pelanggan
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'outlets'}" @click="currentView = 'outlets'" v-if="hasAccess('outlets', 'read')">
+            <i class="bi bi-shop"></i> Outlets
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'sales'}" @click="currentView = 'sales'" v-if="hasAccess('sales', 'read')">
+            <i class="bi bi-receipt"></i> Penjualan
+        </div>
+        
+        <!-- 🌟 PERBAIKAN: Jika Payment beda baris di matriks, ganti 'sales' jadi 'payment' -->
+        <div class="nav-icon" :class="{'active': currentView === 'payment'}" @click="currentView = 'payment'" v-if="hasAccess('payment', 'read')">
+            <i class="bi bi-bank"></i> Payment
+        </div>
+        
+        <div class="nav-icon" :class="{'active': currentView === 'reports'}" @click="currentView = 'reports'" v-if="hasAccess('reports', 'read')">
+            <i class="bi bi-graph-up-arrow"></i> Laporan
+        </div>
+        
+        <div class="nav-icon mt-auto" :class="{'active': currentView === 'settings'}" @click="currentView = 'settings'" v-if="hasAccess('settings', 'read')">
+            <i class="bi bi-gear"></i> Setelan
+        </div>
+    </div>
+</aside>
 
         <main class="main-content">
             
