@@ -4716,6 +4716,17 @@ body.sidebar-open {
             </select>
         </div>
 
+        <!-- 🌟 KODE BARU: Kotak Filter Tipe Pesanan -->
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold text-muted mb-1">Tipe Pesanan</label>
+            <select class="form-select form-select-sm shadow-none border-info" v-model="salesOrderTypeFilter">
+                <option value="">-- Semua Tipe --</option>
+                <option value="direct">Store (Bawa Langsung)</option>
+                <option value="delivery">Kirim (Delivery)</option>
+                <option value="pre_order">Pre-Order (PO)</option>
+            </select>
+        </div>
+        
         <div class="col-6 col-md-2">
             <label class="form-label small fw-bold text-muted mb-1">Dari Tgl</label>
             <input type="date" class="form-control form-control-sm shadow-none" v-model="transactionStartDate">
@@ -8043,6 +8054,7 @@ body.sidebar-open {
 
                 salesOutletFilter: '',  
                 salesStatusFilter: '',  
+                salesOrderTypeFilter: '', // 🌟 KODE BARU: Untuk filter tipe pesanan
 
                 selectedCustomer: null, 
                 customerSearchQuery: '', 
@@ -8681,6 +8693,17 @@ beforeDestroy() {
                         // Untuk LUNAS
                         list = list.filter(trx => trx.paymentStatus === this.salesStatusFilter);
                     }
+                }
+
+                // =======================================================
+                // 🌟 3.5 KODE BARU: FILTER TIPE PESANAN (KIRIM/STORE/PO)
+                // =======================================================
+                if (this.salesOrderTypeFilter) {
+                    list = list.filter(trx => {
+                        // Jika transaksi lama tidak punya data orderType, anggap saja 'direct' (Store)
+                        let type = trx.orderType || 'direct'; 
+                        return type === this.salesOrderTypeFilter;
+                    });
                 }
 
                 // 4. FILTER PENCARIAN TEKS (Invoice/Nama)
@@ -9732,6 +9755,7 @@ beforeDestroy() {
                 this.reportSearchQuery = '';
                 this.salesOutletFilter = '';
                 this.salesStatusFilter = '';
+                this.salesOrderTypeFilter = '';
             },
             
         // 1. FUNGSI PENGAMAN: Saat kasir mengetik nominal pokok baru
