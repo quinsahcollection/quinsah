@@ -9972,43 +9972,52 @@ getServiceTime(dateStr) {
             // 🌟 KODE BARU: Update status dan TANGGAL dari Kanban Board
 async updateFulfillmentStatus(trx, newStatus) {
     try {
-        // 1. Ambil waktu saat tombol diklik
-        const now = new Date().toLocaleString('id-ID'); 
+        // 1. Ambil waktu saat tombol diklik (dalam format yang mudah dibaca)
+        const now = new Date();
+        const formattedDate = now.toLocaleString('id-ID'); // Format: 16/7/2026, 20.13.42
 
         // 2. Update tampilan lokal secara instan (agar UI terasa cepat tanpa loading)
         trx.fulfillmentStatus = newStatus;
-        trx.fulfillmentUpdatedAt = now; 
-
-        // 🌟 SINKRONKAN TIMER SECARA INSTAN DI SINI
-        this.currentTimeTick = new Date();
+        trx.fulfillmentUpdatedAt = formattedDate; 
+        
+        // 3. Paksa timer di layar agar update ke '0m' secara instan
+        this.currentTimeTick = new Date(); 
         
         // =======================================================
-        // 3. SIMPAN PERUBAHAN KE DATABASE FIREBASE
+        // 4. SIMPAN PERUBAHAN KE DATABASE FIREBASE
         // =======================================================
-        // Pastikan Anda sudah meng-import fungsi Firebase yang dibutuhkan
-        // (Biasanya ada di bagian paling atas script Anda, atau bisa di-import langsung seperti ini)
+        // Pastikan 'db' sudah di-import atau didefinisikan di komponen Anda
         const { doc, updateDoc } = await import('firebase/firestore'); 
         
-        // Arahkan ke koleksi transaksi Anda (pastikan nama koleksinya benar, misal: "transactions")
+        // Referensi dokumen berdasarkan ID transaksi
+        // Sesuaikan "transactions" dengan nama koleksi di Firestore Anda
         const trxRef = doc(db, "transactions", trx.id); 
         
         // Simpan data terbaru ke server
         await updateDoc(trxRef, { 
             fulfillmentStatus: newStatus,
-            fulfillmentUpdatedAt: now 
+            fulfillmentUpdatedAt: formattedDate,
+            // (Opsional) Tambahkan serverTimestamp jika ingin akurasi waktu dari server
+            // updatedAt: serverTimestamp() 
         });
+
+        // Opsional: Berikan feedback ke user (bisa dihilangkan jika dirasa mengganggu)
+        console.log(`Status ${trx.id} berhasil diupdate ke ${newStatus}`);
 
     } catch (error) {
         console.error("Gagal update status fulfillment ke database:", error);
+        
+        // Tampilkan pesan error jika gagal
         Swal.fire({
             title: 'Gagal Menyimpan',
-            text: 'Perubahan status gagal disimpan ke server. Coba lagi.',
+            text: 'Terjadi kesalahan saat menyimpan ke server. Silakan coba lagi.',
             icon: 'error',
             toast: true,
-            position: 'top-end'
+            position: 'top-end',
+            timer: 3000
         });
     }
-},
+}, 
             
             askConfirm(title, message, callback) {
                 this.confirmTitle = title;
