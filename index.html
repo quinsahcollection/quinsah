@@ -4883,7 +4883,7 @@ body.sidebar-open {
                         <span class="small fw-semibold">Belum ada pesanan</span>
                     </div>
                     
-                    <div v-for="trx in fulfillmentOrders.new" :key="trx.id" class="card border-0 border-start border-4 border-danger shadow-sm mb-3">
+                    <div v-for="trx in fulfillmentOrders.new" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
@@ -4891,7 +4891,12 @@ body.sidebar-open {
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
                                     <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
                                 </div>
-                                <button class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PICK')">PICK <i class="bi bi-arrow-right"></i></button>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
+                                    </span>
+                                    <button class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PICK')">PICK <i class="bi bi-arrow-right"></i></button>
+                                </div>
                             </div>
                             <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
@@ -4919,7 +4924,7 @@ body.sidebar-open {
                         <span class="small fw-semibold">Kosong</span>
                     </div>
 
-                    <div v-for="trx in fulfillmentOrders.pick" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" style="border-color: #fd7e14 !important;">
+                    <div v-for="trx in fulfillmentOrders.pick" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
@@ -4927,7 +4932,12 @@ body.sidebar-open {
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
                                     <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
                                 </div>
-                                <button class="btn btn-sm text-white py-0 px-2 fw-bold" style="font-size: 0.7rem; background-color: #fd7e14;" @click="updateFulfillmentStatus(trx, 'PACK')">PACK <i class="bi bi-arrow-right"></i></button>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
+                                    </span>
+                                    <button class="btn btn-sm text-white py-0 px-2 fw-bold" style="font-size: 0.7rem; background-color: #fd7e14;" @click="updateFulfillmentStatus(trx, 'PACK')">PACK <i class="bi bi-arrow-right"></i></button>
+                                </div>
                             </div>
                             <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
@@ -4955,7 +4965,7 @@ body.sidebar-open {
                         <span class="small fw-semibold">Kosong</span>
                     </div>
 
-                    <div v-for="trx in fulfillmentOrders.pack" :key="trx.id" class="card border-0 border-start border-4 border-info shadow-sm mb-3">
+                    <div v-for="trx in fulfillmentOrders.pack" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
@@ -4963,7 +4973,12 @@ body.sidebar-open {
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
                                     <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
                                 </div>
-                                <button class="btn btn-sm btn-info text-dark py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'SHIP')">SHIP <i class="bi bi-arrow-right"></i></button>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
+                                    </span>
+                                    <button class="btn btn-sm btn-info text-dark py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'SHIP')">SHIP <i class="bi bi-arrow-right"></i></button>
+                                </div>
                             </div>
                             <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
@@ -4991,7 +5006,7 @@ body.sidebar-open {
                         <span class="small fw-semibold">Kosong</span>
                     </div>
 
-                    <div v-for="trx in fulfillmentOrders.ship" :key="trx.id" class="card border-0 border-start border-4 border-primary shadow-sm mb-3">
+                    <div v-for="trx in fulfillmentOrders.ship" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
@@ -4999,7 +5014,12 @@ body.sidebar-open {
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
                                     <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
                                 </div>
-                                <button class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'COMPLETED')"><i class="bi bi-check2-all me-1"></i>SELESAI</button>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
+                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
+                                    </span>
+                                    <button class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'COMPLETED')"><i class="bi bi-check2-all me-1"></i>SELESAI</button>
+                                </div>
                             </div>
                             <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
@@ -9867,6 +9887,44 @@ fulfillmentOrders() {
             // Simpan versi saat ini ke penyimpanan HP agar banner tidak muncul terus
             localStorage.setItem('queen_pos_last_version', this.currentAppVersion);
         },
+
+    // Fungsi untuk memecah format tanggal seperti '16/7/2026, 18.45.52' menjadi objek Date
+parseDateStr(dateStr) {
+    if (!dateStr) return new Date();
+    try {
+        // Membersihkan string dan mengubah titik menjadi titik dua untuk waktu
+        let cleanStr = dateStr.replace(/\./g, ':').replace(',', '');
+        let [datePart, timePart] = cleanStr.split(' ');
+        let [day, month, year] = datePart.split('/');
+        let [hours, minutes, seconds] = timePart.split(':');
+        
+        // Month di Javascript dimulai dari 0 (Jan = 0)
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    } catch (e) {
+        return new Date(); // Fallback jika gagal diproses
+    }
+},
+
+// Fungsi untuk menentukan indikator warna dan label waktu
+getServiceTime(dateStr) {
+    const pastDate = this.parseDateStr(dateStr);
+    const now = new Date();
+    const diffMs = now - pastDate; // Selisih dalam milidetik
+    
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffHours < 1) {
+        // Kurang dari 1 Jam = HIJAU
+        return { class: 'bg-success', label: diffMinutes + 'm', color: '#198754' };
+    } else if (diffHours < 24) {
+        // 1 sampai 24 Jam = KUNING/ORANGE
+        return { class: 'bg-warning text-dark', label: Math.floor(diffHours) + 'h', color: '#ffc107' };
+    } else {
+        // Lebih dari 24 Jam = MERAH
+        return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
+    }
+},
 
     playBeep() {
     try {
