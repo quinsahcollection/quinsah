@@ -4741,7 +4741,8 @@ body.sidebar-open {
                     <th>Cabang</th> 
                     <th>Kasir / PIC</th> 
                     <th>Pelanggan</th>
-                    <th>Status</th> 
+                    <th>Status</th>
+                    <th>Tipe / Kirim</th>
                     <th>Pembayaran</th>
                     <th>Total</th>
                     <th class="text-center">Aksi Lanjutan</th>
@@ -4767,6 +4768,20 @@ body.sidebar-open {
                     <td class="small cursor-pointer text-primary text-decoration-underline" @click="openCustomerDetail({id: trx.customerId, name: trx.customer})">
                         {{ trx.customer }}
                     </td>
+
+                    <td>
+                        <div class="d-flex flex-column gap-1 align-items-start">
+                            <!-- Label Tipe Pesanan -->
+                            <span class="badge bg-info text-dark border" v-if="trx.orderType === 'delivery'"><i class="bi bi-truck me-1"></i>Kirim</span>
+                            <span class="badge bg-warning text-dark border" v-else-if="trx.orderType === 'pre_order'"><i class="bi bi-hourglass-split me-1"></i>PO</span>
+                            <span class="badge bg-light text-dark border" v-else><i class="bi bi-bag-check me-1"></i>Store</span>
+                            
+                            <!-- Label Status Fulfillment (Hanya muncul jika bukan tipe Store/Bawa Langsung) -->
+                            <span class="badge bg-danger" style="font-size: 0.6rem;" v-if="(trx.orderType === 'delivery' || trx.orderType === 'pre_order') && trx.fulfillmentStatus === 'NEW'">Perlu Diproses</span>
+                            <span class="badge bg-success" style="font-size: 0.6rem;" v-else-if="(trx.orderType === 'delivery' || trx.orderType === 'pre_order') && trx.fulfillmentStatus === 'COMPLETED'">Terkirim</span>
+                        </div>
+                    </td>
+                    
                     <td>
                         <span class="badge border" :class="getPaymentStatusColor(trx.paymentStatus)">
                             {{ trx.paymentStatus || 'LUNAS' }}
