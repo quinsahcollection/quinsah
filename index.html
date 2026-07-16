@@ -5172,33 +5172,39 @@ body.sidebar-open {
             </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 border-bottom pb-2">
-                <h6 class="fw-bold mb-0">Keranjang</h6>
-                
-                <div class="d-flex flex-nowrap align-items-center gap-1 ms-auto">
-                    
-                    <button class="btn btn-sm btn-outline-info border p-1 px-2 position-relative" @click="openModal('holdModal')" title="Lihat Daftar Hold">
-                        <i class="bi bi-card-list"></i>
-                        
-                        <span v-if="heldTransactions.length > 0" 
-                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm" 
-                              style="font-size: 0.65rem; padding: 0.25em 0.45em; z-index: 5;">
-                            {{ heldTransactions.length }}
-                        </span>
-                    </button>
-                    
-                    <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi/Simpan Sementara">
-                        <i class="bi bi-pause-circle"></i>
-                    </button>
-                    
-                    <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="resetPos" title="Batalkan/Kosongkan Keranjang & Reset Nomor Invoice">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                    
-                    <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false">
-                        <i class="bi bi-x-lg text-dark"></i>
-                    </button>         
-                </div>
-            </div>
+    <h6 class="fw-bold mb-0">Keranjang</h6>
+    
+    <div class="d-flex flex-nowrap align-items-center gap-1 ms-auto">
+        
+        <!-- 🌟 KODE BARU: Pilih Tipe Pesanan (Kompak & Hemat Tempat) -->
+        <select class="form-select form-select-sm border-0 bg-light fw-bold text-primary" 
+                v-model="posOrderType" 
+                style="width: 100px; font-size: 0.7rem; cursor: pointer;">
+            <option value="direct">🛍️ Store</option>
+            <option value="delivery">🚚 Kirim</option>
+            <option value="pre_order">⏳ PO</option>
+        </select>
+        
+        <button class="btn btn-sm btn-outline-info border p-1 px-2 position-relative" @click="openModal('holdModal')" title="Lihat Daftar Hold">
+            <i class="bi bi-card-list"></i>
+            <span v-if="heldTransactions.length > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm" style="font-size: 0.65rem; padding: 0.25em 0.45em; z-index: 5;">
+                {{ heldTransactions.length }}
+            </span>
+        </button>
+        
+        <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi">
+            <i class="bi bi-pause-circle"></i>
+        </button>
+        
+        <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="resetPos" title="Batalkan">
+            <i class="bi bi-trash"></i>
+        </button>
+        
+        <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false">
+            <i class="bi bi-x-lg text-dark"></i>
+        </button>         
+    </div>
+</div>
            
             <div class="mb-2 pb-2 border-bottom">
                 <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
@@ -7987,7 +7993,8 @@ body.sidebar-open {
                     surchargeType: 'nominal', 
                     isActive: true
                 },
-                
+
+                posOrderType: 'direct', // direct (Langsung), delivery (Kirim), pre_order (PO)
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
                 activeBatchProduct: {},
