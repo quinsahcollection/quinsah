@@ -9980,11 +9980,11 @@ getServiceTime(dateStr) {
             // 🌟 KODE BARU: Update status dan TANGGAL dari Kanban Board
 async updateFulfillmentStatus(trx, newStatus) {
     try {
-        // 1. Ambil waktu saat tombol diklik (dalam format yang mudah dibaca)
+        // 1. Ambil waktu saat tombol diklik
         const now = new Date();
-        const formattedDate = now.toLocaleString('id-ID'); // Format: 16/7/2026, 20.13.42
+        const formattedDate = now.toLocaleString('id-ID');
 
-        // 2. Update tampilan lokal secara instan (agar UI terasa cepat tanpa loading)
+        // 2. Update tampilan lokal secara instan
         trx.fulfillmentStatus = newStatus;
         trx.fulfillmentUpdatedAt = formattedDate; 
         
@@ -9994,28 +9994,15 @@ async updateFulfillmentStatus(trx, newStatus) {
         // =======================================================
         // 4. SIMPAN PERUBAHAN KE DATABASE FIREBASE
         // =======================================================
-        // Pastikan 'db' sudah di-import atau didefinisikan di komponen Anda
-        const { doc, updateDoc } = await import('firebase/firestore'); 
-        
-        // Referensi dokumen berdasarkan ID transaksi
-        // Sesuaikan "transactions" dengan nama koleksi di Firestore Anda
-        const trxRef = doc(db, "transactions", trx.id); 
-        
-        // Simpan data terbaru ke server
-        await updateDoc(trxRef, { 
+        // Menggunakan format yang sama dengan script Anda yang lain
+        await updateDoc(doc(db, "transactions", trx.id), { 
             fulfillmentStatus: newStatus,
-            fulfillmentUpdatedAt: formattedDate,
-            // (Opsional) Tambahkan serverTimestamp jika ingin akurasi waktu dari server
-            // updatedAt: serverTimestamp() 
+            fulfillmentUpdatedAt: formattedDate
         });
-
-        // Opsional: Berikan feedback ke user (bisa dihilangkan jika dirasa mengganggu)
-        console.log(`Status ${trx.id} berhasil diupdate ke ${newStatus}`);
 
     } catch (error) {
         console.error("Gagal update status fulfillment ke database:", error);
         
-        // Tampilkan pesan error jika gagal
         Swal.fire({
             title: 'Gagal Menyimpan',
             text: 'Terjadi kesalahan saat menyimpan ke server. Silakan coba lagi.',
