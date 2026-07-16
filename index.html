@@ -9925,26 +9925,29 @@ parseDateStr(dateStr) {
 
 // Fungsi untuk menentukan indikator warna dan label waktu
 getServiceTime(dateStr) {
-        const pastDate = this.parseDateStr(dateStr);
-        
-        // GUNAKAN VARIABEL REAKTIF DI SINI 👇
-        const now = this.currentTimeTick; 
-        
-        const diffMs = now - pastDate;
-        const diffHours = diffMs / (1000 * 60 * 60);
-        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const pastDate = this.parseDateStr(dateStr);
+    const now = this.currentTimeTick; 
+    
+    // Hitung selisih waktu
+    const diffMs = now - pastDate;
+    
+    // MENCEGAH MINUS: Jika diffMs minus, jadikan 0
+    const safeDiffMs = Math.max(0, diffMs); 
+    
+    const diffHours = safeDiffMs / (1000 * 60 * 60);
+    const diffMinutes = Math.floor(safeDiffMs / (1000 * 60));
 
-        if (diffHours < 1) {
-            // Kurang dari 1 Jam = HIJAU
-            return { class: 'bg-success', label: diffMinutes + 'm', color: '#198754' };
-        } else if (diffHours < 24) {
-            // 1 sampai 24 Jam = KUNING/ORANGE
-            return { class: 'bg-warning text-dark', label: Math.floor(diffHours) + 'h', color: '#ffc107' };
-        } else {
-            // Lebih dari 24 Jam = MERAH
-            return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
-        }
-    },
+    if (diffHours < 1) {
+        // Kurang dari 1 Jam = HIJAU
+        return { class: 'bg-success', label: diffMinutes + 'm', color: '#198754' };
+    } else if (diffHours < 24) {
+        // 1 sampai 24 Jam = KUNING/ORANGE
+        return { class: 'bg-warning text-dark', label: Math.floor(diffHours) + 'h', color: '#ffc107' };
+    } else {
+        // Lebih dari 24 Jam = MERAH
+        return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
+    }
+},
 
     playBeep() {
     try {
@@ -9969,19 +9972,21 @@ getServiceTime(dateStr) {
             // 🌟 KODE BARU: Update status dan TANGGAL dari Kanban Board
 async updateFulfillmentStatus(trx, newStatus) {
     try {
-        // Ambil waktu saat tombol diklik
         const now = new Date().toLocaleString('id-ID'); 
 
-        // Jika Anda pakai Firebase online, hapus // pada baris di bawah ini:
-        // const { doc, updateDoc } = await import('firebase/firestore');
-        // await updateDoc(doc(db, "transactions", trx.id), { 
+        trx.fulfillmentStatus = newStatus;
+        trx.fulfillmentUpdatedAt = now; 
+        
+        // 🌟 SINKRONKAN TIMER SECARA INSTAN DI SINI
+        this.currentTimeTick = new Date(); 
+        
+        // ... (Kode penyimpanan Firebase Anda di bawahnya tetap sama) ...
+        // const { doc, updateDoc } = await import('firebase/firestore'); 
+        // const trxRef = doc(db, "transactions", trx.id); 
+        // await updateDoc(trxRef, { 
         //     fulfillmentStatus: newStatus,
         //     fulfillmentUpdatedAt: now 
         // });
-        
-        // Update tampilan lokal secara instan
-        trx.fulfillmentStatus = newStatus;
-        trx.fulfillmentUpdatedAt = now; // 👈 Waktu proses di-update!
         
     } catch (error) {
         console.error("Gagal update status fulfillment:", error);
