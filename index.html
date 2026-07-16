@@ -15283,6 +15283,10 @@ let item = {
                 cashierName: finalCashierName,
                 shiftId: finalShiftId,
                 registerName: finalRegisterName,
+
+                // 🌟 KODE BARU: Masukkan Tipe Pesanan dan Status Fulfillment ke Database
+                orderType: this.posOrderType || 'direct', 
+                fulfillmentStatus: fStatus,
                 
                 paymentMethod: finalPaymentMethod,
                 splitPayments: finalSplitPayments,
@@ -15651,6 +15655,9 @@ let item = {
             this.paymentData = { method: 'CASH', amountReceived: 0, note: '' };
             this.isSplitPayment = false; 
             this.splitPayments = [];     
+
+            // 🌟 KODE BARU: Kembalikan select box pesanan ke default (Store)
+            this.posOrderType = 'direct';
             
             Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
 
@@ -15672,6 +15679,8 @@ let item = {
                 customer: this.selectedCustomer,
                 total: this.total,
                 totalQty: this.totalQty,
+                // 🌟 KODE BARU: Simpan Tipe Pesanan ke dalam memori antrian (Hold)
+                orderType: this.posOrderType || 'direct',
                 time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
             });
             
@@ -15680,6 +15689,9 @@ let item = {
             this.selectedCustomer = null;
             this.globalDiscountValue = 0;
             this.globalDiscountType = 'none';
+
+            // 🌟 KODE BARU: Kembalikan tipe pesanan ke Store untuk pelanggan baru
+            this.posOrderType = 'direct';
             
             // 3. GENERATE INVOICE BARU untuk pelanggan berikutnya
             this.posCustomInvoice = this.generateInvoiceNumber('pos');
@@ -15698,6 +15710,9 @@ let item = {
             this.cart = h.cart;
             this.selectedCustomer = h.customer;
             this.posCustomInvoice = h.invoice || this.generateInvoiceNumber('pos');
+
+            // 🌟 KODE BARU: Panggil dan pasang kembali Tipe Pesanan dari memori Hold
+            this.posOrderType = h.orderType || 'direct';
             
             // Hapus dari daftar antrian
             this.heldTransactions.splice(index, 1);
