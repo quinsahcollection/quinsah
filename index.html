@@ -5703,7 +5703,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- MODAL DETAIL VARIAN (MODE VIEWER/READ-ONLY) -->
+                <!-- MODAL DETAIL VARIAN (MODE VIEWER/READ-ONLY) -->
         <div class="modal fade variant-detail-modal" id="variantDetailModal" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-sm">
                 <div class="modal-content border-0 shadow-lg">
@@ -5712,9 +5712,21 @@ body.sidebar-open {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4 bg-white" v-if="variantDetail.v && variantDetail.p">
-                        <div class="text-center mb-3">
-                            <img :src="variantDetail.v.imageBase64 || variantDetail.p.imageBase64 || 'https://via.placeholder.com/100'" width="100" height="100" class="rounded object-fit-cover shadow-sm border">
+                        
+                        <!-- 👇 BAGIAN GAMBAR YANG SUDAH DIPERBAIKI 👇 -->
+                        <div class="text-center mb-3 d-flex justify-content-center">
+                            <template v-if="(variantDetail.v.imageBase64 || variantDetail.p.imageBase64) && (variantDetail.v.imageBase64 || variantDetail.p.imageBase64).trim() !== ''">
+                                <img :src="variantDetail.v.imageBase64 || variantDetail.p.imageBase64" width="100" height="100" class="rounded object-fit-cover shadow-sm border" @error="variantDetail.v.imageBase64 = ''; variantDetail.p.imageBase64 = ''">
+                            </template>
+                            <template v-else>
+                                <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary rounded" style="width: 100px; height: 100px;">
+                                    <i class="bi bi-box-seam" style="font-size: 2rem; margin-bottom: 2px;"></i>
+                                    <span style="font-size: 0.7rem; font-weight: 500;">NO IMAGE</span>
+                                </div>
+                            </template>
                         </div>
+                        <!-- 👆 SELESAI BAGIAN GAMBAR 👆 -->
+
                         <div class="mb-2 text-center">
                             <h6 class="fw-bold text-primary-custom mb-1">{{ variantDetail.v.name || variantDetail.v.attributes }}</h6>
                             <span class="badge bg-dark font-monospace text-white">{{ variantDetail.v.variantSku || variantDetail.p.sku || '-' }}</span>
