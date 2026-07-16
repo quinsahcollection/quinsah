@@ -8285,6 +8285,9 @@ body.sidebar-open {
                 salesOrderTypeFilter: '', // 🌟 KODE BARU: Untuk filter tipe pesanan
                 fulfillmentOutletFilter: '', // Filter cabang khusus di halaman Fulfillment
 
+                currentTimeTick: new Date(), // Variabel reaktif untuk pemicu waktu
+                timerInterval: null,          // Untuk menyimpan ID interval agar bisa dibersihkan
+                
                 selectedCustomer: null, 
                 customerSearchQuery: '', 
                 showCustomerDropdown: false, // Mengontrol tampil/hilangnya list pencarian
@@ -8517,7 +8520,15 @@ body.sidebar-open {
         });
           
     this.resetPosDate();
-    
+
+    // =========================================================
+    // 🌟 TAMBAHAN BARU: TIMER UNTUK INDIKATOR WAKTU KANBAN
+    // =========================================================
+    this.currentTimeTick = new Date(); // Inisialisasi awal saat dimuat
+    this.timerInterval = setInterval(() => {
+        this.currentTimeTick = new Date();
+    }, 60000); // Berdetak dan memperbarui waktu setiap 1 menit (60.000 ms)
+            
     // [TETAP] Simpan reference ke fungsi agar bisa dihapus nanti
     this._modalListener = (event) => {
         if (document.querySelectorAll('.modal.show').length > 0) { 
@@ -8563,6 +8574,13 @@ body.sidebar-open {
 
 // [TETAP] Pembersihan sisa listener saat ganti halaman utama
 beforeDestroy() {
+    // =========================================================
+    // 🌟 TAMBAHAN BARU: BERSIHKAN TIMER KANBAN
+    // =========================================================
+    if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+    }
+
     if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
     if (this._printListener) window.removeEventListener('afterprint', this._printListener);
     if (this._authUnsubscribe) this._authUnsubscribe(); 
@@ -9907,24 +9925,26 @@ parseDateStr(dateStr) {
 
 // Fungsi untuk menentukan indikator warna dan label waktu
 getServiceTime(dateStr) {
-    const pastDate = this.parseDateStr(dateStr);
-    const now = new Date();
-    const diffMs = now - pastDate; // Selisih dalam milidetik
-    
-    const diffHours = diffMs / (1000 * 60 * 60);
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const pastDate = this.parseDateStr(dateStr);
+        
+        // GUNAKAN VARIABEL REAKTIF DI SINI 👇
+        const now = this.currentTimeTick; 
+        
+        const diffMs = now - pastDate;
+        const diffHours = diffMs / (1000 * 60 * 60);
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-    if (diffHours < 1) {
-        // Kurang dari 1 Jam = HIJAU
-        return { class: 'bg-success', label: diffMinutes + 'm', color: '#198754' };
-    } else if (diffHours < 24) {
-        // 1 sampai 24 Jam = KUNING/ORANGE
-        return { class: 'bg-warning text-dark', label: Math.floor(diffHours) + 'h', color: '#ffc107' };
-    } else {
-        // Lebih dari 24 Jam = MERAH
-        return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
-    }
-},
+        if (diffHours < 1) {
+            // Kurang dari 1 Jam = HIJAU
+            return { class: 'bg-success', label: diffMinutes + 'm', color: '#198754' };
+        } else if (diffHours < 24) {
+            // 1 sampai 24 Jam = KUNING/ORANGE
+            return { class: 'bg-warning text-dark', label: Math.floor(diffHours) + 'h', color: '#ffc107' };
+        } else {
+            // Lebih dari 24 Jam = MERAH
+            return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
+        }
+    },
 
     playBeep() {
     try {
