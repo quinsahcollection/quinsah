@@ -4870,74 +4870,135 @@ body.sidebar-open {
     </div>
 
     <!-- Area Papan Kanban (Bisa di-scroll ke samping) -->
-    <div class="row flex-grow-1 flex-nowrap overflow-auto pb-3 mx-0 px-2" style="min-height: 65vh; scroll-snap-type: x mandatory;">
-        
-        <!-- 📦 KOLOM 1: NEW (Pesanan Baru Masuk) -->
-        <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
-            <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-inbox text-danger me-1"></i> New (Baru)</h6>
-                    <span class="badge bg-danger rounded-pill shadow-sm">0</span>
-                </div>
-                <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                <div class="row flex-grow-1 flex-nowrap overflow-auto pb-3 mx-0 px-2" style="min-height: 65vh; scroll-snap-type: x mandatory;">
                     
-                    <!-- Placeholder Kartu Kosong -->
-                    <div class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <i class="bi bi-inbox fs-1 mb-2 d-block text-black-50"></i>
-                        <span class="small fw-semibold">Belum ada pesanan</span>
+                    <!-- 📦 KOLOM 1: NEW (Pesanan Baru Masuk) -->
+                    <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
+                        <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
+                            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-inbox text-danger me-1"></i> New (Baru)</h6>
+                                <span class="badge bg-danger rounded-pill shadow-sm">{{ fulfillmentOrders.new.length }}</span>
+                            </div>
+                            <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                                <div v-if="fulfillmentOrders.new.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
+                                    <i class="bi bi-inbox fs-1 mb-2 d-block text-black-50"></i>
+                                    <span class="small fw-semibold">Belum ada pesanan</span>
+                                </div>
+                                
+                                <!-- KARTU PESANAN: NEW -->
+                                <div v-for="trx in fulfillmentOrders.new" :key="trx.id" class="card border-0 border-start border-4 border-danger shadow-sm mb-3">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                                <div class="text-muted fw-semibold" style="font-size: 0.75rem;">{{ trx.customer }}</div>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PACKING')">PROSES</button>
+                                        </div>
+                                        <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
+                                            <div v-for="item in trx.items" :key="item.productId" class="d-flex border-bottom border-white pb-1 mb-1">
+                                                <span class="fw-bold me-2">{{ item.qty }}x</span>
+                                                <span class="text-truncate">{{ item.name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                </div>
+
+                    <!-- 🛠️ KOLOM 2: PICK & PACK (Sedang Disiapkan) -->
+                    <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
+                        <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
+                            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam text-warning me-1"></i> Pick & Pack</h6>
+                                <span class="badge bg-warning text-dark rounded-pill shadow-sm">{{ fulfillmentOrders.packing.length }}</span>
+                            </div>
+                            <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                                <div v-if="fulfillmentOrders.packing.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
+                                    <span class="small fw-semibold">Kosong</span>
+                                </div>
+
+                                <!-- KARTU PESANAN: PACKING -->
+                                <div v-for="trx in fulfillmentOrders.packing" :key="trx.id" class="card border-0 border-start border-4 border-warning shadow-sm mb-3">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                                <div class="text-muted fw-semibold" style="font-size: 0.75rem;">{{ trx.customer }}</div>
+                                            </div>
+                                            <button class="btn btn-sm btn-info text-white py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'READY')">SIAP KIRIM</button>
+                                        </div>
+                                        <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
+                                            <div v-for="item in trx.items" :key="item.productId" class="d-flex border-bottom border-white pb-1 mb-1">
+                                                <span class="fw-bold me-2">{{ item.qty }}x</span>
+                                                <span class="text-truncate">{{ item.name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 🚀 KOLOM 3: READY TO SHIP (Siap Kirim) -->
+                    <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
+                        <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
+                            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bicycle text-primary me-1"></i> Ready to Ship</h6>
+                                <span class="badge bg-primary rounded-pill shadow-sm">{{ fulfillmentOrders.ready.length }}</span>
+                            </div>
+                            <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                                <div v-if="fulfillmentOrders.ready.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
+                                    <span class="small fw-semibold">Kosong</span>
+                                </div>
+
+                                <!-- KARTU PESANAN: READY -->
+                                <div v-for="trx in fulfillmentOrders.ready" :key="trx.id" class="card border-0 border-start border-4 border-primary shadow-sm mb-3">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                                <div class="text-muted fw-semibold" style="font-size: 0.75rem;">{{ trx.customer }}</div>
+                                            </div>
+                                            <button class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'COMPLETED')">SELESAI</button>
+                                        </div>
+                                        <div class="bg-light p-2 rounded small text-muted" style="font-size: 0.75rem;">
+                                            {{ trx.items.length }} Jenis Item
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ KOLOM 4: COMPLETED (Selesai) -->
+                    <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
+                        <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
+                            <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-check-circle text-success me-1"></i> Completed</h6>
+                                <span class="badge bg-success rounded-pill shadow-sm">{{ fulfillmentOrders.completed.length }}</span>
+                            </div>
+                            <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                                <div v-if="fulfillmentOrders.completed.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
+                                    <span class="small fw-semibold">Kosong</span>
+                                </div>
+
+                                <!-- KARTU PESANAN: COMPLETED -->
+                                <div v-for="trx in fulfillmentOrders.completed" :key="trx.id" class="card border-0 border-start border-4 border-success shadow-sm mb-2 opacity-75">
+                                    <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a href="#" class="fw-bold text-decoration-underline text-success small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                            <div class="text-muted fw-semibold" style="font-size: 0.7rem;">{{ trx.customer }}</div>
+                                        </div>
+                                        <i class="bi bi-check-all fs-4 text-success"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
             </div>
         </div>
-
-        <!-- 🛠️ KOLOM 2: PICK & PACK (Sedang Disiapkan) -->
-        <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
-            <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam text-warning me-1"></i> Pick & Pack</h6>
-                    <span class="badge bg-warning text-dark rounded-pill shadow-sm">0</span>
-                </div>
-                <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 🚀 KOLOM 3: READY TO SHIP (Siap Kirim) -->
-        <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
-            <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bicycle text-primary me-1"></i> Ready to Ship</h6>
-                    <span class="badge bg-primary rounded-pill shadow-sm">0</span>
-                </div>
-                <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ✅ KOLOM 4: COMPLETED (Selesai) -->
-        <div class="col-11 col-md-5 col-lg-3 px-2" style="scroll-snap-align: start; min-width: 320px;">
-            <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-1 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-check-circle text-success me-1"></i> Completed</h6>
-                    <span class="badge bg-success rounded-pill shadow-sm">0</span>
-                </div>
-                <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
 </main>
 
 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
@@ -8446,6 +8507,27 @@ beforeDestroy() {
                 flatten(roots, 0); return res;
             },
 
+            // 🌟 KODE BARU: Mengelompokkan data untuk Kanban Board
+    fulfillmentOrders() {
+        let list = this.transactions || [];
+        
+        // 1. Ambil HANYA transaksi yang bertipe Kirim (delivery) atau PO (pre_order)
+        let filtered = list.filter(trx => trx.orderType === 'delivery' || trx.orderType === 'pre_order');
+        
+        // 2. Filter Cabang (jika dipilih di layar fulfillment)
+        if (this.fulfillmentOutletFilter) {
+            filtered = filtered.filter(trx => trx.outletId === this.fulfillmentOutletFilter);
+        }
+
+        // 3. Kelompokkan berdasarkan status fulfillment
+        return {
+            new: filtered.filter(trx => trx.fulfillmentStatus === 'NEW'),
+            packing: filtered.filter(trx => trx.fulfillmentStatus === 'PACKING'),
+            ready: filtered.filter(trx => trx.fulfillmentStatus === 'READY'),
+            completed: filtered.filter(trx => trx.fulfillmentStatus === 'COMPLETED').slice(0, 30) // Batasi 30 agar tidak berat
+        };
+    },
+            
             availableRegisters() {
             if (!this.shiftForm.outletId || !this.outlets) return ['Kasir 1', 'Kasir 2']; // Fallback bawaan jika outlet belum dipilih
         
@@ -9752,6 +9834,21 @@ beforeDestroy() {
         console.log("Audio tidak didukung di browser ini:", e);
     }
 },
+            // 🌟 KODE BARU: Update status dari Kanban Board
+    async updateFulfillmentStatus(trx, newStatus) {
+        try {
+            // Jika Anda pakai Firebase online, hapus // pada dua baris di bawah ini:
+            // const { doc, updateDoc } = await import('firebase/firestore');
+            // await updateDoc(doc(db, "transactions", trx.id), { fulfillmentStatus: newStatus });
+            
+            // Update tampilan lokal secara instan
+            trx.fulfillmentStatus = newStatus;
+            
+        } catch (error) {
+            console.error("Gagal update status fulfillment:", error);
+            Swal.fire('Error', 'Gagal memindahkan kartu pesanan.', 'error');
+        }
+    },
             
             askConfirm(title, message, callback) {
                 this.confirmTitle = title;
