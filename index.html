@@ -4791,9 +4791,23 @@ body.sidebar-open {
                             <span class="badge bg-warning text-dark border" v-else-if="trx.orderType === 'pre_order'"><i class="bi bi-hourglass-split me-1"></i>PO</span>
                             <span class="badge bg-light text-dark border" v-else><i class="bi bi-bag-check me-1"></i>Store</span>
                             
-                            <!-- Label Status Fulfillment (Hanya muncul jika bukan tipe Store/Bawa Langsung) -->
-                            <span class="badge bg-danger" style="font-size: 0.6rem;" v-if="(trx.orderType === 'delivery' || trx.orderType === 'pre_order') && trx.fulfillmentStatus === 'NEW'">Perlu Diproses</span>
-                            <span class="badge bg-success" style="font-size: 0.6rem;" v-else-if="(trx.orderType === 'delivery' || trx.orderType === 'pre_order') && trx.fulfillmentStatus === 'COMPLETED'">Terkirim</span>
+                            <!-- Label Status Fulfillment (Hanya muncul jika tipe Kirim/PO) -->
+                            <template v-if="trx.orderType === 'delivery' || trx.orderType === 'pre_order'">
+                                <!-- Jika NEW atau belum ada status sama sekali -->
+                                <span class="badge bg-danger" style="font-size: 0.6rem;" v-if="trx.fulfillmentStatus === 'NEW' || !trx.fulfillmentStatus">Perlu Diproses</span>
+                                
+                                <!-- Jika PICK -->
+                                <span class="badge text-white" style="font-size: 0.6rem; background-color: #fd7e14;" v-else-if="trx.fulfillmentStatus === 'PICK'">Proses Pick</span>
+                                
+                                <!-- Jika PACK -->
+                                <span class="badge bg-info text-dark" style="font-size: 0.6rem;" v-else-if="trx.fulfillmentStatus === 'PACK'">Proses Pack</span>
+                                
+                                <!-- Jika SHIP -->
+                                <span class="badge bg-primary" style="font-size: 0.6rem;" v-else-if="trx.fulfillmentStatus === 'SHIP'">Dikirim (Ship)</span>
+                                
+                                <!-- Jika COMPLETED -->
+                                <span class="badge bg-success" style="font-size: 0.6rem;" v-else-if="trx.fulfillmentStatus === 'COMPLETED'">Terkirim</span>
+                            </template>
                         </div>
                     </td>
                     
