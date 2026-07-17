@@ -4882,7 +4882,7 @@ body.sidebar-open {
         </div>
     </div>
 
-        <!-- 🌟 BATCH ACTION FLOATING BAR (Muncul otomatis saat ada yang dicentang) -->
+    <!-- 🌟 BATCH ACTION FLOATING BAR (Muncul otomatis saat ada yang dicentang) -->
     <div v-if="selectedOrders.length > 0" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 bg-white p-3 rounded-pill shadow-lg border d-flex align-items-center gap-3 z-3" style="min-width: 320px;">
         <span class="badge bg-danger rounded-circle px-2 py-1">{{ selectedOrders.length }}</span>
         <span class="fw-bold small text-dark me-2">Terpilih</span>
@@ -4936,7 +4936,11 @@ body.sidebar-open {
                             </div>
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
-                                    <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
+                                    <div>
+                                        <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
+                                        <span class="fw-semibold">{{ item.name }}</span>
+                                        <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4979,7 +4983,11 @@ body.sidebar-open {
                             </div>
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
-                                    <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
+                                    <div>
+                                        <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
+                                        <span class="fw-semibold">{{ item.name }}</span>
+                                        <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5021,7 +5029,11 @@ body.sidebar-open {
                             </div>
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
-                                    <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
+                                    <div>
+                                        <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
+                                        <span class="fw-semibold">{{ item.name }}</span>
+                                        <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5067,7 +5079,11 @@ body.sidebar-open {
                             </div>
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
-                                    <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
+                                    <div>
+                                        <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
+                                        <span class="fw-semibold">{{ item.name }}</span>
+                                        <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5129,6 +5145,8 @@ body.sidebar-open {
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
                                     <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
                                         <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                        <!-- Menambahkan Nomor HP yang sebelumnya terlewat di kolom Completed -->
+                                        <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
                                     </div>
                                     <div v-if="trx.trackingNumber" class="mt-1">
                                         <span class="badge bg-light text-success border border-success" style="font-size: 0.65rem;">
@@ -5143,8 +5161,9 @@ body.sidebar-open {
                 </div>
             </div>
         </div>
-        </div>
-</main>
+
+    </div>
+ </div>
 
 
 <div class="modal fade" id="invoiceDetailModal" tabindex="-1" data-bs-backdrop="static">
