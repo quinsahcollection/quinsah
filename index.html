@@ -15836,8 +15836,11 @@ let item = {
             // =================================================================
             // 5. PENYUSUNAN DATA TRANSAKSI UTAMA
             // =================================================================
-            // 🚨 PASTIKAN BARIS INI ADA DAN TEPAT BERADA DI SINI!
+            // 🚨 PASTIKAN BARIS INI ADA DAN TEPAT BERADA DI SINI:
             let fStatus = (this.posOrderType === 'delivery' || this.posOrderType === 'pre_order') ? 'NEW' : 'COMPLETED';
+            
+            // 🌟 TAMBAHKAN INI UNTUK MENANGKAP NOMOR HP PELANGGAN:
+            let finalCustomerPhone = this.selectedCustomer && this.selectedCustomer.phone ? this.selectedCustomer.phone : (this.selectedCustomer && this.selectedCustomer.no_hp ? this.selectedCustomer.no_hp : '-');
             
             let trxRaw = {
                 id: currentInvoiceId,
@@ -15848,6 +15851,7 @@ let item = {
                 outletId: this.posActiveOutletId || '',
                 cashierId: finalCashierId,
                 cashierName: finalCashierName,
+                customerPhone: finalCustomerPhone,
                 shiftId: finalShiftId,
                 registerName: finalRegisterName,
 
