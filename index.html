@@ -8309,6 +8309,10 @@ body.sidebar-open {
 
                 currentTimeTick: new Date(), // Variabel reaktif untuk pemicu waktu
                 timerInterval: null,          // Untuk menyimpan ID interval agar bisa dibersihkan
+
+                selectedOrders: [], // Menyimpan pesanan yang dicentang
+                batchActionTarget: 'PICK', // Tujuan awal untuk dropdown pemindahan massal
+
                 
                 selectedCustomer: null, 
                 customerSearchQuery: '', 
@@ -8638,6 +8642,7 @@ fulfillmentOrders() {
         pick: filtered.filter(trx => trx.fulfillmentStatus === 'PICK'),
         pack: filtered.filter(trx => trx.fulfillmentStatus === 'PACK'),
         ship: filtered.filter(trx => trx.fulfillmentStatus === 'SHIP'),
+        hold: filtered.filter(trx => trx.fulfillmentStatus === 'HOLD'),
         completed: filtered.filter(trx => trx.fulfillmentStatus === 'COMPLETED').slice(0, 30) // Batasi 30 agar tidak berat
     };
 },
