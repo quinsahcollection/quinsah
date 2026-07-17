@@ -4882,12 +4882,26 @@ body.sidebar-open {
         </div>
     </div>
 
-    <!-- Area Papan Kanban (Bisa di-scroll ke samping) -->
-    <!-- Perbaikan: Menghapus px-2 di container utama agar snapping lebih presisi ke tengah layar -->
+        <!-- 🌟 BATCH ACTION FLOATING BAR (Muncul otomatis saat ada yang dicentang) -->
+    <div v-if="selectedOrders.length > 0" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 bg-white p-3 rounded-pill shadow-lg border d-flex align-items-center gap-3 z-3" style="min-width: 320px;">
+        <span class="badge bg-danger rounded-circle px-2 py-1">{{ selectedOrders.length }}</span>
+        <span class="fw-bold small text-dark me-2">Terpilih</span>
+        
+        <select class="form-select form-select-sm border-info" v-model="batchActionTarget" style="width: 140px;">
+            <option value="PICK">Ke PICK</option>
+            <option value="PACK">Ke PACK</option>
+            <option value="SHIP">Ke SHIP</option>
+            <option value="HOLD">TUNDA (Hold)</option>
+        </select>
+        
+        <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" @click="processBatchAction">Proses</button>
+        <button class="btn btn-light btn-sm text-danger rounded-circle shadow-sm" @click="selectedOrders = []" title="Batal Pilih"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <!-- Area Papan Kanban -->
     <div class="row flex-grow-1 flex-nowrap overflow-auto pb-3 mx-0" style="min-height: 65vh; scroll-snap-type: x mandatory;">
         
-        <!-- 📦 KOLOM 1: NEW (Pesanan Baru Masuk) -->
-        <!-- Perbaikan: Menggunakan col-12 dan scroll-snap-align: center -->
+        <!-- 📦 KOLOM 1: NEW -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -4895,31 +4909,34 @@ body.sidebar-open {
                     <span class="badge bg-danger rounded-pill shadow-sm">{{ fulfillmentOrders.new.length }}</span>
                 </div>
                 <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div v-if="fulfillmentOrders.new.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Belum ada pesanan</span>
-                    </div>
+                    <div v-if="fulfillmentOrders.new.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
                     
                     <div v-for="trx in fulfillmentOrders.new" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
-                                    <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
-                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
+                                <div class="d-flex gap-2">
+                                    <input class="form-check-input border-secondary mt-1 shadow-sm" type="checkbox" :value="trx" v-model="selectedOrders">
+                                    <div>
+                                        <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                        <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
+                                        <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                            <!-- Menampilkan Nomor HP -->
+                                            <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
-                                    </span>
-                                    <button class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PICK')">PICK <i class="bi bi-arrow-right"></i></button>
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'HOLD')" title="Tunda (Stok Bermasalah)"><i class="bi bi-pause-circle"></i></button>
+                                        <button class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PICK')">PICK <i class="bi bi-arrow-right"></i></button>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
                                     <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
-                                    <div v-if="item.variantName" class="text-muted ms-3" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</div>
-                                    <div v-if="item.note" class="text-warning-emphasis fst-italic ms-3" style="font-size: 0.65rem;">Note: {{ item.note }}</div>
                                 </div>
                             </div>
                         </div>
@@ -4928,8 +4945,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- 🛒 KOLOM 2: PICK (Ambil Barang) -->
-        <!-- Perbaikan: Menggunakan col-12 dan scroll-snap-align: center -->
+        <!-- 🛒 KOLOM 2: PICK -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -4937,31 +4953,33 @@ body.sidebar-open {
                     <span class="badge rounded-pill shadow-sm text-white" style="background-color: #fd7e14;">{{ fulfillmentOrders.pick.length }}</span>
                 </div>
                 <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div v-if="fulfillmentOrders.pick.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
+                    <div v-if="fulfillmentOrders.pick.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
 
                     <div v-for="trx in fulfillmentOrders.pick" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
-                                    <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
-                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
+                                <div class="d-flex gap-2">
+                                    <input class="form-check-input border-secondary mt-1 shadow-sm" type="checkbox" :value="trx" v-model="selectedOrders">
+                                    <div>
+                                        <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                        <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
+                                        <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                            <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
-                                    </span>
-                                    <button class="btn btn-sm text-white py-0 px-2 fw-bold" style="font-size: 0.7rem; background-color: #fd7e14;" @click="updateFulfillmentStatus(trx, 'PACK')">PACK <i class="bi bi-arrow-right"></i></button>
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'HOLD')" title="Tunda (Stok Bermasalah)"><i class="bi bi-pause-circle"></i></button>
+                                        <button class="btn btn-sm text-white py-0 px-2 fw-bold" style="font-size: 0.7rem; background-color: #fd7e14;" @click="updateFulfillmentStatus(trx, 'PACK')">PACK <i class="bi bi-arrow-right"></i></button>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
                                     <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
-                                    <div v-if="item.variantName" class="text-muted ms-3" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</div>
-                                    <div v-if="item.note" class="text-warning-emphasis fst-italic ms-3" style="font-size: 0.65rem;">Note: {{ item.note }}</div>
                                 </div>
                             </div>
                         </div>
@@ -4970,8 +4988,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- 📦 KOLOM 3: PACK (Kemas Barang) -->
-        <!-- Perbaikan: Menggunakan col-12 dan scroll-snap-align: center -->
+        <!-- 📦 KOLOM 3: PACK -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -4979,31 +4996,32 @@ body.sidebar-open {
                     <span class="badge bg-info text-dark rounded-pill shadow-sm">{{ fulfillmentOrders.pack.length }}</span>
                 </div>
                 <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div v-if="fulfillmentOrders.pack.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
+                    <div v-if="fulfillmentOrders.pack.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
 
                     <div v-for="trx in fulfillmentOrders.pack" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
-                                    <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
-                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
+                                <div class="d-flex gap-2">
+                                    <input class="form-check-input border-secondary mt-1 shadow-sm" type="checkbox" :value="trx" v-model="selectedOrders">
+                                    <div>
+                                        <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                        <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
+                                        <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                            <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
-                                    </span>
-                                    <button class="btn btn-sm btn-info text-dark py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'SHIP')">SHIP <i class="bi bi-arrow-right"></i></button>
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
+                                    
+                                    <!-- 🌟 TOMBOL SHIP DIUBAH: Sekarang Memanggil Pop-Up Input Resi -->
+                                    <button class="btn btn-sm btn-info text-dark py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="promptShipInfo(trx)">SHIP <i class="bi bi-arrow-right"></i></button>
                                 </div>
                             </div>
-                            <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
                                     <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
-                                    <div v-if="item.variantName" class="text-muted ms-3" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</div>
-                                    <div v-if="item.note" class="text-warning-emphasis fst-italic ms-3" style="font-size: 0.65rem;">Note: {{ item.note }}</div>
                                 </div>
                             </div>
                         </div>
@@ -5012,8 +5030,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- 🚀 KOLOM 4: SHIP (Proses Kirim / Menunggu Kurir) -->
-        <!-- Perbaikan: Menggunakan col-12 dan scroll-snap-align: center -->
+        <!-- 🚀 KOLOM 4: SHIP -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -5021,31 +5038,36 @@ body.sidebar-open {
                     <span class="badge bg-primary rounded-pill shadow-sm">{{ fulfillmentOrders.ship.length }}</span>
                 </div>
                 <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div v-if="fulfillmentOrders.ship.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
+                    <div v-if="fulfillmentOrders.ship.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
 
                     <div v-for="trx in fulfillmentOrders.ship" :key="trx.id" class="card border-0 border-start border-4 shadow-sm mb-3" :style="{ borderColor: getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).color + ' !important' }">
                         <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
-                                    <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
-                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
+                                <div class="d-flex gap-2">
+                                    <input class="form-check-input border-secondary mt-1 shadow-sm" type="checkbox" :value="trx" v-model="selectedOrders">
+                                    <div>
+                                        <a href="#" class="fw-bold text-decoration-underline text-primary-custom small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                        <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
+                                        <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                            <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
+                                        </div>
+                                        <!-- TAMPILAN RESI YANG DIINPUT -->
+                                        <div v-if="trx.trackingNumber" class="mt-1">
+                                            <span class="badge bg-light text-primary border border-primary fw-bold" style="font-size: 0.65rem;">
+                                                <i class="bi bi-truck me-1"></i>{{ trx.courierName }}: {{ trx.trackingNumber }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-1">
-                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem; letter-spacing: 0.5px;">
-                                        {{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}
-                                    </span>
+                                    <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
                                     <button class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'COMPLETED')"><i class="bi bi-check2-all me-1"></i>SELESAI</button>
                                 </div>
                             </div>
-                            <!-- LIST ITEM DETAIL -->
                             <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
                                     <div><span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> <span class="fw-semibold">{{ item.name }}</span></div>
-                                    <div v-if="item.variantName" class="text-muted ms-3" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</div>
-                                    <div v-if="item.note" class="text-warning-emphasis fst-italic ms-3" style="font-size: 0.65rem;">Note: {{ item.note }}</div>
                                 </div>
                             </div>
                         </div>
@@ -5054,9 +5076,42 @@ body.sidebar-open {
             </div>
         </div>
 
+        <!-- ⏸️ KOLOM BARU: HOLD (Tertunda) -->
+        <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
+            <div class="card border-0 shadow-sm h-100 rounded-4" style="background-color: #f8f9fa;">
+                <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-secondary"><i class="bi bi-pause-circle-fill me-1"></i> Hold</h6>
+                    <span class="badge bg-secondary rounded-pill shadow-sm">{{ fulfillmentOrders.hold ? fulfillmentOrders.hold.length : 0 }}</span>
+                </div>
+                <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
+                    <div v-if="!fulfillmentOrders.hold || fulfillmentOrders.hold.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
 
-                <!-- ✅ KOLOM 5: COMPLETED (Selesai) -->
-        <!-- Perbaikan: Menggunakan col-12, ditambahkan flex-shrink-0, dan scroll-snap-align: center -->
+                    <div v-for="trx in fulfillmentOrders.hold" :key="trx.id" class="card border-0 border-start border-4 border-secondary shadow-sm mb-3">
+                        <div class="card-body p-2 bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex gap-2">
+                                    <input class="form-check-input border-secondary mt-1 shadow-sm" type="checkbox" :value="trx" v-model="selectedOrders">
+                                    <div>
+                                        <a href="#" class="fw-bold text-decoration-underline text-secondary small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
+                                        <div class="text-danger fw-bold mt-1" style="font-size: 0.7rem;"><i class="bi bi-exclamation-triangle me-1"></i>Tertunda</div>
+                                        <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                            <span class="text-muted ms-1" style="font-size: 0.7rem;"><i class="bi bi-telephone ms-1 me-1"></i>{{ trx.customerPhone || '-' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <!-- Tombol untuk mengembalikan status ke antrean Pick -->
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size: 0.65rem;" @click="updateFulfillmentStatus(trx, 'PICK')"><i class="bi bi-arrow-counterclockwise me-1"></i>Lanjut Pick</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ KOLOM 5: COMPLETED -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -5064,9 +5119,7 @@ body.sidebar-open {
                     <span class="badge bg-success rounded-pill shadow-sm">{{ fulfillmentOrders.completed.length }}</span>
                 </div>
                 <div class="card-body overflow-auto p-2" style="max-height: calc(100vh - 250px);">
-                    <div v-if="fulfillmentOrders.completed.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white">
-                        <span class="small fw-semibold">Kosong</span>
-                    </div>
+                    <div v-if="fulfillmentOrders.completed.length === 0" class="text-center text-muted mt-5 py-5 border border-dashed rounded-3 bg-white"><span class="small fw-semibold">Kosong</span></div>
 
                     <div v-for="trx in fulfillmentOrders.completed" :key="trx.id" class="card border-0 border-start border-4 border-success shadow-sm mb-3 opacity-75">
                         <div class="card-body p-2">
@@ -5074,25 +5127,23 @@ body.sidebar-open {
                                 <div>
                                     <a href="#" class="fw-bold text-decoration-underline text-success small" @click.prevent="openInvoiceDetail(trx)">{{ trx.id }}</a>
                                     <div class="text-muted" style="font-size: 0.65rem;"><i class="bi bi-clock me-1"></i>{{ trx.fulfillmentUpdatedAt || trx.dateStr }}</div>
-                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;"><i class="bi bi-person me-1"></i>{{ trx.customer }}</div>
+                                    <div class="text-dark fw-semibold mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-person me-1"></i>{{ trx.customer }}
+                                    </div>
+                                    <div v-if="trx.trackingNumber" class="mt-1">
+                                        <span class="badge bg-light text-success border border-success" style="font-size: 0.65rem;">
+                                            <i class="bi bi-truck me-1"></i>{{ trx.trackingNumber }}
+                                        </span>
+                                    </div>
                                 </div>
                                 <i class="bi bi-check-all fs-4 text-success"></i>
-                            </div>
-                            <!-- LIST ITEM DETAIL (Di Completed juga dimunculkan agar tetap bisa direview) -->
-                            <div class="bg-light p-2 rounded small text-muted" style="font-size: 0.75rem;">
-                                <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
-                                    <div><span class="fw-bold me-1">{{ item.qty }}x</span> <span>{{ item.name }}</span></div>
-                                    <div v-if="item.variantName" class="ms-3" style="font-size: 0.65rem;"><i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}</div>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-    </div>
-</div>
+        </div>
 </main>
 
 
@@ -9975,6 +10026,105 @@ getServiceTime(dateStr) {
         return { class: 'bg-danger', label: Math.floor(diffHours) + 'h', color: '#dc3545' };
     }
 },
+
+        // =========================================================
+    // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
+    // =========================================================
+    async promptShipInfo(trx) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Kirim Pesanan & Input Resi',
+            html: `
+                <div class="mb-3 text-start mt-3">
+                    <label class="form-label small fw-bold text-muted">Kurir / Ekspedisi</label>
+                    <input id="swal-kurir" class="form-control form-control-sm" placeholder="Contoh: JNE, J&T, GoSend, dll">
+                </div>
+                <div class="mb-2 text-start">
+                    <label class="form-label small fw-bold text-muted">Nomor Resi (Opsional)</label>
+                    <input id="swal-resi" class="form-control form-control-sm" placeholder="Ketik atau scan barcode resi">
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-send me-1"></i> Proses Kirim',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#0d6efd',
+            preConfirm: () => {
+                return {
+                    kurir: document.getElementById('swal-kurir').value,
+                    resi: document.getElementById('swal-resi').value
+                }
+            }
+        });
+
+        if (formValues) {
+            this.processShipmentToFirebase(trx, formValues.kurir, formValues.resi);
+        }
+    },
+
+    async processShipmentToFirebase(trx, kurir, resi) {
+        try {
+            const now = new Date();
+            const formattedDate = now.toLocaleString('id-ID');
+
+            // Update UI lokal
+            trx.fulfillmentStatus = 'SHIP';
+            trx.fulfillmentUpdatedAt = formattedDate;
+            trx.courierName = kurir;
+            trx.trackingNumber = resi;
+            this.currentTimeTick = new Date();
+
+            // Simpan ke Firebase
+            await updateDoc(doc(db, "transactions", trx.id), { 
+                fulfillmentStatus: 'SHIP',
+                fulfillmentUpdatedAt: formattedDate,
+                courierName: kurir || '-',
+                trackingNumber: resi || '-'
+            });
+
+            Swal.fire({ title: 'Terkirim!', text: 'Resi berhasil disimpan.', icon: 'success', toast: true, position: 'top-end', timer: 3000 });
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan resi.', 'error');
+        }
+    },
+
+    // =========================================================
+    // 🌟 FITUR 3: PROSES BANYAK KARTU SEKALIGUS (BATCH ACTION)
+    // =========================================================
+    async processBatchAction() {
+        if (!this.batchActionTarget || this.selectedOrders.length === 0) return;
+        
+        const targetStatus = this.batchActionTarget;
+        const totalItems = this.selectedOrders.length;
+        
+        // Munculkan loading
+        Swal.fire({ title: 'Memproses...', text: `Memindahkan ${totalItems} pesanan`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        try {
+            const now = new Date();
+            const formattedDate = now.toLocaleString('id-ID');
+            this.currentTimeTick = now;
+
+            // Loop untuk mengupdate semua pesanan yang dicentang secara paralel
+            const batchPromises = this.selectedOrders.map(trx => {
+                trx.fulfillmentStatus = targetStatus;
+                trx.fulfillmentUpdatedAt = formattedDate;
+                
+                return updateDoc(doc(db, "transactions", trx.id), {
+                    fulfillmentStatus: targetStatus,
+                    fulfillmentUpdatedAt: formattedDate
+                });
+            });
+
+            await Promise.all(batchPromises); // Tunggu semua proses Firebase selesai
+
+            this.selectedOrders = []; // Kosongkan pilihan
+            Swal.fire({ title: 'Selesai!', text: `${totalItems} pesanan berhasil dipindah.`, icon: 'success', toast: true, position: 'top-end', timer: 3000 });
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Gagal', 'Beberapa pesanan mungkin gagal diproses.', 'error');
+        }
+    },
 
     playBeep() {
     try {
