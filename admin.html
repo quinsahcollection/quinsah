@@ -345,7 +345,7 @@
             <!-- MAIN DYNAMIC CONTENT -->
             <div class="container-fluid p-4 flex-grow-1">
                 
-                <!-- TAB 1: DASBOR & TENANTS (Dianggap Sebagai Pusat Kontrol Utama) -->
+                <!-- TAB 1: DASBOR & TENANTS -->
                 <div v-if="currentTab === 'dashboard' || currentTab === 'tenants'">
                     
                     <!-- Header Section -->
@@ -467,8 +467,8 @@
                                         
                                         <td>
                                             <span class="badge rounded-pill fw-semibold px-3 py-2 border" 
-                                                  :class="tenant.paketLangganan.toLowerCase().includes('premium') || tenant.paketLangganan.toLowerCase().includes('lifetime') ? 'badge-soft-warning border-warning border-opacity-25' : 'bg-light text-secondary border-secondary border-opacity-25'">
-                                                <i class="bi me-1" :class="tenant.paketLangganan.toLowerCase().includes('premium') ? 'bi-star-fill text-warning' : 'bi-tag'"></i>
+                                                  :class="tenant.paketLangganan && (tenant.paketLangganan.toLowerCase().includes('premium') || tenant.paketLangganan.toLowerCase().includes('lifetime')) ? 'badge-soft-warning border-warning border-opacity-25' : 'bg-light text-secondary border-secondary border-opacity-25'">
+                                                <i class="bi me-1" :class="tenant.paketLangganan && tenant.paketLangganan.toLowerCase().includes('premium') ? 'bi-star-fill text-warning' : 'bi-tag'"></i>
                                                 {{ tenant.paketLangganan }}
                                             </span>
                                         </td>
@@ -505,11 +505,6 @@
                         <div>
                             <h5 class="fw-bold text-dark mb-1">Manajemen Langganan & Billing</h5>
                             <p class="text-secondary small mb-0">Pantau status pembayaran dan kelola penagihan (invoice) untuk setiap cabang.</p>
-                        </div>
-                        <div>
-                            <button class="btn bg-gradient-primary text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" @click="fetchTenants" :disabled="isLoadingTenants">
-                                <i class="bi bi-plus-lg me-2"></i> Buat Tagihan Baru
-                            </button>
                         </div>
                     </div>
 
@@ -570,19 +565,22 @@
                                         
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-secondary" title="Lihat Riwayat Tagihan">
-                                                    <i class="bi bi-clock-history"></i>
+                                                <button class="btn btn-outline-primary fw-semibold" title="Buat Tagihan Sistem" @click="bukaModalTagihan(tenant)">
+                                                    <i class="bi bi-receipt"></i> Buat Tagihan
                                                 </button>
-                                                <button class="btn btn-outline-primary fw-semibold" title="Kirim Pengingat Tagihan (Email/WA)">
-                                                    <i class="bi bi-send me-1"></i> Tagih
-                                                </button>
+                                                <!-- Tombol ini otomatis membuat pesan WA ke nomor tenant -->
+                                                <a :href="'https://wa.me/' + formatNomorWA(tenant.phone) + '?text=Halo%20' + tenant.namaUsaha + ',%20tagihan%20SaaS%20ERP%20Anda%20sudah%20terbit.%20Silakan%20cek%20di%20aplikasi.'" 
+                                                   target="_blank" 
+                                                   class="btn btn-success fw-semibold" title="Kirim Pengingat (WA)">
+                                                    <i class="bi bi-whatsapp me-1"></i> WA
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>           
+                    </div>
                 </div>
 
                 <!-- TAB 3: LOGS (Placeholder) -->
@@ -630,7 +628,7 @@
             <!-- Footer ERP -->
             <footer class="mt-auto py-3 px-4 bg-white border-top border-subtle d-flex justify-content-between align-items-center text-secondary small">
                 <div>&copy; 2026 SaaS ERP Executive Console. All rights reserved.</div>
-                <div>System Version <strong>v2.4 (ERP Layout)</strong></div>
+                <div>System Version <strong>v2.5 (ERP Layout with Billing)</strong></div>
             </footer>
         </div>
 
@@ -700,6 +698,33 @@
             </div>
         </div>
 
+        <!-- MODAL BUAT TAGIHAN -->
+        <div class="modal fade" id="modalBuatTagihan" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content card-modern border-0 shadow-lg">
+                    <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+                        <h5 class="modal-title fw-bold">Buat Tagihan Baru</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3 text-secondary small">Kepada: <strong class="text-dark">{{ selectedTenant.namaUsaha }}</strong></div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">NOMINAL (Rp)</label>
+                            <input type="number" class="form-control form-control-modern" v-model="formTagihan.amount" placeholder="Contoh: 150000">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">DESKRIPSI TAGIHAN</label>
+                            <input type="text" class="form-control form-control-modern" v-model="formTagihan.desc" placeholder="Contoh: Langganan Bulan Agustus 2026">
+                        </div>
+                        <button class="btn bg-gradient-primary text-white w-100 fw-bold py-2 shadow-sm" @click="kirimTagihanKeFirebase" :disabled="isSaving">
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ isSaving ? 'Mengirim...' : 'Kirim Tagihan Sekarang' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -710,7 +735,9 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    
+    // 🌟 KODE BARU: Penambahan addDoc dan serverTimestamp
+    import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     // 🌟 FIREBASE CONFIG
     const firebaseConfig = { 
@@ -744,7 +771,11 @@
                 selectedTenant: {},
                 formEdit: { id: '', paketLangganan: '', expiredDate: '', status: '' },
                 isSaving: false,
-                modalInstance: null
+                modalInstance: null,
+                
+                // 🌟 KODE BARU: Variabel form tagihan
+                formTagihan: { amount: 0, desc: '' },
+                modalTagihanInstance: null
             }
         },
         mounted() {
@@ -900,6 +931,57 @@
                         text: 'Terjadi kesalahan saat menyimpan ke database.',
                         confirmButtonColor: '#4f46e5'
                     });
+                }
+                this.isSaving = false;
+            },
+
+            // 🌟 KODE BARU: Fungsi Helper Format Nomor WA
+            formatNomorWA(phone) {
+                if (!phone) return '628000000000'; // Default jika tidak ada nomor
+                let p = String(phone).replace(/\D/g, '');
+                if (p.startsWith('0')) return '62' + p.substring(1);
+                return p;
+            },
+            
+            // 🌟 KODE BARU: Fungsi Menampilkan Modal Pembuatan Tagihan
+            bukaModalTagihan(tenant) {
+                this.selectedTenant = tenant;
+                this.formTagihan = { amount: '', desc: '' };
+                if (!this.modalTagihanInstance) {
+                    this.modalTagihanInstance = new bootstrap.Modal(document.getElementById('modalBuatTagihan'));
+                }
+                this.modalTagihanInstance.show();
+            },
+            
+            // 🌟 KODE BARU: Fungsi Mengirim Tagihan ke Firebase
+            async kirimTagihanKeFirebase() {
+                if(!this.formTagihan.amount || !this.formTagihan.desc) {
+                    Swal.fire('Perhatian', 'Harap isi nominal dan deskripsi tagihan.', 'warning');
+                    return;
+                }
+                
+                this.isSaving = true;
+                try {
+                    const billingRef = collection(db, "billings");
+                    
+                    // Set jatuh tempo ke 7 hari dari sekarang
+                    let due = new Date();
+                    due.setDate(due.getDate() + 7);
+
+                    await addDoc(billingRef, {
+                        companyId: this.selectedTenant.id,
+                        amount: Number(this.formTagihan.amount),
+                        description: this.formTagihan.desc,
+                        status: 'UNPAID',
+                        createdAt: serverTimestamp(),
+                        dueDate: due.toISOString() 
+                    });
+                    
+                    Swal.fire('Berhasil!', 'Tagihan telah sukses dikirim ke akun tenant.', 'success');
+                    this.modalTagihanInstance.hide();
+                } catch (e) {
+                    console.error("Gagal membuat tagihan", e);
+                    Swal.fire('Error', 'Gagal mengirim tagihan ke server.', 'error');
                 }
                 this.isSaving = false;
             },
