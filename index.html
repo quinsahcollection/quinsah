@@ -7604,7 +7604,7 @@ body.sidebar-open {
                 <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
                     <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
                     <div class="small text-dark">
-                        <strong>Instruksi:</strong> Silakan transfer tagihan Anda ke rekening <strong>BCA 1234567890 a.n. Herman Kosasi</strong>. Klik tombol konfirmasi setelah transfer agar kami dapat mengaktifkan kembali sistem Anda.
+                        <strong>Instruksi:</strong> Silakan transfer tagihan Anda ke rekening <strong>BCA 0040112928 a.n. Herman Kosasi</strong>. Klik tombol konfirmasi setelah transfer agar kami dapat mengaktifkan kembali sistem Anda.
                     </div>
                 </div>
 
@@ -10186,6 +10186,20 @@ konfirmasiPembayaran(bill) {
     const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(textMessage)}`;
     window.open(waUrl, '_blank');
 },
+
+    // Fungsi untuk merapikan tampilan tanggal
+        formatTanggal(isoString) {
+            if (!isoString) return '-';
+            return new Date(isoString).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+        },
+
+        // Fungsi untuk merapikan tampilan angka (titik ribuan)
+        formatNumber(number) {
+            if (!number) return '0';
+            return new Intl.NumberFormat('id-ID').format(number);
+        },
     
     // Fungsi untuk memecah format tanggal seperti '16/7/2026, 18.45.52' menjadi objek Date
 parseDateStr(dateStr) {
