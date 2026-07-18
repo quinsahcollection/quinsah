@@ -847,11 +847,15 @@ body.sidebar-open {
                     <small class="text-danger fw-bold">{{ userProfile.companyData.expiredDate ? formatTanggalCantik(userProfile.companyData.expiredDate) : 'Tanpa Batas' }}</small>
                 </div>
             </li>
-            <li class="px-3 py-2 border-bottom text-center">
-                <button class="btn btn-sm btn-outline-success w-100 fw-bold" style="border-radius: 6px;" @click="upgradePremium()">
-                    <i class="bi bi-star-fill me-1"></i> Upgrade Premium
-                </button>
-            </li>
+            <!-- PERBAIKAN: Tombol Tagihan & Langganan Baru -->
+<li class="px-3 py-2 border-bottom text-center">
+    <button class="btn btn-sm btn-outline-primary w-100 fw-bold d-flex justify-content-between align-items-center" style="border-radius: 6px;" @click="bukaModalTagihanTenant">
+        <span><i class="bi bi-receipt me-1"></i> Tagihan & Langganan</span>
+        <span v-if="jumlahTagihanBelumLunas > 0" class="badge bg-danger rounded-pill shadow-sm" style="font-size: 0.65rem;">
+            {{ jumlahTagihanBelumLunas }}
+        </span>
+    </button>
+</li>
             
             <!-- PERBAIKAN: Menu Change Log Tepat di Bawah Upgrade Premium -->
             <li class="px-3 py-2 border-bottom text-center bg-light bg-opacity-50">
@@ -7587,6 +7591,65 @@ body.sidebar-open {
         </div>
     </div>
 </div>
+        <!-- MODAL TAGIHAN & LANGGANAN (SISI TENANT) -->
+<div class="modal fade" id="modalTagihanTenant" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-primary text-white border-0 py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-receipt me-2"></i>Tagihan & Langganan Sistem</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4 bg-light">
+                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
+                    <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
+                    <div class="small text-dark">
+                        <strong>Instruksi:</strong> Silakan transfer tagihan Anda ke rekening <strong>BCA 1234567890 a.n. Herman Kosasi</strong>. Klik tombol konfirmasi setelah transfer agar kami dapat mengaktifkan kembali sistem Anda.
+                    </div>
+                </div>
+
+                <div v-if="isLoadingBilling" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="small mt-2 text-muted fw-semibold">Memeriksa data tagihan...</div>
+                </div>
+                
+                <div v-else-if="billings.length === 0" class="text-center py-5 text-muted bg-white rounded-3 border border-subtle shadow-sm">
+                    <i class="bi bi-emoji-smile fs-1 d-block mb-2 text-success"></i>
+                    <h6 class="fw-bold text-dark mb-1">Semua Tagihan Lunas!</h6>
+                    <span class="small">Anda tidak memiliki tagihan sistem saat ini.</span>
+                </div>
+
+                <div v-else class="row g-3">
+                    <div v-for="bill in billings" :key="bill.id" class="col-12">
+                        <div class="card border-0 shadow-sm" :class="bill.status === 'UNPAID' ? 'border-start border-4 border-danger' : 'border-start border-4 border-success opacity-75'">
+                            <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">{{ bill.description }}</h6>
+                                    <div class="text-muted small mb-2 mb-md-0" style="font-size: 0.75rem;">
+                                        Jatuh Tempo: <span class="fw-bold" :class="bill.status === 'UNPAID' ? 'text-danger' : ''">{{ formatTanggal(bill.dueDate) }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-md-end text-start mt-2 mt-md-0">
+                                    <h5 class="fw-bold text-primary mb-1">Rp {{ formatNumber(bill.amount) }}</h5>
+                                    <span class="badge" :class="bill.status === 'UNPAID' ? 'bg-danger' : 'bg-success'">
+                                        <i class="bi me-1" :class="bill.status === 'UNPAID' ? 'bi-exclamation-circle' : 'bi-check-circle'"></i>
+                                        {{ bill.status === 'UNPAID' ? 'BELUM DIBAYAR' : 'LUNAS' }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="bill.status === 'UNPAID'" class="card-footer bg-white border-top border-subtle text-end py-2 pe-3">
+                                <button class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-sm" @click="konfirmasiPembayaran(bill)">
+                                    <i class="bi bi-whatsapp me-1"></i> Konfirmasi Sudah Bayar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
    
             <div id="print-section">
         
@@ -8390,6 +8453,10 @@ body.sidebar-open {
                     isActive: true
                 },
 
+                billings: [],
+                isLoadingBilling: false,
+                modalTagihanInstance: null,
+
                 posOrderType: 'direct', // direct (Langsung), delivery (Kirim), pre_order (PO)
                 searchQuery: '', posSearchMode: 'text', posCategoryFilter: '', posCustomDate: '', posCustomInvoice: '',
                 activeBarcodeSku: '', html5QrCode: null,
@@ -8808,7 +8875,11 @@ fulfillmentOrders() {
             if (!this.registerFilterOutlet) return this.registers;
             return this.registers.filter(r => r.outletId === this.registerFilterOutlet);
         },
-          
+
+        jumlahTagihanBelumLunas() {
+        return (this.billings || []).filter(b => b.status === 'UNPAID').length;
+        },
+            
         activePaymentMethodsForCashier() {
             // Coba mencari ID outlet dari berbagai variabel kasir yang umum dipakai
             const currentOutletId = this.user?.outletId || this.currentOutletId || '';
@@ -10067,6 +10138,55 @@ fulfillmentOrders() {
         console.log("Memuat ulang data fulfillment...");
     },
 
+    async fetchBillings() {
+    const myCompanyId = this.userProfile?.companyId || this.userProfile?.id;
+    if (!myCompanyId) return;
+    
+    this.isLoadingBilling = true;
+    try {
+        const q = query(
+            collection(db, "billings"), 
+            where("companyId", "==", myCompanyId), 
+            orderBy("createdAt", "desc")
+        );
+        const querySnapshot = await getDocs(q);
+        
+        let bills = [];
+        querySnapshot.forEach((doc) => {
+            let data = doc.data();
+            data.id = doc.id;
+            if (data.dueDate) {
+                data.dueDate = typeof data.dueDate === 'number' 
+                    ? new Date(data.dueDate).toISOString() 
+                    : (data.dueDate.toDate ? data.dueDate.toDate().toISOString() : data.dueDate);
+            }
+            bills.push(data);
+        });
+        this.billings = bills;
+    } catch (error) {
+        console.error("Gagal mengambil tagihan:", error);
+    }
+    this.isLoadingBilling = false;
+},
+
+bukaModalTagihanTenant() {
+    this.fetchBillings(); // Tarik data terbaru sebelum popup muncul
+    if (!this.modalTagihanInstance) {
+        this.modalTagihanInstance = new bootstrap.Modal(document.getElementById('modalTagihanTenant'));
+    }
+    this.modalTagihanInstance.show();
+},
+
+konfirmasiPembayaran(bill) {
+    // 🚨 GANTI "628xxxxxxxxxx" DENGAN NOMOR WA ADMIN ANDA
+    const adminPhone = "6285760035568"; 
+    
+    const textMessage = `Halo Admin, saya dari toko *${this.userProfile?.companyData?.namaUsaha || 'Tenant'}* mengonfirmasi telah melakukan transfer untuk tagihan *${bill.description}* sebesar *Rp ${this.formatNumber(bill.amount)}*. Mohon dicek.`;
+    
+    const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(textMessage)}`;
+    window.open(waUrl, '_blank');
+},
+    
     // Fungsi untuk memecah format tanggal seperti '16/7/2026, 18.45.52' menjadi objek Date
 parseDateStr(dateStr) {
     if (!dateStr) return new Date();
