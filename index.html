@@ -15859,7 +15859,7 @@ let item = {
         let currentServiceAmt = this.serviceAmount || 0;
         
         // 🌟 TANGKAP NILAI ONGKIR SAAT CHECKOUT (JIKA TIPE DELIVERY)
-        let currentShippingCost = (this.posOrderType === 'delivery') ? (Number(this.posShippingCost) || 0) : 0;
+        let currentShippingCost = (this.posOrderType === 'delivery') ? (Number(this.biayaOngkir) || 0) : 0;
         let currentTotal = this.total || 0; // Seharusnya 'this.total' sudah mencakup ongkir dari computed property
 
         let cleanItems = (this.cart || []).map(c => JSON.parse(JSON.stringify({
@@ -15925,7 +15925,7 @@ let item = {
         
         // 🌟 LOGIKA COD: Jika Delivery dan COD, ubah status pembayaran
         let finalPaymentStatus = (uangDiterima >= grandTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS');
-        if (this.posOrderType === 'delivery' && this.posIsCOD) {
+        if (this.posOrderType === 'delivery' && this.metodeBayarPengiriman === 'COD') {
             finalPaymentStatus = 'BELUM LUNAS';
             sisaHutang = grandTotal; // Set seluruhnya menjadi hutang/piutang jika COD
             uangDiterima = 0;
