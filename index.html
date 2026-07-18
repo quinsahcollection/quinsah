@@ -5505,226 +5505,259 @@ body.sidebar-open {
     </div>
 </div>
 
-        <!-- POS SIDEBAR RIGHT -->
-                      
-            <aside class="sidebar-right" :class="{'show-mobile': isMobileCartOpen}" v-show="currentView === 'pos'">
+       <!-- POS SIDEBAR RIGHT -->
+<aside class="sidebar-right" :class="{'show-mobile': isMobileCartOpen}" v-show="currentView === 'pos'">
             
-            <div class="mb-3">
-                <select class="form-select form-select-sm fw-bold border-secondary border-opacity-25 shadow-sm text-dark" 
-                 v-model="posActiveOutletId" 
-                 :disabled="userRole !== 'Admin'">
-                <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
-            </select>
-            </div>
-
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 border-bottom pb-2">
-    <h6 class="fw-bold mb-0">Keranjang</h6>
-    
-    <div class="d-flex flex-nowrap align-items-center gap-1 ms-auto">
-        
-        <!-- 🌟 KODE BARU: Pilih Tipe Pesanan (Kompak & Hemat Tempat) -->
-        <select class="form-select form-select-sm border-0 bg-light fw-bold text-primary" 
-                v-model="posOrderType" 
-                style="width: 100px; font-size: 0.7rem; cursor: pointer;">
-            <option value="direct">🛍️ Store</option>
-            <option value="delivery">🚚 Kirim</option>
-            <option value="pre_order">⏳ PO</option>
-        </select>
-        
-        <button class="btn btn-sm btn-outline-info border p-1 px-2 position-relative" @click="openModal('holdModal')" title="Lihat Daftar Hold">
-            <i class="bi bi-card-list"></i>
-            <span v-if="heldTransactions.length > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm" style="font-size: 0.65rem; padding: 0.25em 0.45em; z-index: 5;">
-                {{ heldTransactions.length }}
-            </span>
-        </button>
-        
-        <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi">
-            <i class="bi bi-pause-circle"></i>
-        </button>
-        
-        <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="resetPos" title="Batalkan">
-            <i class="bi bi-trash"></i>
-        </button>
-        
-        <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false">
-            <i class="bi bi-x-lg text-dark"></i>
-        </button>         
+    <div class="mb-3">
+        <select class="form-select form-select-sm fw-bold border-secondary border-opacity-25 shadow-sm text-dark" 
+         v-model="posActiveOutletId" 
+         :disabled="userRole !== 'Admin'">
+        <option v-for="ot in outlets" :key="ot.id" :value="ot.id">{{ ot.name }}</option>
+    </select>
     </div>
-</div>
-           
-            <div class="mb-2 pb-2 border-bottom">
-                <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
-                    <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
-                    <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="No Invoice" :disabled="isEditingInvoice">
-                </div>
-                <div class="input-group input-group-sm position-relative">
-    <!-- Input Text Pengganti Select -->
-    <input type="text" 
-           class="form-control fw-semibold border-danger" 
-           placeholder="Ketik Nama atau No Telp..." 
-           v-model="customerSearchQuery" 
-           @input="showCustomerDropdown = true"
-           @focus="showCustomerDropdown = true" 
-           @blur="hideCustomerDropdown" 
-           autocomplete="off">
 
-    <!-- Tombol 'X' untuk mereset pelanggan jika sudah terpilih -->
-    <button v-if="selectedCustomer" class="btn btn-outline-secondary" type="button" @click="clearCustomer" title="Hapus Pilihan">
-        <i class="bi bi-x-lg"></i>
-    </button>
-
-    <!-- Tombol Tambah Pelanggan Baru -->
-    <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru">
-        <i class="bi bi-person-plus-fill"></i>
-    </button>
-
-    <!-- Dropdown Hasil Pencarian (Otomatis muncul saat fokus/mengetik) -->
-    <ul v-if="showCustomerDropdown" 
-        class="dropdown-menu show w-100 position-absolute shadow-sm p-1" 
-        style="top: 100%; left: 0; z-index: 1050; max-height: 250px; overflow-y: auto; margin-top: 2px;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 border-bottom pb-2">
+        <h6 class="fw-bold mb-0">Keranjang</h6>
         
-        <!-- Jika diketik tapi tidak ada hasil -->
-        <li v-if="filteredCustomers.length === 0" class="text-center text-muted small p-2">
-            Pelanggan tidak ditemukan
-        </li>
+        <div class="d-flex flex-nowrap align-items-center gap-1 ms-auto">
+            
+            <!-- 🌟 Pilih Tipe Pesanan (Kompak & Hemat Tempat) -->
+            <select class="form-select form-select-sm border-0 bg-light fw-bold text-primary" 
+                    v-model="posOrderType" 
+                    style="width: 100px; font-size: 0.7rem; cursor: pointer;">
+                <option value="direct">🛍️ Store</option>
+                <option value="delivery">🚚 Kirim</option>
+                <option value="pre_order">⏳ PO</option>
+            </select>
+            
+            <button class="btn btn-sm btn-outline-info border p-1 px-2 position-relative" @click="openModal('holdModal')" title="Lihat Daftar Hold">
+                <i class="bi bi-card-list"></i>
+                <span v-if="heldTransactions.length > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger shadow-sm" style="font-size: 0.65rem; padding: 0.25em 0.45em; z-index: 5;">
+                    {{ heldTransactions.length }}
+                </span>
+            </button>
+            
+            <button class="btn btn-sm btn-warning text-dark border p-1 px-2" @click="holdTransaction" :disabled="cart.length===0" title="Hold Transaksi">
+                <i class="bi bi-pause-circle"></i>
+            </button>
+            
+            <button class="btn btn-sm btn-light text-danger border p-1 px-2" @click="resetPos" title="Batalkan">
+                <i class="bi bi-trash"></i>
+            </button>
+            
+            <button class="btn btn-sm btn-light border p-1 px-2 d-lg-none ms-1" @click="isMobileCartOpen = false">
+                <i class="bi bi-x-lg text-dark"></i>
+            </button>         
+        </div>
+    </div>
+            
+    <div class="mb-2 pb-2 border-bottom">
+        <div class="input-group input-group-sm mb-2" title="Nomor Invoice POS (Otomatis/Bisa Diedit)">
+            <span class="input-group-text bg-white fw-bold"><i class="bi bi-receipt me-1"></i> INV</span>
+            <input type="text" class="form-control fw-bold text-primary-custom" v-model="posCustomInvoice" placeholder="No Invoice" :disabled="isEditingInvoice">
+        </div>
+        <div class="input-group input-group-sm position-relative">
+            <!-- Input Text Pengganti Select -->
+            <input type="text" 
+                   class="form-control fw-semibold border-danger" 
+                   placeholder="Ketik Nama atau No Telp..." 
+                   v-model="customerSearchQuery" 
+                   @input="showCustomerDropdown = true"
+                   @focus="showCustomerDropdown = true" 
+                   @blur="hideCustomerDropdown" 
+                   autocomplete="off">
 
-        <!-- List hasil filter (Otomatis menyaring) -->
-        <li v-for="cust in filteredCustomers" :key="cust.id">
-            <a class="dropdown-item cursor-pointer rounded mb-1" @mousedown.prevent="selectCustomer(cust)">
-                <div class="fw-bold">{{ cust.name }}</div>
-                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ cust.phone }}</div>
-            </a>
-        </li>
-    </ul>
-</div>
-</div>
-                        <!-- AREA LIST PRODUK (Biar bisa di-scroll) -->
-            <div class="flex-grow-1 overflow-auto pe-2 mb-2 pb-3">
-                
-                <div v-if="isEditingInvoice" class="alert alert-warning py-2 px-3 mb-2 d-flex justify-content-between align-items-center shadow-sm border-warning">
-                    <div style="font-size: 0.8rem;">
-                        <i class="bi bi-pencil-square fw-bold me-1"></i> Mode Edit: <strong>{{ originalEditTrx?.id }}</strong>
-                    </div>
-                    <button class="btn btn-sm btn-danger py-1 px-2 fw-bold" style="font-size: 0.75rem;" @click="cancelEditInvoice">
-                        <i class="bi bi-x-circle me-1"></i>Batal Edit
-                    </button>
-                </div>
-                
-                <div v-if="cart.length===0" class="text-center text-muted mt-5">
-                    <i class="bi bi-cart-x fs-2 mb-2 d-block"></i>
-                    <small>Kosong</small>
-                </div>
-                
-                <!-- DAFTAR ITEM KERANJANG -->
-                <div class="cart-item mb-2 pb-2 border-bottom" v-for="item in cart" :key="item.cartId">
-                    <div class="d-flex gap-2">
-                        
-                        <!-- 📸 KOTAK FOTO PRODUK KIRI -->
-                        <div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
-                            <template v-if="item.imageBase64 && item.imageBase64.trim() !== ''">
-                                <img :src="item.imageBase64" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" class="border shadow-sm" @error="item.imageBase64 = ''">
-                            </template>
-                            <template v-else>
-                                <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
-                                    <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
-                                    <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
-                                </div>
-                            </template>
-                        </div>
+            <!-- Tombol 'X' untuk mereset pelanggan jika sudah terpilih -->
+            <button v-if="selectedCustomer" class="btn btn-outline-secondary" type="button" @click="clearCustomer" title="Hapus Pilihan">
+                <i class="bi bi-x-lg"></i>
+            </button>
 
-                        <!-- 📝 KOTAK INFO PRODUK KANAN -->
-                        <div class="flex-grow-1 overflow-hidden">
-                            <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
-                                <div class="fw-bold text-truncate cursor-pointer" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
-                                <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
-                            </div>
-                            
-                            <div class="d-flex flex-column gap-1 mb-2" v-if="item.variantName">
-                                <div class="text-muted fw-semibold lh-sm" style="font-size: 0.75rem;">
-                                    <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}
-                                </div>
-                                <div>
-                                    <span class="badge bg-dark text-white px-2 py-1 shadow-sm" style="font-size: 0.65rem; letter-spacing: 0.5px; border-radius: 4px;">
-                                        {{ item.variantSku }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
-                                <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
-                            </div>
-                            
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <div class="d-flex flex-column">
-                                    <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
-                                    <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
-                                </div>
-                                <div class="d-flex align-items-center bg-light border p-0 rounded">
-                                    <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
-                                    <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
-                                    <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                    </div>
-                </div>
+            <!-- Tombol Tambah Pelanggan Baru -->
+            <button class="btn btn-outline-danger" type="button" @click="openModal('addCustomerModal')" title="Tambah Pelanggan Baru">
+                <i class="bi bi-person-plus-fill"></i>
+            </button>
+
+            <!-- Dropdown Hasil Pencarian -->
+            <ul v-if="showCustomerDropdown" 
+                class="dropdown-menu show w-100 position-absolute shadow-sm p-1" 
+                style="top: 100%; left: 0; z-index: 1050; max-height: 250px; overflow-y: auto; margin-top: 2px;">
+                
+                <li v-if="filteredCustomers.length === 0" class="text-center text-muted small p-2">
+                    Pelanggan tidak ditemukan
+                </li>
+
+                <li v-for="cust in filteredCustomers" :key="cust.id">
+                    <a class="dropdown-item cursor-pointer rounded mb-1" @mousedown.prevent="selectCustomer(cust)">
+                        <div class="fw-bold">{{ cust.name }}</div>
+                        <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ cust.phone }}</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- AREA LIST PRODUK & PENGIRIMAN (Bisa di-scroll) -->
+    <div class="flex-grow-1 overflow-auto pe-2 mb-2 pb-3">
+        
+        <div v-if="isEditingInvoice" class="alert alert-warning py-2 px-3 mb-2 d-flex justify-content-between align-items-center shadow-sm border-warning">
+            <div style="font-size: 0.8rem;">
+                <i class="bi bi-pencil-square fw-bold me-1"></i> Mode Edit: <strong>{{ originalEditTrx?.id }}</strong>
             </div>
+            <button class="btn btn-sm btn-danger py-1 px-2 fw-bold" style="font-size: 0.75rem;" @click="cancelEditInvoice">
+                <i class="bi bi-x-circle me-1"></i>Batal Edit
+            </button>
+        </div>
+        
+        <div v-if="cart.length===0" class="text-center text-muted mt-5">
+            <i class="bi bi-cart-x fs-2 mb-2 d-block"></i>
+            <small>Kosong</small>
+        </div>
+        
+        <!-- DAFTAR ITEM KERANJANG -->
+        <div class="cart-item mb-2 pb-2 border-bottom" v-for="item in cart" :key="item.cartId">
+            <div class="d-flex gap-2">
+                
+                <!-- 📸 KOTAK FOTO PRODUK KIRI -->
+                <div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
+                    <template v-if="item.imageBase64 && item.imageBase64.trim() !== ''">
+                        <img :src="item.imageBase64" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" class="border shadow-sm" @error="item.imageBase64 = ''">
+                    </template>
+                    <template v-else>
+                        <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
+                            <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
+                            <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
+                        </div>
+                    </template>
+                </div>
 
-
-<!-- BLOK PEMBAYARAN (Otomatis terdorong ke paling bawah karena mt-auto) -->
-<div class="mt-auto bg-white pt-2 border-top shadow-lg z-3">
+                <!-- 📝 KOTAK INFO PRODUK KANAN -->
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="d-flex justify-content-between mb-1" @click="openEditCartItem(item)">
+                        <div class="fw-bold text-truncate cursor-pointer" style="font-size: 0.8rem; max-width: 65%;">{{ item.name }}</div>
+                        <div class="fw-bold text-primary-custom" style="font-size: 0.85rem;">Rp {{ formatNumber(getFinalItemPrice(item) * item.qty) }}</div>
+                    </div>
                     
-    <div class="mb-2 p-2 bg-danger bg-opacity-10 border border-danger rounded mx-2 mt-2">
-        <label class="form-label small fw-bold text-danger mb-1"><i class="bi bi-tag-fill me-1"></i>Diskon Global (Per Invoice)</label>
-        <div class="input-group input-group-sm">
-            <select class="form-select bg-white fw-semibold" style="max-width: 45%;" v-model="globalDiscountType" @change="globalDiscountValue = 0">
-                <option value="none">Tanpa Diskon</option>
-                <option value="percent">% Persen</option>
-                <option value="nominal">Rp Nominal</option>
-            </select>
-            <input type="number" class="form-control text-end fw-bold text-danger" v-model.number="globalDiscountValue" :disabled="globalDiscountType === 'none'" placeholder="0">
-        </div>
-    </div>
-
-    <div class="border-top pt-2 pb-3 px-3" style="font-size: 0.8rem;">
-        <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
-        
-        <template v-if="posDiscountAmount > 0">
-            <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
-                <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
-                <span class="fw-bold">- Rp {{ formatNumber((getPriceBeforePosDiscount(item) - getFinalItemPrice(item)) * item.qty) }}</span>
+                    <div class="d-flex flex-column gap-1 mb-2" v-if="item.variantName">
+                        <div class="text-muted fw-semibold lh-sm" style="font-size: 0.75rem;">
+                            <i class="bi bi-tag-fill me-1"></i>{{ item.variantName }}
+                        </div>
+                        <div>
+                            <span class="badge bg-dark text-white px-2 py-1 shadow-sm" style="font-size: 0.65rem; letter-spacing: 0.5px; border-radius: 4px;">
+                                {{ item.variantSku }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-muted fst-italic mb-1" style="font-size: 0.65rem; color: #d97706 !important;" v-if="item.note">
+                        <i class="bi bi-pencil-square"></i> Note: {{ item.note }}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <div class="d-flex flex-column">
+                            <span class="text-muted" style="font-size: 0.7rem; text-decoration: line-through;" v-if="getFinalItemPrice(item) < getPriceBeforePosDiscount(item)">Rp {{ formatNumber(getPriceBeforePosDiscount(item)) }}</span>
+                            <span class="fw-semibold text-success cursor-pointer" style="font-size: 0.75rem;" @click="openEditCartItem(item)">@ Rp {{ formatNumber(getFinalItemPrice(item)) }} <i class="bi bi-pencil ms-1 text-muted"></i></span>
+                        </div>
+                        <div class="d-flex align-items-center bg-light border p-0 rounded">
+                            <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, -1)">-</button>
+                            <span class="px-2 fw-bold text-primary-custom" style="font-size: 0.8rem;">{{ item.qty }}</span>
+                            <button class="btn btn-sm py-0 px-2 border-0 fw-bold fs-6" @click="updateQty(item.cartId, 1)">+</button>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
-        </template>
-
-        <div class="d-flex justify-content-between mb-1 text-success fw-bold" v-if="discountAmount > 0">
-            <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer ? selectedCustomer.membershipId : null) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
         </div>
 
-        <div class="d-flex justify-content-between mb-1 text-danger fw-bold" v-if="globalDiscountAmount > 0">
-            <span>Diskon Invoice ({{ globalDiscountType === 'percent' ? globalDiscountValue + '%' : 'Manual' }})</span><span>- Rp {{ formatNumber(globalDiscountAmount) }}</span>
+        <!-- 🚚 🌟 AREA INPUT PENGIRIMAN & COD (Muncul otomatis jika tipe pesanan = Kirim) 🌟 -->
+        <div v-if="posOrderType === 'delivery' && cart.length > 0" class="card mt-2 border-info shadow-sm mx-1 fade-in">
+            <div class="card-header bg-info bg-opacity-10 py-1 px-2 border-info d-flex align-items-center gap-2">
+                <i class="bi bi-truck text-info fs-6"></i>
+                <span class="fw-bold text-dark" style="font-size: 0.75rem;">Detail Pengiriman</span>
+            </div>
+            <div class="card-body p-2">
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label mb-0 text-muted fw-semibold" style="font-size: 0.65rem;">Kurir</label>
+                        <input type="text" class="form-control form-control-sm border-secondary border-opacity-50" v-model="posCourier" placeholder="J&T, Shopee...">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label mb-0 text-muted fw-semibold" style="font-size: 0.65rem;">Ongkir (Rp)</label>
+                        <input type="number" class="form-control form-control-sm border-secondary border-opacity-50" v-model.number="posShippingCost" placeholder="0">
+                    </div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label mb-0 text-muted fw-semibold" style="font-size: 0.65rem;">Metode Bayar Pengiriman</label>
+                        <select class="form-select form-select-sm fw-bold shadow-none" v-model="posIsCOD" :class="posIsCOD ? 'text-danger border-danger bg-danger bg-opacity-10' : 'text-success border-success bg-success bg-opacity-10'" style="font-size: 0.75rem;">
+                            <option :value="false">💳 Non-COD (Bayar Lunas Sekarang)</option>
+                            <option :value="true">⚠️ COD (Bayar di Tempat / Piutang)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="d-flex justify-content-between mb-1 text-danger fw-semibold" v-if="taxAmount > 0">
-            <span>PPN ({{ posActiveOutlet?.taxPercent }}%)</span><span>+ Rp {{ formatNumber(taxAmount) }}</span>
-        </div>
-        <div class="d-flex justify-content-between mb-2 text-warning fw-semibold" v-if="serviceAmount > 0" style="color: #d97706 !important;">
-            <span>Service ({{ posActiveOutlet?.serviceChargePercent }}%)</span><span>+ Rp {{ formatNumber(serviceAmount) }}</span>
-        </div>
-        
-        <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
-            <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
-        </div>
-        
-        <button class="btn btn-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || !posCustomInvoice || isProcessing">
-            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
-            <span v-else><i class="bi bi-wallet2 me-1"></i> LANJUT BAYAR</span>
-        </button>
-        
-        <div v-if="!posActiveOutletId && cart.length > 0" class="text-danger text-center mt-1 pb-1" style="font-size: 0.65rem;">*Pilih Cabang (Outlet) Terlebih Dahulu</div>
     </div>
-</div>
-            </aside>
+
+    <!-- BLOK PEMBAYARAN (Otomatis terdorong ke paling bawah karena mt-auto) -->
+    <div class="mt-auto bg-white pt-2 border-top shadow-lg z-3">
+                        
+        <div class="mb-2 p-2 bg-danger bg-opacity-10 border border-danger rounded mx-2 mt-2">
+            <label class="form-label small fw-bold text-danger mb-1"><i class="bi bi-tag-fill me-1"></i>Diskon Global (Per Invoice)</label>
+            <div class="input-group input-group-sm">
+                <select class="form-select bg-white fw-semibold" style="max-width: 45%;" v-model="globalDiscountType" @change="globalDiscountValue = 0">
+                    <option value="none">Tanpa Diskon</option>
+                    <option value="percent">% Persen</option>
+                    <option value="nominal">Rp Nominal</option>
+                </select>
+                <input type="number" class="form-control text-end fw-bold text-danger" v-model.number="globalDiscountValue" :disabled="globalDiscountType === 'none'" placeholder="0">
+            </div>
+        </div>
+
+        <div class="border-top pt-2 pb-3 px-3" style="font-size: 0.8rem;">
+            <div class="d-flex justify-content-between mb-1 text-muted fw-semibold"><span>Subtotal Produk</span><span>Rp {{ formatNumber(subtotalBase) }}</span></div>
+            
+            <template v-if="posDiscountAmount > 0">
+                <div v-for="item in cart.filter(i => i.posDiscountType && i.posDiscountType !== 'none')" :key="'d-'+item.cartId" class="d-flex justify-content-between mb-1 text-danger" style="font-size: 0.7rem;">
+                    <span><i class="bi bi-tags-fill me-1"></i>Extra Diskon ({{ item.posDiscountType === 'multi' ? item.posDiscountValue + '% Bertingkat' : item.posDiscountType === 'percent' ? item.posDiscountValue + '%' : 'Rp' }})</span>
+                    <span class="fw-bold">- Rp {{ formatNumber((getPriceBeforePosDiscount(item) - getFinalItemPrice(item)) * item.qty) }}</span>
+                </div>
+            </template>
+
+            <div class="d-flex justify-content-between mb-1 text-success fw-bold" v-if="discountAmount > 0">
+                <span>Diskon Member ({{ getMembershipDiscount(selectedCustomer ? selectedCustomer.membershipId : null) }}%)</span><span>- Rp {{ formatNumber(discountAmount) }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-1 text-danger fw-bold" v-if="globalDiscountAmount > 0">
+                <span>Diskon Invoice ({{ globalDiscountType === 'percent' ? globalDiscountValue + '%' : 'Manual' }})</span><span>- Rp {{ formatNumber(globalDiscountAmount) }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-1 text-danger fw-semibold" v-if="taxAmount > 0">
+                <span>PPN ({{ posActiveOutlet?.taxPercent }}%)</span><span>+ Rp {{ formatNumber(taxAmount) }}</span>
+            </div>
+            
+            <div class="d-flex justify-content-between mb-2 text-warning fw-semibold" v-if="serviceAmount > 0" style="color: #d97706 !important;">
+                <span>Service ({{ posActiveOutlet?.serviceChargePercent }}%)</span><span>+ Rp {{ formatNumber(serviceAmount) }}</span>
+            </div>
+
+            <!-- 🌟 BARIS ONGKIR DI STRUK (Muncul jika tipe Kirim dan ada ongkir) -->
+            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0">
+                <span><i class="bi bi-truck me-1"></i>Ongkir ({{ posCourier || '-' }})</span><span>+ Rp {{ formatNumber(posShippingCost) }}</span>
+            </div>
+            
+            <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
+                <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
+            </div>
+            
+            <button class="btn btn-primary-custom w-100 py-2 fw-bold shadow-sm" @click="openPaymentModal" :disabled="cart.length===0 || !selectedCustomer || !posActiveOutletId || !posCustomInvoice || isProcessing">
+                <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+                <span v-else><i class="bi bi-wallet2 me-1"></i> LANJUT BAYAR</span>
+            </button>
+            
+            <div v-if="!posActiveOutletId && cart.length > 0" class="text-danger text-center mt-1 pb-1" style="font-size: 0.65rem;">*Pilih Cabang (Outlet) Terlebih Dahulu</div>
+        </div>
+    </div>
+</aside>
 
         <!-- MODAL GLOBAL KONFIRMASI -->
         <div class="modal fade" id="confirmModal" tabindex="-1">
@@ -8338,6 +8371,10 @@ body.sidebar-open {
                 paymentStartDate: '', 
                 paymentEndDate: '',
 
+                posCourier: '',        // Untuk menyimpan nama kurir
+                posShippingCost: 0,    // Untuk menyimpan nilai ongkir
+                posIsCOD: false        // Untuk status COD atau Lunas
+
                 isSplitPayment: false,
                 splitPayments: [],
                 
@@ -9884,7 +9921,15 @@ fulfillmentOrders() {
             netSubtotal() { return this.subtotal - this.discountAmount - this.globalDiscountAmount; },
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
-            total() { return Math.round(this.netSubtotal + this.taxAmount + this.serviceAmount); }
+            total() { 
+    // Ambil ongkir hanya jika tipe pesanannya adalah delivery
+    let shippingCost = (this.posOrderType === 'delivery') ? (Number(this.posShippingCost) || 0) : 0;
+    
+    // Tambahkan ongkir (shippingCost) ke total keseluruhan
+    let grandTotal = this.netSubtotal + this.taxAmount + this.serviceAmount + shippingCost;
+    
+    return Math.round(grandTotal); 
+}
         },
         
         watch: {
@@ -15693,293 +15738,260 @@ let item = {
                 this.showModal('paymentModal');
             },
 
-            async processTransaction() {
-        // Cegah klik ganda
-        if (this.isProcessing) return;
-        this.isProcessing = true;
+           async processTransaction() {
+    // Cegah klik ganda
+    if (this.isProcessing) return;
+    this.isProcessing = true;
 
-        try {
-            // =================================================================
-            // 0. VALIDASI NOMOR INVOICE LOKAL
-            // =================================================================
-            let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
-            
-            if (!currentInvoiceId) {
-                Swal.fire({ icon: 'warning', title: 'Data Tidak Lengkap', text: 'Nomor invoice tidak boleh kosong!' });
+    try {
+        // =================================================================
+        // 0. VALIDASI NOMOR INVOICE LOKAL
+        // =================================================================
+        let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
+        
+        if (!currentInvoiceId) {
+            Swal.fire({ icon: 'warning', title: 'Data Tidak Lengkap', text: 'Nomor invoice tidak boleh kosong!' });
+            this.isProcessing = false;
+            return;
+        }
+
+        if (this.transactions && this.transactions.length > 0) {
+            let isDuplicate = this.transactions.some(t => {
+                let existingId = String(t.id).trim();
+                if (this.isEditingInvoice && this.originalEditTrx) {
+                    return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
+                }
+                return existingId === currentInvoiceId;
+            });
+
+            if (isDuplicate) {
+                Swal.fire({ icon: 'error', title: 'Nomor Invoice Duplikat!', text: 'Gagal menyimpan! Nomor Invoice sudah terdaftar di memori lokal.' });
                 this.isProcessing = false;
                 return;
             }
+        }
 
-            if (this.transactions && this.transactions.length > 0) {
-                let isDuplicate = this.transactions.some(t => {
-                    let existingId = String(t.id).trim();
-                    if (this.isEditingInvoice && this.originalEditTrx) {
-                        return existingId === currentInvoiceId && existingId !== String(this.originalEditTrx.id).trim();
-                    }
-                    return existingId === currentInvoiceId;
-                });
-
-                if (isDuplicate) {
-                    Swal.fire({ icon: 'error', title: 'Nomor Invoice Duplikat!', text: 'Gagal menyimpan! Nomor Invoice sudah terdaftar di memori lokal.' });
-                    this.isProcessing = false;
-                    return;
-                }
-            }
-
-            // =================================================================
-            // PENGAMAN KE FIREBASE / SERVER-SIDE (🌟 DIPERBAIKI UNTUK OFFLINE)
-            // =================================================================
-            const trxRef = doc(db, "transactions", currentInvoiceId);
-            
-            // 🌟 DIBUNGKUS TRY-CATCH: Jika offline, getDoc akan error tapi tidak membuat sistem mati
-            try {
-                const trxSnap = await getDoc(trxRef);
-                if (trxSnap.exists()) {
-                    const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
-                    if (!isNumpangEdit) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Bentrok Nomor Invoice',
-                            html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
-                            confirmButtonColor: '#dc2626'
-                        });
-                        if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
-                            await this.generateInvoiceNumber(); 
-                        }
-                        this.isProcessing = false;
-                        return; 
-                    }
-                }
-            } catch (networkError) {
-                console.warn("Bypass cek duplikat online karena sedang Mode Offline.", networkError);
-                // Biarkan lanjut ke bawah (menyimpan di cache lokal)
-            }
-            
-            // 🌟🌟 SIAPKAN KERANJANG BATCH 🌟🌟
-            const batch = writeBatch(db);
-
-            // =================================================================
-            // 1. LOGIKA EDIT (Pembatalan dimasukkan ke Batch)
-            // =================================================================
-            if (this.isEditingInvoice && this.originalEditTrx) {
-                await this.revertPosStock(this.originalEditTrx); // Asumsi revert stok berjalan aman
-                batch.delete(doc(db, "transactions", this.originalEditTrx.id)); // Hapus nota lama via Batch
-            }
-
-            // =================================================================
-            // 2. KUNCI SEMUA VARIABEL TOTALAN
-            // =================================================================
-            let currentSubtotalBase = this.subtotalBase || 0;
-            let currentGlobalDiscountType = this.globalDiscountType || 'none';
-            let currentGlobalDiscountValue = this.globalDiscountValue || 0;
-            let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
-            let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
-            let currentTaxAmt = this.taxAmount || 0;
-            let currentServiceAmt = this.serviceAmount || 0;
-            let currentTotal = this.total || 0;
-
-            let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
-                ...c,
-                sku: c.sku || '-',
-                variantSku: c.variantSku || null,
-                variantName: c.variantName || null,
-                note: c.note || '',
-                finalPrice: this.getFinalItemPrice(c),
-                cutBatches: [], 
-                totalCogs: 0    
-            })));
-
-            // =================================================================
-            // 3. LOGIKA MDR, SURCHARGE & UANG DITERIMA (TERMASUK SPLIT PAYMENT) 
-            // =================================================================
-            let nominalMdr = 0;
-            let nominalSurcharge = 0;
-            let uangDiterima = 0;
-            let sisaHutang = 0;
-            let finalPaymentMethod = 'CASH';
-            let finalSplitPayments = [];
-            
-            if (this.isSplitPayment) {
-                nominalSurcharge = this.splitPayments.reduce((sum, p) => sum + (p.surchargeAmount || 0), 0);
-                uangDiterima = this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-                let grandTotal = currentTotal + nominalSurcharge;
-                
-                sisaHutang = Math.max(0, grandTotal - uangDiterima);
-                finalPaymentMethod = 'SPLIT';
-                finalSplitPayments = JSON.parse(JSON.stringify(this.splitPayments));
-                
-                if (sisaHutang > 0 && this.selectedCustomer && this.selectedCustomer.id) {
-                    finalSplitPayments.push({
-                        method: 'HUTANG',
-                        baseAmount: sisaHutang,
-                        surchargeAmount: 0,
-                        amount: sisaHutang,
-                        note: 'Sisa tagihan otomatis dicatat sbg hutang',
-                        isDebt: true
+        // =================================================================
+        // PENGAMAN KE FIREBASE / SERVER-SIDE (🌟 DIPERBAIKI UNTUK OFFLINE)
+        // =================================================================
+        const trxRef = doc(db, "transactions", currentInvoiceId);
+        
+        // 🌟 DIBUNGKUS TRY-CATCH: Jika offline, getDoc akan error tapi tidak membuat sistem mati
+        try {
+            const trxSnap = await getDoc(trxRef);
+            if (trxSnap.exists()) {
+                const isNumpangEdit = this.isEditingInvoice && this.originalEditTrx && String(this.originalEditTrx.id).trim() === currentInvoiceId;
+                if (!isNumpangEdit) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Bentrok Nomor Invoice',
+                        html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
+                        confirmButtonColor: '#dc2626'
                     });
-                }
-            } else {
-                if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
-                    let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
-                    if (pm) {
-                        if (pm.mdr > 0) nominalMdr = (currentTotal * pm.mdr) / 100;
-                        if (pm.surcharge > 0) {
-                            nominalSurcharge = (pm.surchargeType === 'percent') ? (currentTotal * pm.surcharge) / 100 : Number(pm.surcharge);
-                        }
+                    if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
+                        await this.generateInvoiceNumber(); 
                     }
+                    this.isProcessing = false;
+                    return; 
                 }
-                
-                let grandTotal = currentTotal + nominalSurcharge;
-                let inputUang = Number(this.paymentData.amountReceived) || 0;
-                uangDiterima = (inputUang === 0 || inputUang === currentTotal) ? grandTotal : inputUang;
-                sisaHutang = Math.max(0, grandTotal - uangDiterima);
-                finalPaymentMethod = this.paymentData.method || 'CASH';
             }
+        } catch (networkError) {
+            console.warn("Bypass cek duplikat online karena sedang Mode Offline.", networkError);
+            // Biarkan lanjut ke bawah (menyimpan di cache lokal)
+        }
+        
+        // 🌟🌟 SIAPKAN KERANJANG BATCH 🌟🌟
+        const batch = writeBatch(db);
 
+        // =================================================================
+        // 1. LOGIKA EDIT (Pembatalan dimasukkan ke Batch)
+        // =================================================================
+        if (this.isEditingInvoice && this.originalEditTrx) {
+            await this.revertPosStock(this.originalEditTrx); // Asumsi revert stok berjalan aman
+            batch.delete(doc(db, "transactions", this.originalEditTrx.id)); // Hapus nota lama via Batch
+        }
+
+        // =================================================================
+        // 2. KUNCI SEMUA VARIABEL TOTALAN
+        // =================================================================
+        let currentSubtotalBase = this.subtotalBase || 0;
+        let currentGlobalDiscountType = this.globalDiscountType || 'none';
+        let currentGlobalDiscountValue = this.globalDiscountValue || 0;
+        let currentGlobalDiscountAmt = this.globalDiscountAmount || 0;
+        let currentDiscountAmt = (this.discountAmount + this.posDiscountAmount + currentGlobalDiscountAmt) || 0;
+        let currentTaxAmt = this.taxAmount || 0;
+        let currentServiceAmt = this.serviceAmount || 0;
+        
+        // 🌟 TANGKAP NILAI ONGKIR SAAT CHECKOUT (JIKA TIPE DELIVERY)
+        let currentShippingCost = (this.posOrderType === 'delivery') ? (Number(this.posShippingCost) || 0) : 0;
+        let currentTotal = this.total || 0; // Seharusnya 'this.total' sudah mencakup ongkir dari computed property
+
+        let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
+            ...c,
+            sku: c.sku || '-',
+            variantSku: c.variantSku || null,
+            variantName: c.variantName || null,
+            note: c.note || '',
+            finalPrice: this.getFinalItemPrice(c),
+            cutBatches: [], 
+            totalCogs: 0    
+        })));
+
+        // =================================================================
+        // 3. LOGIKA MDR, SURCHARGE & UANG DITERIMA (TERMASUK SPLIT PAYMENT) 
+        // =================================================================
+        let nominalMdr = 0;
+        let nominalSurcharge = 0;
+        let uangDiterima = 0;
+        let sisaHutang = 0;
+        let finalPaymentMethod = 'CASH';
+        let finalSplitPayments = [];
+        
+        if (this.isSplitPayment) {
+            nominalSurcharge = this.splitPayments.reduce((sum, p) => sum + (p.surchargeAmount || 0), 0);
+            uangDiterima = this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             let grandTotal = currentTotal + nominalSurcharge;
-            let finalPaymentStatus = (uangDiterima >= grandTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS');
-
-            // =================================================================
-            // 4. LOGIKA KASIR / SHIFT
-            // =================================================================
-            const currentUser = this.userProfile || this.loggedInUser || this.user || {};
-            const myId = String(currentUser.id || currentUser.uid || '');
-            const myEmail = String(currentUser.email || '').toLowerCase();
-
-            const shiftAktif = (this.registers || []).find(r => {
-                if (r.status !== 'OPEN') return false;
-                const sId = String(r.cashierId || '');
-                const sEmail = String(r.cashierEmail || '').toLowerCase();
-                return (myId !== '' && sId === myId) || (myEmail !== '' && sEmail === myEmail);
-            });
             
-            const finalCashierId = shiftAktif ? shiftAktif.cashierId : myId;
-            const finalCashierName = shiftAktif ? shiftAktif.cashierName : (currentUser.namaLengkap || currentUser.name || currentUser.username || 'Admin');
-            const finalShiftId = shiftAktif ? shiftAktif.id : null;
-            const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
-
-            // =================================================================
-            // 5. PENYUSUNAN DATA TRANSAKSI UTAMA
-            // =================================================================
-            // 🚨 PASTIKAN BARIS INI ADA DAN TEPAT BERADA DI SINI:
-            let fStatus = (this.posOrderType === 'delivery' || this.posOrderType === 'pre_order') ? 'NEW' : 'COMPLETED';
+            sisaHutang = Math.max(0, grandTotal - uangDiterima);
+            finalPaymentMethod = 'SPLIT';
+            finalSplitPayments = JSON.parse(JSON.stringify(this.splitPayments));
             
-            // 🌟 TAMBAHKAN INI UNTUK MENANGKAP NOMOR HP PELANGGAN:
-            let finalCustomerPhone = this.selectedCustomer && this.selectedCustomer.phone ? this.selectedCustomer.phone : (this.selectedCustomer && this.selectedCustomer.no_hp ? this.selectedCustomer.no_hp : '-');
-            
-            let trxRaw = {
-                id: currentInvoiceId,
-                companyId: this.userProfile?.companyId || '',
-                dateStr: new Date().toLocaleString('id-ID'),
-                customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
-                customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
-                outletId: this.posActiveOutletId || '',
-                cashierId: finalCashierId,
-                cashierName: finalCashierName,
-                customerPhone: finalCustomerPhone,
-                shiftId: finalShiftId,
-                registerName: finalRegisterName,
-
-                // 🌟 KODE BARU: Masukkan Tipe Pesanan dan Status Fulfillment ke Database
-                orderType: this.posOrderType || 'direct', 
-                fulfillmentStatus: fStatus,
-                fulfillmentUpdatedAt: new Date().toLocaleString('id-ID'),
-                
-                paymentMethod: finalPaymentMethod,
-                splitPayments: finalSplitPayments,
-                totalDebt: sisaHutang,
-                isDebt: sisaHutang > 0,
-                amountReceived: uangDiterima,
-                paymentStatus: finalPaymentStatus,
-                sisaTagihan: sisaHutang,
-                
-                mdrFee: nominalMdr,
-                surchargeFee: nominalSurcharge,
-                subtotal: currentSubtotalBase,
-                discountAmt: currentDiscountAmt,
-                taxAmt: currentTaxAmt,
-                serviceAmt: currentServiceAmt,
-                total: grandTotal, 
-                items: cleanItems // <- Ini akan diperbarui di dalam loop
-            };
-
-            let trxData = JSON.parse(JSON.stringify(trxRaw));
-            trxData.createdAt = serverTimestamp();
-            this.posCustomInvoice = trxData.id;
-
-            // KITA TUNDA setDoc! Jangan masukkan ke Firebase dulu.
-
-            // ==========================================
-            // 6. ENGINE POTONG STOK & BATCH (DIMASUKKAN KE BATCH FIREBASE)
-            // ==========================================
-            let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
-            let dateNowStr = new Date().toLocaleString('id-ID');
-
-            for (let i = 0; i < trxData.items.length; i++) {
-                let item = trxData.items[i];
-                let prod = this.products.find(p => p.id === item.productId);
-                if (!prod) continue;
-
-                let prodCopy = JSON.parse(JSON.stringify(prod));
-                let requiredQty = item.qty;
-                let outletId = trxData.outletId;
-                let totalItemCogs = 0; 
-
-                if (item.variantSku) {
-                    let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
-                    if (vIdx !== -1) {
-                        if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                        prodCopy.variants[vIdx].outletStocks[outletId] = (prodCopy.variants[vIdx].outletStocks[outletId] || 0) - requiredQty;
-
-                        if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
-                        if (!prodCopy.variants[vIdx].batches[outletId]) prodCopy.variants[vIdx].batches[outletId] = [];
-                        let batches = prodCopy.variants[vIdx].batches[outletId]; 
-
-                        if (hppMethod === 'FEFO') {
-                            batches.sort((a, b) => {
-                                if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                                if (!a.expiredDate) return 1;
-                                if (!b.expiredDate) return -1;
-                                return new Date(a.expiredDate) - new Date(b.expiredDate);
-                            });
-                        } else if (hppMethod === 'LIFO') {
-                            batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                        } else {
-                            batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                        }
-
-                        let reqQty = requiredQty;
-                        for (let j = 0; j < batches.length; j++) {
-                            if (reqQty <= 0) break;
-                            let b = batches[j];
-                            let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-
-                            if (available > 0) {
-                                let taken = Math.min(available, reqQty);
-                                if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                                if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                                reqQty -= taken;
-                                
-                                let modalBatch = b.hargaModal || b.cost || prodCopy.variants[vIdx].hppPrice || 0;
-                                totalItemCogs += (taken * modalBatch);
-                                
-                                item.cutBatches.push({ 
-                                    batchNo: b.batchNo || '-', 
-                                    expiredDate: b.expiredDate || '', 
-                                    qty: taken, 
-                                    cost: modalBatch 
-                                });
-                            }
-                        }
-                        prodCopy.variants[vIdx].batches[outletId] = batches;
+            if (sisaHutang > 0 && this.selectedCustomer && this.selectedCustomer.id) {
+                finalSplitPayments.push({
+                    method: 'HUTANG',
+                    baseAmount: sisaHutang,
+                    surchargeAmount: 0,
+                    amount: sisaHutang,
+                    note: 'Sisa tagihan otomatis dicatat sbg hutang',
+                    isDebt: true
+                });
+            }
+        } else {
+            if (this.activePaymentMethodsForCashier && this.activePaymentMethodsForCashier.length > 0) {
+                let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method);
+                if (pm) {
+                    if (pm.mdr > 0) nominalMdr = (currentTotal * pm.mdr) / 100;
+                    if (pm.surcharge > 0) {
+                        nominalSurcharge = (pm.surchargeType === 'percent') ? (currentTotal * pm.surcharge) / 100 : Number(pm.surcharge);
                     }
-                } else {
-                    if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                    prodCopy.baseOutletStocks[outletId] = (prodCopy.baseOutletStocks[outletId] || 0) - requiredQty;
+                }
+            }
+            
+            let grandTotal = currentTotal + nominalSurcharge;
+            let inputUang = Number(this.paymentData.amountReceived) || 0;
+            uangDiterima = (inputUang === 0 || inputUang === currentTotal) ? grandTotal : inputUang;
+            sisaHutang = Math.max(0, grandTotal - uangDiterima);
+            finalPaymentMethod = this.paymentData.method || 'CASH';
+        }
 
-                    if (!prodCopy.batches) prodCopy.batches = {};
-                    if (!prodCopy.batches[outletId]) prodCopy.batches[outletId] = [];
-                    let batches = prodCopy.batches[outletId];
+        let grandTotal = currentTotal + nominalSurcharge;
+        
+        // 🌟 LOGIKA COD: Jika Delivery dan COD, ubah status pembayaran
+        let finalPaymentStatus = (uangDiterima >= grandTotal) ? 'LUNAS' : (uangDiterima > 0 ? 'SEBAGIAN' : 'BELUM LUNAS');
+        if (this.posOrderType === 'delivery' && this.posIsCOD) {
+            finalPaymentStatus = 'BELUM LUNAS';
+            sisaHutang = grandTotal; // Set seluruhnya menjadi hutang/piutang jika COD
+            uangDiterima = 0;
+            finalPaymentMethod = 'COD';
+        }
+
+        // =================================================================
+        // 4. LOGIKA KASIR / SHIFT
+        // =================================================================
+        const currentUser = this.userProfile || this.loggedInUser || this.user || {};
+        const myId = String(currentUser.id || currentUser.uid || '');
+        const myEmail = String(currentUser.email || '').toLowerCase();
+
+        const shiftAktif = (this.registers || []).find(r => {
+            if (r.status !== 'OPEN') return false;
+            const sId = String(r.cashierId || '');
+            const sEmail = String(r.cashierEmail || '').toLowerCase();
+            return (myId !== '' && sId === myId) || (myEmail !== '' && sEmail === myEmail);
+        });
+        
+        const finalCashierId = shiftAktif ? shiftAktif.cashierId : myId;
+        const finalCashierName = shiftAktif ? shiftAktif.cashierName : (currentUser.namaLengkap || currentUser.name || currentUser.username || 'Admin');
+        const finalShiftId = shiftAktif ? shiftAktif.id : null;
+        const finalRegisterName = shiftAktif ? shiftAktif.registerName : 'Tanpa Laci';
+
+        // =================================================================
+        // 5. PENYUSUNAN DATA TRANSAKSI UTAMA
+        // =================================================================
+        let fStatus = (this.posOrderType === 'delivery' || this.posOrderType === 'pre_order') ? 'NEW' : 'COMPLETED';
+        let finalCustomerPhone = this.selectedCustomer && this.selectedCustomer.phone ? this.selectedCustomer.phone : (this.selectedCustomer && this.selectedCustomer.no_hp ? this.selectedCustomer.no_hp : '-');
+        
+        let trxRaw = {
+            id: currentInvoiceId,
+            companyId: this.userProfile?.companyId || '',
+            dateStr: new Date().toLocaleString('id-ID'),
+            customerId: this.selectedCustomer ? (this.selectedCustomer.id || null) : null,
+            customer: this.selectedCustomer ? (this.selectedCustomer.name || 'Umum') : 'Umum',
+            outletId: this.posActiveOutletId || '',
+            cashierId: finalCashierId,
+            cashierName: finalCashierName,
+            customerPhone: finalCustomerPhone,
+            shiftId: finalShiftId,
+            registerName: finalRegisterName,
+
+            // STATUS & ORDER TYPE
+            orderType: this.posOrderType || 'direct', 
+            fulfillmentStatus: fStatus,
+            fulfillmentUpdatedAt: new Date().toLocaleString('id-ID'),
+            
+            // 🌟 DATA PENGIRIMAN (DIMASUKKAN KE DATABASE)
+            courier: this.posOrderType === 'delivery' ? (this.posCourier || '') : '',
+            shippingCost: currentShippingCost,
+            isCOD: this.posOrderType === 'delivery' ? this.posIsCOD : false,
+            
+            paymentMethod: finalPaymentMethod,
+            splitPayments: finalSplitPayments,
+            totalDebt: sisaHutang,
+            isDebt: sisaHutang > 0,
+            amountReceived: uangDiterima,
+            paymentStatus: finalPaymentStatus,
+            sisaTagihan: sisaHutang,
+            
+            mdrFee: nominalMdr,
+            surchargeFee: nominalSurcharge,
+            subtotal: currentSubtotalBase,
+            discountAmt: currentDiscountAmt,
+            taxAmt: currentTaxAmt,
+            serviceAmt: currentServiceAmt,
+            total: grandTotal, // <- Pastikan ini sudah termasuk Ongkir (dr variable grandTotal)
+            items: cleanItems
+        };
+
+        let trxData = JSON.parse(JSON.stringify(trxRaw));
+        trxData.createdAt = serverTimestamp();
+        this.posCustomInvoice = trxData.id;
+
+        // KITA TUNDA setDoc! Jangan masukkan ke Firebase dulu.
+
+        // ==========================================
+        // 6. ENGINE POTONG STOK & BATCH (DIMASUKKAN KE BATCH FIREBASE)
+        // ==========================================
+        let hppMethod = (this.appSettings && this.appSettings.hppMethod) ? this.appSettings.hppMethod : 'FIFO';
+        let dateNowStr = new Date().toLocaleString('id-ID');
+
+        for (let i = 0; i < trxData.items.length; i++) {
+            let item = trxData.items[i];
+            let prod = this.products.find(p => p.id === item.productId);
+            if (!prod) continue;
+
+            let prodCopy = JSON.parse(JSON.stringify(prod));
+            let requiredQty = item.qty;
+            let outletId = trxData.outletId;
+            let totalItemCogs = 0; 
+
+            if (item.variantSku) {
+                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                if (vIdx !== -1) {
+                    if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                    prodCopy.variants[vIdx].outletStocks[outletId] = (prodCopy.variants[vIdx].outletStocks[outletId] || 0) - requiredQty;
+
+                    if (!prodCopy.variants[vIdx].batches) prodCopy.variants[vIdx].batches = {};
+                    if (!prodCopy.variants[vIdx].batches[outletId]) prodCopy.variants[vIdx].batches[outletId] = [];
+                    let batches = prodCopy.variants[vIdx].batches[outletId]; 
 
                     if (hppMethod === 'FEFO') {
                         batches.sort((a, b) => {
@@ -16006,9 +16018,9 @@ let item = {
                             if (b.qtySisa !== undefined) b.qtySisa -= taken;
                             reqQty -= taken;
                             
-                            let modalBatch = b.hargaModal || b.cost || prodCopy.hppPrice || 0;
+                            let modalBatch = b.hargaModal || b.cost || prodCopy.variants[vIdx].hppPrice || 0;
                             totalItemCogs += (taken * modalBatch);
-                                
+                            
                             item.cutBatches.push({ 
                                 batchNo: b.batchNo || '-', 
                                 expiredDate: b.expiredDate || '', 
@@ -16017,254 +16029,304 @@ let item = {
                             });
                         }
                     }
-                    prodCopy.batches[outletId] = batches;
+                    prodCopy.variants[vIdx].batches[outletId] = batches;
+                }
+            } else {
+                if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                prodCopy.baseOutletStocks[outletId] = (prodCopy.baseOutletStocks[outletId] || 0) - requiredQty;
+
+                if (!prodCopy.batches) prodCopy.batches = {};
+                if (!prodCopy.batches[outletId]) prodCopy.batches[outletId] = [];
+                let batches = prodCopy.batches[outletId];
+
+                if (hppMethod === 'FEFO') {
+                    batches.sort((a, b) => {
+                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                        if (!a.expiredDate) return 1;
+                        if (!b.expiredDate) return -1;
+                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                    });
+                } else if (hppMethod === 'LIFO') {
+                    batches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                } else {
+                    batches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
                 }
 
-                item.totalCogs = totalItemCogs;
+                let reqQty = requiredQty;
+                for (let j = 0; j < batches.length; j++) {
+                    if (reqQty <= 0) break;
+                    let b = batches[j];
+                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
 
-                // 🌟 [BATCH 1] Update Produk Utama
-                batch.update(doc(db, "products", prod.id), {
-                    variants: prodCopy.variants || [],
-                    baseOutletStocks: prodCopy.baseOutletStocks || {},
-                    batches: prodCopy.batches || {} 
+                    if (available > 0) {
+                        let taken = Math.min(available, reqQty);
+                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                        reqQty -= taken;
+                        
+                        let modalBatch = b.hargaModal || b.cost || prodCopy.hppPrice || 0;
+                        totalItemCogs += (taken * modalBatch);
+                            
+                        item.cutBatches.push({ 
+                            batchNo: b.batchNo || '-', 
+                            expiredDate: b.expiredDate || '', 
+                            qty: taken, 
+                            cost: modalBatch 
+                        });
+                    }
+                }
+                prodCopy.batches[outletId] = batches;
+            }
+
+            item.totalCogs = totalItemCogs;
+
+            // [BATCH 1] Update Produk Utama
+            batch.update(doc(db, "products", prod.id), {
+                variants: prodCopy.variants || [],
+                baseOutletStocks: prodCopy.baseOutletStocks || {},
+                batches: prodCopy.batches || {} 
+            });
+
+            // [BATCH 2] Catat Log Mutasi Keluar Produk Utama
+            let logRef = doc(collection(db, "stockLogs"));
+            batch.set(logRef, {
+                companyId: this.userProfile?.companyId || '',
+                createdAt: serverTimestamp(),
+                dateStr: dateNowStr,
+                type: 'OUT',
+                productId: prod.id,
+                sku: prod.sku || '-',
+                productName: prod.name || '-',
+                variantSku: item.variantSku || null,
+                variantName: item.variantName || '-',
+                qtyChange: -item.qty,
+                outletId: trxData.outletId,
+                outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
+                refId: trxData.id,
+                userName: finalCashierName,
+                note: 'Penjualan Kasir POS'
+            });
+
+            // =================================================================
+            // 7. ENGINE POTONG STOK UNTUK OPSI / MODIFIER LINKED PRODUCT
+            // =================================================================
+            let daftarOpsiTerpilih = item.linkedModifiers || [];
+            
+            for (let opsi of daftarOpsiTerpilih) {
+                let linkedProdId = opsi.productId;
+                if (!linkedProdId) continue;
+
+                let linkedProd = this.products.find(p => p.id === linkedProdId);
+                if (!linkedProd) continue;
+
+                let linkedProdCopy = JSON.parse(JSON.stringify(linkedProd));
+                
+                let qtyOpsiPerItem = Number(opsi.qty || 1);
+                let requiredOptQty = item.qty * qtyOpsiPerItem;
+
+                if (!linkedProdCopy.baseOutletStocks) linkedProdCopy.baseOutletStocks = {};
+                linkedProdCopy.baseOutletStocks[outletId] = (linkedProdCopy.baseOutletStocks[outletId] || 0) - requiredOptQty;
+
+                if (!linkedProdCopy.batches) linkedProdCopy.batches = {};
+                if (!linkedProdCopy.batches[outletId]) linkedProdCopy.batches[outletId] = [];
+                let optBatches = linkedProdCopy.batches[outletId];
+
+                if (hppMethod === 'FEFO') {
+                    optBatches.sort((a, b) => {
+                        if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
+                        if (!a.expiredDate) return 1;
+                        if (!b.expiredDate) return -1;
+                        return new Date(a.expiredDate) - new Date(b.expiredDate);
+                    });
+                } else if (hppMethod === 'LIFO') {
+                    optBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
+                } else {
+                    optBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
+                }
+
+                let remOptQty = requiredOptQty;
+                for (let b of optBatches) {
+                    if (remOptQty <= 0) break;
+                    let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
+                    if (available > 0) {
+                        let taken = Math.min(available, remOptQty);
+                        if (b.qty_remain !== undefined) b.qty_remain -= taken;
+                        if (b.qtySisa !== undefined) b.qtySisa -= taken;
+                        remOptQty -= taken;
+                    }
+                }
+                linkedProdCopy.batches[outletId] = optBatches;
+
+                // [BATCH 3] Update Produk Opsi (Topping)
+                batch.update(doc(db, "products", linkedProd.id), {
+                    baseOutletStocks: linkedProdCopy.baseOutletStocks || {},
+                    batches: linkedProdCopy.batches || {}
                 });
-
-                // 🌟 [BATCH 2] Catat Log Mutasi Keluar Produk Utama
-                let logRef = doc(collection(db, "stockLogs"));
-                batch.set(logRef, {
+                
+                // [BATCH 4] Catat Log Mutasi Topping
+                let optLogRef = doc(collection(db, "stockLogs"));
+                batch.set(optLogRef, {
                     companyId: this.userProfile?.companyId || '',
                     createdAt: serverTimestamp(),
                     dateStr: dateNowStr,
                     type: 'OUT',
-                    productId: prod.id,
-                    sku: prod.sku || '-',
-                    productName: prod.name || '-',
-                    variantSku: item.variantSku || null,
-                    variantName: item.variantName || '-',
-                    qtyChange: -item.qty,
+                    productId: linkedProd.id,
+                    sku: linkedProd.sku || '-',
+                    productName: linkedProd.name || '-',
+                    variantSku: null,
+                    variantName: '-',
+                    qtyChange: -requiredOptQty,
                     outletId: trxData.outletId,
                     outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
                     refId: trxData.id,
                     userName: finalCashierName,
-                    note: 'Penjualan Kasir POS'
+                    note: `Terjual sbg Topping di POS`
                 });
+            }
+        }
 
-                // =================================================================
-                // 7. ENGINE POTONG STOK UNTUK OPSI / MODIFIER LINKED PRODUCT
-                // =================================================================
-                let daftarOpsiTerpilih = item.linkedModifiers || [];
-                
-                for (let opsi of daftarOpsiTerpilih) {
-                    let linkedProdId = opsi.productId;
-                    if (!linkedProdId) continue;
+        // =================================================================
+        // 7.5 EKSEKUSI TUKAR TAMBAH (JIKA ADA PENDING TRADE-IN)
+        // =================================================================
+        if (this.pendingTradeIn && this.pendingTradeIn.originalInvoice) {
+            let oldTrx = this.pendingTradeIn.originalInvoice;
+            let refundTotal = this.pendingTradeIn.refundAmount;
 
-                    let linkedProd = this.products.find(p => p.id === linkedProdId);
-                    if (!linkedProd) continue;
+            // A. Update Status dan Total Invoice Lama
+            oldTrx.total -= refundTotal;
+            if (oldTrx.total < 0) oldTrx.total = 0;
+            oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
 
-                    let linkedProdCopy = JSON.parse(JSON.stringify(linkedProd));
-                    
-                    let qtyOpsiPerItem = Number(opsi.qty || 1);
-                    let requiredOptQty = item.qty * qtyOpsiPerItem;
+            let isSisaBarangAda = oldTrx.items.some(i => i.qty > 0);
+            oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+            oldTrx.status = oldTrx.paymentStatus;
 
-                    if (!linkedProdCopy.baseOutletStocks) linkedProdCopy.baseOutletStocks = {};
-                    linkedProdCopy.baseOutletStocks[outletId] = (linkedProdCopy.baseOutletStocks[outletId] || 0) - requiredOptQty;
+            oldTrx.paymentHistory = oldTrx.paymentHistory || [];
+            oldTrx.paymentHistory.push({
+                date: new Date().toLocaleString('id-ID'),
+                method: 'SALDO TUKAR',
+                amount: -refundTotal,
+                note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
+            });
 
-                    if (!linkedProdCopy.batches) linkedProdCopy.batches = {};
-                    if (!linkedProdCopy.batches[outletId]) linkedProdCopy.batches[outletId] = [];
-                    let optBatches = linkedProdCopy.batches[outletId];
+            // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
+            for (let retItem of this.pendingTradeIn.itemsToReturn) {
+                let invItem = oldTrx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+                if (invItem) {
+                    invItem.qty -= retItem.returnQty;
+                    invItem.isReturned = true;
 
-                    if (hppMethod === 'FEFO') {
-                        optBatches.sort((a, b) => {
-                            if (!a.expiredDate && !b.expiredDate) return new Date(a.tanggalMasuk || a.date || 0) - new Date(b.tanggalMasuk || b.date || 0);
-                            if (!a.expiredDate) return 1;
-                            if (!b.expiredDate) return -1;
-                            return new Date(a.expiredDate) - new Date(b.expiredDate);
-                        });
-                    } else if (hppMethod === 'LIFO') {
-                        optBatches.sort((a, b) => new Date(b.date || b.tanggalMasuk || 0) - new Date(a.date || a.tanggalMasuk || 0));
-                    } else {
-                        optBatches.sort((a, b) => new Date(a.date || a.tanggalMasuk || 0) - new Date(b.date || b.tanggalMasuk || 0));
-                    }
-
-                    let remOptQty = requiredOptQty;
-                    for (let b of optBatches) {
-                        if (remOptQty <= 0) break;
-                        let available = b.qty_remain !== undefined ? b.qty_remain : (b.qtySisa !== undefined ? b.qtySisa : (b.qty || 0));
-                        if (available > 0) {
-                            let taken = Math.min(available, remOptQty);
-                            if (b.qty_remain !== undefined) b.qty_remain -= taken;
-                            if (b.qtySisa !== undefined) b.qtySisa -= taken;
-                            remOptQty -= taken;
-                        }
-                    }
-                    linkedProdCopy.batches[outletId] = optBatches;
-
-                    // 🌟 [BATCH 3] Update Produk Opsi (Topping)
-                    batch.update(doc(db, "products", linkedProd.id), {
-                        baseOutletStocks: linkedProdCopy.baseOutletStocks || {},
-                        batches: linkedProdCopy.batches || {}
+                    oldTrx.returHistory = oldTrx.returHistory || [];
+                    oldTrx.returHistory.push({
+                        date: new Date().toLocaleString('id-ID'),
+                        productName: retItem.name + (retItem.variantName ? ` (${retItem.variantName})` : ''),
+                        qtyRetur: retItem.returnQty,
+                        refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
+                        alasan: this.pendingTradeIn.reason || 'Tukar Tambah'
                     });
-                    
-                    // 🌟 [BATCH 4] Catat Log Mutasi Topping
-                    let optLogRef = doc(collection(db, "stockLogs"));
-                    batch.set(optLogRef, {
+                }
+
+                // Kembalikan Stok
+                let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                if (prod) {
+                    let prodCopy = JSON.parse(JSON.stringify(prod));
+                    if (retItem.variantSku) {
+                        let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                        if (vIdx !== -1) {
+                            if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
+                            prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] = (prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
+                        }
+                    } else {
+                        if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
+                        prodCopy.baseOutletStocks[oldTrx.outletId] = (prodCopy.baseOutletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
+                    }
+
+                    // Masukkan update stok ke Batch
+                    batch.update(doc(db, "products", prod.id), {
+                        variants: prodCopy.variants || [],
+                        baseOutletStocks: prodCopy.baseOutletStocks || {}
+                    });
+
+                    // Catat ke Log Mutasi Stok (IN)
+                    let tradeLogRef = doc(collection(db, "stockLogs"));
+                    batch.set(tradeLogRef, {
                         companyId: this.userProfile?.companyId || '',
                         createdAt: serverTimestamp(),
                         dateStr: dateNowStr,
-                        type: 'OUT',
-                        productId: linkedProd.id,
-                        sku: linkedProd.sku || '-',
-                        productName: linkedProd.name || '-',
-                        variantSku: null,
-                        variantName: '-',
-                        qtyChange: -requiredOptQty,
-                        outletId: trxData.outletId,
-                        outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
-                        refId: trxData.id,
+                        type: 'IN',
+                        productId: prod.id,
+                        sku: retItem.sku || prod.sku || '-',
+                        productName: prod.name,
+                        variantSku: retItem.variantSku || null,
+                        variantName: retItem.variantName || '-',
+                        qtyChange: retItem.returnQty,
+                        outletId: oldTrx.outletId,
+                        outletName: this.getOutletName(oldTrx.outletId) || 'Toko',
+                        refId: `TUKAR-${oldTrx.id}`,
                         userName: finalCashierName,
-                        note: `Terjual sbg Topping di POS`
+                        note: `Retur Tukar Tambah dari Inv: ${oldTrx.id}`
                     });
                 }
             }
 
-            // =================================================================
-            // 🌟 7.5 EKSEKUSI TUKAR TAMBAH (JIKA ADA PENDING TRADE-IN)
-            // =================================================================
-            if (this.pendingTradeIn && this.pendingTradeIn.originalInvoice) {
-                let oldTrx = this.pendingTradeIn.originalInvoice;
-                let refundTotal = this.pendingTradeIn.refundAmount;
-
-                // A. Update Status dan Total Invoice Lama
-                oldTrx.total -= refundTotal;
-                if (oldTrx.total < 0) oldTrx.total = 0;
-                oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
-
-                let isSisaBarangAda = oldTrx.items.some(i => i.qty > 0);
-                oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-                oldTrx.status = oldTrx.paymentStatus;
-
-                oldTrx.paymentHistory = oldTrx.paymentHistory || [];
-                oldTrx.paymentHistory.push({
-                    date: new Date().toLocaleString('id-ID'),
-                    method: 'SALDO TUKAR',
-                    amount: -refundTotal,
-                    note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
-                });
-
-                // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
-                for (let retItem of this.pendingTradeIn.itemsToReturn) {
-                    let invItem = oldTrx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
-                    if (invItem) {
-                        invItem.qty -= retItem.returnQty;
-                        invItem.isReturned = true;
-
-                        oldTrx.returHistory = oldTrx.returHistory || [];
-                        oldTrx.returHistory.push({
-                            date: new Date().toLocaleString('id-ID'),
-                            productName: retItem.name + (retItem.variantName ? ` (${retItem.variantName})` : ''),
-                            qtyRetur: retItem.returnQty,
-                            refundAmount: retItem.returnQty * (invItem.finalPrice || invItem.sellPrice || 0),
-                            alasan: this.pendingTradeIn.reason || 'Tukar Tambah'
-                        });
-                    }
-
-                    // Kembalikan Stok (Membonceng ke fungsi Batch Kasir)
-                    let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
-                    if (prod) {
-                        let prodCopy = JSON.parse(JSON.stringify(prod));
-                        if (retItem.variantSku) {
-                            let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
-                            if (vIdx !== -1) {
-                                if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
-                                prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] = (prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
-                            }
-                        } else {
-                            if (!prodCopy.baseOutletStocks) prodCopy.baseOutletStocks = {};
-                            prodCopy.baseOutletStocks[oldTrx.outletId] = (prodCopy.baseOutletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
-                        }
-
-                        // Masukkan update stok ke Batch
-                        batch.update(doc(db, "products", prod.id), {
-                            variants: prodCopy.variants || [],
-                            baseOutletStocks: prodCopy.baseOutletStocks || {}
-                        });
-
-                        // Catat ke Log Mutasi Stok (IN)
-                        let tradeLogRef = doc(collection(db, "stockLogs"));
-                        batch.set(tradeLogRef, {
-                            companyId: this.userProfile?.companyId || '',
-                            createdAt: serverTimestamp(),
-                            dateStr: dateNowStr,
-                            type: 'IN',
-                            productId: prod.id,
-                            sku: retItem.sku || prod.sku || '-',
-                            productName: prod.name,
-                            variantSku: retItem.variantSku || null,
-                            variantName: retItem.variantName || '-',
-                            qtyChange: retItem.returnQty,
-                            outletId: oldTrx.outletId,
-                            outletName: this.getOutletName(oldTrx.outletId) || 'Toko',
-                            refId: `TUKAR-${oldTrx.id}`,
-                            userName: finalCashierName,
-                            note: `Retur Tukar Tambah dari Inv: ${oldTrx.id}`
-                        });
-                    }
-                }
-
-                // C. Masukkan Update Invoice Lama ke Batch Firebase
-                batch.update(doc(db, "transactions", oldTrx.id), {
-                    items: oldTrx.items,
-                    total: oldTrx.total,
-                    sisaTagihan: oldTrx.sisaTagihan,
-                    paymentStatus: oldTrx.paymentStatus,
-                    status: oldTrx.status,
-                    paymentHistory: oldTrx.paymentHistory,
-                    returHistory: oldTrx.returHistory
-                });
-            }
-            
-            // =================================================================
-            // 8. UPDATE FINAL & EKSEKUSI KERANJANG FIREBASE
-            // =================================================================
-            // 🌟 [BATCH 5] Masukkan data Nota/Transaksi HANYA setelah semua HPP & Batch dihitung di loop atas
-            batch.set(doc(db, "transactions", trxData.id), trxData);
-
-            // 🚀🚀 TEMBAK SEMUANYA KE SERVER DALAM 1 PERINTAH!
-            // 🌟 PERBAIKAN: "await" DIHAPUS. Tidak perlu menunggu Google Server untuk lanjut!
-            batch.commit().catch(err => console.warn("Sinkronisasi tertunda (Mode Offline):", err));
-
-            this.activePrintData = trxData;
-            this.printMode = 'receipt';
-            this.hideModal('paymentModal');
-
-            // MUNCULKAN DIALOG PRINT SEKETIKA
-            setTimeout(() => {
-                this.triggerPrint(trxData, 'receipt');
-            }, 500); 
-
-            // RESET FORM KASIR KE KONDISI AWAL
-            this.posCustomInvoice = this.generateInvoiceNumber('POS');
-            this.cart = [];
-            this.pendingTradeIn = null; // KOSONGKAN memori tukar tambah setelah sukses dibayar
-            this.selectedCustomer = null;
-            this.customerSearchQuery = ''; 
-            this.globalDiscountType = 'none';
-            this.globalDiscountValue = 0;
-            this.paymentData = { method: 'CASH', amountReceived: 0, note: '' };
-            this.isSplitPayment = false; 
-            this.splitPayments = [];     
-
-            // 🌟 KODE BARU: Kembalikan select box pesanan ke default (Store)
-            this.posOrderType = 'direct';
-            
-            Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
-
-        } catch (err) {
-            console.error("Gagal proses transaksi:", err);
-            Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan transaksi.', 'error');
+            // C. Masukkan Update Invoice Lama ke Batch Firebase
+            batch.update(doc(db, "transactions", oldTrx.id), {
+                items: oldTrx.items,
+                total: oldTrx.total,
+                sisaTagihan: oldTrx.sisaTagihan,
+                paymentStatus: oldTrx.paymentStatus,
+                status: oldTrx.status,
+                paymentHistory: oldTrx.paymentHistory,
+                returHistory: oldTrx.returHistory
+            });
         }
-        this.isProcessing = false;
-    },
+        
+        // =================================================================
+        // 8. UPDATE FINAL & EKSEKUSI KERANJANG FIREBASE
+        // =================================================================
+        // [BATCH 5] Masukkan data Nota/Transaksi
+        batch.set(doc(db, "transactions", trxData.id), trxData);
+
+        // 🚀🚀 TEMBAK SEMUANYA KE SERVER DALAM 1 PERINTAH!
+        batch.commit().catch(err => console.warn("Sinkronisasi tertunda (Mode Offline):", err));
+
+        this.activePrintData = trxData;
+        this.printMode = 'receipt';
+        this.hideModal('paymentModal');
+
+        // MUNCULKAN DIALOG PRINT SEKETIKA
+        setTimeout(() => {
+            this.triggerPrint(trxData, 'receipt');
+        }, 500); 
+
+        // =================================================================
+        // 9. 🌟 RESET SEMUA FORM KASIR KE KONDISI AWAL (TERMASUK ONGKIR)
+        // =================================================================
+        this.posCustomInvoice = this.generateInvoiceNumber('POS');
+        this.cart = [];
+        this.pendingTradeIn = null; 
+        this.selectedCustomer = null;
+        this.customerSearchQuery = ''; 
+        this.globalDiscountType = 'none';
+        this.globalDiscountValue = 0;
+        this.paymentData = { method: 'CASH', amountReceived: 0, note: '' };
+        this.isSplitPayment = false; 
+        this.splitPayments = [];     
+
+        // 🌟 KEMBALIKAN SEMUA VARIABEL PENGIRIMAN KE DEFAULT
+        this.posOrderType = 'direct';
+        this.posCourier = '';
+        this.posShippingCost = 0;
+        this.posIsCOD = false;
+        
+        Swal.fire({ icon: 'success', title: 'Transaksi Berhasil', text: 'Invoice ' + currentInvoiceId + ' tersimpan.', timer: 2000, showConfirmButton: false });
+
+    } catch (err) {
+        console.error("Gagal proses transaksi:", err);
+        Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan transaksi.', 'error');
+    }
+    this.isProcessing = false;
+},
 
         holdTransaction() {
             if (this.cart.length === 0) return;
