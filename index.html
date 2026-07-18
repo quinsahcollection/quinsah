@@ -15761,6 +15761,15 @@ let item = {
 
     try {
         // =================================================================
+        // [DITAMBAHKAN] PENGAMAN KERANJANG KOSONG
+        // =================================================================
+        if (!this.cart || this.cart.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Keranjang Kosong', text: 'Silakan tambahkan produk terlebih dahulu!' });
+            this.isProcessing = false;
+            return;
+        }
+
+        // =================================================================
         // 0. VALIDASI NOMOR INVOICE LOKAL
         // =================================================================
         let currentInvoiceId = String(this.posCustomInvoice || '').replace(/\//g, '-').trim();
@@ -15804,8 +15813,12 @@ let item = {
                         html: `Nomor invoice <strong>${currentInvoiceId}</strong> baru saja digunakan oleh kasir lain.<br>Silakan ganti nomor invoice atau klik bayar ulang.`,
                         confirmButtonColor: '#dc2626'
                     });
-                    if (typeof this.generateInvoiceNumber === 'function' && !this.posCustomInvoice) {
-                        await this.generateInvoiceNumber(); 
+                    
+                    // [DIPERBAIKI] Pastikan men-generate ulang dengan aman jika fungsi tersedia
+                    if (typeof this.generateInvoiceNumber === 'function') {
+                        let regeneratedInv = this.generateInvoiceNumber('POS');
+                        if (regeneratedInv instanceof Promise) regeneratedInv = await regeneratedInv;
+                        if (regeneratedInv) this.posCustomInvoice = regeneratedInv;
                     }
                     this.isProcessing = false;
                     return; 
@@ -15823,7 +15836,12 @@ let item = {
         // 1. LOGIKA EDIT (Pembatalan dimasukkan ke Batch)
         // =================================================================
         if (this.isEditingInvoice && this.originalEditTrx) {
-            await this.revertPosStock(this.originalEditTrx); // Asumsi revert stok berjalan aman
+            // [DIPERBAIKI] Dibungkus try-catch agar jika fungsi revert error, transaksi tetap jalan
+            try {
+                await this.revertPosStock(this.originalEditTrx); 
+            } catch (revertErr) {
+                console.warn("Revert stok berpotensi gagal, tapi dilanjutkan:", revertErr);
+            }
             batch.delete(doc(db, "transactions", this.originalEditTrx.id)); // Hapus nota lama via Batch
         }
 
@@ -15842,13 +15860,14 @@ let item = {
         let currentShippingCost = (this.posOrderType === 'delivery') ? (Number(this.posShippingCost) || 0) : 0;
         let currentTotal = this.total || 0; // Seharusnya 'this.total' sudah mencakup ongkir dari computed property
 
-        let cleanItems = this.cart.map(c => JSON.parse(JSON.stringify({
+        let cleanItems = (this.cart || []).map(c => JSON.parse(JSON.stringify({
             ...c,
             sku: c.sku || '-',
             variantSku: c.variantSku || null,
             variantName: c.variantName || null,
             note: c.note || '',
-            finalPrice: this.getFinalItemPrice(c),
+            // [DIPERBAIKI] Pastikan harga valid jika fungsi getFinalItemPrice tidak ditemukan
+            finalPrice: typeof this.getFinalItemPrice === 'function' ? this.getFinalItemPrice(c) : (c.finalPrice || c.sellPrice || 0),
             cutBatches: [], 
             totalCogs: 0    
         })));
@@ -15991,7 +16010,8 @@ let item = {
 
         for (let i = 0; i < trxData.items.length; i++) {
             let item = trxData.items[i];
-            let prod = this.products.find(p => p.id === item.productId);
+            // [DIPERBAIKI] Pengaman produk kosong
+            let prod = (this.products || []).find(p => p.id === item.productId);
             if (!prod) continue;
 
             let prodCopy = JSON.parse(JSON.stringify(prod));
@@ -16000,7 +16020,10 @@ let item = {
             let totalItemCogs = 0; 
 
             if (item.variantSku) {
-                let vIdx = prodCopy.variants.findIndex(v => v.variantSku === item.variantSku);
+                // [DIPERBAIKI] Pengaman variants array
+                let variantsList = prodCopy.variants || [];
+                let vIdx = variantsList.findIndex(v => v.variantSku === item.variantSku);
+                
                 if (vIdx !== -1) {
                     if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                     prodCopy.variants[vIdx].outletStocks[outletId] = (prodCopy.variants[vIdx].outletStocks[outletId] || 0) - requiredQty;
@@ -16117,7 +16140,8 @@ let item = {
                 variantName: item.variantName || '-',
                 qtyChange: -item.qty,
                 outletId: trxData.outletId,
-                outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
+                // [DIPERBAIKI] Pengecekan getOutletName aman
+                outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(trxData.outletId) : 'Toko Utama') || 'Toko Utama',
                 refId: trxData.id,
                 userName: finalCashierName,
                 note: 'Penjualan Kasir POS'
@@ -16132,7 +16156,8 @@ let item = {
                 let linkedProdId = opsi.productId;
                 if (!linkedProdId) continue;
 
-                let linkedProd = this.products.find(p => p.id === linkedProdId);
+                // [DIPERBAIKI] Pengaman optional chaining
+                let linkedProd = (this.products || []).find(p => p.id === linkedProdId);
                 if (!linkedProd) continue;
 
                 let linkedProdCopy = JSON.parse(JSON.stringify(linkedProd));
@@ -16193,7 +16218,7 @@ let item = {
                     variantName: '-',
                     qtyChange: -requiredOptQty,
                     outletId: trxData.outletId,
-                    outletName: this.getOutletName(trxData.outletId) || 'Toko Utama',
+                    outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(trxData.outletId) : 'Toko Utama') || 'Toko Utama',
                     refId: trxData.id,
                     userName: finalCashierName,
                     note: `Terjual sbg Topping di POS`
@@ -16213,7 +16238,7 @@ let item = {
             if (oldTrx.total < 0) oldTrx.total = 0;
             oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
 
-            let isSisaBarangAda = oldTrx.items.some(i => i.qty > 0);
+            let isSisaBarangAda = (oldTrx.items || []).some(i => i.qty > 0);
             oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
             oldTrx.status = oldTrx.paymentStatus;
 
@@ -16226,8 +16251,9 @@ let item = {
             });
 
             // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
-            for (let retItem of this.pendingTradeIn.itemsToReturn) {
-                let invItem = oldTrx.items.find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
+            let itemsToReturn = this.pendingTradeIn.itemsToReturn || [];
+            for (let retItem of itemsToReturn) {
+                let invItem = (oldTrx.items || []).find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
                 if (invItem) {
                     invItem.qty -= retItem.returnQty;
                     invItem.isReturned = true;
@@ -16243,11 +16269,13 @@ let item = {
                 }
 
                 // Kembalikan Stok
-                let prod = this.products.find(p => p.sku === retItem.sku || p.name === retItem.name);
+                let prod = (this.products || []).find(p => p.sku === retItem.sku || p.name === retItem.name);
                 if (prod) {
                     let prodCopy = JSON.parse(JSON.stringify(prod));
                     if (retItem.variantSku) {
-                        let vIdx = prodCopy.variants.findIndex(v => v.variantSku === retItem.variantSku);
+                        // [DIPERBAIKI] Pengaman saat findIndex variant
+                        let vList = prodCopy.variants || [];
+                        let vIdx = vList.findIndex(v => v.variantSku === retItem.variantSku);
                         if (vIdx !== -1) {
                             if (!prodCopy.variants[vIdx].outletStocks) prodCopy.variants[vIdx].outletStocks = {};
                             prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] = (prodCopy.variants[vIdx].outletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
@@ -16277,7 +16305,7 @@ let item = {
                         variantName: retItem.variantName || '-',
                         qtyChange: retItem.returnQty,
                         outletId: oldTrx.outletId,
-                        outletName: this.getOutletName(oldTrx.outletId) || 'Toko',
+                        outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(oldTrx.outletId) : 'Toko') || 'Toko',
                         refId: `TUKAR-${oldTrx.id}`,
                         userName: finalCashierName,
                         note: `Retur Tukar Tambah dari Inv: ${oldTrx.id}`
@@ -16287,13 +16315,13 @@ let item = {
 
             // C. Masukkan Update Invoice Lama ke Batch Firebase
             batch.update(doc(db, "transactions", oldTrx.id), {
-                items: oldTrx.items,
+                items: oldTrx.items || [],
                 total: oldTrx.total,
                 sisaTagihan: oldTrx.sisaTagihan,
                 paymentStatus: oldTrx.paymentStatus,
                 status: oldTrx.status,
-                paymentHistory: oldTrx.paymentHistory,
-                returHistory: oldTrx.returHistory
+                paymentHistory: oldTrx.paymentHistory || [],
+                returHistory: oldTrx.returHistory || []
             });
         }
         
@@ -16304,7 +16332,12 @@ let item = {
         batch.set(doc(db, "transactions", trxData.id), trxData);
 
         // 🚀🚀 TEMBAK SEMUANYA KE SERVER DALAM 1 PERINTAH!
-        batch.commit().catch(err => console.warn("Sinkronisasi tertunda (Mode Offline):", err));
+        // [DIPERBAIKI] Disusun rapi dengan then-catch agar background process tidak memblokir UI.
+        batch.commit().then(() => {
+            console.log(`Invoice ${trxData.id} berhasil disinkronkan.`);
+        }).catch(err => {
+            console.warn("Sinkronisasi tertunda (Mode Offline) atau error background:", err);
+        });
 
         this.activePrintData = trxData;
         this.printMode = 'receipt';
@@ -16312,13 +16345,27 @@ let item = {
 
         // MUNCULKAN DIALOG PRINT SEKETIKA
         setTimeout(() => {
-            this.triggerPrint(trxData, 'receipt');
+            if (typeof this.triggerPrint === 'function') {
+                this.triggerPrint(trxData, 'receipt');
+            }
         }, 500); 
 
         // =================================================================
         // 9. 🌟 RESET SEMUA FORM KASIR KE KONDISI AWAL (TERMASUK ONGKIR)
         // =================================================================
-        this.posCustomInvoice = this.generateInvoiceNumber('POS');
+        // [DIPERBAIKI] Penanganan Async/Await untuk Invoice Number
+        if (typeof this.generateInvoiceNumber === 'function') {
+            let nextInvoice = this.generateInvoiceNumber('POS');
+            if (nextInvoice instanceof Promise) {
+                nextInvoice = await nextInvoice;
+            }
+            if (nextInvoice) {
+                this.posCustomInvoice = nextInvoice;
+            }
+        } else {
+            this.posCustomInvoice = ''; 
+        }
+
         this.cart = [];
         this.pendingTradeIn = null; 
         this.selectedCustomer = null;
@@ -16340,8 +16387,10 @@ let item = {
     } catch (err) {
         console.error("Gagal proses transaksi:", err);
         Swal.fire('Error', 'Terjadi kesalahan sistem saat menyimpan transaksi.', 'error');
+    } finally {
+        // [DIPERBAIKI] Memastikan loading state mati bagaimanapun kondisinya (berhasil maupun error)
+        this.isProcessing = false;
     }
-    this.isProcessing = false;
 },
 
         holdTransaction() {
