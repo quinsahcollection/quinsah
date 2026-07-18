@@ -9923,16 +9923,24 @@ fulfillmentOrders() {
             netSubtotal() { return this.subtotal - this.discountAmount - this.globalDiscountAmount; },
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
-            total() { 
-    // Ambil ongkir hanya jika tipe pesanannya adalah delivery
-    let shippingCost = (this.posOrderType === 'delivery') ? (Number(this.posShippingCost) || 0) : 0;
-    
-    // Tambahkan ongkir (shippingCost) ke total keseluruhan
-    let grandTotal = this.netSubtotal + this.taxAmount + this.serviceAmount + shippingCost;
-    
-    return Math.round(grandTotal); 
-}
-        },
+            total() {
+        // 1. Hitung total dasar (Subtotal + PPN - Diskon, dll)
+        // (Sesuaikan nama variabel subtotal dan PPN dengan yang ada di script-mu)
+        let hitungTotal = this.subtotalProduk + this.pajakPpn; 
+
+        // 2. Logika Ongkir khusus Delivery
+        if (this.posOrderType === 'delivery') {
+            
+            // CEK: Jika metode bayar BUKAN COD, baru ongkir ditambahkan
+            if (this.metodeBayarPengiriman !== 'COD (Bayar di Tempat / Piutang)') {
+                hitungTotal += Number(this.biayaOngkir || 0);
+            }
+            // Jika COD, ongkir diabaikan dari tagihan sistem
+        }
+
+        return hitungTotal;
+    }
+},
         
         watch: {
     // [TETAP] 1. TAMBAHAN PENGAMAN UTAMA: Pantau User Profile
