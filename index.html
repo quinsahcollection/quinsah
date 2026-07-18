@@ -10421,11 +10421,20 @@ updateDynamicManifest(namaToko, logoUrl) {
 
     // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-        // PERBAIKAN KRITIS: Gunakan tagihan asli (this.total / sisa split), BUKAN amountReceived (uang kasir)!
-        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
-        let admin = this.hitungSurcharge(this.paymentData.method, pokok);
-        return pokok + admin;
-    },
+    // 1. Ambil nilai pokok (Total Produk + PPN - Diskon + Ongkir Asli)
+    let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+    
+    // 2. Cek apakah ini COD
+    // Jika metode bayar adalah 'COD', maka kita kurangi pokok dengan nilai ongkir
+    let ongkir = Number(this.biayaOngkir || 0); // Pastikan nama variabel ongkir Anda benar
+    if (this.metodeBayarPengiriman === 'COD') {
+        pokok = pokok - ongkir;
+    }
+    
+    // 3. Tambahkan admin (surcharge)
+    let admin = this.hitungSurcharge(this.paymentData.method, pokok);
+    return pokok + admin;
+},
 
     // 4. FUNGSI KEMBALIAN: Menghitung kembalian kasir dengan akurat
     getKembalian() {
