@@ -286,7 +286,6 @@
                     <li>
                         <a class="nav-link-custom" :class="{'active': currentTab === 'billing'}" @click="currentTab = 'billing'">
                             <i class="bi bi-credit-card"></i> Langganan & Billing
-                            <span class="badge badge-soft-info ms-auto" style="font-size: 0.65rem;">Segera</span>
                         </a>
                     </li>
                     <li>
@@ -498,20 +497,92 @@
                     </div>
                 </div>
 
-                <!-- TAB 2: BILLING (Placeholder untuk ERP masa depan) -->
+                <!-- TAB 2: BILLING (Aktif) -->
                 <div v-else-if="currentTab === 'billing'">
-                    <div class="card-modern p-5 text-center my-4">
-                        <div class="badge-soft-info rounded-circle p-4 d-inline-block mb-3">
-                            <i class="bi bi-receipt-cutoff fs-1"></i>
+                    
+                    <!-- Header Section -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1">Manajemen Langganan & Billing</h5>
+                            <p class="text-secondary small mb-0">Pantau status pembayaran dan kelola penagihan (invoice) untuk setiap cabang.</p>
                         </div>
-                        <h4 class="fw-bold text-dark">Modul Langganan & Billing (Coming Soon)</h4>
-                        <p class="text-secondary max-w-md mx-auto mb-4" style="max-width: 500px;">
-                            Struktur menu sidebar ERP ini disiapkan untuk menampung riwayat pembayaran langganan, pembuatan invoice otomatis untuk tenant, dan integrasi payment gateway di masa depan.
-                        </p>
-                        <button class="btn btn-outline-primary fw-semibold rounded-3 px-4" @click="currentTab = 'dashboard'">
-                            <i class="bi bi-arrow-left me-2"></i>Kembali ke Dasbor Utama
-                        </button>
+                        <div>
+                            <button class="btn bg-gradient-primary text-white fw-semibold px-3 py-2 d-flex align-items-center shadow-sm" @click="fetchTenants" :disabled="isLoadingTenants">
+                                <i class="bi bi-plus-lg me-2"></i> Buat Tagihan Baru
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Table Section: Status Langganan -->
+                    <div class="card-modern overflow-hidden">
+                        <div class="p-3 bg-light border-bottom border-subtle d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2 text-primary-custom"></i>Status Tagihan Tenant Aktif</h6>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-custom align-middle mb-0 text-nowrap">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-4 py-3">Nama Toko & Kontak</th>
+                                        <th class="py-3">Paket Berjalan</th>
+                                        <th class="py-3">Tgl Jatuh Tempo</th>
+                                        <th class="py-3">Status Tagihan</th>
+                                        <th class="text-end pe-4 py-3">Aksi Panel</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="isLoadingTenants">
+                                        <td colspan="5" class="text-center py-5 text-secondary">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                            Memuat data billing...
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr v-else-if="tenants.length === 0">
+                                        <td colspan="5" class="text-center py-5 text-muted">Belum ada data tagihan.</td>
+                                    </tr>
+
+                                    <tr v-for="tenant in tenants" :key="'bill-' + tenant.id">
+                                        <td class="ps-4 py-3">
+                                            <div class="fw-bold text-dark">{{ tenant.namaUsaha }}</div>
+                                            <div class="text-secondary small"><i class="bi bi-envelope me-1"></i>{{ tenant.email }}</div>
+                                        </td>
+                                        
+                                        <td>
+                                            <span class="badge border bg-light text-dark border-subtle px-2 py-1">
+                                                {{ tenant.paketLangganan || 'Belum Diatur' }}
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="text-secondary small fw-medium">
+                                            <span :class="tenant.sisaHari <= 0 ? 'text-danger fw-bold' : ''">
+                                                {{ formatTanggal(tenant.expiredDate) }}
+                                            </span>
+                                            <div v-if="tenant.sisaHari <= 0" class="text-danger" style="font-size: 0.7rem;">Lewat Jatuh Tempo</div>
+                                        </td>
+                                        
+                                        <td>
+                                            <span class="badge px-3 py-1 rounded-pill" :class="tenant.sisaHari > 0 ? 'badge-soft-success' : 'badge-soft-danger'">
+                                                <i class="bi me-1" :class="tenant.sisaHari > 0 ? 'bi-check-circle' : 'bi-exclamation-circle'"></i>
+                                                {{ tenant.sisaHari > 0 ? 'LUNAS (Aktif)' : 'MENUNGGAK' }}
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="text-end pe-4">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-secondary" title="Lihat Riwayat Tagihan">
+                                                    <i class="bi bi-clock-history"></i>
+                                                </button>
+                                                <button class="btn btn-outline-primary fw-semibold" title="Kirim Pengingat Tagihan (Email/WA)">
+                                                    <i class="bi bi-send me-1"></i> Tagih
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>           
                 </div>
 
                 <!-- TAB 3: LOGS (Placeholder) -->
