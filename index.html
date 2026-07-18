@@ -9924,22 +9924,25 @@ fulfillmentOrders() {
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() {
-        // 1. Hitung total dasar (Subtotal + PPN - Diskon, dll)
-        // (Sesuaikan nama variabel subtotal dan PPN dengan yang ada di script-mu)
-        let hitungTotal = this.subtotalProduk + this.pajakPpn; 
+                // 1. Hitung total dasar menggunakan variabel ASLI dari kodemu
+                // netSubtotal sudah otomatis dikurangi semua diskon
+                let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
 
-        // 2. Logika Ongkir khusus Delivery
-        if (this.posOrderType === 'delivery') {
-            
-            // CEK: Jika metode bayar BUKAN COD, baru ongkir ditambahkan
-            if (this.metodeBayarPengiriman !== 'COD (Bayar di Tempat / Piutang)') {
-                hitungTotal += Number(this.biayaOngkir || 0);
+                // 2. Logika Ongkir khusus Delivery
+                if (this.posOrderType === 'delivery') {
+                    
+                    // CEK COD: Saya buat pengaman ganda agar membaca 'COD' atau teks panjangnya
+                    let isCOD = (this.metodeBayarPengiriman === 'COD' || this.metodeBayarPengiriman === 'COD (Bayar di Tempat / Piutang)');
+                    
+                    // Jika metode bayar BUKAN COD, ongkir ditambahkan ke sistem
+                    if (!isCOD) {
+                        hitungTotal += Number(this.biayaOngkir || 0);
+                    }
+                    // Jika COD, ongkir diabaikan dari tagihan sistem (tidak ditambahkan)
+                }
+
+                return Math.max(0, hitungTotal); // Math.max agar tidak pernah minus
             }
-            // Jika COD, ongkir diabaikan dari tagihan sistem
-        }
-
-        return hitungTotal;
-    }
 },
         
         watch: {
