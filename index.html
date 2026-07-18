@@ -10300,49 +10300,56 @@ async updateFulfillmentStatus(trx, newStatus) {
         }
     },
 
-        // ==========================================
-        // 🌟 FUNGSI DYNAMIC PWA (KTP APLIKASI OTOMATIS)
-        // ==========================================
-        updateDynamicManifest(namaToko, logoUrl) {
-            // 1. Siapkan kerangka datanya
-            const manifestData = {
-                name: namaToko || "Sistem Kasir POS",
-                short_name: (namaToko || "Kasir").substring(0, 12), // Maksimal 12 huruf untuk di HP
-                start_url: "./",
-                display: "standalone",
-                background_color: "#f8f9fa",
-                theme_color: "#0d6efd",
-                icons: [
-                    {
-                        // Jika toko belum punya logo di database, pakai logo bawaan kita
-                        src: logoUrl || "./logo.png",
-                        sizes: "192x192",
-                        type: "image/png"
-                    },
-                    {
-                        src: logoUrl || "./logo.png",
-                        sizes: "512x512",
-                        type: "image/png"
-                    }
-                ]
-            };
+// ==========================================
+// 🌟 FUNGSI DYNAMIC PWA (KTP APLIKASI OTOMATIS)
+// ==========================================
+updateDynamicManifest(namaToko, logoUrl) {
+    // Dapatkan URL dasar web (contoh: https://queenpos.id)
+    const baseUrl = window.location.origin;
 
-            // 2. Ubah data menjadi file JSON Virtual (Blob)
-            const stringManifest = JSON.stringify(manifestData);
-            const blob = new Blob([stringManifest], { type: 'application/json' });
-            const manifestUrl = URL.createObjectURL(blob);
-
-            // 3. Cari tag <link rel="manifest"> di HTML dan ganti isinya dengan yang baru!
-            let manifestElement = document.querySelector('link[rel="manifest"]');
-            if (!manifestElement) {
-                manifestElement = document.createElement('link');
-                manifestElement.rel = 'manifest';
-                document.head.appendChild(manifestElement);
+    // 1. Siapkan kerangka datanya
+    const manifestData = {
+        name: namaToko || "Sistem Kasir POS",
+        short_name: (namaToko || "Kasir").substring(0, 12), // Maksimal 12 huruf untuk di HP
+        
+        // 🌟 PERBAIKAN: Gunakan URL lengkap, bukan "./"
+        start_url: baseUrl + "/", 
+        
+        display: "standalone",
+        background_color: "#f8f9fa",
+        theme_color: "#0d6efd",
+        icons: [
+            {
+                // 🌟 PERBAIKAN: Gunakan URL lengkap untuk logo
+                src: logoUrl || (baseUrl + "/logo.png"),
+                sizes: "192x192",
+                type: "image/png"
+            },
+            {
+                // 🌟 PERBAIKAN: Gunakan URL lengkap untuk logo
+                src: logoUrl || (baseUrl + "/logo.png"),
+                sizes: "512x512",
+                type: "image/png"
             }
-            manifestElement.href = manifestUrl;
-            
-            console.log("KTP Aplikasi (Manifest) berhasil diubah menjadi:", namaToko);
-        },
+        ]
+    };
+
+    // 2. Ubah data menjadi file JSON Virtual (Blob)
+    const stringManifest = JSON.stringify(manifestData);
+    const blob = new Blob([stringManifest], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(blob);
+
+    // 3. Cari tag <link rel="manifest"> di HTML dan ganti isinya dengan yang baru!
+    let manifestElement = document.querySelector('link[rel="manifest"]');
+    if (!manifestElement) {
+        manifestElement = document.createElement('link');
+        manifestElement.rel = 'manifest';
+        document.head.appendChild(manifestElement);
+    }
+    manifestElement.href = manifestUrl;
+    
+    console.log("KTP Aplikasi (Manifest) berhasil diubah menjadi:", namaToko);
+},
             
     resetSalesFilter() {
                 this.transactionStartDate = '';
