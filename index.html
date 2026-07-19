@@ -7765,7 +7765,14 @@ body.sidebar-open {
                         <td style="padding-bottom:3px;">Biaya Layanan</td>
                         <td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.surchargeFee) }}</td>
                     </tr>
-                    
+                    <tr v-if="(activePrintData.shippingCost || 0) > 0">
+                    <td style="padding-bottom:3px;">Ongkir ({{ activePrintData.courier || '-' }})</td>
+                    <td style="text-align: right; padding-bottom:3px;">{{ formatNumber(activePrintData.shippingCost) }}</td>
+                    </tr>
+                    <tr v-if="activePrintData.orderType === 'delivery'">
+                    <td style="padding-bottom:3px;">Pengiriman</td>
+                    <td style="text-align: right; padding-bottom:3px; font-weight:bold;">{{ activePrintData.isCOD ? 'COD' : 'NON-COD' }}</td>
+    </tr>
                     <tr><td style="font-weight: 800; font-size: 1.3em; padding-top: 5px;">TOTAL</td><td style="text-align: right; font-weight: 800; font-size: 1.3em; padding-top: 5px;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <template v-if="activePrintData.splitPayments && activePrintData.splitPayments.length > 0">
@@ -7986,7 +7993,14 @@ body.sidebar-open {
                         <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">Biaya Layanan</td>
                         <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.surchargeFee) }}</td>
                     </tr>
-                    
+                    <tr v-if="(activePrintData.shippingCost || 0) > 0">
+    <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">Ongkos Kirim ({{ activePrintData.courier || '-' }})</td>
+    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.shippingCost) }}</td>
+</tr>
+<tr v-if="activePrintData.orderType === 'delivery'">
+    <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">Status Pengiriman</td>
+    <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: bold;">{{ activePrintData.isCOD ? 'COD (Bayar di Tempat)' : 'NON-COD (Lunas)' }}</td>
+</tr>
                     <tr><td style="padding: 15px 10px; font-weight: 800; font-size: 18px;">TOTAL TAGIHAN</td><td style="padding: 15px 10px; font-weight: 800; font-size: 18px; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total) }}</td></tr>
                     
                     <template v-if="activePrintData.splitPayments && activePrintData.splitPayments.length > 0">
@@ -10741,12 +10755,14 @@ updateDynamicManifest(namaToko, logoUrl) {
 
     // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-    // 1. Ambil nilai pokok
-    // Karena "this.total" otomatis TIDAK memasukkan ongkir saat COD (berkat perbaikan no.2),
-    // kita tidak perlu lagi memotongnya secara manual di sini.
-    let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+    // 1. Ambil nominal yang sedang diketik kasir di dalam kotak input
+    let inputNominal = Number(this.paymentData.amountReceived) || 0;
     
-    // 2. Tambahkan admin (surcharge)
+    // 2. Jika kasir mengetik nominal, gunakan nominal itu. 
+    // Jika masih kosong (0), gunakan total tagihan atau sisa tagihan split.
+    let pokok = inputNominal > 0 ? inputNominal : (this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0));
+    
+    // 3. Tambahkan biaya admin (surcharge) berdasarkan pokok yang baru
     let admin = this.hitungSurcharge(this.paymentData.method, pokok);
     return pokok + admin;
 },
