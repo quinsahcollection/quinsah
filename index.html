@@ -5692,10 +5692,13 @@ body.sidebar-open {
                 <div class="row g-2">
                     <div class="col-12">
                         <label class="form-label mb-0 text-muted fw-semibold" style="font-size: 0.65rem;">Metode Bayar Pengiriman</label>
-                        <select class="form-select form-select-sm fw-bold shadow-none" v-model="posIsCOD" :class="posIsCOD ? 'text-danger border-danger bg-danger bg-opacity-10' : 'text-success border-success bg-success bg-opacity-10'" style="font-size: 0.75rem;">
-                            <option :value="false">💳 Non-COD (Bayar Lunas Sekarang)</option>
-                            <option :value="true">⚠️ COD (Bayar di Tempat / Piutang)</option>
-                        </select>
+                        <select class="form-select form-select-sm fw-bold shadow-none" 
+        v-model="posIsCOD" 
+        :class="String(posIsCOD) === 'true' ? 'text-danger border-danger bg-danger bg-opacity-10' : 'text-success border-success bg-success bg-opacity-10'" 
+        style="font-size: 0.75rem;">
+    <option value="false">💳 Non-COD (Bayar Lunas Sekarang)</option>
+    <option value="true">⚠️ COD (Bayar di Tempat / Piutang)</option>
+</select>
                     </div>
                 </div>
             </div>
@@ -5745,9 +5748,9 @@ body.sidebar-open {
             </div>
 
             <!-- 🌟 BARIS ONGKIR DI STRUK (Muncul jika tipe Kirim dan ada ongkir) -->
-            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0 && !posIsCOD">
-                <span><i class="bi bi-truck me-1"></i>Ongkir ({{ posCourier || '-' }})</span><span>+ Rp {{ formatNumber(posShippingCost) }}</span>
-            </div>
+            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0 && String(posIsCOD) !== 'true'">
+    <span><i class="bi bi-truck me-1"></i>Ongkir ({{ posCourier || '-' }})</span><span>+ Rp {{ formatNumber(posShippingCost) }}</span>
+</div>
             
             <div class="d-flex justify-content-between mb-2 mt-2 border-top pt-2">
                 <span class="fw-bold fs-6">Total Tagihan</span><span class="fw-bold fs-5 text-primary-custom">Rp {{ formatNumber(total) }}</span>
@@ -10110,9 +10113,11 @@ fulfillmentOrders() {
                     + (Number(this.taxAmount) || 0) 
                     + (Number(this.serviceAmount) || 0);
 
-    // 2. Logika Ongkir yang meniru cara kerja warna merah di HTML
-    // Jika ada ongkir DAN statusnya adalah Non-COD (!this.posIsCOD)
-    if (this.posShippingCost > 0 && !this.posIsCOD) {
+    // 2. Logika Ongkir yang AMAN dari tipe data String/Boolean
+    let isCodActive = String(this.posIsCOD) === 'true';
+
+    // Jika ada ongkir DAN statusnya BUKAN COD
+    if (this.posShippingCost > 0 && !isCodActive) {
         hitungTotal += Number(this.posShippingCost);
     }
 
@@ -10736,17 +10741,12 @@ updateDynamicManifest(namaToko, logoUrl) {
 
     // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-    // 1. Ambil nilai pokok (Total Produk + PPN - Diskon + Ongkir Asli)
+    // 1. Ambil nilai pokok
+    // Karena "this.total" otomatis TIDAK memasukkan ongkir saat COD (berkat perbaikan no.2),
+    // kita tidak perlu lagi memotongnya secara manual di sini.
     let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
     
-    // 2. Cek apakah ini COD
-    // Jika metode bayar adalah 'COD', maka kita kurangi pokok dengan nilai ongkir
-    let ongkir = Number(this.biayaOngkir || 0); // Pastikan nama variabel ongkir Anda benar
-    if (this.metodeBayarPengiriman === 'COD') {
-        pokok = pokok - ongkir;
-    }
-    
-    // 3. Tambahkan admin (surcharge)
+    // 2. Tambahkan admin (surcharge)
     let admin = this.hitungSurcharge(this.paymentData.method, pokok);
     return pokok + admin;
 },
@@ -16291,7 +16291,7 @@ let item = {
             // 🌟 DATA PENGIRIMAN (DIMASUKKAN KE DATABASE)
             courier: this.posOrderType === 'delivery' ? (this.posCourier || '') : '',
             shippingCost: currentShippingCost,
-            isCOD: this.posOrderType === 'delivery' ? this.posIsCOD : false,
+            isCOD: this.posOrderType === 'delivery' ? (String(this.posIsCOD) === 'true') : false,
             
             paymentMethod: finalPaymentMethod,
             splitPayments: finalSplitPayments,
