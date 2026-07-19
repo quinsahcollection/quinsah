@@ -7591,6 +7591,7 @@ body.sidebar-open {
         </div>
     </div>
 </div>
+
         <!-- MODAL TAGIHAN & LANGGANAN (SISI TENANT) -->
 <div class="modal fade" id="modalTagihanTenant" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -7601,47 +7602,65 @@ body.sidebar-open {
             </div>
             
             <div class="modal-body p-4 bg-light">
-                <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
-                    <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
-                    <div class="small text-dark">
-                        <strong>Instruksi:</strong> Silakan transfer tagihan Anda ke rekening <strong>BCA 0040112928 a.n. Herman Kosasi</strong>. Klik tombol konfirmasi setelah transfer agar kami dapat mengaktifkan kembali sistem Anda.
+                
+                <!-- TOMBOL BERLANGGANAN BARU -->
+                <div class="bg-white p-3 rounded-3 shadow-sm border border-subtle mb-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">Ingin Memperpanjang Akses?</h6>
+                        <span class="small text-secondary">Hubungi admin untuk berlangganan atau *upgrade* paket.</span>
                     </div>
+                    <button class="btn btn-primary fw-bold px-4" @click="ajukanLanggananWA">
+                        <i class="bi bi-star-fill me-2 text-warning"></i> Berlangganan
+                    </button>
                 </div>
+
+                <h6 class="fw-bold text-secondary mb-3">Daftar Tagihan Anda:</h6>
 
                 <div v-if="isLoadingBilling" class="text-center py-4">
                     <div class="spinner-border text-primary" role="status"></div>
-                    <div class="small mt-2 text-muted fw-semibold">Memeriksa data tagihan...</div>
                 </div>
                 
                 <div v-else-if="billings.length === 0" class="text-center py-5 text-muted bg-white rounded-3 border border-subtle shadow-sm">
                     <i class="bi bi-emoji-smile fs-1 d-block mb-2 text-success"></i>
                     <h6 class="fw-bold text-dark mb-1">Semua Tagihan Lunas!</h6>
-                    <span class="small">Anda tidak memiliki tagihan sistem saat ini.</span>
                 </div>
 
                 <div v-else class="row g-3">
                     <div v-for="bill in billings" :key="bill.id" class="col-12">
                         <div class="card border-0 shadow-sm" :class="bill.status === 'UNPAID' ? 'border-start border-4 border-danger' : 'border-start border-4 border-success opacity-75'">
-                            <div class="card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                                <div>
-                                    <h6 class="fw-bold mb-1 text-dark">{{ bill.description }}</h6>
-                                    <div class="text-muted small mb-2 mb-md-0" style="font-size: 0.75rem;">
-                                        Jatuh Tempo: <span class="fw-bold" :class="bill.status === 'UNPAID' ? 'text-danger' : ''">{{ formatTanggal(bill.dueDate) }}</span>
+                            <div class="card-body p-3">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-dark">{{ bill.description }}</h6>
+                                        <div class="text-muted small" style="font-size: 0.75rem;">
+                                            Jatuh Tempo: <span class="fw-bold" :class="bill.status === 'UNPAID' ? 'text-danger' : ''">{{ formatTanggal(bill.dueDate) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-md-end text-start mt-2 mt-md-0">
+                                        <h5 class="fw-bold text-primary mb-1">Rp {{ formatNumber(bill.amount) }}</h5>
+                                        <span class="badge" :class="bill.status === 'UNPAID' ? 'bg-danger' : 'bg-success'">
+                                            <i class="bi me-1" :class="bill.status === 'UNPAID' ? 'bi-exclamation-circle' : 'bi-check-circle'"></i>
+                                            {{ bill.status === 'UNPAID' ? 'BELUM DIBAYAR' : 'LUNAS' }}
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="text-md-end text-start mt-2 mt-md-0">
-                                    <h5 class="fw-bold text-primary mb-1">Rp {{ formatNumber(bill.amount) }}</h5>
-                                    <span class="badge" :class="bill.status === 'UNPAID' ? 'bg-danger' : 'bg-success'">
-                                        <i class="bi me-1" :class="bill.status === 'UNPAID' ? 'bi-exclamation-circle' : 'bi-check-circle'"></i>
-                                        {{ bill.status === 'UNPAID' ? 'BELUM DIBAYAR' : 'LUNAS' }}
-                                    </span>
+                                
+                                <!-- RINCIAN PEMBAYARAN JIKA BELUM LUNAS -->
+                                <div v-if="bill.status === 'UNPAID'" class="mt-3 pt-3 border-top border-subtle">
+                                    <div class="bg-primary bg-opacity-10 p-3 rounded-3 mb-3">
+                                        <div class="fw-bold text-primary mb-2 small"><i class="bi bi-wallet2 me-1"></i> METODE PEMBAYARAN:</div>
+                                        <ul class="mb-0 small text-dark ps-3" style="line-height: 1.6;">
+                                            <li><strong>Transfer Bank:</strong> BCA 0040112928 a.n. Herman Kosasi</li>
+                                            <li><strong>Scan QRIS:</strong> Silakan klik tombol di bawah untuk meminta *barcode* QRIS via WhatsApp.</li>
+                                        </ul>
+                                    </div>
+                                    <div class="text-end">
+                                        <button class="btn btn-success fw-bold px-4 shadow-sm" @click="konfirmasiPembayaran(bill)">
+                                            <i class="bi bi-whatsapp me-1"></i> Konfirmasi Sudah Bayar
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div v-if="bill.status === 'UNPAID'" class="card-footer bg-white border-top border-subtle text-end py-2 pe-3">
-                                <button class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-sm" @click="konfirmasiPembayaran(bill)">
-                                    <i class="bi bi-whatsapp me-1"></i> Konfirmasi Sudah Bayar
-                                </button>
+                                
                             </div>
                         </div>
                     </div>
@@ -7650,7 +7669,7 @@ body.sidebar-open {
         </div>
     </div>
 </div>
-   
+
             <div id="print-section">
         
         <div v-if="printMode === 'receipt' && activePrintData" class="mode-receipt" 
@@ -10175,6 +10194,17 @@ bukaModalTagihanTenant() {
         this.modalTagihanInstance = new bootstrap.Modal(document.getElementById('modalTagihanTenant'));
     }
     this.modalTagihanInstance.show();
+},
+
+ajukanLanggananWA() {
+    // 🚨 GANTI NOMOR INI DENGAN NOMOR WA ASLI ADMIN
+    const adminPhone = "6281234567890"; 
+    
+    const namaToko = this.userProfile?.companyData?.namaUsaha || 'Toko Saya';
+    const textMessage = `Halo Admin, saya dari *${namaToko}* ingin mengajukan paket berlangganan / perpanjangan akses untuk SaaS ERP. Mohon info paket yang tersedia dan panduan pembayarannya. Terima kasih.`;
+    
+    const waUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(textMessage)}`;
+    window.open(waUrl, '_blank');
 },
 
 konfirmasiPembayaran(bill) {
