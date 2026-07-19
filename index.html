@@ -5745,7 +5745,7 @@ body.sidebar-open {
             </div>
 
             <!-- 🌟 BARIS ONGKIR DI STRUK (Muncul jika tipe Kirim dan ada ongkir) -->
-            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0 && String(posIsCOD) !== 'true'">
+            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0 && !posIsCOD">
                 <span><i class="bi bi-truck me-1"></i>Ongkir ({{ posCourier || '-' }})</span><span>+ Rp {{ formatNumber(posShippingCost) }}</span>
             </div>
             
@@ -10103,29 +10103,17 @@ fulfillmentOrders() {
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() {
-    // 1. Ambil nilai mentah dari HTML agar tidak ada ongkir siluman yang menyusup
-    let sub = Number(this.subtotalBase) || 0;
-    
-    // Kurangi diskon (jika ada)
-    let diskonMember = Number(this.discountAmount) || 0;
-    let diskonGlobal = Number(this.globalDiscountAmount) || 0;
-    
-    // Tambah PPN & Servis
-    let ppn = Number(this.taxAmount) || 0;
-    let servis = Number(this.serviceAmount) || 0;
+    // 1. Hitung dasar murni tanpa ongkir
+    let hitungTotal = (Number(this.subtotalBase) || 0) 
+                    - (Number(this.discountAmount) || 0) 
+                    - (Number(this.globalDiscountAmount) || 0) 
+                    + (Number(this.taxAmount) || 0) 
+                    + (Number(this.serviceAmount) || 0);
 
-    // 2. Hitung Total Dasar (Murni tanpa ongkir)
-    let hitungTotal = (sub - diskonMember - diskonGlobal) + ppn + servis;
-
-    // 3. Logika Ongkir Ekstra Ketat
-    let ongkir = Number(this.posShippingCost) || 0;
-    
-    // Mengubah nilai posIsCOD menjadi string untuk mencegah error tipe data (Boolean vs String)
-    let isCOD = String(this.posIsCOD) === 'true'; 
-
-    // Jika ada ongkir DAN statusnya BUKAN COD, baru kita tambahkan
-    if (ongkir > 0 && isCOD === false) {
-        hitungTotal += ongkir;
+    // 2. Logika Ongkir yang meniru cara kerja warna merah di HTML
+    // Jika ada ongkir DAN statusnya adalah Non-COD (!this.posIsCOD)
+    if (this.posShippingCost > 0 && !this.posIsCOD) {
+        hitungTotal += Number(this.posShippingCost);
     }
 
     return Math.max(0, hitungTotal);
