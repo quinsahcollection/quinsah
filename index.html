@@ -10103,24 +10103,23 @@ fulfillmentOrders() {
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() {
-    // 1. Hitung total dasar menggunakan variabel ASLI dari kodemu
+    // 1. Hitung total dasar (Subtotal + PPN + Service)
     let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
 
-    // 2. TANGKAP ONGKIR
-    let ongkir = Number(this.biayaOngkir) || Number(this.posShippingCost) || 0;
+    // 2. Ambil nominal ongkir langsung dari inputan
+    let ongkir = Number(this.posShippingCost) || 0;
 
+    // 3. Logika Penambahan Ongkir
     if (ongkir > 0) {
         
-        // 3. UBAH JADI HURUF BESAR SEMUA (Agar aman dari salah ketik huruf besar/kecil)
-        let namaMetode = String(this.metodeBayarPengiriman || '').toUpperCase();
-        
-        // 4. PENGECEKAN SAPU JAGAT: Selama ada kata "COD" di dalam value-nya, anggap itu COD
-        let isCOD = namaMetode.includes('COD');
-        
-        // Jika BUKAN COD, ongkir DITAMBAHKAN
-        if (!isCOD) {
+        // Cek langsung variabel posIsCOD (karena isinya true/false)
+        // Jika false (berarti Non-COD), maka ongkir ditambahkan ke total tagihan
+        if (this.posIsCOD === false) {
             hitungTotal += ongkir;
         }
+        
+        // Jika posIsCOD === true (COD), sistem otomatis melewati baris di atas,
+        // sehingga ongkir TIDAK ditambahkan ke hitungTotal.
     }
 
     return Math.max(0, hitungTotal);
