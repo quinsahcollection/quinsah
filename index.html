@@ -10106,23 +10106,23 @@ fulfillmentOrders() {
     // 1. Hitung total dasar menggunakan variabel ASLI dari kodemu
     let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
 
-    // 2. TANGKAP ONGKIR: Kita baca dari 2 kemungkinan nama variabel agar aman
+    // 2. TANGKAP ONGKIR
     let ongkir = Number(this.biayaOngkir) || Number(this.posShippingCost) || 0;
 
-    // 3. LOGIKA ONGKIR PINTAR: Langsung proses jika ada nominal ongkir
     if (ongkir > 0) {
         
-        // Cek nama metode bayar (Sesuaikan dengan value persis di kodemu)
-        let namaMetode = String(this.metodeBayarPengiriman || '');
-        let isCOD = (namaMetode === 'COD' || namaMetode === 'COD (Bayar di Tempat / Piutang)');
+        // 3. UBAH JADI HURUF BESAR SEMUA (Agar aman dari salah ketik huruf besar/kecil)
+        let namaMetode = String(this.metodeBayarPengiriman || '').toUpperCase();
         
-        // Jika metode bayarnya BUKAN COD (termasuk Non-COD), ongkir DITAMBAHKAN
+        // 4. PENGECEKAN SAPU JAGAT: Selama ada kata "COD" di dalam value-nya, anggap itu COD
+        let isCOD = namaMetode.includes('COD');
+        
+        // Jika BUKAN COD, ongkir DITAMBAHKAN
         if (!isCOD) {
             hitungTotal += ongkir;
         }
     }
 
-    // Return hasil akhir (Math.max untuk mencegah minus)
     return Math.max(0, hitungTotal);
 }
 },
