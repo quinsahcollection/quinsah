@@ -38,8 +38,8 @@
                 <h4 class="fw-bold mb-0">E-Receipt</h4>
                 <div class="small opacity-75 mb-1">{{ ereceiptData.id }}</div>
 
-                <div class="mt-2 mb-2">
-    <!-- PERBAIKAN BADGE LUNAS -->
+                <div class="mt-2 mb-2 d-flex justify-content-center gap-1 flex-wrap">
+    <!-- BADGE LUNAS / BELUM LUNAS -->
     <span v-if="ereceiptData.amountReceived >= ereceiptData.total" 
           class="badge bg-success text-white px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
         <i class="bi bi-check-circle-fill me-1"></i> LUNAS
@@ -47,6 +47,14 @@
     <span v-else 
           class="badge bg-warning text-dark px-3 py-1 rounded-pill border border-white shadow-sm" style="letter-spacing: 1px;">
         <i class="bi bi-exclamation-circle-fill me-1"></i> BELUM LUNAS
+    </span>
+
+    <!-- 🌟 KODE BARU: BADGE LABEL COD -->
+    <span v-if="ereceiptData.orderType === 'delivery'" 
+          class="badge px-3 py-1 rounded-pill border border-white shadow-sm"
+          :class="String(ereceiptData.isCOD) === 'true' || ereceiptData.isCOD === true ? 'bg-danger text-white' : 'bg-info text-dark'"
+          style="letter-spacing: 1px;">
+        <i class="bi bi-truck me-1"></i> {{ (String(ereceiptData.isCOD) === 'true' || ereceiptData.isCOD === true) ? 'COD' : 'KIRIM' }}
     </span>
 </div>
             </div>
@@ -135,11 +143,26 @@
         <span>Rp {{ formatNumber(ereceiptData.surchargeFee) }}</span>
     </div>
 
+    <!-- 🌟 KODE BARU: TAMPILAN ONGKIR & KURIR -->
+    <div v-if="(ereceiptData.shippingCost || 0) > 0" class="d-flex justify-content-between mb-2 text-info fw-bold">
+        <span><i class="bi bi-truck me-1"></i>Ongkir ({{ ereceiptData.courier || '-' }}) :</span>
+        <span>+ Rp {{ formatNumber(ereceiptData.shippingCost) }}</span>
+    </div>
+    
+    <!-- 🌟 KODE BARU: TAMPILAN STATUS PENGIRIMAN (COD/NON-COD) -->
+    <div v-if="ereceiptData.orderType === 'delivery'" class="d-flex justify-content-between mb-2">
+        <span class="text-muted">Status Pengiriman :</span>
+        <span class="fw-bold" :class="String(ereceiptData.isCOD) === 'true' || ereceiptData.isCOD === true ? 'text-danger' : 'text-success'">
+            {{ (String(ereceiptData.isCOD) === 'true' || ereceiptData.isCOD === true) ? 'COD (Bayar di Tempat)' : 'NON-COD (Lunas)' }}
+        </span>
+    </div>
+
     <hr class="my-3 border-dark" style="opacity: 0.2;">
 
     <div class="d-flex justify-content-between fw-bold fs-6 mb-3 text-dark">
         <span>TOTAL AKHIR :</span>
-        <span class="text-success fs-5">Rp {{ formatNumber(ereceiptData.total + (ereceiptData.surcharge || 0)) }}</span>
+        <!-- PERBAIKAN: Menghapus tambahan surcharge manual karena total dari database sudah mencakup semuanya -->
+        <span class="text-success fs-5">Rp {{ formatNumber(ereceiptData.total) }}</span>
     </div>
 
     <div class="bg-light p-3 rounded-3 border shadow-sm">
@@ -442,8 +465,9 @@
         
         methods: {
             formatNumber(num) {
-                return new Intl.NumberFormat('id-ID').format(num || 0);
-            },
+    // Math.round menyingkirkan angka desimal di belakang koma
+    return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.round(Number(num) || 0));
+},
 
             async fetchReceipt(invId) {
                 try {
