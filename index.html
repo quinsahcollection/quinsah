@@ -10103,25 +10103,28 @@ fulfillmentOrders() {
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() {
-                // 1. Hitung total dasar menggunakan variabel ASLI dari kodemu
-                // netSubtotal sudah otomatis dikurangi semua diskon
-                let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
+    // 1. Hitung total dasar menggunakan variabel ASLI dari kodemu
+    let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
 
-                // 2. Logika Ongkir khusus Delivery
-                if (this.posOrderType === 'delivery') {
-                    
-                    // CEK COD: Saya buat pengaman ganda agar membaca 'COD' atau teks panjangnya
-                    let isCOD = (this.metodeBayarPengiriman === 'COD' || this.metodeBayarPengiriman === 'COD (Bayar di Tempat / Piutang)');
-                    
-                    // Jika metode bayar BUKAN COD, ongkir ditambahkan ke sistem
-                    if (!isCOD) {
-                        hitungTotal += Number(this.biayaOngkir || 0);
-                    }
-                    // Jika COD, ongkir diabaikan dari tagihan sistem (tidak ditambahkan)
-                }
+    // 2. TANGKAP ONGKIR: Kita baca dari 2 kemungkinan nama variabel agar aman
+    let ongkir = Number(this.biayaOngkir) || Number(this.posShippingCost) || 0;
 
-                return Math.max(0, hitungTotal); // Math.max agar tidak pernah minus
-            }
+    // 3. LOGIKA ONGKIR PINTAR: Langsung proses jika ada nominal ongkir
+    if (ongkir > 0) {
+        
+        // Cek nama metode bayar (Sesuaikan dengan value persis di kodemu)
+        let namaMetode = String(this.metodeBayarPengiriman || '');
+        let isCOD = (namaMetode === 'COD' || namaMetode === 'COD (Bayar di Tempat / Piutang)');
+        
+        // Jika metode bayarnya BUKAN COD (termasuk Non-COD), ongkir DITAMBAHKAN
+        if (!isCOD) {
+            hitungTotal += ongkir;
+        }
+    }
+
+    // Return hasil akhir (Math.max untuk mencegah minus)
+    return Math.max(0, hitungTotal);
+}
 },
         
         watch: {
