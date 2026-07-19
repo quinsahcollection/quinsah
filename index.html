@@ -5745,7 +5745,7 @@ body.sidebar-open {
             </div>
 
             <!-- 🌟 BARIS ONGKIR DI STRUK (Muncul jika tipe Kirim dan ada ongkir) -->
-            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0">
+            <div class="d-flex justify-content-between mb-2 text-info fw-bold" v-if="posOrderType === 'delivery' && posShippingCost > 0 && String(posIsCOD) !== 'true'">
                 <span><i class="bi bi-truck me-1"></i>Ongkir ({{ posCourier || '-' }})</span><span>+ Rp {{ formatNumber(posShippingCost) }}</span>
             </div>
             
@@ -10103,23 +10103,29 @@ fulfillmentOrders() {
             taxAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.taxPercent || 0) / 100); },
             serviceAmount() { if(!this.posActiveOutlet) return 0; return this.netSubtotal * ((this.posActiveOutlet.serviceChargePercent || 0) / 100); },
             total() {
-    // 1. Hitung total dasar (Subtotal + PPN + Service)
-    let hitungTotal = (this.netSubtotal || 0) + (this.taxAmount || 0) + (this.serviceAmount || 0); 
+    // 1. Ambil nilai mentah dari HTML agar tidak ada ongkir siluman yang menyusup
+    let sub = Number(this.subtotalBase) || 0;
+    
+    // Kurangi diskon (jika ada)
+    let diskonMember = Number(this.discountAmount) || 0;
+    let diskonGlobal = Number(this.globalDiscountAmount) || 0;
+    
+    // Tambah PPN & Servis
+    let ppn = Number(this.taxAmount) || 0;
+    let servis = Number(this.serviceAmount) || 0;
 
-    // 2. Ambil nominal ongkir langsung dari inputan
+    // 2. Hitung Total Dasar (Murni tanpa ongkir)
+    let hitungTotal = (sub - diskonMember - diskonGlobal) + ppn + servis;
+
+    // 3. Logika Ongkir Ekstra Ketat
     let ongkir = Number(this.posShippingCost) || 0;
+    
+    // Mengubah nilai posIsCOD menjadi string untuk mencegah error tipe data (Boolean vs String)
+    let isCOD = String(this.posIsCOD) === 'true'; 
 
-    // 3. Logika Penambahan Ongkir
-    if (ongkir > 0) {
-        
-        // Cek langsung variabel posIsCOD (karena isinya true/false)
-        // Jika false (berarti Non-COD), maka ongkir ditambahkan ke total tagihan
-        if (this.posIsCOD === false) {
-            hitungTotal += ongkir;
-        }
-        
-        // Jika posIsCOD === true (COD), sistem otomatis melewati baris di atas,
-        // sehingga ongkir TIDAK ditambahkan ke hitungTotal.
+    // Jika ada ongkir DAN statusnya BUKAN COD, baru kita tambahkan
+    if (ongkir > 0 && isCOD === false) {
+        hitungTotal += ongkir;
     }
 
     return Math.max(0, hitungTotal);
