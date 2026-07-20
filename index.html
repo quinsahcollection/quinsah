@@ -15050,32 +15050,32 @@ if (!userCred.user.emailVerified) {
                         });
 
                         // 5. Simpan User Pemilik Toko & Tempelkan Role Super Admin Tersebut!
-                        await setDoc(doc(db, "users", res.user.uid), {
-                            namaLengkap: this.authUser.name,
-                            email: this.authUser.email,
-                            companyId: newCompanyId, 
-                            roleId: superAdminRoleId, // <--- Berikan jabatan Super Admin
-                            role: 'Admin', // (Untuk kebutuhan legacy kode lama jika masih ada)
-                            createdAt: serverTimestamp()
-                        });
+await setDoc(doc(db, "users", res.user.uid), {
+    namaLengkap: this.authUser.name,
+    email: this.authUser.email,
+    companyId: newCompanyId, 
+    roleId: superAdminRoleId,
+    role: 'Admin',
+    createdAt: serverTimestamp()
+});
 
-                        // 6. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual SETELAH verifikasi
-                        await signOut(auth);
-                        this.isRegistering = false; 
+    // 🌟 PERBAIKAN: Beri instruksi tegas agar aplikasi "mengunci" diri
+    this.isLoggedIn = false; // Memaksa UI tetap di halaman login
+    await signOut(auth); // Keluar dari Firebase Auth
+    this.isRegistering = false; 
 
-                        // 🌟 PERBARUI TEKS NOTIFIKASI SUKSES
-                        Swal.fire({
-                        icon: 'info', // Ganti icon jadi info
-                        title: 'Verifikasi Email Anda!',
-                        html: `Toko <b>${this.authUser.companyName}</b> berhasil didaftarkan.<br><br>
-                        Kami telah mengirimkan link aktivasi ke email <b>${this.authUser.email}</b>.<br><br>
-                        <span class="text-danger">Silakan klik link di email tersebut (cek juga folder Spam) sebelum Anda mencoba Masuk (Login).</span>`,
-                        confirmButtonText: 'Mengerti'
-                        });
+    // SEGERA munculkan notifikasi agar user tidak sempat melihat dashboard
+    Swal.fire({
+    icon: 'info',
+    title: 'Verifikasi Email Anda!',
+    html: `Toko <b>${this.authUser.companyName}</b> berhasil didaftarkan.<br><br>
+           Silakan klik link aktivasi di email <b>${this.authUser.email}</b> sebelum masuk.`,
+    confirmButtonText: 'Mengerti'
+    });
 
-                 // Reset form & pindah ke mode login
-                this.authMode = 'login';
-                this.authUser = { name: '', email: '', password: '', companyName: '', urlToko: '' };
+    // Reset form
+    this.authMode = 'login';
+    this.authUser = { name: '', email: '', password: '', companyName: '', urlToko: '' };
                     }
                 } catch(e) {
                     this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
