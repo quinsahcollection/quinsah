@@ -14881,8 +14881,40 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 
                 try {
                     if (this.authMode === 'login') {
-                        await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
-                    } else {
+    // 1. Lakukan proses login ke Firebase Auth
+    const userCred = await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+    
+    // 2. PROTEKSI SUBDOMAIN (Hanya jalan jika user login di [namatoko].queenpos.id)
+    if (this.isSubdomainLokal) {
+        const currentSubdomain = this.getSubdomainName();
+        
+        // Cek data user untuk mendapatkan ID Toko (companyId)
+        const userDocRef = doc(db, "users", userCred.user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const companyId = userData.companyId;
+            
+            // Tarik data toko untuk melihat urlToko aslinya
+            if (companyId) {
+                const companyDocRef = doc(db, "companies", companyId);
+                const companyDocSnap = await getDoc(companyDocRef);
+                
+                if (companyDocSnap.exists()) {
+                    const companyData = companyDocSnap.data();
+                    const urlTokoAsli = companyData.urlToko;
+                    
+                    // 3. COCOKKAN URL! Jika tidak sama, tolak aksesnya!
+                    if (urlTokoAsli && urlTokoAsli !== currentSubdomain) {
+                        await signOut(auth); // Keluarkan paksa
+                        throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
+                    }
+                }
+            }
+        }
+    }
+} else {
                         // ==========================================================
                         // PROSES REGISTRASI SAAS (MULTI-TENANT + STARTER PACK)
                         // ==========================================================
