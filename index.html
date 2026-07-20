@@ -14964,13 +14964,18 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 const companyDocSnap = await getDoc(companyDocRef);
                 
                 if (companyDocSnap.exists()) {
-                    const companyData = companyDocSnap.data();
-                    const urlTokoAsli = companyData.urlToko;
-                    
-                    // 3. COCOKKAN URL! Jika tidak sama, tolak aksesnya!
-                    if (urlTokoAsli && urlTokoAsli !== currentSubdomain) {
-                        await signOut(auth); // Keluarkan paksa
-                        throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
+                const companyData = companyDocSnap.data();
+                const urlTokoAsli = companyData.urlToko;
+    
+            // 3. COCOKKAN URL DENGAN SUPER KETAT!
+            if (!urlTokoAsli) {
+            // Blokir jika akun lama belum punya data urlToko di database
+            await signOut(auth);
+            throw new Error(`Gagal masuk! Akun ini belum memiliki URL Toko di sistem. Silakan update database Anda.`);
+            } else if (urlTokoAsli !== currentSubdomain) {
+            // Blokir jika URL tidak sama dengan yang diketik
+            await signOut(auth);
+            throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
                     }
                 }
             }
