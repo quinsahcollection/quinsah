@@ -8528,7 +8528,7 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -14951,7 +14951,13 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                 try {
                     if (this.authMode === 'login') {
     // 1. Lakukan proses login ke Firebase Auth
-    const userCred = await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+const userCred = await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+
+// 🌟 TAMBAHAN BARU: CEK STATUS VERIFIKASI EMAIL
+if (!userCred.user.emailVerified) {
+    await signOut(auth); // Keluarkan paksa
+    throw new Error(`Email Anda belum diverifikasi! Silakan cek kotak masuk (atau folder Spam) email ${this.authUser.email} untuk mengaktifkan akun Anda.`);
+}
     
     // 2. PROTEKSI SUBDOMAIN (Hanya jalan jika user login di [namatoko].queenpos.id)
     if (this.isSubdomainLokal) {
@@ -14996,6 +15002,9 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
 
                         // 1. Buat Autentikasi Firebase
                         const res = await createUserWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
+
+                        // 🌟 TAMBAHAN BARU: KIRIM EMAIL VERIFIKASI SEKARANG JUGA
+                        await sendEmailVerification(res.user);
                         
                         // 2. Hitung Tanggal Jatuh Tempo (Hari ini + 7 Hari)
                         const currentDate = new Date();
@@ -15044,23 +15053,23 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                             createdAt: serverTimestamp()
                         });
 
-                        // 6. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual
+                        // 6. KELUARKAN PAKSA (LOGOUT) agar dia harus login manual SETELAH verifikasi
                         await signOut(auth);
                         this.isRegistering = false; 
 
-                        // Berikan notifikasi sukses beserta info Trial
+                        // 🌟 PERBARUI TEKS NOTIFIKASI SUKSES
                         Swal.fire({
-                            icon: 'success',
-                            title: 'Toko Berhasil Dibuat!',
-                            html: `Selamat datang, <b>${this.authUser.name}</b>!<br><br>
-                                   Toko <b>${this.authUser.companyName}</b> telah aktif dengan masa percobaan gratis (Free Trial) selama <b>7 Hari</b>.<br>
-                                   Silakan Login untuk mulai mengatur kasir Anda.`,
-                            confirmButtonText: 'Mulai Sekarang'
+                        icon: 'info', // Ganti icon jadi info
+                        title: 'Verifikasi Email Anda!',
+                        html: `Toko <b>${this.authUser.companyName}</b> berhasil didaftarkan.<br><br>
+                        Kami telah mengirimkan link aktivasi ke email <b>${this.authUser.email}</b>.<br><br>
+                        <span class="text-danger">Silakan klik link di email tersebut (cek juga folder Spam) sebelum Anda mencoba Masuk (Login).</span>`,
+                        confirmButtonText: 'Mengerti'
                         });
-                        
-                        // Reset form & pindah ke mode login
-                        this.authMode = 'login';
-                        this.authUser = { name: '', email: '', password: '', companyName: '', urlToko: '' };
+
+                 // Reset form & pindah ke mode login
+                this.authMode = 'login';
+                this.authUser = { name: '', email: '', password: '', companyName: '', urlToko: '' };
                     }
                 } catch(e) {
                     this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
