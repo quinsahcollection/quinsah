@@ -664,113 +664,125 @@ body.sidebar-open {
     </div>
 
     <div v-else-if="!isLoggedIn" class="auth-wrapper d-print-none">
-    <div class="auth-card">
-    <div class="auth-logo text-center mb-3">
-        <img src="logo.png" alt="Logo QueenPOS" style="width: 220px; max-width: 100%; height: auto; margin-bottom: -5px;">
-    </div>
-    
-    <p class="text-center text-muted small mb-4">{{ authMode === 'login' ? 'Masuk ke sistem ' : 'Buat akun baru' }}</p>
-    <div v-if="authError" class="alert alert-danger py-2 small fw-semibold">{{ authError }}</div>
-
-    <!-- KONDISI A: Login di Domain Utama (Minta URL Toko Dulu) -->
-    <div v-if="!isSubdomainLokal && authMode === 'login'">
-        <h6 class="text-center text-secondary mb-4">Akses ke halaman toko Anda</h6>
-        <form @submit.prevent="lanjutKeSubdomain">
-            <div class="mb-4">
-                <label class="form-label small fw-bold">URL Akses Toko</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" v-model="loginUrlToko" placeholder="namatoko" required style="text-transform: lowercase;">
-                    <span class="input-group-text bg-light text-muted">.queenpos.id</span>
-                </div>
+        <div class="auth-card">
+            <div class="auth-logo text-center mb-3">
+                <img src="logo.png" alt="Logo QueenPOS" style="width: 220px; max-width: 100%; height: auto; margin-bottom: -5px;">
             </div>
-            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3">
-                Lanjut ke Toko <i class="bi bi-arrow-right ms-1"></i>
-            </button>
-        </form>
+            
+            <p class="text-center text-muted small mb-4">{{ authMode === 'login' ? 'Masuk ke sistem ' : 'Buat akun baru' }}</p>
+            <div v-if="authError" class="alert alert-danger py-2 small fw-semibold">{{ authError }}</div>
 
-        <!-- 🌟 TAMBAHAN: Teks Toggle untuk Daftar dari Halaman Utama -->
-        <div class="text-center small fw-semibold text-muted mt-2">
-            <span>Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar Sekarang</a></span>
-        </div>
-    </div>
-
-   <!-- KONDISI B: Mode Register ATAU Login di Subdomain (Tampilkan Form Asli) -->
-<div v-else>
-    
-    <!-- LAYAR 1: Tampil saat sistem sedang mengecek URL ke Firebase -->
-    <div v-if="isCheckingSubdomain" class="text-center py-5">
-        <div class="spinner-border text-danger mb-3" style="width: 2.5rem; height: 2.5rem;"></div>
-        <h6 class="text-muted fw-bold">Memeriksa Validitas Toko...</h6>
-    </div>
-
-    <!-- LAYAR 2: Tampil jika URL toko TIDAK ADA di database -->
-    <div v-else-if="subdomainInvalid" class="text-center py-4">
-        <h1 class="text-warning mb-3">⚠️</h1>
-        <h5 class="fw-bold">Toko Tidak Ditemukan</h5>
-        <p class="text-muted small">Akun URL <b>{{ getSubdomainName() }}.queenpos.id</b> yang Anda masukkan belum didaftarkan di sistem kami.</p>
-        <a href="https://queenpos.id" class="btn btn-danger w-100 fw-bold py-2 mt-3 rounded-3 shadow-sm">
-            Kembali ke Halaman Utama
-        </a>
-    </div>
-
-    <!-- LAYAR 3: Tampil jika URL toko VALID (Form Login Asli Anda) -->
-    <div v-else>
-        <!-- Info Subdomain Aktif -->
-        <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
-            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 fs-6 rounded-pill">
-                {{ getSubdomainName() }}.queenpos.id
-            </span>
-        </div>
-
-        <form @submit.prevent="handleAuthAction">
-            <!-- ISIAN KHUSUS REGISTER -->
-            <div v-if="authMode === 'register'">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Nama Lengkap</label>
-                    <input type="text" class="form-control" v-model="authUser.name" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Nama Usaha / Toko</label>
-                    <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
-                </div>
-
-                <!-- 🌟 TAMBAHAN BARU: ISIAN URL TOKO SAAT REGISTER -->
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" v-model="authUser.urlToko" placeholder="kedaikopisenja" required @input="formatUrlToko">
-                        <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+            <!-- KONDISI A: Login di Domain Utama (Minta URL Toko Dulu) -->
+            <div v-if="!isSubdomainLokal && authMode === 'login'">
+                <h6 class="text-center text-secondary mb-4">Akses ke halaman toko Anda</h6>
+                <form @submit.prevent="lanjutKeSubdomain">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">URL Akses Toko</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" v-model="loginUrlToko" placeholder="namatoko" required style="text-transform: lowercase;">
+                            <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+                        </div>
                     </div>
+                    <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3">
+                        Lanjut ke Toko <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </form>
+
+                <!-- Teks Toggle untuk Daftar dari Halaman Utama -->
+                <div class="text-center small fw-semibold text-muted mt-2">
+                    <span>Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar Sekarang</a></span>
                 </div>
             </div>
-            
-            <!-- ISIAN UMUM (EMAIL & PASS) -->
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Email Address</label>
-                <input type="email" class="form-control" v-model="authUser.email" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Password</label>
-                <input type="password" class="form-control" v-model="authUser.password" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
-                <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
-                <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
-            </button>
-        </form>
 
-        <!-- Teks Toggle Login/Register -->
-        <div class="text-center small fw-semibold text-muted mt-2">
-            <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
-            <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
-        </div>
-    </div> <!-- PENUTUP LAYAR 3 -->
+           <!-- KONDISI B: Mode Register ATAU Login di Subdomain (Tampilkan Form Asli) -->
+            <div v-else>
+                
+                <!-- LAYAR 1: Tampil saat sistem sedang mengecek URL ke Firebase -->
+                <div v-if="isCheckingSubdomain" class="text-center py-5">
+                    <div class="spinner-border text-danger mb-3" style="width: 2.5rem; height: 2.5rem;"></div>
+                    <h6 class="text-muted fw-bold">Memeriksa Validitas Toko...</h6>
+                </div>
 
-</div> <!-- PENUTUP KONDISI B -->
+                <!-- LAYAR 2: Tampil jika URL toko TIDAK ADA di database -->
+                <div v-else-if="subdomainInvalid" class="text-center py-4">
+                    <h1 class="text-warning mb-3">⚠️</h1>
+                    <h5 class="fw-bold">Toko Tidak Ditemukan</h5>
+                    <p class="text-muted small">Akun URL <b>{{ getSubdomainName() }}.queenpos.id</b> yang Anda masukkan belum didaftarkan di sistem kami.</p>
+                    <a href="https://queenpos.id" class="btn btn-danger w-100 fw-bold py-2 mt-3 rounded-3 shadow-sm">
+                        Kembali ke Halaman Utama
+                    </a>
+                </div>
+
+                <!-- LAYAR 3: Tampil jika URL toko VALID (Form Login Asli Anda) -->
+                <div v-else>
+                    <!-- Info Subdomain Aktif -->
+                    <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 fs-6 rounded-pill">
+                            {{ getSubdomainName() }}.queenpos.id
+                        </span>
+                    </div>
+
+                    <form @submit.prevent="handleAuthAction">
+                        <!-- ISIAN KHUSUS REGISTER -->
+                        <div v-if="authMode === 'register'">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nama Lengkap</label>
+                                <input type="text" class="form-control" v-model="authUser.name" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nama Usaha / Toko</label>
+                                <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" v-model="authUser.urlToko" placeholder="kedaikopisenja" required @input="formatUrlToko">
+                                    <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ISIAN UMUM (EMAIL & PASS) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Email Address</label>
+                            <input type="email" class="form-control" v-model="authUser.email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Password</label>
+                            <input type="password" class="form-control" v-model="authUser.password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
+                            <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
+                            <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
+                        </button>
+                    </form>
+
+                    <!-- 🌟 TAMBAHAN 1: TOMBOL LOGIN GOOGLE -->
+                    <div class="d-flex align-items-center mb-3 mt-2">
+                        <hr class="flex-grow-1 m-0">
+                        <span class="mx-2 text-muted small fw-bold">ATAU</span>
+                        <hr class="flex-grow-1 m-0">
+                    </div>
+                    <button type="button" @click="loginDenganGoogle" class="btn btn-outline-dark w-100 fw-bold py-2 mb-3 d-flex align-items-center justify-content-center">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px; margin-right: 10px;">
+                        Masuk dengan Google
+                    </button>
+
+                    <!-- 🌟 PERBAIKAN 2: SEMBUNYIKAN TOMBOL DAFTAR DI SUBDOMAIN TOKO -->
+                    <!-- Teks ini sekarang hanya muncul jika BUKAN di subdomain tenant (isSubdomainLokal bernilai false) -->
+                    <div class="text-center small fw-semibold text-muted mt-2" v-if="!isSubdomainLokal">
+                        <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
+                        <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
+                    </div>
+
+                </div> <!-- PENUTUP LAYAR 3 -->
+
+            </div> <!-- PENUTUP KONDISI B -->
         </div>
-        </div>
+    </div>
 
     <div v-else class="app-container d-print-none">
         
@@ -8528,7 +8540,7 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -10396,6 +10408,44 @@ fulfillmentOrders() {
     
     this.isProcessingAuth = false;
 },
+
+            async loginDenganGoogle() {
+        try {
+            // 1. Panggil Popup Google
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            // Catatan: Jika lewat Google, user.emailVerified otomatis bernilai TRUE!
+
+            // 2. Cek apakah ini di Subdomain (Login Karyawan/Owner ke Toko)
+            if (this.isSubdomainLokal) {
+                // Gunakan logika pengecekan tenant Anda di sini
+                // (Persis seperti logika yang ada di handleAuthAction)
+                console.log("Login Google dari Subdomain sukses!", user.email);
+            } 
+            // 3. Jika di Domain Utama (Daftar Toko Baru)
+            else {
+                // Karena Google tidak meminta "Nama Toko" dan "URL", 
+                // Anda mungkin perlu memunculkan form/popup tambahan di sini 
+                // untuk meminta data toko mereka sebelum menyimpan ke Firestore.
+                console.log("Pendaftaran/Login Google dari Domain Utama", user.email);
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: `Selamat datang, ${user.displayName}!`
+            });
+
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Gagal',
+                text: error.message
+            });
+        }
+    }, 
             
             openChangeLogModal() {
             const modalEl = document.getElementById('changeLogModal');
