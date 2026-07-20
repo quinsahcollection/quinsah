@@ -14953,10 +14953,16 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
     // 1. Lakukan proses login ke Firebase Auth
 const userCred = await signInWithEmailAndPassword(auth, this.authUser.email, this.authUser.password);
 
-// 🌟 TAMBAHAN BARU: CEK STATUS VERIFIKASI EMAIL
+// 🌟 PERBAIKAN: CEK STATUS & OTOMATIS KIRIM ULANG EMAIL JIKA BELUM VERIFIKASI
 if (!userCred.user.emailVerified) {
-    await signOut(auth); // Keluarkan paksa
-    throw new Error(`Email Anda belum diverifikasi! Silakan cek kotak masuk (atau folder Spam) email ${this.authUser.email} untuk mengaktifkan akun Anda.`);
+    // 1. Tembakkan ulang email verifikasinya ke akun lama ini
+    await sendEmailVerification(userCred.user);
+    
+    // 2. Keluarkan paksa dari sistem
+    await signOut(auth); 
+    
+    // 3. Tampilkan pesan error yang menginfokan pengiriman ulang
+    throw new Error(`Email belum terverifikasi! Kami BARU SAJA MENGIRIM ULANG link aktivasi ke ${this.authUser.email}. Silakan cek kotak masuk (atau folder Spam) Anda sekarang.`);
 }
     
     // 2. PROTEKSI SUBDOMAIN (Hanya jalan jika user login di [namatoko].queenpos.id)
