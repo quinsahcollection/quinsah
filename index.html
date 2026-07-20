@@ -665,42 +665,85 @@ body.sidebar-open {
 
     <div v-else-if="!isLoggedIn" class="auth-wrapper d-print-none">
     <div class="auth-card">
-        
-        <div class="auth-logo text-center mb-3">
-            <img src="logo.png" alt="Logo QueenPOS" style="width: 220px; max-width: 100%; height: auto; margin-bottom: -5px;">
-</div>
-        
-        <p class="text-center text-muted small mb-4">{{ authMode === 'login' ? 'Masuk ke sistem kasir' : 'Buat akun baru' }}</p>
-     
-            <div v-if="authError" class="alert alert-danger py-2 small fw-semibold">{{ authError }}</div>
-            <form @submit.prevent="handleAuthAction">
-                <div class="mb-3" v-if="authMode === 'register'">
+    <div class="auth-logo text-center mb-3">
+        <img src="logo.png" alt="Logo QueenPOS" style="width: 220px; max-width: 100%; height: auto; margin-bottom: -5px;">
+    </div>
+    
+    <p class="text-center text-muted small mb-4">{{ authMode === 'login' ? 'Masuk ke sistem kasir' : 'Buat akun baru' }}</p>
+    <div v-if="authError" class="alert alert-danger py-2 small fw-semibold">{{ authError }}</div>
+
+    <!-- KONDISI A: Login di Domain Utama (Minta URL Toko Dulu) -->
+    <div v-if="!isSubdomainLokal && authMode === 'login'">
+        <h6 class="text-center text-secondary mb-4">Akses ruang kerja toko Anda</h6>
+        <form @submit.prevent="lanjutKeSubdomain">
+            <div class="mb-4">
+                <label class="form-label small fw-bold">URL Akses Toko</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" v-model="loginUrlToko" placeholder="namatoko" required style="text-transform: lowercase;">
+                    <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3">
+                Lanjut ke Toko <i class="bi bi-arrow-right ms-1"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- KONDISI B: Mode Register ATAU Login di Subdomain (Tampilkan Form Asli) -->
+    <div v-else>
+        <!-- Info Subdomain Aktif -->
+        <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
+            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 fs-6 rounded-pill">
+                {{ getSubdomainName() }}.queenpos.id
+            </span>
+        </div>
+
+        <form @submit.prevent="handleAuthAction">
+            <!-- ISIAN KHUSUS REGISTER -->
+            <div v-if="authMode === 'register'">
+                <div class="mb-3">
                     <label class="form-label small fw-bold">Nama Lengkap</label>
                     <input type="text" class="form-control" v-model="authUser.name" required>
                 </div>
                 
-                <div class="mb-3" v-if="authMode === 'register'">
+                <div class="mb-3">
                     <label class="form-label small fw-bold">Nama Usaha / Toko</label>
                     <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
                 </div>
+
+                <!-- 🌟 TAMBAHAN BARU: ISIAN URL TOKO SAAT REGISTER -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Email Address</label>
-                    <input type="email" class="form-control" v-model="authUser.email" required>
+                    <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" v-model="authUser.urlToko" placeholder="kedaikopisenja" required @input="formatUrlToko">
+                        <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Password</label>
-                    <input type="password" class="form-control" v-model="authUser.password" required>
-                </div>
-                <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
-                    <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
-                    <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
-                </button>
-            </form>
-            <div class="text-center small fw-semibold text-muted">
-                <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
-                <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
             </div>
-        </div>
+            
+            <!-- ISIAN UMUM (EMAIL & PASS) -->
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Email Address</label>
+                <input type="email" class="form-control" v-model="authUser.email" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Password</label>
+                <input type="password" class="form-control" v-model="authUser.password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
+                <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
+                <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Teks Toggle Login/Register -->
+    <div class="text-center small fw-semibold text-muted">
+        <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
+        <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
+    </div>
+</div>
     </div>
 
     <div v-else class="app-container d-print-none">
@@ -8532,7 +8575,14 @@ body.sidebar-open {
                 authMode: 'login', 
                 authError: '', 
                 isProcessingAuth: false, 
-                authUser: { name: '', email: '', password: '', companyName: '' },
+                loginUrlToko: '',
+                authUser: { 
+                name: '', 
+                companyName: '', 
+                urlToko: '', // 👈 Tambahkan ini
+                email: '', 
+                password: '' 
+                },
                 isRegistering: false,
 
                 currentView: hasInv ? 'ereceipt' : 'dashboard', 
@@ -8931,6 +8981,14 @@ beforeDestroy() {
 },
         
         computed: {
+            isSubdomainLokal() {
+            const hostname = window.location.hostname;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') return false;
+        
+            const parts = hostname.split('.');
+            return parts.length >= 3 && parts[0] !== 'www';
+            },
+            
             structuredCategories() {
                 let res = []; let map = {};
                 this.categories.forEach(c => map[c.id] = {...c, children: []});
@@ -10255,6 +10313,21 @@ fulfillmentOrders() {
         },
         
         methods: {
+            getSubdomainName() {
+            return window.location.hostname.split('.')[0];
+        },
+
+            formatUrlToko() {
+            // Memaksa input URL menjadi huruf kecil dan tanpa spasi/simbol
+            this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
+        },
+
+            lanjutKeSubdomain() {
+            if (!this.loginUrlToko) return;
+            let cleanUrl = this.loginUrlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
+            window.location.href = `https://${cleanUrl}.queenpos.id`;
+        },
+            
             openChangeLogModal() {
             const modalEl = document.getElementById('changeLogModal');
             if (modalEl) {
@@ -10262,6 +10335,7 @@ fulfillmentOrders() {
                 myModal.show();
             }
         },
+            
         viewUpdateDetails() {
             this.openChangeLogModal();
             this.dismissUpdateBanner();
@@ -14825,6 +14899,7 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                         // 3. Buat Data Perusahaan (Tenant Baru)
                         const companyRef = await addDoc(collection(db, "companies"), {
                             namaUsaha: this.authUser.companyName,
+                            urlToko: this.authUser.urlToko,
                             pemilik: this.authUser.name,
                             email: this.authUser.email,
                             paketLangganan: 'Trial 7 Hari',
@@ -14879,7 +14954,7 @@ async logStock(type, { productId, sku, name, variantSku, variantName, qty, outle
                         
                         // Reset form & pindah ke mode login
                         this.authMode = 'login';
-                        this.authUser = { name: '', email: '', password: '', companyName: '' };
+                        this.authUser = { name: '', email: '', password: '', companyName: '', urlToko: '' };
                     }
                 } catch(e) {
                     this.authError = e.message || "Terjadi kesalahan saat autentikasi.";
