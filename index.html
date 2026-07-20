@@ -689,7 +689,26 @@ body.sidebar-open {
         </form>
     </div>
 
-    <!-- KONDISI B: Mode Register ATAU Login di Subdomain (Tampilkan Form Asli) -->
+   <!-- KONDISI B: Mode Register ATAU Login di Subdomain (Tampilkan Form Asli) -->
+<div v-else>
+    
+    <!-- LAYAR 1: Tampil saat sistem sedang mengecek URL ke Firebase -->
+    <div v-if="isCheckingSubdomain" class="text-center py-5">
+        <div class="spinner-border text-danger mb-3" style="width: 2.5rem; height: 2.5rem;"></div>
+        <h6 class="text-muted fw-bold">Memeriksa Validitas Toko...</h6>
+    </div>
+
+    <!-- LAYAR 2: Tampil jika URL toko TIDAK ADA di database -->
+    <div v-else-if="subdomainInvalid" class="text-center py-4">
+        <h1 class="text-warning mb-3">⚠️</h1>
+        <h5 class="fw-bold">Toko Tidak Ditemukan</h5>
+        <p class="text-muted small">Akun URL <b>{{ getSubdomainName() }}.queenpos.id</b> yang Anda masukkan belum didaftarkan di sistem kami.</p>
+        <a href="https://queenpos.id" class="btn btn-danger w-100 fw-bold py-2 mt-3 rounded-3 shadow-sm">
+            Kembali ke Halaman Utama
+        </a>
+    </div>
+
+    <!-- LAYAR 3: Tampil jika URL toko VALID (Form Login Asli Anda) -->
     <div v-else>
         <!-- Info Subdomain Aktif -->
         <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
@@ -736,15 +755,15 @@ body.sidebar-open {
                 <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
             </button>
         </form>
-    </div>
 
-    <!-- Teks Toggle Login/Register -->
-    <div class="text-center small fw-semibold text-muted">
-        <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
-        <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
-    </div>
-</div>
-    </div>
+        <!-- Teks Toggle Login/Register -->
+        <div class="text-center small fw-semibold text-muted mt-2">
+            <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
+            <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
+        </div>
+    </div> <!-- PENUTUP LAYAR 3 -->
+
+</div> <!-- PENUTUP KONDISI B -->
 
     <div v-else class="app-container d-print-none">
         
@@ -8571,7 +8590,9 @@ body.sidebar-open {
                 isLoggedIn: false, 
                 userRole: 'Karyawan', 
                 userProfile: null,
-                
+
+                isCheckingSubdomain: false,
+                subdomainInvalid: false,
                 authMode: 'login', 
                 authError: '', 
                 isProcessingAuth: false, 
@@ -8876,6 +8897,26 @@ body.sidebar-open {
         },
 
         async mounted() {
+
+       // Jalankan pengecekan ini HANYA jika user berada di subdomain
+    if (this.isSubdomainLokal) {
+        this.isCheckingSubdomain = true;
+        const currentSubdomain = this.getSubdomainName();
+        
+        try {
+            const q = query(collection(db, "companies"), where("urlToko", "==", currentSubdomain));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                // Toko tidak ditemukan di database!
+                this.subdomainInvalid = true;
+            }
+        } catch (error) {
+            console.error("Gagal memeriksa keabsahan subdomain:", error);
+        }
+        
+        this.isCheckingSubdomain = false;
+    },
 
         // =========================================================
         // 🌟 CEK UPDATE VERSI SISTEM (TAMBAHAN KODE BARU)
@@ -10322,11 +10363,32 @@ fulfillmentOrders() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
-            lanjutKeSubdomain() {
-            if (!this.loginUrlToko) return;
-            let cleanUrl = this.loginUrlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
+            async lanjutKeSubdomain() {
+    if (!this.loginUrlToko) return;
+    let cleanUrl = this.loginUrlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    this.isProcessingAuth = true; // Munculkan loading di tombol
+    this.authError = '';
+    
+    try {
+        // Tanya ke satpam (Firebase): Adakah toko dengan URL ini?
+        const q = query(collection(db, "companies"), where("urlToko", "==", cleanUrl));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            // Jika kosong (tidak ada toko dengan URL tersebut)
+            this.authError = `Akun URL "${cleanUrl}" belum didaftarkan.`;
+        } else {
+            // Jika terdaftar, baru pindahkan halamannya
             window.location.href = `https://${cleanUrl}.queenpos.id`;
-        },
+        }
+    } catch (error) {
+        this.authError = "Gagal memeriksa URL Toko. Periksa koneksi Anda.";
+        console.error(error);
+    }
+    
+    this.isProcessingAuth = false;
+},
             
             openChangeLogModal() {
             const modalEl = document.getElementById('changeLogModal');
