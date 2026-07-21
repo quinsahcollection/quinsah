@@ -8540,7 +8540,7 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -8916,117 +8916,26 @@ body.sidebar-open {
         },
 
         async mounted() {
-        // =========================================================
-        // 1. CEK VALIDITAS SUBDOMAIN (Kode asli Anda)
-        // =========================================================
-        if (this.isSubdomainLokal) {
-            this.isCheckingSubdomain = true;
-            const currentSubdomain = this.getSubdomainName();
-            
-            try {
-                const q = query(collection(db, "companies"), where("urlToko", "==", currentSubdomain));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    // Toko tidak ditemukan di database!
-                    this.subdomainInvalid = true;
-                }
-            } catch (error) {
-                console.error("Gagal memeriksa keabsahan subdomain:", error);
-            }
-            
-            this.isCheckingSubdomain = false;
-        }
 
-        // =========================================================
-        // 2. TANGKAP KEMBALIAN DARI GOOGLE LOGIN (Jurus Redirect)
-        // =========================================================
+       // Jalankan pengecekan ini HANYA jika user berada di subdomain
+    if (this.isSubdomainLokal) {
+        this.isCheckingSubdomain = true;
+        const currentSubdomain = this.getSubdomainName();
+        
         try {
-            const result = await getRedirectResult(auth);
+            const q = query(collection(db, "companies"), where("urlToko", "==", currentSubdomain));
+            const querySnapshot = await getDocs(q);
             
-            if (result) {
-                // Jika ada result, berarti user baru saja berhasil login via Google dan dikembalikan ke sini
-                const user = result.user;
-                
-                // A. JIKA LOGIN DI SUBDOMAIN LOKAL (Login Karyawan/Owner)
-                if (this.isSubdomainLokal) {
-                    const currentSubdomain = this.getSubdomainName();
-                    
-                    // Ambil data user dari database kita
-                    const userDocRef = doc(db, "users", user.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-                    
-                    if (userDocSnap.exists()) {
-                        const userData = userDocSnap.data();
-                        const companyId = userData.companyId;
-                        
-                        if (companyId) {
-                            const companyDocRef = doc(db, "companies", companyId);
-                            const companyDocSnap = await getDoc(companyDocRef);
-                            
-                            if (companyDocSnap.exists()) {
-                                const companyData = companyDocSnap.data();
-                                const urlTokoAsli = companyData.urlToko;
-                                
-                                // PROTEKSI SUPER KETAT (Persis seperti di handleAuthAction)
-                                if (!urlTokoAsli) {
-                                    await signOut(auth);
-                                    throw new Error(`Gagal masuk! Akun ini belum memiliki URL Toko di sistem.`);
-                                } else if (urlTokoAsli !== currentSubdomain) {
-                                    await signOut(auth);
-                                    throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
-                                } else {
-                                    // BERHASIL MASUK KE TOKO YANG BENAR!
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Berhasil',
-                                        text: `Selamat datang kembali, ${user.displayName}!`
-                                    });
-                                }
-                            }
-                        }
-                    } else {
-                        // Jika email Google-nya sama sekali belum terdaftar di database Firestore Anda
-                        await signOut(auth);
-                        throw new Error("Akun Google ini belum terdaftar di sistem. Silakan mendaftar melalui website utama terlebih dahulu.");
-                    }
-                } 
-                // B. JIKA LOGIN DI DOMAIN UTAMA (Pendaftaran Toko Baru)
-                else {
-                    // Di sini Anda bisa memunculkan popup khusus untuk menanyakan
-                    // "Nama Toko" dan "URL" kepada pendaftar baru dari Google, 
-                    // karena Google hanya memberikan Nama Lengkap dan Email.
-                    
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Info Pendaftaran',
-                        text: `Halo ${user.displayName}, fitur pembuatan toko otomatis via Google sedang disiapkan. Silakan gunakan form registrasi di samping untuk saat ini.`
-                    });
-                    
-                    // Keluarkan dulu sementara jika belum ada form popup URL Toko-nya
-                    await signOut(auth);
-                }
-                
-                // 🌟 MATIKAN LOADING DI SINI (Setelah proses login sukses selesai)
-                this.isProcessingAuth = false;
-                
-            } else {
-                // 🌟 MATIKAN LOADING DI SINI (Jika user menekan tombol Back atau memuat halaman normal)
-                this.isProcessingAuth = false;
+            if (querySnapshot.empty) {
+                // Toko tidak ditemukan di database!
+                this.subdomainInvalid = true;
             }
-            
         } catch (error) {
-            // 🌟 MATIKAN LOADING DI SINI (Jika terjadi error/koneksi terputus saat kembali)
-            this.isProcessingAuth = false;
-            
-            // Tangkap error jika batal login Google atau koneksi putus
-            console.error("Error Google Redirect:", error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Akses Gagal',
-                text: error.message || "Gagal masuk melalui Google."
-            });
+            console.error("Gagal memeriksa keabsahan subdomain:", error);
         }
+        
+        this.isCheckingSubdomain = false;
+    }
 
         // =========================================================
         // 🌟 CEK UPDATE VERSI SISTEM (TAMBAHAN KODE BARU)
@@ -10501,22 +10410,83 @@ fulfillmentOrders() {
 },
 
             async loginDenganGoogle() {
+    this.isProcessingAuth = true; // Nyalakan loading
+    
     try {
-        this.isProcessingAuth = true; // Munculkan efek loading di tombol (opsional)
-        
-        // 1. Panggil Redirect Google
         const provider = new GoogleAuthProvider();
         
-        // Browser akan langsung pindah ke Google.
-        await signInWithRedirect(auth, provider);
+        // Kita KEMBALI gunakan Popup karena Vercel Anda sudah mengizinkannya!
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        // A. JIKA LOGIN DI SUBDOMAIN LOKAL (Login Karyawan/Owner)
+        if (this.isSubdomainLokal) {
+            const currentSubdomain = this.getSubdomainName();
+            const userDocRef = doc(db, "users", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                const companyId = userData.companyId;
+                
+                if (companyId) {
+                    const companyDocRef = doc(db, "companies", companyId);
+                    const companyDocSnap = await getDoc(companyDocRef);
+                    
+                    if (companyDocSnap.exists()) {
+                        const companyData = companyDocSnap.data();
+                        const urlTokoAsli = companyData.urlToko;
+                        
+                        // PROTEKSI SUPER KETAT
+                        if (!urlTokoAsli) {
+                            await signOut(auth);
+                            throw new Error(`Gagal masuk! Akun ini belum memiliki URL Toko di sistem.`);
+                        } else if (urlTokoAsli !== currentSubdomain) {
+                            await signOut(auth);
+                            throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
+                        } else {
+                            // BERHASIL MASUK!
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: `Selamat datang kembali, ${user.displayName}!`
+                            });
+                            
+                            // (Pastikan Anda memiliki perintah untuk mengubah tampilan ke dashboard di sini)
+                            // Misalnya: this.isLoggedIn = true; atau merutekan ke halaman lain
+                        }
+                    }
+                }
+            } else {
+                await signOut(auth);
+                throw new Error("Akun Google ini belum terdaftar di sistem.");
+            }
+        } 
+        // B. JIKA LOGIN DI DOMAIN UTAMA
+        else {
+            Swal.fire({
+                icon: 'info',
+                title: 'Info Pendaftaran',
+                text: `Halo ${user.displayName}, pendaftaran via Google sedang disiapkan.`
+            });
+            await signOut(auth);
+        }
         
     } catch (error) {
+        console.error("Error Google Popup:", error);
+        
+        // Abaikan peringatan jika user sekadar menutup jendela popup (batal login)
+        if (error.code !== 'auth/popup-closed-by-user') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Gagal',
+                text: error.message || "Gagal masuk melalui Google."
+            });
+        }
+    } finally {
+        // 🌟 JURUS PAMUNGKAS: 
+        // Apapun yang terjadi (sukses, error, atau batal), matikan loading!
         this.isProcessingAuth = false;
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal Mengalihkan',
-            text: error.message
-        });
     }
 },
             
