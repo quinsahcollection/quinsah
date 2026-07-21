@@ -664,7 +664,7 @@ body.sidebar-open {
     </div>
 
     <div v-else-if="!isLoggedIn" class="auth-wrapper d-print-none">
-        <div class="auth-card">
+        <div class="auth-card" :style="{ maxWidth: authMode === 'register' ? '700px' : '400px', width: '100%', transition: 'max-width 0.3s ease' }">
             <div class="auth-logo text-center mb-3">
                 <img src="logo.png" alt="Logo QueenPOS" style="width: 220px; max-width: 100%; height: auto; margin-bottom: -5px;">
             </div>
@@ -714,71 +714,89 @@ body.sidebar-open {
                 </div>
 
                 <!-- LAYAR 3: Tampil jika URL toko VALID (Form Login Asli Anda) -->
-                <div v-else>
-                    <!-- Info Subdomain Aktif -->
-                    <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
-                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 fs-6 rounded-pill">
-                            {{ getSubdomainName() }}.queenpos.id
-                        </span>
-                    </div>
+<div v-else>
+    <!-- Info Subdomain Aktif -->
+    <div v-if="isSubdomainLokal && authMode === 'login'" class="text-center mb-3">
+        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 fs-6 rounded-pill">
+            {{ getSubdomainName() }}.queenpos.id
+        </span>
+    </div>
 
-                    <form @submit.prevent="handleAuthAction">
-                        <!-- ISIAN KHUSUS REGISTER -->
-                        <div v-if="authMode === 'register'">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Nama Lengkap</label>
-                                <input type="text" class="form-control" v-model="authUser.name" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Nama Usaha / Toko</label>
-                                <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
-                            </div>
+    <!-- ================= FORM UTAMA ================= -->
+    <form @submit.prevent="handleAuthAction">
+        
+        <!-- MODE REGISTER (Grid 2 Kolom) -->
+        <div v-if="authMode === 'register'" class="row text-start">
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label small fw-bold">Nama Lengkap</label>
+                <input type="text" class="form-control" v-model="authUser.name" required>
+            </div>
+            
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label small fw-bold">Nama Usaha / Toko</label>
+                <input type="text" class="form-control" v-model="authUser.companyName" required placeholder="Misal: Kedai Kopi Senja">
+            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" v-model="authUser.urlToko" placeholder="kedaikopisenja" required @input="formatUrlToko">
-                                    <span class="input-group-text bg-light text-muted">.queenpos.id</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- ISIAN UMUM (EMAIL & PASS) -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Email Address</label>
-                            <input type="email" class="form-control" v-model="authUser.email" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Password</label>
-                            <input type="password" class="form-control" v-model="authUser.password" required>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3" :disabled="isProcessingAuth">
-                            <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
-                            <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
-                        </button>
-                    </form>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label small fw-bold">Email Address</label>
+                <input type="email" class="form-control" v-model="authUser.email" required>
+            </div>
 
-                    <!-- 🌟 TAMBAHAN 1: TOMBOL LOGIN GOOGLE -->
-                    <div class="d-flex align-items-center mb-3 mt-2">
-                        <hr class="flex-grow-1 m-0">
-                        <span class="mx-2 text-muted small fw-bold">ATAU</span>
-                        <hr class="flex-grow-1 m-0">
-                    </div>
-                    <button type="button" @click="loginDenganGoogle" class="btn btn-outline-dark w-100 fw-bold py-2 mb-3 d-flex align-items-center justify-content-center">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px; margin-right: 10px;">
-                        Masuk dengan Google
-                    </button>
+            <div class="col-12 col-md-6 mb-3">
+                <label class="form-label small fw-bold">Password</label>
+                <input type="password" class="form-control" v-model="authUser.password" required>
+            </div>
 
-                    <!-- 🌟 PERBAIKAN 2: SEMBUNYIKAN TOMBOL DAFTAR DI SUBDOMAIN TOKO -->
-                    <!-- Teks ini sekarang hanya muncul jika BUKAN di subdomain tenant (isSubdomainLokal bernilai false) -->
-                    <div class="text-center small fw-semibold text-muted mt-2" v-if="!isSubdomainLokal">
-                        <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
-                        <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
-                    </div>
+            <div class="col-12 mb-3">
+                <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" v-model="authUser.urlToko" placeholder="kedaikopisenja" required @input="formatUrlToko">
+                    <span class="input-group-text bg-light text-muted">.queenpos.id</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MODE LOGIN (1 Kolom + Lupa Password) -->
+        <div v-else class="text-start">
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Email Address</label>
+                <input type="email" class="form-control" v-model="authUser.email" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Password</label>
+                <input type="password" class="form-control" v-model="authUser.password" required>
+            </div>
+            
+            <div class="text-end" style="margin-top: -10px; margin-bottom: 15px;">
+                <a href="#" @click.prevent="lupaPassword" style="font-size: 13px; color: #d9534f; text-decoration: none; font-weight: bold;">Lupa Password?</a>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 mb-3 mt-2" :disabled="isProcessingAuth">
+            <span v-if="isProcessingAuth" class="spinner-border spinner-border-sm"></span>
+            <span v-else>{{ authMode === 'login' ? 'Masuk' : 'Daftar Sekarang' }}</span>
+        </button>
+    </form>
 
-                </div> <!-- PENUTUP LAYAR 3 -->
+    <!-- ================= TOMBOL GOOGLE (TETAP AMAN DI SINI) ================= -->
+    <div class="d-flex align-items-center mb-3 mt-2">
+        <hr class="flex-grow-1 m-0">
+        <span class="mx-2 text-muted small fw-bold">ATAU</span>
+        <hr class="flex-grow-1 m-0">
+    </div>
+    
+    <button type="button" @click="loginDenganGoogle" class="btn btn-outline-dark w-100 fw-bold py-2 mb-3 d-flex align-items-center justify-content-center">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width: 20px; margin-right: 10px;">
+        Masuk dengan Google
+    </button>
+
+    <!-- Teks Toggle Daftar/Masuk -->
+    <div class="text-center small fw-semibold text-muted mt-2" v-if="!isSubdomainLokal">
+        <span v-if="authMode === 'login'">Belum punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'register'">Daftar</a></span>
+        <span v-else>Sudah punya akun? <a href="#" class="text-danger" @click.prevent="authMode = 'login'">Masuk</a></span>
+    </div>
+
+</div>
 
             </div> <!-- PENUTUP KONDISI B -->
         </div>
@@ -8540,7 +8558,7 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -10381,6 +10399,63 @@ fulfillmentOrders() {
             // Memaksa input URL menjadi huruf kecil dan tanpa spasi/simbol
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
+
+    async lupaPassword() {
+    // 1. Munculkan popup untuk meminta alamat email
+    const { value: emailTarget } = await Swal.fire({
+        title: 'Lupa Password?',
+        text: 'Masukkan email akun Anda. Kami akan mengirimkan link untuk membuat password baru.',
+        input: 'email',
+        inputPlaceholder: 'nama@email.com',
+        showCancelButton: true,
+        confirmButtonText: 'Kirim Link',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#d9534f'
+    });
+
+    // 2. Jika user menekan tombol "Kirim Link" dan mengisi email
+    if (emailTarget) {
+        // Tampilkan animasi loading
+        Swal.fire({
+            title: 'Mengirim...',
+            text: 'Mohon tunggu sebentar',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            // 3. Panggil fungsi Firebase untuk kirim email reset
+            await sendPasswordResetEmail(auth, emailTarget);
+            
+            // 4. Jika sukses
+            Swal.fire({
+                icon: 'success',
+                title: 'Terkirim!',
+                text: `Link untuk mengatur ulang password telah dikirim ke ${emailTarget}. Silakan cek kotak masuk (atau folder Spam) Anda.`
+            });
+            
+        } catch (error) {
+            // 5. Tangkap error (misal email belum terdaftar)
+            let pesanError = "Terjadi kesalahan saat mengirim email.";
+            
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                pesanError = "Email tersebut belum terdaftar di sistem kami.";
+            } else if (error.code === 'auth/invalid-email') {
+                pesanError = "Format email tidak valid.";
+            } else {
+                pesanError = error.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Mengirim',
+                text: pesanError
+            });
+        }
+    }
+},
 
             async lanjutKeSubdomain() {
     if (!this.loginUrlToko) return;
