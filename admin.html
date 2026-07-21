@@ -12,7 +12,7 @@
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- SweetAlert2 & Vue 3 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -20,15 +20,16 @@
     
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            --dark-gradient: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            --primary-color: #d9534f;
+            --primary-gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             --sidebar-width: 260px;
             --border-color: rgba(226, 232, 240, 0.8);
         }
         
         body { 
             background-color: #f8fafc; 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
             color: #334155;
             min-height: 100vh;
             overflow-x: hidden;
@@ -36,8 +37,10 @@
 
         /* Utility Enhancements */
         .bg-gradient-primary { background: var(--primary-gradient); color: white; }
-        .text-primary-custom { color: #4f46e5 !important; }
+        .text-primary-custom { color: #2563eb !important; }
         .border-subtle { border-color: var(--border-color) !important; }
+        .btn-primary-custom { background-color: var(--primary-color); color: white; border: none; }
+        .btn-primary-custom:hover { background-color: #c9302c; color: white; }
         
         /* Layout Structure */
         #wrapper {
@@ -50,7 +53,7 @@
         #sidebar-wrapper {
             min-width: var(--sidebar-width);
             max-width: var(--sidebar-width);
-            background: var(--dark-gradient);
+            background: var(--primary-gradient);
             color: #fff;
             transition: all 0.3s ease;
             display: flex;
@@ -64,6 +67,8 @@
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 100vh;
         }
 
         /* Sidebar Styling */
@@ -71,8 +76,7 @@
             padding: 1.5rem 1.25rem;
             font-size: 1.15rem;
             font-weight: 700;
-            letter-spacing: -0.02em;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             display: flex;
             align-items: center;
         }
@@ -87,7 +91,7 @@
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #64748b;
+            color: #93c5fd;
             font-weight: 700;
             padding: 0.75rem 0.75rem 0.25rem;
             margin-top: 0.5rem;
@@ -97,7 +101,7 @@
             display: flex;
             align-items: center;
             padding: 0.75rem 1rem;
-            color: #94a3b8;
+            color: #e2e8f0;
             text-decoration: none;
             border-radius: 0.5rem;
             font-weight: 500;
@@ -109,13 +113,13 @@
         
         .nav-link-custom:hover {
             color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .nav-link-custom.active {
-            color: #ffffff;
-            background: var(--primary-gradient);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            color: #1e3a8a;
+            background: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             font-weight: 600;
         }
 
@@ -132,75 +136,108 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 999;
         }
 
-        /* Modern Cards & Shadows */
+        /* Modern Cards */
         .card-modern {
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-        }
-        
-        .stat-card {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
         }
 
         /* Table Styling */
         .table-custom th {
             font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
             font-weight: 600;
             color: #64748b;
             background-color: #f8fafc;
-            border-bottom: 1px solid var(--border-color);
         }
         
         .table-custom td {
             padding: 1rem 0.75rem;
-            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
         }
-        
-        .table-custom tr:last-child td { border-bottom: none; }
 
         /* Form Inputs */
         .form-control-modern, .form-select-modern {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            padding: 0.65rem 1rem;
+            border-radius: 0.5rem;
+            padding: 0.6rem 1rem;
             font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-        
-        .form-control-modern:focus, .form-select-modern:focus {
-            background-color: #ffffff;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
         /* Badges */
-        .badge-soft-primary { background-color: #e0e7ff; color: #4338ca; }
+        .badge-soft-primary { background-color: #dbeafe; color: #1e40af; }
         .badge-soft-success { background-color: #dcfce7; color: #15803d; }
         .badge-soft-warning { background-color: #fef9c3; color: #a16207; }
         .badge-soft-danger { background-color: #fee2e2; color: #b91c1c; }
-        .badge-soft-info { background-color: #e0f2fe; color: #0369a1; }
 
         [v-cloak] { display: none !important; }
 
+        /* 🌟 NAVIGASI BAWAH KHUSUS MOBILE */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border-top: 1px solid var(--border-color);
+            display: none;
+            justify-content: space-around;
+            padding: 0.6rem 0;
+            z-index: 1030;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        }
+        
+        .mobile-bottom-nav .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #64748b;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        
+        .mobile-bottom-nav .nav-item i {
+            font-size: 1.35rem;
+            margin-bottom: 2px;
+            transition: all 0.2s;
+        }
+        
+        .mobile-bottom-nav .nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .mobile-bottom-nav .nav-item.active i {
+            transform: scale(1.15);
+        }
+
+        /* 🌟 RESPONSIVE RULES */
         @media (max-width: 768px) {
-            #sidebar-wrapper {
-                margin-left: calc(-1 * var(--sidebar-width));
+            #sidebar-wrapper { 
+                display: none !important; /* Matikan sidebar samping di HP */
             }
-            #wrapper.toggled #sidebar-wrapper {
-                margin-left: 0;
+            .mobile-bottom-nav { 
+                display: flex; /* Tampilkan navigasi bawah di HP */
+            }
+            .top-navbar .btn-light {
+                display: none !important; /* Matikan tombol hamburger menu di atas */
+            }
+            #page-content-wrapper {
+                padding-bottom: 75px; /* Beri ruang agar konten bawah tidak tertutup menu */
+            }
+            .container-fluid {
+                padding: 1rem !important;
+            }
+            .table-responsive table {
+                min-width: 800px;
             }
         }
     </style>
@@ -210,62 +247,49 @@
 <div id="app" v-cloak>
     <!-- LOGIN SCREEN -->
     <div v-if="!isLoggedIn" class="container d-flex justify-content-center align-items-center vh-100">
-        <div class="card-modern overflow-hidden shadow-lg" style="width: 440px; max-width: 95%;">
-            <div class="bg-gradient-primary p-5 text-center position-relative">
-                <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-10 rounded-circle mb-3" style="width: 64px; height: 64px; backdrop-filter: blur(4px);">
-                    <i class="bi bi-grid-1x2-fill text-white fs-2"></i>
+        <div class="card-modern overflow-hidden shadow-lg" style="width: 400px; max-width: 95%;">
+            <div class="bg-gradient-primary p-4 text-center position-relative">
+                <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-25 rounded-circle mb-2" style="width: 56px; height: 56px;">
+                    <i class="bi bi-shield-lock-fill text-white fs-3"></i>
                 </div>
-                <h4 class="fw-bold text-white mb-1">ERP Super Admin</h4>
-                <p class="text-white-50 small mb-0">Centralized Cloud POS Control System</p>
+                <h5 class="fw-bold text-white mb-0">ERP Super Admin</h5>
             </div>
             
-            <div class="p-4 p-sm-5 bg-white">
-                <div v-if="authError" class="alert badge-soft-danger py-2 px-3 small fw-semibold border-0 rounded-3 mb-4 d-flex align-items-center">
-                    <i class="bi bi-exclamation-triangle-fill fs-6 me-2"></i> 
-                    <div>{{ authError }}</div>
+            <div class="p-4 bg-white">
+                <div v-if="authError" class="alert badge-soft-danger py-2 px-3 small fw-semibold border-0 rounded-3 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ authError }}
                 </div>
                 
                 <form @submit.prevent="loginAdmin">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary">EMAIL EKSEKUTIF</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0 border-subtle rounded-start-3 text-muted">
-                                <i class="bi bi-envelope"></i>
-                            </span>
-                            <input type="email" class="form-control form-control-modern border-start-0 rounded-end-3" v-model="auth.email" required placeholder="name@domain.com">
-                        </div>
+                        <label class="form-label small fw-bold text-secondary">Email Administrator</label>
+                        <input type="email" class="form-control form-control-modern" v-model="auth.email" required placeholder="admin@domain.com">
                     </div>
                     
                     <div class="mb-4">
-                        <label class="form-label small fw-bold text-secondary">PASSWORD OTORISASI</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0 border-subtle rounded-start-3 text-muted">
-                                <i class="bi bi-key"></i>
-                            </span>
-                            <input type="password" class="form-control form-control-modern border-start-0 rounded-end-3" v-model="auth.password" required placeholder="••••••••">
-                        </div>
+                        <label class="form-label small fw-bold text-secondary">Password Otorisasi</label>
+                        <input type="password" class="form-control form-control-modern" v-model="auth.password" required placeholder="••••••••">
                     </div>
                     
-                    <button type="submit" class="btn bg-gradient-primary text-white w-100 fw-bold py-2 rounded-3 border-0 shadow-sm d-flex align-items-center justify-content-center" :disabled="isLoading">
+                    <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2 rounded-3" :disabled="isLoading">
                         <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-                        <span>{{ isLoading ? 'Memverifikasi...' : 'Masuk ke Portal ERP' }}</span>
-                        <i v-if="!isLoading" class="bi bi-arrow-right-short fs-5 ms-1"></i>
+                        {{ isLoading ? 'Memverifikasi...' : 'Akses Portal' }}
                     </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- MAIN ERP DASHBOARD WITH SIDEBAR -->
-    <div v-else id="wrapper" :class="{'toggled': isSidebarToggled}">
+    <!-- MAIN ERP DASHBOARD -->
+    <div v-else id="wrapper">
         
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR BIRU (Hanya tampil di Laptop/PC) -->
         <div id="sidebar-wrapper" class="shadow-sm">
             <div class="sidebar-heading">
-                <div class="bg-gradient-primary text-white rounded-3 d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 36px; height: 36px;">
+                <div class="bg-white text-primary rounded-3 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
                     <i class="bi bi-building-fill fs-6"></i>
                 </div>
-                <span>SaaS ERP <span class="fw-light text-white-50 fs-6 d-block" style="line-height: 0.5;">Super Admin</span></span>
+                <span>SaaS ERP <span class="fw-light fs-6 d-block" style="line-height: 0.5;">Super Admin</span></span>
             </div>
             
             <div class="flex-grow-1 overflow-auto">
@@ -282,20 +306,25 @@
                         </a>
                     </li>
                     
-                    <div class="sidebar-label">Ekspansi Masa Depan</div>
+                    <div class="sidebar-label">Operasional Ekstra</div>
                     <li>
                         <a class="nav-link-custom" :class="{'active': currentTab === 'billing'}" @click="currentTab = 'billing'">
-                            <i class="bi bi-credit-card"></i> Langganan & Billing
+                            <i class="bi bi-receipt"></i> Penagihan / Billing
                         </a>
                     </li>
+                    <li>
+                        <a class="nav-link-custom" :class="{'active': currentTab === 'broadcast'}" @click="currentTab = 'broadcast'">
+                            <i class="bi bi-megaphone"></i> Pengumuman Massal
+                        </a>
+                    </li>
+                    
+                    <div class="sidebar-label">Sistem & Keamanan</div>
                     <li>
                         <a class="nav-link-custom" :class="{'active': currentTab === 'logs'}" @click="currentTab = 'logs'">
                             <i class="bi bi-shield-check"></i> Log Otorisasi
                             <span class="badge badge-soft-info ms-auto" style="font-size: 0.65rem;">Segera</span>
                         </a>
                     </li>
-                    
-                    <div class="sidebar-label">Sistem</div>
                     <li>
                         <a class="nav-link-custom" :class="{'active': currentTab === 'settings'}" @click="currentTab = 'settings'">
                             <i class="bi bi-sliders"></i> Pengaturan Global
@@ -304,10 +333,10 @@
                 </ul>
             </div>
 
-            <!-- Sidebar Footer User Profile -->
-            <div class="p-3 border-top" style="border-color: rgba(255,255,255,0.08) !important;">
+            <!-- Sidebar Footer -->
+            <div class="p-3 border-top" style="border-color: rgba(255,255,255,0.15) !important;">
                 <div class="d-flex align-items-center">
-                    <div class="bg-primary bg-opacity-25 text-white rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 38px; height: 38px;">
+                    <div class="bg-white bg-opacity-25 text-white rounded-circle d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 36px; height: 36px;">
                         HK
                     </div>
                     <div class="overflow-hidden">
@@ -318,15 +347,39 @@
             </div>
         </div>
 
-        <!-- PAGE CONTENT WRAPPER -->
+        <!-- 🌟 NAVIGASI BAWAH (Hanya Tampil di HP) -->
+        <nav class="mobile-bottom-nav">
+            <a href="#" class="nav-item" :class="{'active': currentTab === 'dashboard'}" @click.prevent="currentTab = 'dashboard'">
+                <i class="bi" :class="currentTab === 'dashboard' ? 'bi-speedometer2' : 'bi-speedometer'"></i>
+                <span>Dasbor</span>
+            </a>
+            <a href="#" class="nav-item" :class="{'active': currentTab === 'tenants'}" @click.prevent="currentTab = 'tenants'">
+                <i class="bi" :class="currentTab === 'tenants' ? 'bi-shop-window' : 'bi-shop'"></i>
+                <span>Tenant</span>
+            </a>
+            <a href="#" class="nav-item" :class="{'active': currentTab === 'billing'}" @click.prevent="currentTab = 'billing'">
+                <i class="bi" :class="currentTab === 'billing' ? 'bi-receipt-cutoff' : 'bi-receipt'"></i>
+                <span>Tagihan</span>
+            </a>
+            <a href="#" class="nav-item" :class="{'active': currentTab === 'broadcast'}" @click.prevent="currentTab = 'broadcast'">
+                <i class="bi" :class="currentTab === 'broadcast' ? 'bi-megaphone-fill' : 'bi-megaphone'"></i>
+                <span>Info</span>
+            </a>
+            <a href="#" class="nav-item" :class="{'active': currentTab === 'settings'}" @click.prevent="currentTab = 'settings'">
+                <i class="bi" :class="currentTab === 'settings' ? 'bi-sliders' : 'bi-sliders2'"></i>
+                <span>Sistem</span>
+            </a>
+        </nav>
+
+        <!-- PAGE CONTENT -->
         <div id="page-content-wrapper">
             <!-- TOP NAVBAR -->
             <nav class="top-navbar">
                 <div class="d-flex align-items-center">
-                    <button class="btn btn-light border border-subtle rounded-3 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" @click="isSidebarToggled = !isSidebarToggled">
+                    <button class="btn btn-light border border-subtle rounded-3 me-3 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
                         <i class="bi bi-list fs-5"></i>
                     </button>
-                    <h5 class="fw-bold mb-0 text-dark">
+                    <h5 class="fw-bold mb-0 text-dark d-none d-sm-block">
                         {{ getTabTitle() }}
                     </h5>
                 </div>
@@ -334,10 +387,10 @@
                 <div class="d-flex align-items-center gap-3">
                     <div class="d-none d-md-flex align-items-center px-3 py-1 rounded-pill bg-light border border-subtle text-secondary small">
                         <span class="d-inline-block bg-success rounded-circle me-2" style="width: 8px; height: 8px;"></span>
-                        <span class="fw-medium">Koneksi Real-time Aktif</span>
+                        <span class="fw-medium">Sistem Online</span>
                     </div>
-                    <button class="btn btn-sm btn-white border border-subtle fw-semibold text-danger px-3 py-2 rounded-3 d-flex align-items-center shadow-sm" @click="logoutAdmin">
-                        <i class="bi bi-box-arrow-right me-1"></i> Keluar
+                    <button class="btn btn-sm btn-outline-danger fw-semibold px-3 py-1 rounded-3 d-flex align-items-center" @click="logoutAdmin">
+                        <i class="bi bi-box-arrow-right me-1 d-none d-sm-inline"></i> Keluar
                     </button>
                 </div>
             </nav>
@@ -345,294 +398,193 @@
             <!-- MAIN DYNAMIC CONTENT -->
             <div class="container-fluid p-4 flex-grow-1">
                 
-                <!-- ========================================== -->
-                <!-- TAB 1: DASBOR (Hanya Statistik & Overview) -->
-                <!-- ========================================== -->
+                <!-- TAB 1: DASBOR -->
                 <div v-if="currentTab === 'dashboard'">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
                         <div>
-                            <p class="text-secondary small mb-0">Pantau operasional ekosistem SaaS POS Anda secara langsung dari panel ini.</p>
+                            <p class="text-secondary small mb-0">Pantau operasional ekosistem SaaS POS Anda secara langsung.</p>
                         </div>
-                        <button class="btn btn-white card-modern fw-semibold text-primary-custom px-3 py-2 d-flex align-items-center shadow-sm" @click="fetchTenants" :disabled="isLoadingTenants">
+                        <button class="btn btn-sm btn-white card-modern fw-semibold text-primary-custom px-3 py-2 d-flex align-items-center shadow-sm" @click="fetchTenants" :disabled="isLoadingTenants">
                             <i class="bi bi-arrow-clockwise me-2" :class="{'spin-animation': isLoadingTenants}"></i> 
-                            <span>{{ isLoadingTenants ? 'Menyinkronkan...' : 'Refresh Database' }}</span>
+                            <span>Refresh Data</span>
                         </button>
                     </div>
 
-                    <!-- Stats Widgets -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="card-modern stat-card h-100 p-4 border-start border-primary border-4">
+                        <div class="col-12 col-md-4">
+                            <div class="card-modern stat-card h-100 p-3 p-md-4 border-start border-primary border-4">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-secondary small fw-bold text-uppercase tracking-wider mb-1">Total Tenant Aktif</div>
+                                        <div class="text-secondary small fw-bold text-uppercase mb-1">Total Tenant Aktif</div>
                                         <h2 class="fw-bold mb-0 text-dark">{{ stats.totalAktif }} <span class="fs-6 text-muted fw-normal">Toko</span></h2>
                                     </div>
-                                    <div class="badge-soft-primary rounded-4 p-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
-                                        <i class="bi bi-shop fs-3"></i>
+                                    <div class="badge-soft-primary rounded-3 p-2 p-md-3 d-flex align-items-center justify-content-center fs-3">
+                                        <i class="bi bi-shop"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-4">
-                            <div class="card-modern stat-card h-100 p-4 border-start border-warning border-4">
+                        <div class="col-12 col-md-4">
+                            <div class="card-modern stat-card h-100 p-3 p-md-4 border-start border-warning border-4">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-secondary small fw-bold text-uppercase tracking-wider mb-1">Pengguna Premium</div>
+                                        <div class="text-secondary small fw-bold text-uppercase mb-1">Pengguna Premium</div>
                                         <h2 class="fw-bold mb-0 text-dark">{{ stats.totalPremium }} <span class="fs-6 text-muted fw-normal">Akun</span></h2>
                                     </div>
-                                    <div class="badge-soft-warning rounded-4 p-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
-                                        <i class="bi bi-star-fill fs-3"></i>
+                                    <div class="badge-soft-warning rounded-3 p-2 p-md-3 d-flex align-items-center justify-content-center fs-3">
+                                        <i class="bi bi-star-fill"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-4">
-                            <div class="card-modern stat-card h-100 p-4 border-start border-danger border-4">
+                        <div class="col-12 col-md-4">
+                            <div class="card-modern stat-card h-100 p-3 p-md-4 border-start border-danger border-4">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="text-secondary small fw-bold text-uppercase tracking-wider mb-1">Kadaluarsa (Expired)</div>
+                                        <div class="text-secondary small fw-bold text-uppercase mb-1">Akses Kadaluarsa</div>
                                         <h2 class="fw-bold mb-0 text-dark">{{ stats.totalExpired }} <span class="fs-6 text-muted fw-normal">Toko</span></h2>
                                     </div>
-                                    <div class="badge-soft-danger rounded-4 p-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
-                                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                                    <div class="badge-soft-danger rounded-3 p-2 p-md-3 d-flex align-items-center justify-content-center fs-3">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Pendaftar Terbaru -->
-                    <div class="card-modern overflow-hidden mt-4">
-                        <div class="p-3 bg-light border-bottom border-subtle d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary-custom"></i>5 Pendaftar Terbaru</h6>
-                            <button class="btn btn-sm btn-outline-primary" @click="currentTab = 'tenants'">Lihat Semua</button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-custom align-middle mb-0 text-nowrap">
-                                <tbody>
-                                    <tr v-if="isLoadingTenants">
-                                        <td colspan="4" class="text-center py-4 text-secondary">Memuat data...</td>
-                                    </tr>
-                                    <tr v-else-if="tenants.length === 0">
-                                        <td colspan="4" class="text-center py-4 text-muted">Belum ada tenant.</td>
-                                    </tr>
-                                    <tr v-for="tenant in tenants.slice(0, 5)" :key="'dash-'+tenant.id">
-                                        <td class="ps-4 py-3">
-                                            <div class="fw-bold text-dark fs-6">{{ tenant.namaUsaha }}</div>
-                                            <a :href="'https://' + tenant.urlToko + '.queenpos.id'" target="_blank" class="small text-primary-custom text-decoration-none">
-                                                <i class="bi bi-link-45deg"></i> {{ tenant.urlToko }}.queenpos.id
-                                            </a>
-                                        </td>
-                                        <td class="text-secondary small">{{ formatTanggal(tenant.tanggalDaftar) }}</td>
-                                        <td>
-                                            <span class="badge border bg-light text-secondary border-secondary border-opacity-25">{{ tenant.paketLangganan }}</span>
-                                        </td>
-                                        <td>
-                                            <span class="badge px-2 py-1 rounded" :class="tenant.status === 'Aktif' ? 'badge-soft-success' : 'badge-soft-danger'">
-                                                {{ tenant.status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- ========================================== -->
-                <!-- TAB 2: MANAJEMEN TENANT (Tabel Penuh & Fungsi Edit/Hapus) -->
-                <!-- ========================================== -->
+                <!-- TAB 2: MANAJEMEN TENANT -->
                 <div v-else-if="currentTab === 'tenants'">
                     <div class="card-modern overflow-hidden">
-                        <div class="p-3 bg-light border-bottom border-subtle d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-table me-2 text-primary-custom"></i>Daftar Seluruh Toko / Cabang</h6>
-                            <span class="badge badge-soft-primary">{{ tenants.length }} Total Database</span>
+                        <div class="p-3 bg-light border-bottom border-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-table me-2 text-primary-custom"></i>Database Tenant</h6>
+                            <div class="d-flex gap-2">
+                                <span class="badge badge-soft-primary align-self-center">{{ tenants.length }} Terdaftar</span>
+                            </div>
                         </div>
                         
                         <div class="table-responsive">
                             <table class="table table-custom align-middle mb-0 text-nowrap">
                                 <thead>
                                     <tr>
-                                        <th class="ps-4 py-3">Nama Toko & URL Link</th>
-                                        <th class="py-3">Pemilik & Email</th>
-                                        <th class="py-3">Tgl Bergabung</th>
+                                        <th class="ps-3 ps-md-4 py-3">Nama Toko & URL Link</th>
                                         <th class="py-3">Kapasitas Sistem</th>
                                         <th class="py-3">Tipe Paket</th>
-                                        <th class="py-3">Status & Sisa Waktu</th>
-                                        <th class="text-end pe-4 py-3">Aksi Panel</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="isLoadingTenants">
-                                        <td colspan="6" class="text-center py-5 text-secondary">
-                                            <div class="d-flex flex-column align-items-center justify-content-center">
-                                                <div class="spinner-border text-primary mb-2" role="status"></div>
-                                                <span class="small fw-medium">Menyinkronkan data dengan Cloud Firestore...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    
-                                    <tr v-else-if="tenants.length === 0">
-                                        <td colspan="6" class="text-center py-5 text-muted">
-                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                            <span>Belum ada data tenant yang terdaftar.</span>
-                                        </td>
-                                    </tr>
-
-                                    <tr v-for="tenant in tenants" :key="tenant.id">
-                                        <td class="ps-4 py-3">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-light rounded-3 p-2 me-3 text-secondary d-flex align-items-center justify-content-center border border-subtle" style="width: 40px; height: 40px;">
-                                                    <i class="bi bi-buildings-fill fs-5 text-primary-custom"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="fw-bold text-dark fs-6">{{ tenant.namaUsaha }}</div>
-                                                    <!-- 🌟 TAMPILAN URL KLIKABLE -->
-                                                    <a :href="'https://' + tenant.urlToko + '.queenpos.id'" target="_blank" class="small text-primary-custom text-decoration-none">
-                                                        <i class="bi bi-link-45deg"></i> {{ tenant.urlToko }}.queenpos.id
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                        <div class="d-flex flex-column gap-1">
-                                        <span class="badge bg-light text-dark border border-subtle text-start">
-                                        <i class="bi bi-shop me-1 text-primary"></i> {{ tenant.totalOutlets || 0 }} Outlet
-                                        </span>
-                                        <span class="badge bg-light text-dark border border-subtle text-start">
-                                        <i class="bi bi-pc-display-horizontal me-1 text-info"></i> {{ tenant.totalKasir || 0 }} Kasir
-                                        </span>
-                                        </div>
-                                        </td>
-                                        
-                                        <td>
-                                            <div class="text-secondary small fw-bold mb-1"><i class="bi bi-person me-1"></i>{{ tenant.pemilik }}</div>
-                                            <span class="fw-medium text-dark small bg-light px-2 py-1 rounded border border-subtle">
-                                                {{ tenant.email }}
-                                            </span>
-                                        </td>
-                                        
-                                        <td class="text-secondary small">{{ formatTanggal(tenant.tanggalDaftar) }}</td>
-                                        
-                                        <td>
-                                            <span class="badge rounded-pill fw-semibold px-3 py-2 border" 
-                                                  :class="tenant.paketLangganan && (tenant.paketLangganan.toLowerCase().includes('premium') || tenant.paketLangganan.toLowerCase().includes('lifetime')) ? 'badge-soft-warning border-warning border-opacity-25' : 'bg-light text-secondary border-secondary border-opacity-25'">
-                                                <i class="bi me-1" :class="tenant.paketLangganan && tenant.paketLangganan.toLowerCase().includes('premium') ? 'bi-star-fill text-warning' : 'bi-tag'"></i>
-                                                {{ tenant.paketLangganan }}
-                                            </span>
-                                        </td>
-                                        
-                                        <td>
-                                            <div class="d-flex flex-column gap-1">
-                                                <span class="badge px-2 py-1 rounded" style="width:fit-content;" :class="tenant.status === 'Aktif' ? 'badge-soft-success' : 'badge-soft-danger'">
-                                                    <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i>
-                                                    {{ tenant.status }}
-                                                </span>
-                                                <span class="small fw-semibold" :class="tenant.sisaHari > 0 ? 'text-success' : 'text-danger'">
-                                                    {{ tenant.sisaHari > 0 ? `(${tenant.sisaHari} Hari Tersisa)` : '(Sudah Expired)' }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        
-                                        <td class="text-end pe-4">
-                                            <!-- Tombol Kelola -->
-                                            <button class="btn btn-sm btn-white card-modern text-primary-custom fw-semibold px-3 py-1 shadow-sm" @click="bukaModalEdit(tenant)">
-                                                <span>Kelola Akses</span> <i class="bi bi-sliders ms-1"></i>
-                                            </button>
-                                            
-                                            <!-- 🌟 TOMBOL HAPUS AKUN -->
-                                            <button class="btn btn-sm btn-outline-danger card-modern fw-semibold px-2 py-1 shadow-sm ms-2" title="Hapus Tenant" @click="hapusTenant(tenant)">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========================================== -->
-                <!-- TAB 3: BILLING -->
-                <!-- ========================================== -->
-                <div v-else-if="currentTab === 'billing'">
-                    <!-- Bagian header dan tabel billing tidak ada perubahan (tetap ada seperti sebelumnya) -->
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-                        <div>
-                            <h5 class="fw-bold text-dark mb-1">Manajemen Langganan & Billing</h5>
-                            <p class="text-secondary small mb-0">Pantau status pembayaran dan kelola penagihan (invoice) untuk setiap cabang.</p>
-                        </div>
-                    </div>
-
-                    <div class="card-modern overflow-hidden">
-                        <div class="p-3 bg-light border-bottom border-subtle d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2 text-primary-custom"></i>Status Tagihan Tenant Aktif</h6>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-custom align-middle mb-0 text-nowrap">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-4 py-3">Nama Toko & Kontak</th>
-                                        <th class="py-3">Paket Berjalan</th>
-                                        <th class="py-3">Tgl Jatuh Tempo</th>
-                                        <th class="py-3">Status Tagihan</th>
-                                        <th class="text-end pe-4 py-3">Aksi Panel</th>
+                                        <th class="py-3">Status Langganan</th>
+                                        <th class="text-end pe-3 pe-md-4 py-3">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-if="isLoadingTenants">
                                         <td colspan="5" class="text-center py-5 text-secondary">
-                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                            Memuat data billing...
+                                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                                            <span class="d-block small fw-medium">Memuat data dari Firestore...</span>
                                         </td>
                                     </tr>
-                                    
                                     <tr v-else-if="tenants.length === 0">
-                                        <td colspan="5" class="text-center py-5 text-muted">Belum ada data tagihan.</td>
+                                        <td colspan="5" class="text-center py-5 text-muted">Belum ada tenant.</td>
                                     </tr>
+                                    <tr v-for="tenant in tenants" :key="tenant.id">
+                                        <td class="ps-3 ps-md-4 py-3">
+                                            <div class="fw-bold text-dark fs-6">{{ tenant.namaUsaha }}</div>
+                                            <a :href="'https://' + tenant.urlToko + '.queenpos.id'" target="_blank" class="small text-primary-custom text-decoration-none d-block mb-1">
+                                                <i class="bi bi-link-45deg"></i> {{ tenant.urlToko }}.queenpos.id
+                                            </a>
+                                            <div class="text-secondary small"><i class="bi bi-envelope me-1"></i>{{ tenant.email }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1" style="width: fit-content;">
+                                                <span class="badge bg-light text-dark border border-subtle text-start py-1">
+                                                    <i class="bi bi-shop me-1 text-primary"></i> {{ tenant.totalOutlets || 0 }} Outlet
+                                                </span>
+                                                <span class="badge bg-light text-dark border border-subtle text-start py-1">
+                                                    <i class="bi bi-pc-display-horizontal me-1 text-info"></i> {{ tenant.totalKasir || 0 }} Kasir
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill fw-semibold px-2 py-1 border" 
+                                                  :class="tenant.paketLangganan && tenant.paketLangganan.includes('Premium') ? 'badge-soft-warning border-warning border-opacity-25' : 'bg-light text-secondary border-secondary border-opacity-25'">
+                                                {{ tenant.paketLangganan || 'Basic' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column gap-1">
+                                                <span class="badge px-2 py-1 rounded" style="width:fit-content;" :class="tenant.status === 'Aktif' ? 'badge-soft-success' : 'badge-soft-danger'">
+                                                    {{ tenant.status }}
+                                                </span>
+                                                <span class="small" style="font-size: 0.7rem;" :class="tenant.sisaHari > 0 ? 'text-success' : 'text-danger fw-bold'">
+                                                    {{ tenant.sisaHari > 0 ? `${tenant.sisaHari} Hari Tersisa` : 'Expired' }}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end pe-3 pe-md-4">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary bg-white shadow-sm" type="button" data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots-vertical"></i> Kelola
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-subtle">
+                                                    <li><a class="dropdown-item fw-semibold text-primary" href="#" @click.prevent="loginAsTenant(tenant)">
+                                                        <i class="bi bi-box-arrow-in-right me-2"></i>Login ke Toko Ini
+                                                    </a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item" href="#" @click.prevent="bukaModalEdit(tenant)">
+                                                        <i class="bi bi-sliders me-2 text-secondary"></i>Edit Langganan
+                                                    </a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" @click.prevent="hapusTenant(tenant)">
+                                                        <i class="bi bi-trash me-2"></i>Hapus Permanen
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- TAB 3: BILLING -->
+                <div v-else-if="currentTab === 'billing'">
+                    <div class="card-modern overflow-hidden">
+                        <div class="p-3 bg-light border-bottom border-subtle">
+                            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2 text-primary-custom"></i>Manajemen Tagihan Tenant</h6>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-custom align-middle mb-0 text-nowrap">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3 ps-md-4 py-3">Nama Toko & Kontak</th>
+                                        <th class="py-3">Jatuh Tempo</th>
+                                        <th class="py-3">Status Tagihan</th>
+                                        <th class="text-end pe-3 pe-md-4 py-3">Aksi Panel</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     <tr v-for="tenant in tenants" :key="'bill-' + tenant.id">
-                                        <td class="ps-4 py-3">
+                                        <td class="ps-3 ps-md-4 py-3">
                                             <div class="fw-bold text-dark">{{ tenant.namaUsaha }}</div>
                                             <div class="text-secondary small"><i class="bi bi-envelope me-1"></i>{{ tenant.email }}</div>
                                         </td>
-                                        
+                                        <td class="small" :class="tenant.sisaHari <= 0 ? 'text-danger fw-bold' : ''">{{ formatTanggal(tenant.expiredDate) }}</td>
                                         <td>
-                                            <span class="badge border bg-light text-dark border-subtle px-2 py-1">
-                                                {{ tenant.paketLangganan || 'Belum Diatur' }}
+                                            <span class="badge" :class="tenant.sisaHari > 0 ? 'badge-soft-success' : 'badge-soft-danger'">
+                                                {{ tenant.sisaHari > 0 ? 'LUNAS' : 'MENUNGGAK' }}
                                             </span>
                                         </td>
-                                        
-                                        <td class="text-secondary small fw-medium">
-                                            <span :class="tenant.sisaHari <= 0 ? 'text-danger fw-bold' : ''">
-                                                {{ formatTanggal(tenant.expiredDate) }}
-                                            </span>
-                                            <div v-if="tenant.sisaHari <= 0" class="text-danger" style="font-size: 0.7rem;">Lewat Jatuh Tempo</div>
-                                        </td>
-                                        
-                                        <td>
-                                            <span class="badge px-3 py-1 rounded-pill" :class="tenant.sisaHari > 0 ? 'badge-soft-success' : 'badge-soft-danger'">
-                                                <i class="bi me-1" :class="tenant.sisaHari > 0 ? 'bi-check-circle' : 'bi-exclamation-circle'"></i>
-                                                {{ tenant.sisaHari > 0 ? 'LUNAS (Aktif)' : 'MENUNGGAK' }}
-                                            </span>
-                                        </td>
-                                        
-                                        <td class="text-end pe-4">
+                                        <td class="text-end pe-3 pe-md-4">
                                             <div class="btn-group btn-group-sm">
                                                 <button class="btn btn-outline-info fw-semibold" title="Lihat Riwayat Tagihan" @click="bukaModalRiwayat(tenant)">
                                                     <i class="bi bi-clock-history"></i> Riwayat
                                                 </button>
                                                 <button class="btn btn-outline-primary fw-semibold" title="Buat Tagihan Sistem" @click="bukaModalTagihan(tenant)">
-                                                    <i class="bi bi-receipt"></i> Buat Tagihan
+                                                    <i class="bi bi-receipt"></i> Tagih
                                                 </button>
                                                 <a :href="'https://wa.me/' + formatNomorWA(tenant.phone) + '?text=Halo%20' + tenant.namaUsaha + ',%20tagihan%20SaaS%20ERP%20Anda%20sudah%20terbit.%20Silakan%20cek%20di%20aplikasi.'" 
                                                    target="_blank" class="btn btn-success fw-semibold" title="Kirim Pengingat (WA)">
-                                                    <i class="bi bi-whatsapp me-1"></i> WA
+                                                    <i class="bi bi-whatsapp"></i> WA
                                                 </a>
                                             </div>
                                         </td>
@@ -643,196 +595,161 @@
                     </div>
                 </div>
 
-                <!-- TAB 4: LOGS (Placeholder) -->
+                <!-- TAB 4: BROADCAST (FITUR AKTIF FIREBASE) -->
+                <div v-else-if="currentTab === 'broadcast'">
+                    <div class="card-modern p-4 max-w-lg">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-megaphone me-2 text-primary-custom"></i>Kirim Pengumuman Massal</h6>
+                        <hr class="border-subtle mb-4">
+                        <form @submit.prevent="kirimBroadcast">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Judul Pengumuman</label>
+                                <input type="text" class="form-control form-control-modern" v-model="formBroadcast.title" placeholder="Cth: Maintenance Server Malam Ini" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold">Isi Pesan</label>
+                                <textarea class="form-control form-control-modern" rows="4" v-model="formBroadcast.message" placeholder="Ketik pesan yang akan dikirim ke semua kasir aplikasi..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2" :disabled="isSendingBroadcast">
+                                <span v-if="isSendingBroadcast" class="spinner-border spinner-border-sm me-2"></span>
+                                {{ isSendingBroadcast ? 'Mengirim...' : 'Kirim Broadcast Sekarang' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TAB 5: LOGS -->
                 <div v-else-if="currentTab === 'logs'">
                     <div class="card-modern p-5 text-center my-4">
                         <div class="badge-soft-warning rounded-circle p-4 d-inline-block mb-3">
                             <i class="bi bi-shield-lock fs-1"></i>
                         </div>
-                        <h4 class="fw-bold text-dark">Log Keamanan & Otorisasi</h4>
-                        <p class="text-secondary max-w-md mx-auto mb-4" style="max-width: 500px;">
-                            Nantinya, Anda dapat melacak riwayat login pemilik toko, percobaan pergantian password, dan jejak audit keamanan (*audit trails*) di halaman ERP ini.
+                        <h4 class="fw-bold text-dark">Log Keamanan</h4>
+                        <p class="text-secondary max-w-md mx-auto mb-0" style="max-width: 500px;">
+                            Fitur pelacakan riwayat aktivitas tenant ini akan dirilis pada pembaruan minor berikutnya.
                         </p>
-                        <button class="btn btn-outline-primary fw-semibold rounded-3 px-4" @click="currentTab = 'dashboard'">
-                            <i class="bi bi-arrow-left me-2"></i>Kembali ke Dasbor Utama
-                        </button>
                     </div>
                 </div>
 
-                <!-- TAB 5: SETTINGS -->
+                <!-- TAB 6: SETTINGS (MAINTENANCE AKTIF FIREBASE) -->
                 <div v-else-if="currentTab === 'settings'">
                     <div class="card-modern p-4 max-w-lg">
-                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-sliders me-2 text-primary-custom"></i>Konfigurasi ERP Super Admin</h6>
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-sliders me-2 text-primary-custom"></i>Pengaturan Sistem Global</h6>
                         <hr class="border-subtle mb-4">
                         
+                        <!-- 🌟 SAKLAR MAINTENANCE YANG TERHUBUNG FIREBASE -->
+                        <div class="bg-light border border-subtle rounded-3 p-3 mb-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold text-dark mb-1"><i class="bi bi-cone-striped text-warning me-2"></i>Mode Perbaikan Server</div>
+                                <div class="small text-secondary" style="font-size: 0.75rem;">Kunci aplikasi kasir untuk semua penyewa.</div>
+                            </div>
+                            <div class="form-check form-switch ms-3">
+                                <input class="form-check-input fs-4 cursor-pointer" type="checkbox" role="switch" v-model="isMaintenance" @change="toggleMaintenance" :disabled="isSavingSettings">
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">EMAIL SUPER ADMIN TETAP</label>
                             <input type="text" class="form-control form-control-modern" value="hrmnkosasi@gmail.com" disabled readonly>
-                            <div class="form-text small text-muted">Email ini terikat secara permanen pada protokol keamanan lapis pertama.</div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold text-secondary">ZONA WAKTU SISTEM</label>
-                            <input type="text" class="form-control form-control-modern" value="Asia/Jakarta (GMT+7)" disabled readonly>
-                        </div>
-
-                        <div class="alert badge-soft-primary border-0 rounded-3 p-3 d-flex align-items-center">
-                            <i class="bi bi-info-circle-fill fs-5 me-3"></i>
-                            <div class="small">Pengaturan lanjutan untuk batas masa waktu trial otomatis akan dapat dikonfigurasi pada pembaruan sistem berikutnya.</div>
                         </div>
                     </div>
                 </div>
 
             </div>
-            
-            <!-- Footer ERP -->
-            <footer class="mt-auto py-3 px-4 bg-white border-top border-subtle d-flex justify-content-between align-items-center text-secondary small">
-                <div>&copy; 2026 SaaS ERP Executive Console. All rights reserved.</div>
-                <div>System Version <strong>v2.6 (URL Link & Delete Feature)</strong></div>
-            </footer>
         </div>
 
-        <!-- SEMUA MODAL DI SINI (Tetap Sama) -->
-        <!-- MODAL KONFIGURASI TENANT -->
-        <div class="modal fade" id="modalEditTenant" tabindex="-1" aria-hidden="true">
+        <!-- MODALS (Tetap Sama) -->
+        <div class="modal fade" id="modalEditTenant" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content card-modern border-0 overflow-hidden shadow-lg">
-                    <div class="modal-header bg-gradient-primary text-white border-bottom-0 pt-4 px-4 pb-3">
-                        <div>
-                            <span class="badge bg-white bg-opacity-10 text-white mb-1">Otorisasi Eksekutif</span>
-                            <h5 class="modal-title fw-bold text-white">Konfigurasi Akses Tenant</h5>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-content card-modern border-0">
+                    <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+                        <h6 class="modal-title fw-bold">Konfigurasi: {{ selectedTenant.namaUsaha }}</h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    
                     <div class="modal-body p-4">
-                        <div class="bg-light rounded-3 p-3 mb-4 border border-subtle d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center">
-                                <div class="badge-soft-primary rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                    <i class="bi bi-shop fs-4"></i>
-                                </div>
-                                <div>
-                                    <strong class="d-block text-dark fs-6 lh-1 mb-1">{{ selectedTenant.namaUsaha }}</strong>
-                                    <span class="text-secondary small">{{ selectedTenant.email }}</span>
-                                </div>
-                            </div>
-                            <span class="badge border" :class="selectedTenant.status === 'Aktif' ? 'badge-soft-success' : 'badge-soft-danger'">
-                                {{ selectedTenant.status }}
-                            </span>
-                        </div>
-
                         <form @submit.prevent="simpanPerubahanTenant">
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-secondary">LEVEL PAKET LANGGANAN</label>
+                                <label class="form-label small fw-bold">Paket Langganan</label>
                                 <select class="form-select form-select-modern" v-model="formEdit.paketLangganan">
-                                    <option value="Trial 7 Hari">⚡ Trial 7 Hari (Uji Coba)</option>
-                                    <option value="Basic (Bulanan)">📦 Basic (Bulanan)</option>
-                                    <option value="Premium (Tahunan)">⭐ Premium (Tahunan)</option>
-                                    <option value="Lifetime Akses">👑 Lifetime Akses Khusus</option>
+                                    <option value="Trial 7 Hari">Trial 7 Hari</option>
+                                    <option value="Basic (Bulanan)">Basic (Bulanan)</option>
+                                    <option value="Premium (Tahunan)">Premium (Tahunan)</option>
+                                    <option value="Lifetime Akses">Lifetime Akses Khusus</option>
                                 </select>
                             </div>
-
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-secondary">TANGGAL KADALUARSA AKSES</label>
+                                <label class="form-label small fw-bold">Tgl Kadaluarsa</label>
                                 <input type="date" class="form-control form-control-modern" v-model="formEdit.expiredDate">
-                                <div class="form-text small text-muted">Akses sistem di cabang akan terblokir otomatis setelah tanggal ini.</div>
                             </div>
-
                             <div class="mb-4">
-                                <label class="form-label small fw-bold text-secondary">STATUS OPERASIONAL CABANG</label>
+                                <label class="form-label small fw-bold">Status Cabang</label>
                                 <select class="form-select form-select-modern" v-model="formEdit.status">
-                                    <option value="Aktif">🟢 Aktif Beroperasi</option>
-                                    <option value="Suspend">🔴 Suspend (Kunci Akses Cabang)</option>
+                                    <option value="Aktif">Aktif Beroperasi</option>
+                                    <option value="Suspend">Suspend (Dikunci)</option>
                                 </select>
                             </div>
-
-                            <div class="d-grid gap-2 mt-4 pt-2 border-top">
-                                <button type="submit" class="btn bg-gradient-primary text-white fw-bold rounded-3 py-2 border-0 shadow-sm d-flex align-items-center justify-content-center" :disabled="isSaving">
-                                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
-                                    <span>{{ isSaving ? 'Menyimpan Perubahan...' : 'Simpan Konfigurasi Sekarang' }}</span>
-                                    <i v-if="!isSaving" class="bi bi-check2-circle ms-2 fs-5"></i>
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary-custom w-100 fw-bold py-2" :disabled="isSaving">
+                                {{ isSaving ? 'Menyimpan...' : 'Simpan Konfigurasi' }}
+                            </button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- MODAL BUAT TAGIHAN -->
-        <div class="modal fade" id="modalBuatTagihan" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="modalBuatTagihan" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content card-modern border-0 shadow-lg">
+                <div class="modal-content card-modern border-0">
                     <div class="modal-header bg-gradient-primary text-white border-0 py-3">
-                        <h5 class="modal-title fw-bold">Buat Tagihan Baru</h5>
+                        <h6 class="modal-title fw-bold">Tagih: {{ selectedTenant.namaUsaha }}</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
-                        <div class="mb-3 text-secondary small">Kepada: <strong class="text-dark">{{ selectedTenant.namaUsaha }}</strong></div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small">NOMINAL (Rp)</label>
-                            <input type="number" class="form-control form-control-modern" v-model="formTagihan.amount" placeholder="Contoh: 150000">
+                            <input type="number" class="form-control form-control-modern" v-model="formTagihan.amount" placeholder="Cth: 150000">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold small">DESKRIPSI TAGIHAN</label>
-                            <input type="text" class="form-control form-control-modern" v-model="formTagihan.desc" placeholder="Contoh: Langganan Bulan Agustus 2026">
+                            <label class="form-label fw-bold small">DESKRIPSI</label>
+                            <input type="text" class="form-control form-control-modern" v-model="formTagihan.desc" placeholder="Cth: Langganan Agustus">
                         </div>
-                        <button class="btn bg-gradient-primary text-white w-100 fw-bold py-2 shadow-sm" @click="kirimTagihanKeFirebase" :disabled="isSaving">
-                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
-                            {{ isSaving ? 'Mengirim...' : 'Kirim Tagihan Sekarang' }}
+                        <button class="btn btn-primary-custom w-100 fw-bold py-2" @click="kirimTagihanKeFirebase" :disabled="isSaving">
+                            {{ isSaving ? 'Mengirim...' : 'Kirim Tagihan' }}
                         </button>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- MODAL RIWAYAT TAGIHAN -->
-        <div class="modal fade" id="modalRiwayatTagihan" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="modalRiwayatTagihan" tabindex="-1">
             <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content card-modern border-0 shadow-lg">
+                <div class="modal-content card-modern border-0">
                     <div class="modal-header bg-dark text-white border-0 py-3">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2"></i>Riwayat Tagihan Tenant</h5>
+                        <h6 class="modal-title fw-bold">Riwayat: {{ selectedTenant.namaUsaha }}</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
-                    <div class="modal-body p-4 bg-light">
-                        <div class="mb-3 text-secondary">
-                            Toko: <strong class="text-dark fs-6">{{ selectedTenant.namaUsaha }}</strong>
-                        </div>
-                        
-                        <div v-if="isLoadingRiwayat" class="text-center py-4">
-                            <div class="spinner-border text-primary" role="status"></div>
-                        </div>
-                        
-                        <div v-else-if="riwayatTagihan.length === 0" class="text-center py-4 text-muted">
-                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                            Belum ada riwayat tagihan untuk tenant ini.
-                        </div>
-                        
-                        <div v-else class="table-responsive bg-white border border-subtle rounded-3">
-                            <table class="table table-hover align-middle mb-0">
+                    <div class="modal-body p-3 p-md-4">
+                        <div class="table-responsive bg-white border border-subtle rounded-3">
+                            <table class="table table-hover align-middle mb-0 text-nowrap">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="py-2 px-3 small">Deskripsi</th>
                                         <th class="py-2 px-3 small">Nominal</th>
-                                        <th class="py-2 px-3 small">Jatuh Tempo</th>
                                         <th class="py-2 px-3 small">Status</th>
                                         <th class="py-2 px-3 small text-end">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <tr v-if="riwayatTagihan.length === 0"><td colspan="4" class="text-center py-3">Belum ada data.</td></tr>
                                     <tr v-for="bill in riwayatTagihan" :key="bill.id">
-                                        <td class="px-3 fw-medium text-dark">{{ bill.description }}</td>
-                                        <td class="px-3 text-primary fw-bold">Rp {{ formatNumber(bill.amount) }}</td>
-                                        <td class="px-3 small">{{ formatTanggal(bill.dueDate) }}</td>
+                                        <td class="px-3 small">{{ bill.description }}</td>
+                                        <td class="px-3 text-primary fw-bold small">Rp {{ formatNumber(bill.amount) }}</td>
                                         <td class="px-3">
                                             <span class="badge" :class="bill.status === 'PAID' ? 'bg-success' : 'bg-danger'">
                                                 {{ bill.status === 'PAID' ? 'LUNAS' : 'BELUM BAYAR' }}
                                             </span>
                                         </td>
                                         <td class="px-3 text-end">
-                                            <button v-if="bill.status === 'UNPAID'" class="btn btn-sm btn-success fw-bold" @click="tandaiLunas(bill)">
-                                                <i class="bi bi-check-circle me-1"></i> Set Lunas
-                                            </button>
+                                            <button v-if="bill.status === 'UNPAID'" class="btn btn-sm btn-success fw-bold" @click="tandaiLunas(bill)">Set Lunas</button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -853,8 +770,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     
-    // 🌟 KODE BARU: Penambahan fungsi deleteDoc di impor Firestore
-    import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy, addDoc, serverTimestamp, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // 🌟 KODE BARU: Menambahkan fungsi getDoc dan setDoc untuk setting maintenance
+    import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, query, orderBy, addDoc, serverTimestamp, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -865,7 +782,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     const { createApp } = Vue;
 
     createApp({
@@ -875,9 +791,7 @@
                 auth: { email: '', password: '' },
                 authError: '',
                 isLoading: false,
-                
                 currentTab: 'dashboard',
-                isSidebarToggled: false,
                 
                 tenants: [],
                 isLoadingTenants: false,
@@ -887,13 +801,17 @@
                 formEdit: { id: '', paketLangganan: '', expiredDate: '', status: '' },
                 isSaving: false,
                 modalInstance: null,
-
-                riwayatTagihan: [],
-                isLoadingRiwayat: false,
-                modalRiwayatInstance: null,
                 
-                formTagihan: { amount: 0, desc: '' },
-                modalTagihanInstance: null
+                riwayatTagihan: [],
+                modalRiwayatInstance: null,
+                formTagihan: { amount: '', desc: '' },
+                modalTagihanInstance: null,
+
+                // 🌟 VARIABEL BARU UNTUK BROADCAST & MAINTENANCE
+                formBroadcast: { title: '', message: '' },
+                isSendingBroadcast: false,
+                isMaintenance: false,
+                isSavingSettings: false
             }
         },
         mounted() {
@@ -901,6 +819,7 @@
                 if (user && user.email === 'hrmnkosasi@gmail.com') {
                     this.isLoggedIn = true;
                     this.fetchTenants();
+                    this.fetchGlobalSettings(); // Ambil status saklar maintenance saat login
                 } else if (user) {
                     signOut(auth);
                     this.isLoggedIn = false;
@@ -913,243 +832,204 @@
             getTabTitle() {
                 switch(this.currentTab) {
                     case 'dashboard': return 'Dasbor Eksekutif';
-                    case 'tenants': return 'Manajemen Tenant (Toko & Cabang)';
-                    case 'billing': return 'Modul Langganan & Billing';
-                    case 'logs': return 'Log Keamanan & Audit Trails';
-                    case 'settings': return 'Pengaturan Sistem Global';
-                    default: return 'SaaS Executive Portal';
+                    case 'tenants': return 'Database Tenant';
+                    case 'billing': return 'Modul Tagihan';
+                    case 'broadcast': return 'Pengumuman Massal';
+                    case 'logs': return 'Log Otorisasi';
+                    case 'settings': return 'Pengaturan Global';
+                    default: return 'SaaS Portal';
                 }
             },
-
             async loginAdmin() {
-                this.isLoading = true;
-                this.authError = '';
-                
-                if (this.auth.email.trim().toLowerCase() !== "hrmnkosasi@gmail.com") {
-                    this.authError = "Akses Ditolak! Hanya Super Admin utama yang dapat mengakses portal ini.";
-                    this.isLoading = false;
-                    return;
-                }
-
+                this.isLoading = true; this.authError = '';
                 try {
                     const userCred = await signInWithEmailAndPassword(auth, this.auth.email, this.auth.password);
                     if (userCred.user.email !== "hrmnkosasi@gmail.com") {
-                        await signOut(auth);
-                        this.authError = "Akses Ditolak! Akun Anda tidak terdaftar sebagai Eksekutif.";
+                        await signOut(auth); this.authError = "Akses khusus Super Admin.";
                     }
-                } catch (error) {
-                    this.authError = "Login gagal. Pastikan password akun Super Admin benar.";
-                }
+                } catch (error) { this.authError = "Login gagal. Periksa password."; }
                 this.isLoading = false;
             },
-            
-            async logoutAdmin() {
-                await signOut(auth);
-                this.auth.password = '';
+            async logoutAdmin() { await signOut(auth); this.auth.password = ''; },
+
+            // 🌟 FUNGSI FIREBASE: PENGATURAN MAINTENANCE MODE
+            async fetchGlobalSettings() {
+                try {
+                    const docRef = doc(db, "system_settings", "global");
+                    const docSnap = await getDoc(docRef);
+                    
+                    if (docSnap.exists()) {
+                        this.isMaintenance = docSnap.data().isMaintenance || false;
+                    } else {
+                        // Jika belum ada dokumennya, buat satu dengan default false
+                        await setDoc(docRef, { isMaintenance: false });
+                    }
+                } catch (e) { console.error("Gagal menarik setting maintenance", e); }
+            },
+
+            async toggleMaintenance() {
+                this.isSavingSettings = true;
+                const statusName = this.isMaintenance ? "Diaktifkan" : "Dimatikan";
+                
+                try {
+                    await setDoc(doc(db, "system_settings", "global"), { 
+                        isMaintenance: this.isMaintenance,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: `Mode Perbaikan ${statusName}`,
+                        text: this.isMaintenance ? 'Semua aplikasi kasir kini dikunci.' : 'Aplikasi kasir kembali dibuka.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } catch (e) {
+                    this.isMaintenance = !this.isMaintenance; // Kembalikan ke posisi semula jika gagal
+                    Swal.fire('Error', 'Gagal menyimpan pengaturan.', 'error');
+                }
+                this.isSavingSettings = false;
+            },
+
+            // 🌟 FUNGSI FIREBASE: KIRIM BROADCAST
+            async kirimBroadcast() {
+                if (!this.formBroadcast.title || !this.formBroadcast.message) return;
+                
+                this.isSendingBroadcast = true;
+                try {
+                    await addDoc(collection(db, "broadcasts"), {
+                        title: this.formBroadcast.title,
+                        message: this.formBroadcast.message,
+                        status: 'active',
+                        createdAt: serverTimestamp()
+                    });
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Broadcast Terkirim!',
+                        text: 'Pesan akan segera masuk ke semua aplikasi kasir yang aktif.',
+                    });
+                    
+                    // Bersihkan form
+                    this.formBroadcast.title = '';
+                    this.formBroadcast.message = '';
+                } catch (e) {
+                    console.error("Error kirim broadcast", e);
+                    Swal.fire('Error', 'Gagal mengirim pesan broadcast.', 'error');
+                }
+                this.isSendingBroadcast = false;
             },
 
             async fetchTenants() {
                 this.isLoadingTenants = true;
                 this.stats = { totalAktif: 0, totalPremium: 0, totalExpired: 0 };
-
                 try {
                     const q = query(collection(db, "companies"), orderBy("tanggalDaftar", "desc"));
                     const querySnapshot = await getDocs(q);
-                    
                     let dataList = [];
                     const now = new Date();
 
-                    querySnapshot.forEach((doc) => {
-                        let data = doc.data();
-                        data.id = doc.id;
+                    const tenantPromises = querySnapshot.docs.map(async (companyDoc) => {
+                        let data = companyDoc.data();
+                        data.id = companyDoc.id;
                         
                         if (data.expiredDate) {
-                            let exp = new Date(data.expiredDate);
-                            let timeDiff = exp.getTime() - now.getTime();
+                            let timeDiff = new Date(data.expiredDate).getTime() - now.getTime();
                             data.sisaHari = Math.ceil(timeDiff / (1000 * 3600 * 24));
-                        } else {
-                            data.sisaHari = 0;
-                        }
+                        } else { data.sisaHari = 0; }
 
+                        data.totalOutlets = 0;
+                        data.totalKasir = 0;
+                        try {
+                            const outletQ = query(collection(db, "outlets"), where("companyId", "==", data.id));
+                            const outletSnap = await getDocs(outletQ);
+                            data.totalOutlets = outletSnap.size; 
+                            
+                            outletSnap.forEach((outDoc) => {
+                                const outData = outDoc.data();
+                                if(outData.registers && Array.isArray(outData.registers)) {
+                                    data.totalKasir += outData.registers.length;
+                                }
+                            });
+                        } catch(err) {}
+
+                        return data;
+                    });
+
+                    dataList = await Promise.all(tenantPromises);
+
+                    dataList.forEach(data => {
                         if (data.status === 'Aktif' && data.sisaHari > 0) this.stats.totalAktif++;
                         if ((data.paketLangganan || '').toLowerCase().includes('premium') || (data.paketLangganan || '').toLowerCase().includes('lifetime')) this.stats.totalPremium++;
                         if (data.sisaHari <= 0) this.stats.totalExpired++;
-                        
-                        dataList.push(data);
                     });
                     
                     this.tenants = dataList;
                 } catch (e) {
-                    console.error("Gagal memuat", e);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Akses Terkunci',
-                        text: 'Pastikan Rules Firestore Anda sudah mengizinkan Super Admin.',
-                        confirmButtonColor: '#4f46e5'
-                    });
+                    Swal.fire('Akses Terkunci', 'Pastikan Rules Firestore sudah benar.', 'error');
                 }
                 this.isLoadingTenants = false;
             },
 
             bukaModalEdit(tenant) {
                 this.selectedTenant = tenant;
-                
-                let expDateStr = '';
-                if (tenant.expiredDate) {
-                    expDateStr = new Date(tenant.expiredDate).toISOString().split('T')[0];
-                }
-
                 this.formEdit = {
                     id: tenant.id,
                     paketLangganan: tenant.paketLangganan || '',
-                    expiredDate: expDateStr,
+                    expiredDate: tenant.expiredDate ? new Date(tenant.expiredDate).toISOString().split('T')[0] : '',
                     status: tenant.status || 'Aktif'
                 };
-
-                if (!this.modalInstance) {
-                    this.modalInstance = new bootstrap.Modal(document.getElementById('modalEditTenant'));
-                }
+                if (!this.modalInstance) this.modalInstance = new bootstrap.Modal(document.getElementById('modalEditTenant'));
                 this.modalInstance.show();
             },
 
             async simpanPerubahanTenant() {
                 this.isSaving = true;
                 try {
-                    const tenantRef = doc(db, "companies", this.formEdit.id);
-                    
                     let newIsoDate = '';
                     if (this.formEdit.expiredDate) {
                         let d = new Date(this.formEdit.expiredDate);
-                        d.setHours(23, 59, 59); 
-                        newIsoDate = d.toISOString();
+                        d.setHours(23, 59, 59); newIsoDate = d.toISOString();
                     }
-
-                    await updateDoc(tenantRef, {
+                    await updateDoc(doc(db, "companies", this.formEdit.id), {
                         paketLangganan: this.formEdit.paketLangganan,
                         status: this.formEdit.status,
                         expiredDate: newIsoDate
                     });
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tersimpan!',
-                        text: 'Konfigurasi akses toko berhasil diperbarui.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-
-                    this.modalInstance.hide();
-                    this.fetchTenants();
-
-                } catch (e) {
-                    console.error("Update Error", e);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal Menyimpan',
-                        text: 'Terjadi kesalahan saat menyimpan ke database.',
-                        confirmButtonColor: '#4f46e5'
-                    });
-                }
+                    Swal.fire({ icon: 'success', title: 'Tersimpan!', timer: 1500, showConfirmButton: false });
+                    this.modalInstance.hide(); this.fetchTenants();
+                } catch (e) { Swal.fire('Error', 'Gagal menyimpan data.', 'error'); }
                 this.isSaving = false;
             },
 
-            // 🌟 KODE BARU: FUNGSI HAPUS TENANT
             async hapusTenant(tenant) {
                 Swal.fire({
                     title: 'Hapus Permanen?',
-                    text: `Anda yakin ingin menghapus data toko "${tenant.namaUsaha}"? Tindakan ini akan menghapus data profil toko secara permanen.`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Ya, Hapus Permanen!'
+                    text: `Anda yakin menghapus data toko "${tenant.namaUsaha}"?`,
+                    icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
-                        try {
-                            Swal.fire({
-                                title: 'Menghapus...',
-                                text: 'Memproses penghapusan data',
-                                allowOutsideClick: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
-                            
-                            // Menghapus data perusahaan (tenant) dari koleksi "companies"
-                            await deleteDoc(doc(db, "companies", tenant.id));
-                            
-                            Swal.fire('Terhapus!', `Toko ${tenant.namaUsaha} telah berhasil dihapus.`, 'success');
-                            this.fetchTenants(); // Segarkan kembali tabelnya
-                        } catch (e) {
-                            console.error(e);
-                            Swal.fire('Error', 'Gagal menghapus toko.', 'error');
-                        }
+                        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                        await deleteDoc(doc(db, "companies", tenant.id));
+                        Swal.fire('Terhapus!', 'Toko berhasil dihapus.', 'success');
+                        this.fetchTenants();
                     }
                 });
             },
-
-            formatNumber(number) {
-                if (!number) return '0';
-                return new Intl.NumberFormat('id-ID').format(number);
-            },
-
-            async bukaModalRiwayat(tenant) {
-                this.selectedTenant = tenant;
-                this.riwayatTagihan = [];
-                this.isLoadingRiwayat = true;
-                
-                if (!this.modalRiwayatInstance) {
-                    this.modalRiwayatInstance = new bootstrap.Modal(document.getElementById('modalRiwayatTagihan'));
-                }
-                this.modalRiwayatInstance.show();
-
-                try {
-                    const q = query(
-                        collection(db, "billings"), 
-                        where("companyId", "==", tenant.id),
-                        orderBy("createdAt", "desc")
-                    );
-                    const querySnapshot = await getDocs(q);
-                    
-                    let bills = [];
-                    querySnapshot.forEach((doc) => {
-                        let data = doc.data();
-                        data.id = doc.id;
-                        bills.push(data);
-                    });
-                    this.riwayatTagihan = bills;
-                } catch (e) {
-                    console.error("Gagal menarik riwayat", e);
-                }
-                this.isLoadingRiwayat = false;
-            },
-
-            async tandaiLunas(bill) {
+            
+            loginAsTenant(tenant) {
                 Swal.fire({
-                    title: 'Tandai Lunas?',
-                    text: `Apakah Anda yakin tagihan "${bill.description}" sudah dibayar?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#15803d',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Ya, Tandai Lunas!'
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        try {
-                            const billRef = doc(db, "billings", bill.id);
-                            await updateDoc(billRef, { 
-                                status: 'PAID',
-                                paidAt: serverTimestamp() 
-                            });
-                            
-                            bill.status = 'PAID';
-                            Swal.fire('Berhasil!', 'Tagihan telah diubah menjadi Lunas.', 'success');
-                        } catch (e) {
-                            Swal.fire('Error', 'Gagal memperbarui status.', 'error');
-                        }
+                    title: 'Login Sebagai Toko Ini?',
+                    html: `Anda akan memasuki sistem POS sebagai Admin dari toko <b>${tenant.namaUsaha}</b>.`,
+                    icon: 'info', showCancelButton: true, confirmButtonText: 'Masuk Sekarang'
+                }).then((result) => {
+                    if(result.isConfirmed) {
+                        window.open(`https://${tenant.urlToko}.queenpos.id`, '_blank');
                     }
                 });
             },
+
+            formatNumber(number) { return number ? new Intl.NumberFormat('id-ID').format(number) : '0'; },
             
             formatNomorWA(phone) {
                 if (!phone) return '628000000000';
@@ -1158,51 +1038,53 @@
                 return p;
             },
             
+            async bukaModalRiwayat(tenant) {
+                this.selectedTenant = tenant; this.riwayatTagihan = [];
+                if (!this.modalRiwayatInstance) this.modalRiwayatInstance = new bootstrap.Modal(document.getElementById('modalRiwayatTagihan'));
+                this.modalRiwayatInstance.show();
+                try {
+                    const q = query(collection(db, "billings"), where("companyId", "==", tenant.id), orderBy("createdAt", "desc"));
+                    const snap = await getDocs(q);
+                    let bills = [];
+                    snap.forEach(doc => { let d = doc.data(); d.id = doc.id; bills.push(d); });
+                    this.riwayatTagihan = bills;
+                } catch (e) {}
+            },
+
+            async tandaiLunas(bill) {
+                Swal.fire({
+                    title: 'Tandai Lunas?', text: `Tagihan "${bill.description}" dibayar?`, icon: 'question', showCancelButton: true, confirmButtonColor: '#15803d', confirmButtonText: 'Ya!'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await updateDoc(doc(db, "billings", bill.id), { status: 'PAID', paidAt: serverTimestamp() });
+                        bill.status = 'PAID'; Swal.fire('Berhasil!', 'Status diubah LUNAS.', 'success');
+                    }
+                });
+            },
+            
             bukaModalTagihan(tenant) {
-                this.selectedTenant = tenant;
-                this.formTagihan = { amount: '', desc: '' };
-                if (!this.modalTagihanInstance) {
-                    this.modalTagihanInstance = new bootstrap.Modal(document.getElementById('modalBuatTagihan'));
-                }
+                this.selectedTenant = tenant; this.formTagihan = { amount: '', desc: '' };
+                if (!this.modalTagihanInstance) this.modalTagihanInstance = new bootstrap.Modal(document.getElementById('modalBuatTagihan'));
                 this.modalTagihanInstance.show();
             },
             
             async kirimTagihanKeFirebase() {
-                if(!this.formTagihan.amount || !this.formTagihan.desc) {
-                    Swal.fire('Perhatian', 'Harap isi nominal dan deskripsi tagihan.', 'warning');
-                    return;
-                }
-                
+                if(!this.formTagihan.amount || !this.formTagihan.desc) return Swal.fire('Perhatian', 'Isi data tagihan.', 'warning');
                 this.isSaving = true;
                 try {
-                    const billingRef = collection(db, "billings");
-                    
-                    let due = new Date();
-                    due.setDate(due.getDate() + 7);
-
-                    await addDoc(billingRef, {
-                        companyId: this.selectedTenant.id,
-                        amount: Number(this.formTagihan.amount),
-                        description: this.formTagihan.desc,
-                        status: 'UNPAID',
-                        createdAt: serverTimestamp(),
-                        dueDate: due.toISOString() 
+                    let due = new Date(); due.setDate(due.getDate() + 7);
+                    await addDoc(collection(db, "billings"), {
+                        companyId: this.selectedTenant.id, amount: Number(this.formTagihan.amount), description: this.formTagihan.desc,
+                        status: 'UNPAID', createdAt: serverTimestamp(), dueDate: due.toISOString() 
                     });
-                    
-                    Swal.fire('Berhasil!', 'Tagihan telah sukses dikirim ke akun tenant.', 'success');
-                    this.modalTagihanInstance.hide();
-                } catch (e) {
-                    console.error("Gagal membuat tagihan", e);
-                    Swal.fire('Error', 'Gagal mengirim tagihan ke server.', 'error');
-                }
+                    Swal.fire('Berhasil!', 'Tagihan terkirim.', 'success'); this.modalTagihanInstance.hide();
+                } catch (e) { Swal.fire('Error', 'Gagal mengirim.', 'error'); }
                 this.isSaving = false;
             },
 
             formatTanggal(isoString) {
                 if (!isoString) return '-';
-                return new Date(isoString).toLocaleDateString('id-ID', {
-                    day: 'numeric', month: 'short', year: 'numeric'
-                });
+                return new Date(isoString).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
             }
         }
     }).mount('#app');
