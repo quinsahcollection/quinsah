@@ -8540,7 +8540,7 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
@@ -8916,8 +8916,9 @@ body.sidebar-open {
         },
 
         async mounted() {
-
-       // Jalankan pengecekan ini HANYA jika user berada di subdomain
+    // =========================================================
+    // 1. CEK VALIDITAS SUBDOMAIN (Kode asli Anda)
+    // =========================================================
     if (this.isSubdomainLokal) {
         this.isCheckingSubdomain = true;
         const currentSubdomain = this.getSubdomainName();
@@ -8935,6 +8936,85 @@ body.sidebar-open {
         }
         
         this.isCheckingSubdomain = false;
+    }
+
+    // =========================================================
+    // 2. TANGKAP KEMBALIAN DARI GOOGLE LOGIN (Jurus Redirect)
+    // =========================================================
+    try {
+        const result = await getRedirectResult(auth);
+        
+        if (result) {
+            // Jika ada result, berarti user baru saja berhasil login via Google dan dikembalikan ke sini
+            const user = result.user;
+            
+            // A. JIKA LOGIN DI SUBDOMAIN LOKAL (Login Karyawan/Owner)
+            if (this.isSubdomainLokal) {
+                const currentSubdomain = this.getSubdomainName();
+                
+                // Ambil data user dari database kita
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    const companyId = userData.companyId;
+                    
+                    if (companyId) {
+                        const companyDocRef = doc(db, "companies", companyId);
+                        const companyDocSnap = await getDoc(companyDocRef);
+                        
+                        if (companyDocSnap.exists()) {
+                            const companyData = companyDocSnap.data();
+                            const urlTokoAsli = companyData.urlToko;
+                            
+                            // PROTEKSI SUPER KETAT (Persis seperti di handleAuthAction)
+                            if (!urlTokoAsli) {
+                                await signOut(auth);
+                                throw new Error(`Gagal masuk! Akun ini belum memiliki URL Toko di sistem.`);
+                            } else if (urlTokoAsli !== currentSubdomain) {
+                                await signOut(auth);
+                                throw new Error(`Akses Ditolak! Akun Anda terdaftar untuk toko "${urlTokoAsli}". Silakan login melalui link: ${urlTokoAsli}.queenpos.id`);
+                            } else {
+                                // BERHASIL MASUK KE TOKO YANG BENAR!
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil',
+                                    text: `Selamat datang kembali, ${user.displayName}!`
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    // Jika email Google-nya sama sekali belum terdaftar di database Firestore Anda
+                    await signOut(auth);
+                    throw new Error("Akun Google ini belum terdaftar di sistem. Silakan mendaftar melalui website utama terlebih dahulu.");
+                }
+            } 
+            // B. JIKA LOGIN DI DOMAIN UTAMA (Pendaftaran Toko Baru)
+            else {
+                // Di sini Anda bisa memunculkan popup khusus untuk menanyakan
+                // "Nama Toko" dan "URL" kepada pendaftar baru dari Google, 
+                // karena Google hanya memberikan Nama Lengkap dan Email.
+                
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Info Pendaftaran',
+                    text: `Halo ${user.displayName}, fitur pembuatan toko otomatis via Google sedang disiapkan. Silakan gunakan form registrasi di samping untuk saat ini.`
+                });
+                
+                // Keluarkan dulu sementara jika belum ada form popup URL Toko-nya
+                await signOut(auth);
+            }
+        }
+    } catch (error) {
+        // Tangkap error jika batal login Google atau koneksi putus
+        console.error("Error Google Redirect:", error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Akses Gagal',
+            text: error.message || "Gagal masuk melalui Google."
+        });
     }
 
         // =========================================================
@@ -10410,42 +10490,24 @@ fulfillmentOrders() {
 },
 
             async loginDenganGoogle() {
-        try {
-            // 1. Panggil Popup Google
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
-
-            // Catatan: Jika lewat Google, user.emailVerified otomatis bernilai TRUE!
-
-            // 2. Cek apakah ini di Subdomain (Login Karyawan/Owner ke Toko)
-            if (this.isSubdomainLokal) {
-                // Gunakan logika pengecekan tenant Anda di sini
-                // (Persis seperti logika yang ada di handleAuthAction)
-                console.log("Login Google dari Subdomain sukses!", user.email);
-            } 
-            // 3. Jika di Domain Utama (Daftar Toko Baru)
-            else {
-                // Karena Google tidak meminta "Nama Toko" dan "URL", 
-                // Anda mungkin perlu memunculkan form/popup tambahan di sini 
-                // untuk meminta data toko mereka sebelum menyimpan ke Firestore.
-                console.log("Pendaftaran/Login Google dari Domain Utama", user.email);
-            }
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Berhasil',
-                text: `Selamat datang, ${user.displayName}!`
-            });
-
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Akses Gagal',
-                text: error.message
-            });
-        }
-    }, 
+    try {
+        this.isProcessingAuth = true; // Munculkan efek loading di tombol (opsional)
+        
+        // 1. Panggil Redirect Google
+        const provider = new GoogleAuthProvider();
+        
+        // Browser akan langsung pindah ke Google.
+        await signInWithRedirect(auth, provider);
+        
+    } catch (error) {
+        this.isProcessingAuth = false;
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal Mengalihkan',
+            text: error.message
+        });
+    }
+},
             
             openChangeLogModal() {
             const modalEl = document.getElementById('changeLogModal');
