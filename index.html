@@ -9326,9 +9326,7 @@ fulfillmentOrders() {
 
     // 2. Menjumlahkan total uang fisik (Pokok + Admin) yang sudah masuk di keranjang split
     totalSplitPaid() {
-        // Karena di fungsi addSplitPayment Anda menyimpan "cashReceived" (uang riil yang diterima),
-        // kita jumlahkan properti ini agar bisa mendeteksi overpay / kembalian secara presisi.
-        return this.splitPayments.reduce((sum, split) => sum + Number(split.cashReceived || 0), 0);
+        return this.splitPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     },
           
             lowStockItems() {
