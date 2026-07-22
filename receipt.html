@@ -166,32 +166,40 @@
     </div>
 
     <div class="bg-light p-3 rounded-3 border shadow-sm">
-        <template v-if="ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0">
+                <template v-if="ereceiptData.splitPayments && ereceiptData.splitPayments.length > 0">
             <div class="fw-bold text-dark text-uppercase mb-2 pb-1 border-bottom" style="font-size: 0.85em; letter-spacing: 0.5px;">
                 <i class="bi bi-pie-chart-fill me-1 text-success"></i> PEMBAYARAN (SPLIT) :
             </div>
+            
             <div v-for="(split, idx) in ereceiptData.splitPayments" :key="'split-'+idx" class="d-flex justify-content-between align-items-center mb-2">
                 <div>
                     <span class="badge bg-success" style="font-size: 0.75rem;"><i class="bi bi-wallet2 me-1"></i>{{ split.method }}</span>
                 </div>
-                <span class="fw-bold text-dark">Rp {{ formatNumber(split.amount) }}</span>
+                <!-- 🌟 DIPERBAIKI: Membaca cashReceived -->
+                <span class="fw-bold text-dark">Rp {{ formatNumber(split.cashReceived || split.amount) }}</span>
             </div>
+            
             <div class="d-flex justify-content-between mt-2 pt-2 border-top border-secondary small">
                 <span class="text-muted">Total Dibayar :</span>
-                <span class="fw-bold text-success">Rp {{ formatNumber(ereceiptData.amountReceived) }}</span>
+                <!-- 🌟 DIPERBAIKI: Total dinamis dari cashReceived -->
+                <span class="fw-bold text-success">
+                    Rp {{ formatNumber(ereceiptData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}
+                </span>
             </div>
-           <div v-if="(ereceiptData.total - ereceiptData.amountReceived) > 0" class="d-flex justify-content-between mt-1 text-danger fw-bold small">
-    <span>Sisa Hutang :</span>
-    <span>Rp {{ formatNumber(ereceiptData.total - ereceiptData.amountReceived) }}</span>
-</div>
-<div v-else-if="ereceiptData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')" class="d-flex justify-content-between mt-1 text-success fw-bold small">
-    <span>Status Pembayaran :</span>
-    <span>LUNAS</span>
-</div>
-<div v-else class="d-flex justify-content-between mt-1 text-dark fw-bold small">
-    <span>Kembalian :</span>
-    <span>Rp {{ formatNumber(ereceiptData.amountReceived - ereceiptData.total) }}</span>
-</div>
+            
+            <!-- 🌟 DIPERBAIKI: Logika Kembalian / Sisa Hutang / Lunas secara Dinamis -->
+            <div v-if="ereceiptData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) > ereceiptData.total" class="d-flex justify-content-between mt-1 text-success fw-bold small">
+                <span>Kembalian :</span>
+                <span>Rp {{ formatNumber(ereceiptData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) - ereceiptData.total) }}</span>
+            </div>
+            <div v-else-if="(ereceiptData.total - ereceiptData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) > 0" class="d-flex justify-content-between mt-1 text-danger fw-bold small">
+                <span>Sisa Hutang :</span>
+                <span>Rp {{ formatNumber(ereceiptData.total - ereceiptData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}</span>
+            </div>
+            <div v-else class="d-flex justify-content-between mt-1 text-success fw-bold small">
+                <span>Status Pembayaran :</span>
+                <span>LUNAS</span>
+            </div>
         </template>
 
         <template v-else>
