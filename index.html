@@ -10538,6 +10538,10 @@ fulfillmentOrders() {
 },
 
             async loginDenganGoogle() {
+    // 🌟 1. TAMBAHAN PENTING: Gembok pencegah klik ganda!
+    // Jika tombol sudah diklik dan sedang loading, hentikan klik berikutnya
+    if (this.isProcessingAuth) return; 
+    
     this.isProcessingAuth = true; // Nyalakan loading
     
     try {
@@ -10603,8 +10607,8 @@ fulfillmentOrders() {
     } catch (error) {
         console.error("Error Google Popup:", error);
         
-        // Abaikan peringatan jika user sekadar menutup jendela popup (batal login)
-        if (error.code !== 'auth/popup-closed-by-user') {
+        // 🌟 2. TAMBAHAN PENTING: Abaikan juga error 'cancelled-popup-request'
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
             Swal.fire({
                 icon: 'error',
                 title: 'Akses Gagal',
