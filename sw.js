@@ -1,5 +1,5 @@
 // PERBAIKAN: Ganti versi ini (misal: v2, v3, v4) setiap kali Anda edit index.html
-const CACHE_NAME = 'kasir-offline-v3';
+const CACHE_NAME = 'kasir-offline-v4';
 
 const urlsToCache = [
     './',
