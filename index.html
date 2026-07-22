@@ -13047,54 +13047,75 @@ async deletePaymentMethod(id) {
         }
 
         // ========================================================
-        // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA (DIPERBAIKI)
+        // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA (ATURAN PASAR)
         // ========================================================
-        // 1. Hitung ulang subtotal dari sisa barang
+        // 1. Hitung ulang subtotal dari sisa barang (yang Qty-nya > 0)
         trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
         
-        // 2. KOREKSI: Hapus paksaan nilai 0 pada serviceFee & taxAmt. 
-        // Biarkan uang tersebut tetap tercatat sebagai pendapatan toko 
-        // karena uang tersebut (Rp 350) tidak ikut di-refund ke pelanggan.
-        
-        // 3. Update Total Akhir (Grand Total)
+        // 2. LOGIKA ATURAN PASAR (PENGEMBALIAN BIAYA LAYANAN & PAJAK)
+        let isBatalTotal = (trx.subtotal === 0);
+
+        if (isBatalTotal) {
+            // BATAL TOTAL: Pelanggan berhak menerima kembali full 100% uangnya, 
+            // termasuk Pajak & Biaya Layanan yang tadinya dibebankan.
+            let nominalPajakDikembalikan = trx.taxAmt || 0;
+            let nominalLayananDikembalikan = trx.serviceFee || 0;
+
+            // Tambahkan nilai pajak & biaya layanan ke total uang yang di-refund ke pelanggan
+            refundTotal = refundTotal + nominalPajakDikembalikan + nominalLayananDikembalikan;
+
+            // Nol-kan nilai di struk agar toko tidak mencatat piutang fiktif
+            trx.taxAmt = 0;
+            trx.serviceFee = 0;
+        } else {
+            // RETUR SEBAGIAN: Biaya Layanan (serviceFee) TIDAK DIKEMBALIKAN karena 
+            // transaksi pada dasarnya tetap sah terjadi.
+            
+            // (Opsional: Jika PPN Anda proporsional per barang, Anda bisa update taxAmt di sini. 
+            // Tapi jika flat/tidak ada, biarkan saja logika ini kosong).
+        }
+
+        // 3. Update Total Akhir (Grand Total) untuk sisa barang di struk
         trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0);
         
         // 4. Update sisa tagihan untuk hutang
         trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
 
-        // 5. KOREKSI: Potong "Uang Diterima" agar UI & hitungan kembalian tidak kacau
+        // 5. POTONG UANG YANG DITERIMA (Mencegah Layar UI Kacau / Minus)
         trx.amountReceived = (trx.amountReceived || 0) - refundTotal;
         if (trx.amountReceived < 0) trx.amountReceived = 0;
 
         trx.cashSubmitted = (trx.cashSubmitted || 0) - refundTotal;
         if (trx.cashSubmitted < 0) trx.cashSubmitted = 0;
 
+        // 6. Tentukan Status
         let isSisaBarangAda = trx.items.some(i => i.qty > 0);
         trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-        trx.status = trx.paymentStatus; 
+        trx.status = trx.paymentStatus;
 
+        // 7. Catat Histori Pembayaran Uang Keluar (Refund)
         trx.paymentHistory = trx.paymentHistory || [];
         trx.paymentHistory.push({
             date: new Date().toLocaleString('id-ID'),
             method: 'REFUND',
             amount: -refundTotal,
-            note: this.returnForm.reason || 'Pengembalian Dana (Retur)'
+            note: isBatalTotal ? (this.returnForm.reason || 'Batal Total (Full Refund)') : (this.returnForm.reason || 'Retur Sebagian')
         });
 
         // ========================================================
-        // D. SIMPAN PERMANEN KE FIREBASE (DIPERBAIKI)
+        // D. SIMPAN PERMANEN KE FIREBASE
         // ========================================================
         await updateDoc(doc(db, "transactions", trx.id), {
             items: trx.items,
             total: trx.total,
             subtotal: trx.subtotal,
-            taxAmt: trx.taxAmt || 0,         
-            serviceFee: trx.serviceFee || 0, 
+            taxAmt: trx.taxAmt || 0,
+            serviceFee: trx.serviceFee || 0,
             sisaTagihan: trx.sisaTagihan,
             
-            // 🔥 TAMBAHKAN DUA BARIS INI KE FIREBASE
-            amountReceived: trx.amountReceived, 
-            cashSubmitted: trx.cashSubmitted,   
+            // Wajib ditambahkan agar Firebase tahu uang kasirnya sudah berkurang
+            amountReceived: trx.amountReceived,
+            cashSubmitted: trx.cashSubmitted,
             
             paymentStatus: trx.paymentStatus,
             status: trx.status,
