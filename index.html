@@ -11142,32 +11142,53 @@ updateDynamicManifest(namaToko, logoUrl) {
         return kembalian > 0 ? kembalian : 0;
     },
 
-    // 5. FUNGSI UTAMA: Menambahkan pembayaran ke keranjang split
+        // 5. FUNGSI UTAMA: Menambahkan pembayaran ke keranjang split
     addSplitPayment() {
         if (!this.paymentData.method) return Swal.fire('Pilih Metode', 'Pilih metode pembayaran dulu.', 'warning');
         if (this.paymentData.amountReceived <= 0) return Swal.fire('Nominal Kosong', 'Masukkan nominal uang.', 'warning');
         if (this.remainingSplitTagihan <= 0) return Swal.fire('Sudah Lunas', 'Tagihan sudah terbayar penuh.', 'info');
 
-        let baseAmount = Number(this.paymentData.amountReceived);
-        
-        // 🌟 PENGAMAN OVERPAY SPLIT: Jika kasir ketik kelebihan, otomatis dipas-kan ke sisa tagihan agar tidak minus
-        if (baseAmount > this.remainingSplitTagihan) {
-            baseAmount = this.remainingSplitTagihan;
-        }
+        let inputNominal = Number(this.paymentData.amountReceived) || 0;
+        let baseAmount = inputNominal;
+        let kembalian = 0;
 
-        // Hitung admin & total untuk metode yang dipilih dengan parameter baseAmount
-        let surchargeAmount = this.hitungSurcharge(this.paymentData.method, baseAmount);
-        let totalAmount = baseAmount + surchargeAmount;
-
+        // Identifikasi detail metode pembayaran
         let pm = this.activePaymentMethodsForCashier.find(m => m.name === this.paymentData.method || m.id === this.paymentData.method);
         let isDebt = pm ? pm.type === 'DEBT' : false;
+
+        // Deteksi apakah ini metode CASH
+        let isCash = false;
+        if (pm && pm.type === 'CASH') {
+            isCash = true;
+        } else if (typeof this.paymentData.method === 'string' && (this.paymentData.method.toUpperCase().includes('CASH') || this.paymentData.method.toUpperCase().includes('TUNAI'))) {
+            isCash = true;
+        }
+
+        // 🌟 LOGIKA OVERPAY & KEMBALIAN (Modifikasi Final)
+        if (baseAmount > this.remainingSplitTagihan) {
+            if (isCash) {
+                // Untuk CASH: Hitung kembalian, kunci pokok ke sisa tagihan
+                baseAmount = this.remainingSplitTagihan;
+                kembalian = inputNominal - this.remainingSplitTagihan;
+            } else {
+                // Untuk NON-CASH: Potong paksa tanpa kembalian
+                baseAmount = this.remainingSplitTagihan;
+                kembalian = 0;
+            }
+        }
+
+        // Hitung admin & total tagihan fisik untuk metode yang dipilih
+        let surchargeAmount = this.hitungSurcharge(this.paymentData.method, baseAmount);
+        let totalAmount = baseAmount + surchargeAmount;
 
         // MASUKKAN KE KERANJANG SPLIT
         this.splitPayments.push({
             method: this.paymentData.method,
-            baseAmount: baseAmount,           // POKOK: Akan mengurangi remainingSplitTagihan
-            surchargeAmount: surchargeAmount, // ADMIN: Untuk dicetak terpisah di struk
-            amount: totalAmount,              // TOTAL: Uang fisik yang dibayar customer
+            baseAmount: baseAmount,           // POKOK: Mengurangi remainingSplitTagihan
+            surchargeAmount: surchargeAmount, // ADMIN: Dicetak terpisah
+            amount: totalAmount,              // TOTAL TAGIHAN FISIK: baseAmount + admin
+            cashReceived: isCash ? inputNominal : totalAmount, // FISIK UANG (Merekam nominal asli jika Cash)
+            change: kembalian,                // KEMBALIAN (Terekam jika Cash lebih)
             note: this.paymentData.note || '',
             isDebt: isDebt
         });
@@ -11180,7 +11201,7 @@ updateDynamicManifest(namaToko, logoUrl) {
         this.$nextTick(() => {
             this.paymentData.amountReceived = this.remainingSplitTagihan; 
         });
-    },
+    }, 
 
     // 6. FUNGSI HAPUS: Menghapus item dari keranjang split
     removeSplitPayment(index) {
