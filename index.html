@@ -17116,25 +17116,45 @@ let item = {
         // 7.5 EKSEKUSI TUKAR TAMBAH (JIKA ADA PENDING TRADE-IN)
         // =================================================================
         if (this.pendingTradeIn && this.pendingTradeIn.originalInvoice) {
-            let oldTrx = this.pendingTradeIn.originalInvoice;
-            let refundTotal = this.pendingTradeIn.refundAmount;
+                let oldTrx = this.pendingTradeIn.originalInvoice;
+                let refundTotal = this.pendingTradeIn.refundAmount;
 
-            // A. Update Status dan Total Invoice Lama
-            oldTrx.total -= refundTotal;
-            if (oldTrx.total < 0) oldTrx.total = 0;
-            oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
+                // A. Update Status dan Total Invoice Lama (DIPERBAIKI)
+                // 1. Hitung ulang subtotal sisa barang
+                oldTrx.subtotal = (oldTrx.items || []).reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
+                
+                // 2. Terapkan Aturan Pasar
+                let isBatalTotal = (oldTrx.subtotal === 0);
+                if (isBatalTotal) {
+                    oldTrx.taxAmt = 0;
+                    oldTrx.serviceFee = 0;
+                    // Batal total: Hapus seluruh riwayat uang masuk agar tidak gantung/minus
+                    oldTrx.amountReceived = 0;
+                    oldTrx.cashSubmitted = 0;
+                } else {
+                    // Tukar sebagian: Potong uang sesuai nominal barang yang ditukar
+                    oldTrx.amountReceived = (oldTrx.amountReceived || 0) - refundTotal;
+                    if (oldTrx.amountReceived < 0) oldTrx.amountReceived = 0;
 
-            let isSisaBarangAda = (oldTrx.items || []).some(i => i.qty > 0);
-            oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-            oldTrx.status = oldTrx.paymentStatus;
+                    oldTrx.cashSubmitted = (oldTrx.cashSubmitted || 0) - refundTotal;
+                    if (oldTrx.cashSubmitted < 0) oldTrx.cashSubmitted = 0;
+                }
 
-            oldTrx.paymentHistory = oldTrx.paymentHistory || [];
-            oldTrx.paymentHistory.push({
-                date: new Date().toLocaleString('id-ID'),
-                method: 'SALDO TUKAR',
-                amount: -refundTotal,
-                note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
-            });
+                // 3. Set Total Akhir 
+                oldTrx.total = oldTrx.subtotal + (oldTrx.taxAmt || 0) + (oldTrx.serviceFee || 0);
+                oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
+
+                let isSisaBarangAda = (oldTrx.items || []).some(i => i.qty > 0);
+                oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+                oldTrx.status = oldTrx.paymentStatus;
+
+                oldTrx.paymentHistory = oldTrx.paymentHistory || [];
+                oldTrx.paymentHistory.push({
+                    date: new Date().toLocaleString('id-ID'),
+                    method: 'SALDO TUKAR',
+                    amount: -refundTotal,
+                    note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
+                });
 
             // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
             let itemsToReturn = this.pendingTradeIn.itemsToReturn || [];
@@ -17201,13 +17221,21 @@ let item = {
 
             // C. Masukkan Update Invoice Lama ke Batch Firebase
             batch.update(doc(db, "transactions", oldTrx.id), {
-                items: oldTrx.items || [],
-                total: oldTrx.total,
-                sisaTagihan: oldTrx.sisaTagihan,
-                paymentStatus: oldTrx.paymentStatus,
-                status: oldTrx.status,
-                paymentHistory: oldTrx.paymentHistory || [],
-                returHistory: oldTrx.returHistory || []
+                    items: oldTrx.items || [],
+                    total: oldTrx.total,
+                    subtotal: oldTrx.subtotal, // <-- Wajib ditambahkan
+                    taxAmt: oldTrx.taxAmt || 0,
+                    serviceFee: oldTrx.serviceFee || 0,
+                    sisaTagihan: oldTrx.sisaTagihan,
+                    
+                    // 🔥 WAJIB DITAMBAHKAN:
+                    amountReceived: oldTrx.amountReceived,
+                    cashSubmitted: oldTrx.cashSubmitted,
+
+                    paymentStatus: oldTrx.paymentStatus,
+                    status: oldTrx.status,
+                    paymentHistory: oldTrx.paymentHistory || [],
+                    returHistory: oldTrx.returHistory || [],
             });
         }
         
