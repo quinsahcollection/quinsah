@@ -5354,28 +5354,25 @@ body.sidebar-open {
                 </div>
 
                 <div class="row g-2 mb-3">
-    <div class="col-4">
-        <div class="p-2 bg-white border rounded text-center">
-            <div class="small text-muted fw-bold">Total Belanja</div>
-            <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
-        </div>
-    </div>
-    <div class="col-4">
-        <div class="p-2 bg-white border rounded text-center">
-            <div class="small text-muted fw-bold">Sudah Dibayar</div>
-            <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
-        </div>
-    </div>
-    <!-- 🌟 KODE DIPERBAIKI: Otomatis berubah jadi Kembalian jika kelebihan bayar -->
-    <div class="col-4">
-        <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.amountReceived > activeInvoiceDetail.total) ? 'bg-success text-white' : ((activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white')">
-            <div class="small fw-bold text-white-50">{{ activeInvoiceDetail.amountReceived > activeInvoiceDetail.total ? 'Kembalian' : 'Sisa Tagihan' }}</div>
-            <div class="fw-bold fs-6">
-                Rp {{ formatNumber(activeInvoiceDetail.amountReceived > activeInvoiceDetail.total ? (activeInvoiceDetail.amountReceived - activeInvoiceDetail.total) : (activeInvoiceDetail.sisaTagihan || 0)) }}
-            </div>
-        </div>
-    </div>
-</div>
+                    <div class="col-4">
+                        <div class="p-2 bg-white border rounded text-center">
+                            <div class="small text-muted fw-bold">Total Belanja</div>
+                            <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-white border rounded text-center">
+                            <div class="small text-muted fw-bold">Sudah Dibayar</div>
+                            <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white'">
+                            <div class="small fw-bold text-white-50">Sisa Tagihan</div>
+                            <div class="fw-bold fs-6">Rp {{ formatNumber(activeInvoiceDetail.sisaTagihan || 0) }}</div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
@@ -7405,39 +7402,12 @@ body.sidebar-open {
                                 </button>
                             </div>
                             
-                            <!-- 🌟 Ringkasan Split Payment Dinamis -->
-<div class="mt-3 p-2 bg-light rounded border shadow-sm">
-    <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
-        <span class="fw-bold text-muted">Total Tagihan:</span>
-        <span class="fw-bold text-dark">Rp {{ formatNumber(total) }}</span>
-    </div>
-    <div class="d-flex justify-content-between mb-2" style="font-size: 0.85rem;">
-        <span class="fw-bold text-muted">Total Diterima (Split):</span>
-        <span class="fw-bold text-primary-custom">Rp {{ formatNumber(totalSplitPaid) }}</span>
-    </div>
-    
-    <hr class="my-2 border-secondary border-opacity-25">
-    
-    <!-- Indikator Kembalian / Sisa Hutang / Lunas -->
-    <div v-if="totalSplitPaid > total" class="d-flex justify-content-between align-items-center mt-1">
-        <span class="fw-bold text-success small">Kembalian:</span>
-        <span class="fw-bold fs-5 text-success">
-            Rp {{ formatNumber(totalSplitPaid - total) }}
-        </span>
-    </div>
-    <div v-else-if="remainingSplitTagihan > 0" class="d-flex justify-content-between align-items-center mt-1">
-        <span class="fw-bold text-danger small">Sisa Tagihan Pokok:</span>
-        <span class="fw-bold fs-5 text-danger">
-            Rp {{ formatNumber(remainingSplitTagihan) }}
-        </span>
-    </div>
-    <div v-else class="d-flex justify-content-between align-items-center mt-1">
-        <span class="fw-bold text-success small">Status:</span>
-        <span class="fw-bold fs-5 text-success">
-            <i class="bi bi-check-circle-fill me-1"></i> LUNAS
-        </span>
-    </div>
-</div>
+                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
+                                <span class="fw-bold text-muted small">Sisa Tagihan Pokok:</span>
+                                <span class="fw-bold fs-6 fs-md-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
+                                    Rp {{ formatNumber(remainingSplitTagihan) }}
+                                </span>
+                            </div>
                         </div>
 
                         <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
@@ -7929,28 +7899,17 @@ body.sidebar-open {
         <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
     </tr>
     
-    <!-- Total Keseluruhan yang Diterima -->
-    <tr>
-        <td style="padding-top:3px; font-weight:bold;">TOTAL DIBAYAR</td>
-        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.amountReceived) }}</td>
-    </tr>
-
-    <!-- Kembalian jika Split melebihi Total -->
-    <tr v-if="activePrintData.amountReceived > activePrintData.total">
-        <td style="padding-top:2px; font-weight:bold; color:green;">KEMBALI</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
-    </tr>
-    <!-- Sisa Hutang jika kurang -->
-    <tr v-else-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+    <!-- KODE PERBAIKAN: Menghitung sisa hutang secara dinamis (Total - Jumlah Dibayar) -->
+    <tr v-if="(activePrintData.total - activePrintData.amountReceived) > 0">
         <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
         <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
     </tr>
-    <!-- Status Lunas jika pas -->
-    <tr v-else>
+    <!-- Opsi tambahan: Memunculkan tulisan LUNAS jika hutang sudah dibayar penuh -->
+    <tr v-else-if="activePrintData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')">
         <td style="padding-top:2px; font-weight:bold; color:green;">STATUS</td>
         <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">LUNAS</td>
     </tr>
-    </template>
+</template>
 
                     <template v-else>
                         <tr><td style="padding-top:5px; text-transform:uppercase; font-size:0.9em; color:#333;">METODE BAYAR</td><td style="text-align: right; padding-top:5px; font-weight:bold; text-transform:uppercase;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -8161,35 +8120,23 @@ body.sidebar-open {
                     
                     <template v-if="activePrintData.splitPayments && activePrintData.splitPayments.length > 0">
     <tr>
-        <td colspan="2" style="padding-top:5px; font-weight:bold; font-size:0.9em; text-transform:uppercase;">PEMBAYARAN (SPLIT):</td>
+        <td colspan="2" style="padding: 8px 10px; color: #6b7280; font-size: 12px; font-weight: bold; border-bottom: 1px dashed #e5e7eb;">RINCIAN PEMBAYARAN (SPLIT):</td>
     </tr>
     <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
-        <td style="padding-top:2px; font-size:0.9em; padding-left: 5px;">- {{ split.method }}</td>
-        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
+        <td style="padding: 4px 10px 4px 20px; font-size: 13px;">- {{ split.method }}</td>
+        <td style="padding: 4px 10px; text-align: right; font-weight: bold;">Rp {{ formatNumber(split.amount) }}</td>
     </tr>
     
-    <!-- Total Keseluruhan yang Diterima -->
-    <tr>
-        <td style="padding-top:3px; font-weight:bold;">TOTAL DIBAYAR</td>
-        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.amountReceived) }}</td>
+    <!-- KODE PERBAIKAN -->
+    <tr v-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+        <td style="padding: 8px 10px; font-weight: 800; color: #991b1b;">Sisa Hutang</td>
+        <td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #991b1b;">Rp {{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
     </tr>
-
-    <!-- Kembalian jika Split melebihi Total -->
-    <tr v-if="activePrintData.amountReceived > activePrintData.total">
-        <td style="padding-top:2px; font-weight:bold; color:green;">KEMBALI</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+    <tr v-else-if="activePrintData.splitPayments.some(s => s.method.toUpperCase() === 'HUTANG')">
+        <td style="padding: 8px 10px; font-weight: 800; color: #16a34a;">Status Pembayaran</td>
+        <td style="padding: 8px 10px; font-weight: 800; text-align: right; color: #16a34a;">LUNAS</td>
     </tr>
-    <!-- Sisa Hutang jika kurang -->
-    <tr v-else-if="(activePrintData.total - activePrintData.amountReceived) > 0">
-        <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
-    </tr>
-    <!-- Status Lunas jika pas -->
-    <tr v-else>
-        <td style="padding-top:2px; font-weight:bold; color:green;">STATUS</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">LUNAS</td>
-    </tr>
-    </template>
+</template>
                     
                     <template v-else>
                         <tr><td style="padding: 8px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb;">Metode Pembayaran</td><td style="padding: 8px 10px; text-align: right; font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -8657,14 +8604,19 @@ body.sidebar-open {
                 // =========================================================
             // 🌟 1. TARUH VARIABEL DATA DI SINI (Di dalam return)
             // =========================================================
-            currentAppVersion: '1.0.4', 
+            currentAppVersion: '1.0.5', 
             showUpdateBanner: false,
             updateLogs: [
+                { 
+                    version: '1.0.5', 
+                    date: '22 Juli 2026', // Sesuaikan tanggal
+                    desc: '• Memperbaiki bug di POS.' 
+                },
                 { 
                     version: '1.0.4', 
                     date: '14 Juli 2026', // Sesuaikan tanggal
                     desc: '• Memperbaiki masalah stock opname.' 
-                },
+                }
                 { 
                     version: '1.0.3', 
                     date: '13 Juli 2026', 
