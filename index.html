@@ -8558,11 +8558,11 @@ body.sidebar-open {
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     
     // 3. Import Auth
-   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithRedirect, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
       
     const firebaseConfig = { 
         apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
-        authDomain: "quinsahcollection-36926.firebaseapp.com", 
+        authDomain: "queenpos.id", 
         projectId: "quinsahcollection-36926" 
     };
     
@@ -8934,7 +8934,8 @@ body.sidebar-open {
         },
 
         async mounted() {
-    // Jalankan pengecekan ini HANYA jika user berada di subdomain
+
+       // Jalankan pengecekan ini HANYA jika user berada di subdomain
     if (this.isSubdomainLokal) {
         this.isCheckingSubdomain = true;
         const currentSubdomain = this.getSubdomainName();
@@ -8954,53 +8955,53 @@ body.sidebar-open {
         this.isCheckingSubdomain = false;
     }
 
-    // =========================================================
-    // 🌟 CEK UPDATE VERSI SISTEM
-    // =========================================================
-    const lastSeenVersion = localStorage.getItem('queen_pos_last_version');
-    if (lastSeenVersion !== this.currentAppVersion) {
-        this.showUpdateBanner = true; // Munculkan banner jika beda!
-    }
+        // =========================================================
+        // 🌟 CEK UPDATE VERSI SISTEM (TAMBAHAN KODE BARU)
+        // =========================================================
+        const lastSeenVersion = localStorage.getItem('queen_pos_last_version');
+        if (lastSeenVersion !== this.currentAppVersion) {
+            this.showUpdateBanner = true; // Munculkan banner jika beda!
+        }
             
-    // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
-    window.addEventListener('offline', () => {
-        this.isOffline = true;
-        Swal.fire({
-            title: 'Anda Sedang Offline ☁️',
-            text: 'Koneksi terputus. Kasir tetap bisa digunakan, data aman di memori lokal.',
-            icon: 'warning',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 4000
+        // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
+        window.addEventListener('offline', () => {
+            this.isOffline = true;
+            Swal.fire({
+                title: 'Anda Sedang Offline ☁️',
+                text: 'Koneksi terputus. Kasir tetap bisa digunakan, data aman di memori lokal.',
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000
+            });
         });
-    });
 
-    // 🌟 DETEKSI OTOMATIS SAAT INTERNET NYALA KEMBALI
-    window.addEventListener('online', () => {
-        this.isOffline = false;
-        Swal.fire({
-            title: 'Kembali Online! 🟢',
-            text: 'Sistem sedang menyinkronkan data yang tertunda ke server...',
-            icon: 'success',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000
+        // 🌟 DETEKSI OTOMATIS SAAT INTERNET NYALA KEMBALI
+        window.addEventListener('online', () => {
+            this.isOffline = false;
+            Swal.fire({
+                title: 'Kembali Online! 🟢',
+                text: 'Sistem sedang menyinkronkan data yang tertunda ke server...',
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
         });
-    });
           
     this.resetPosDate();
 
     // =========================================================
-    // 🌟 TIMER UNTUK INDIKATOR WAKTU KANBAN
+    // 🌟 TAMBAHAN BARU: TIMER UNTUK INDIKATOR WAKTU KANBAN
     // =========================================================
-    this.currentTimeTick = new Date(); 
+    this.currentTimeTick = new Date(); // Inisialisasi awal saat dimuat
     this.timerInterval = setInterval(() => {
         this.currentTimeTick = new Date();
-    }, 60000); 
+    }, 60000); // Berdetak dan memperbarui waktu setiap 1 menit (60.000 ms)
             
-    // Simpan reference ke fungsi modal agar bisa dihapus nanti
+    // [TETAP] Simpan reference ke fungsi agar bisa dihapus nanti
     this._modalListener = (event) => {
         if (document.querySelectorAll('.modal.show').length > 0) { 
             document.body.classList.add('modal-open'); 
@@ -9008,7 +9009,11 @@ body.sidebar-open {
     };
     document.addEventListener('hidden.bs.modal', this._modalListener);
 
-    // Listener untuk cetak/print
+    // 🌟 PERBAIKAN: Pemanggilan fetchOpnameHistory, fetchTransferHistory, dan fetchPaymentMethods 
+    // di sini DIHAPUS karena terlalu dini (saat ini userProfile.companyId belum di-load oleh Firebase).
+    // Fungsinya dipindahkan ke dalam 'watch: userProfile' di bawah agar otomatis jalan saat data siap.
+
+    // [TETAP] Listener untuk cetak/print
     this._printListener = () => {
         setTimeout(() => {
             this.activePrintData = null; 
@@ -9017,68 +9022,12 @@ body.sidebar-open {
     };
     window.addEventListener('afterprint', this._printListener);
 
-    // =========================================================================
-    // 🌟 LISTENER SUPER ADMIN (MAINTENANCE & BROADCAST)
-    // Dipasang di luar auth agar bisa mengunci layar bahkan sebelum login
-    // =========================================================================
-    try {
-        const globalSettingsRef = doc(db, "system_settings", "global");
-        this._maintenanceUnsubscribe = onSnapshot(globalSettingsRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.isMaintenance) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: '🛠️ Sistem Sedang Perbaikan',
-                        text: 'Mohon maaf, server sedang dalam pemeliharaan rutin. Mohon tunggu.',
-                        allowOutsideClick: false, 
-                        allowEscapeKey: false,    
-                        showConfirmButton: false, 
-                        backdrop: `rgba(15, 23, 42, 0.95)` 
-                    });
-                } else {
-                    if (Swal.isVisible() && Swal.getTitle().textContent.includes('Sistem Sedang Perbaikan')) {
-                        Swal.close();
-                    }
-                }
-            }
-        });
-
-        const broadcastQuery = query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(1));
-        this._broadcastUnsubscribe = onSnapshot(broadcastQuery, (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "added") {
-                    const data = change.doc.data();
-                    const broadcastId = change.doc.id;
-                    const lastReadBroadcast = localStorage.getItem('lastBroadcastId');
-
-                    if (lastReadBroadcast !== broadcastId && !this.isCheckingSubdomain) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: `📢 ${data.title}`,
-                            text: data.message,
-                            confirmButtonText: 'Saya Mengerti',
-                            confirmButtonColor: '#3b82f6',
-                            backdrop: `rgba(0,0,0,0.5)`
-                        }).then(() => {
-                            localStorage.setItem('lastBroadcastId', broadcastId);
-                        });
-                    }
-                }
-            });
-        });
-    } catch (err) {
-        console.warn("Gagal inisialisasi listener Super Admin:", err);
-    }
-
-    // =========================================================================
-    // 🌟 LISTENER AUTENTIKASI UTAMA
-    // =========================================================================
+    // [TETAP] Simpan fungsi unsubscribe dari Firebase
     this._authUnsubscribe = onAuthStateChanged(auth, async (user) => {
         if (this.isRegistering) return; 
         try {
             if (user) { 
-                await this.fetchUserProfile(user); 
+                await this.fetchUserProfile(user); // 🌟 Selesai ini dijalankan, watch userProfile akan terpicu otomatis
                 this.isLoggedIn = true; 
                 this.initAppListeners(); 
                 this.fetchUsersFromDatabase();
@@ -9095,20 +9044,18 @@ body.sidebar-open {
     });
 },
 
+// [TETAP] Pembersihan sisa listener saat ganti halaman utama
 beforeDestroy() {
-    // Bersihkan timer
+    // =========================================================
+    // 🌟 TAMBAHAN BARU: BERSIHKAN TIMER KANBAN
+    // =========================================================
     if (this.timerInterval) {
         clearInterval(this.timerInterval);
     }
 
-    // Bersihkan listener event browser
     if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
     if (this._printListener) window.removeEventListener('afterprint', this._printListener);
-    
-    // Bersihkan listener Firebase agar tidak bocor memori (Memory Leak)
     if (this._authUnsubscribe) this._authUnsubscribe(); 
-    if (this._maintenanceUnsubscribe) this._maintenanceUnsubscribe();
-    if (this._broadcastUnsubscribe) this._broadcastUnsubscribe();
 },
         
         computed: {
@@ -10538,17 +10485,13 @@ fulfillmentOrders() {
 },
 
             async loginDenganGoogle() {
-    // 🌟 1. TAMBAHAN PENTING: Gembok pencegah klik ganda!
-    // Jika tombol sudah diklik dan sedang loading, hentikan klik berikutnya
-    if (this.isProcessingAuth) return; 
-    
     this.isProcessingAuth = true; // Nyalakan loading
     
     try {
         const provider = new GoogleAuthProvider();
         
         // Kita KEMBALI gunakan Popup karena Vercel Anda sudah mengizinkannya!
-        const result = await signInWithRedirect(auth, provider);
+        const result = await signInWithPopup(auth, provider);
         const user = result.user;
         
         // A. JIKA LOGIN DI SUBDOMAIN LOKAL (Login Karyawan/Owner)
@@ -10605,10 +10548,10 @@ fulfillmentOrders() {
         }
         
     } catch (error) {
+        console.error("Error Google Popup:", error);
         
-        // 🌟 2. TAMBAHAN PENTING: Abaikan juga error 'cancelled-popup-request'
-        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-            console.error("Error Google Popup:", error);
+        // Abaikan peringatan jika user sekadar menutup jendela popup (batal login)
+        if (error.code !== 'auth/popup-closed-by-user') {
             Swal.fire({
                 icon: 'error',
                 title: 'Akses Gagal',
