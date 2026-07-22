@@ -8962,6 +8962,69 @@ body.sidebar-open {
         if (lastSeenVersion !== this.currentAppVersion) {
             this.showUpdateBanner = true; // Munculkan banner jika beda!
         }
+
+       // =========================================================================
+// 1. LISTENER MAINTENANCE MODE (Pemblokir Layar)
+// =========================================================================
+const globalSettingsRef = doc(db, "system_settings", "global");
+
+onSnapshot(globalSettingsRef, (docSnap) => {
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        
+        if (data.isMaintenance) {
+            // Jika Super Admin menyalakan saklar, paksa munculkan popup yang tidak bisa ditutup
+            Swal.fire({
+                icon: 'warning',
+                title: '🛠️ Sistem Sedang Perbaikan',
+                text: 'Mohon maaf, server sedang dalam pemeliharaan rutin oleh pusat. Mohon tunggu beberapa saat.',
+                allowOutsideClick: false, // Tidak bisa klik luar
+                allowEscapeKey: false,    // Tidak bisa tekan ESC
+                showConfirmButton: false, // Hilangkan tombol OK
+                backdrop: `rgba(15, 23, 42, 0.95)` // Layar belakang gelap pekat
+            });
+        } else {
+            // Jika Super Admin mematikan saklar, otomatis tutup popup
+            if (Swal.isVisible() && Swal.getTitle().textContent.includes('Sistem Sedang Perbaikan')) {
+                Swal.close();
+            }
+        }
+    }
+});
+
+// =========================================================================
+// 2. LISTENER PENGUMUMAN MASSAL (Broadcast Pop-up)
+// =========================================================================
+// Ambil hanya 1 pengumuman paling baru
+const broadcastQuery = query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(1));
+
+onSnapshot(broadcastQuery, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+        // Jika ada dokumen baru yang ditambahkan oleh Super Admin
+        if (change.type === "added") {
+            const data = change.doc.data();
+            const broadcastId = change.doc.id;
+
+            // Cek di penyimpanan browser kasir (localStorage) apakah pengumuman ini sudah pernah dibaca
+            const lastReadBroadcast = localStorage.getItem('lastBroadcastId');
+
+            if (lastReadBroadcast !== broadcastId) {
+                // Munculkan Pop-up Notifikasi
+                Swal.fire({
+                    icon: 'info',
+                    title: `📢 ${data.title}`,
+                    text: data.message,
+                    confirmButtonText: 'Saya Mengerti',
+                    confirmButtonColor: '#3b82f6',
+                    backdrop: `rgba(0,0,0,0.5)`
+                }).then(() => {
+                    // Setelah kasir klik "Saya Mengerti", simpan ID pengumuman agar tidak muncul terus-menerus saat di-refresh
+                    localStorage.setItem('lastBroadcastId', broadcastId);
+                });
+            }
+        }
+    });
+});
             
         // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
         window.addEventListener('offline', () => {
