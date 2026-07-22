@@ -11082,17 +11082,14 @@ updateDynamicManifest(namaToko, logoUrl) {
 
     // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-    // 1. Ambil nominal yang sedang diketik kasir di dalam kotak input
-    let inputNominal = Number(this.paymentData.amountReceived) || 0;
-    
-    // 2. Jika kasir mengetik nominal, gunakan nominal itu. 
-    // Jika masih kosong (0), gunakan total tagihan atau sisa tagihan split.
-    let pokok = inputNominal > 0 ? inputNominal : (this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0));
-    
-    // 3. Tambahkan biaya admin (surcharge) berdasarkan pokok yang baru
-    let admin = this.hitungSurcharge(this.paymentData.method, pokok);
-    return pokok + admin;
-},
+        // Tagihan dasar selalu mengacu pada total belanja (atau sisa split tagihan)
+        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+        
+        // Tambahkan biaya admin (surcharge) jika metode pembayaran memiliki admin fee
+        let admin = this.hitungSurcharge(this.paymentData.method, pokok);
+        
+        return pokok + admin;
+    },
 
     // 4. FUNGSI KEMBALIAN: Menghitung kembalian kasir dengan akurat
     getKembalian() {
