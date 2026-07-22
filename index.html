@@ -11080,12 +11080,55 @@ updateDynamicManifest(namaToko, logoUrl) {
         }
     },
 
-    // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
+        // 3. FUNGSI VISUAL: Untuk QR Code, EDC, dan Teks "Total Harus Dibayar Customer" di layar
     getTotalBayarDenganAdmin() {
-        // Tagihan dasar selalu mengacu pada total belanja (atau sisa split tagihan)
-        let pokok = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+        // 1. Tagihan Dasar (Total Asli atau Sisa Split Tagihan)
+        let totalTagihan = this.isSplitPayment ? Number(this.remainingSplitTagihan || 0) : Number(this.total || 0);
+        let inputNominal = Number(this.paymentData.amountReceived) || 0;
+
+        // 2. Cek apakah metode pembayaran saat ini adalah CASH / TUNAI
+        let pm = null;
+        if (this.activePaymentMethodsForCashier && this.paymentData.method) {
+            pm = this.activePaymentMethodsForCashier.find(m => 
+                m.name === this.paymentData.method || 
+                m.id === this.paymentData.method || 
+                m.code === this.paymentData.method || 
+                (m.nama && m.nama === this.paymentData.method)
+            );
+        }
         
-        // Tambahkan biaya admin (surcharge) jika metode pembayaran memiliki admin fee
+        let isCash = false;
+        if (this.selectedPaymentMethodData && this.selectedPaymentMethodData.type === 'CASH') {
+            isCash = true;
+        } else if (pm && pm.type === 'CASH') {
+            isCash = true;
+        } else if (this.paymentData.method === 'CASH' || (typeof this.paymentData.method === 'string' && (this.paymentData.method.toUpperCase().includes('CASH') || this.paymentData.method.toUpperCase().includes('TUNAI')))) {
+            isCash = true;
+        }
+
+        // 3. Tentukan Dasar Perhitungan Pokok
+        let pokok = totalTagihan;
+
+        if (isCash) {
+            // Untuk CASH: Jika diketik lebih besar dari tagihan (kembalian), kunci ke tagihan asli.
+            // Jika diketik lebih kecil (pembayaran sebagian/parsial), ikuti angka yang diketik.
+            if (inputNominal > 0 && inputNominal < totalTagihan) {
+                pokok = inputNominal;
+            } else {
+                pokok = totalTagihan;
+            }
+        } else {
+            // Untuk NON-CASH (QRIS, EDC, Transfer, dll):
+            // Jika kasir mengetik nominal pokok yang dicover (misal 150.000),
+            // gunakan angka itu agar Biaya Admin & Total Scan QRIS dihitung dari 150.000.
+            if (inputNominal > 0) {
+                pokok = inputNominal;
+            } else {
+                pokok = totalTagihan;
+            }
+        }
+        
+        // 4. Hitung Biaya Admin (Surcharge) berdasarkan Pokok yang Presisi
         let admin = this.hitungSurcharge(this.paymentData.method, pokok);
         
         return pokok + admin;
