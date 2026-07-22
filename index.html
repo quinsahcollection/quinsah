@@ -13047,12 +13047,27 @@ async deletePaymentMethod(id) {
         }
 
         // ========================================================
-        // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA
+        // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA (DIPERBAIKI)
         // ========================================================
-        trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || 0)), 0);
+        // 1. Hitung ulang subtotal dari sisa barang (yang Qty-nya > 0)
+        trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
         
-        trx.total -= refundTotal;
-        if (trx.total < 0) trx.total = 0;
+        // 2. Logika PPN dan Biaya Layanan
+        // Jika seluruh barang diretur (subtotal jadi 0), maka PPN dan Biaya Layanan HARUS 0
+        if (trx.subtotal === 0) {
+            trx.taxAmt = 0;
+            trx.serviceFee = 0;
+        } else {
+            // (Opsional) Jika subtotal tidak 0 dan Anda ingin PPN turun proporsional:
+            // Jika PPN toko fix 11%:
+            // trx.taxAmt = Math.round(trx.subtotal * 0.11);
+        }
+
+        // 3. Update Total Akhir (Grand Total)
+        // Gunakan penjumlahan ulang, BUKAN sekadar dikurangi refundTotal
+        trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0);
+        
+        // 4. Update sisa tagihan untuk hutang
         trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
 
         let isSisaBarangAda = trx.items.some(i => i.qty > 0);
@@ -13068,17 +13083,19 @@ async deletePaymentMethod(id) {
         });
 
         // ========================================================
-        // D. SIMPAN PERMANEN KE FIREBASE (Mencegah hilang saat refresh)
+        // D. SIMPAN PERMANEN KE FIREBASE (DIPERBAIKI)
         // ========================================================
         await updateDoc(doc(db, "transactions", trx.id), {
             items: trx.items,
             total: trx.total,
             subtotal: trx.subtotal,
+            taxAmt: trx.taxAmt || 0,         // <-- TAMBAHAN: Simpan ulang nilai pajak
+            serviceFee: trx.serviceFee || 0, // <-- TAMBAHAN: Simpan ulang biaya layanan
             sisaTagihan: trx.sisaTagihan,
             paymentStatus: trx.paymentStatus,
             status: trx.status,
             paymentHistory: trx.paymentHistory,
-            returHistory: trx.returHistory // Wajib disave agar struk refund muncul
+            returHistory: trx.returHistory
         });
 
         // ========================================================
