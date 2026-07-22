@@ -5360,18 +5360,26 @@ body.sidebar-open {
             <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
         </div>
     </div>
+    <!-- 🌟 KODE DIPERBAIKI: Nominal Dibayar Dinamis untuk Split -->
     <div class="col-4">
         <div class="p-2 bg-white border rounded text-center">
             <div class="small text-muted fw-bold">Sudah Dibayar</div>
-            <div class="fw-bold text-success fs-6">Rp {{ formatNumber(activeInvoiceDetail.amountReceived) }}</div>
+            <div class="fw-bold text-success fs-6">
+                Rp {{ formatNumber(activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) }}
+            </div>
         </div>
     </div>
-    <!-- 🌟 KODE DIPERBAIKI: Otomatis berubah jadi Kembalian jika kelebihan bayar -->
+    <!-- 🌟 KODE DIPERBAIKI: Otomatis berubah jadi Kembalian jika total split berlebih -->
     <div class="col-4">
-        <div class="p-2 border rounded text-center" :class="(activeInvoiceDetail.amountReceived > activeInvoiceDetail.total) ? 'bg-success text-white' : ((activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white')">
-            <div class="small fw-bold text-white-50">{{ activeInvoiceDetail.amountReceived > activeInvoiceDetail.total ? 'Kembalian' : 'Sisa Tagihan' }}</div>
+        <div class="p-2 border rounded text-center" 
+             :class="( (activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total) ? 'bg-success text-white' : ((activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white')">
+            
+            <div class="small fw-bold text-white-50">
+                {{ (activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total ? 'Kembalian' : 'Sisa Tagihan' }}
+            </div>
+            
             <div class="fw-bold fs-6">
-                Rp {{ formatNumber(activeInvoiceDetail.amountReceived > activeInvoiceDetail.total ? (activeInvoiceDetail.amountReceived - activeInvoiceDetail.total) : (activeInvoiceDetail.sisaTagihan || 0)) }}
+                Rp {{ formatNumber((activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total ? ((activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) - activeInvoiceDetail.total) : (activeInvoiceDetail.sisaTagihan || 0)) }}
             </div>
         </div>
     </div>
@@ -7926,31 +7934,32 @@ body.sidebar-open {
     </tr>
     <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
         <td style="padding-top:2px; font-size:0.9em; padding-left: 5px;">- {{ split.method }}</td>
-        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
+        <!-- Ubah split.amount jadi split.cashReceived || split.amount -->
+        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.cashReceived || split.amount) }}</td>
     </tr>
     
     <!-- Total Keseluruhan yang Diterima -->
     <tr>
         <td style="padding-top:3px; font-weight:bold;">TOTAL DIBAYAR</td>
-        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.amountReceived) }}</td>
+        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}</td>
     </tr>
 
     <!-- Kembalian jika Split melebihi Total -->
-    <tr v-if="activePrintData.amountReceived > activePrintData.total">
+    <tr v-if="activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) > activePrintData.total">
         <td style="padding-top:2px; font-weight:bold; color:green;">KEMBALI</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) - activePrintData.total) }}</td>
     </tr>
     <!-- Sisa Hutang jika kurang -->
-    <tr v-else-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+    <tr v-else-if="(activePrintData.total - activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) > 0">
         <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}</td>
     </tr>
     <!-- Status Lunas jika pas -->
     <tr v-else>
         <td style="padding-top:2px; font-weight:bold; color:green;">STATUS</td>
         <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">LUNAS</td>
     </tr>
-    </template>
+                    </template>
 
                     <template v-else>
                         <tr><td style="padding-top:5px; text-transform:uppercase; font-size:0.9em; color:#333;">METODE BAYAR</td><td style="text-align: right; padding-top:5px; font-weight:bold; text-transform:uppercase;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
@@ -8165,31 +8174,32 @@ body.sidebar-open {
     </tr>
     <tr v-for="(split, idx) in activePrintData.splitPayments" :key="idx">
         <td style="padding-top:2px; font-size:0.9em; padding-left: 5px;">- {{ split.method }}</td>
-        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.amount) }}</td>
+        <!-- Ubah split.amount jadi split.cashReceived || split.amount -->
+        <td style="text-align: right; padding-top:2px; font-size:0.9em;">{{ formatNumber(split.cashReceived || split.amount) }}</td>
     </tr>
     
     <!-- Total Keseluruhan yang Diterima -->
     <tr>
         <td style="padding-top:3px; font-weight:bold;">TOTAL DIBAYAR</td>
-        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.amountReceived) }}</td>
+        <td style="text-align: right; padding-top:3px; font-weight:bold;">{{ formatNumber(activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}</td>
     </tr>
 
     <!-- Kembalian jika Split melebihi Total -->
-    <tr v-if="activePrintData.amountReceived > activePrintData.total">
+    <tr v-if="activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) > activePrintData.total">
         <td style="padding-top:2px; font-weight:bold; color:green;">KEMBALI</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.amountReceived - activePrintData.total) }}</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">{{ formatNumber(activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) - activePrintData.total) }}</td>
     </tr>
     <!-- Sisa Hutang jika kurang -->
-    <tr v-else-if="(activePrintData.total - activePrintData.amountReceived) > 0">
+    <tr v-else-if="(activePrintData.total - activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) > 0">
         <td style="padding-top:2px; font-weight:bold; color:red;">SISA HUTANG</td>
-        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.amountReceived) }}</td>
+        <td style="text-align: right; padding-top:2px; font-weight:bold; color:red;">{{ formatNumber(activePrintData.total - activePrintData.splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}</td>
     </tr>
     <!-- Status Lunas jika pas -->
     <tr v-else>
         <td style="padding-top:2px; font-weight:bold; color:green;">STATUS</td>
         <td style="text-align: right; padding-top:2px; font-weight:bold; color:green;">LUNAS</td>
     </tr>
-    </template>
+                    </template>
                     
                     <template v-else>
                         <tr><td style="padding: 8px 10px; color: #6b7280; font-size: 12px; border-bottom: 1px dashed #e5e7eb;">Metode Pembayaran</td><td style="padding: 8px 10px; text-align: right; font-weight: bold; text-transform: uppercase; border-bottom: 1px dashed #e5e7eb;">{{ activePrintData.paymentMethod || 'CASH' }}</td></tr>
