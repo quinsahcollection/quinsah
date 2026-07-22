@@ -7403,7 +7403,8 @@ body.sidebar-open {
                             <div v-for="(split, index) in splitPayments" :key="index" class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom border-light">
                                 <div>
                                     <span class="badge bg-secondary me-2">{{ split.method }}</span>
-                                    <span class="fw-bold text-success">Rp {{ formatNumber(split.amount) }}</span>
+                                    <!-- Menggunakan cashReceived agar uang 50.000 muncul, bukan 26.000 -->
+                                    <span class="fw-bold text-success">Rp {{ formatNumber(split.cashReceived || split.amount) }}</span>
                                     <small v-if="split.surchargeAmount > 0" class="text-muted d-block" style="font-size: 0.7rem;">
                                         (Pokok: {{ formatNumber(split.baseAmount) }} + Adm: {{ formatNumber(split.surchargeAmount) }})
                                     </small>
@@ -7419,26 +7420,32 @@ body.sidebar-open {
         <span class="fw-bold text-muted">Total Tagihan:</span>
         <span class="fw-bold text-dark">Rp {{ formatNumber(total) }}</span>
     </div>
+    
+    <!-- 🌟 PERBAIKAN 1: Total Diterima menjumlahkan uang riil (termasuk kembalian) -->
     <div class="d-flex justify-content-between mb-2" style="font-size: 0.85rem;">
         <span class="fw-bold text-muted">Total Diterima (Split):</span>
-        <span class="fw-bold text-primary-custom">Rp {{ formatNumber(totalSplitPaid) }}</span>
+        <span class="fw-bold text-primary-custom">
+            Rp {{ formatNumber(splitPayments.reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)) }}
+        </span>
     </div>
     
     <hr class="my-2 border-secondary border-opacity-25">
     
-    <!-- Indikator Kembalian / Sisa Hutang / Lunas -->
-    <div v-if="totalSplitPaid > total" class="d-flex justify-content-between align-items-center mt-1">
+    <!-- 🌟 PERBAIKAN 2: Indikator Kembalian dihitung murni dari split.change saja -->
+    <div v-if="splitPayments.reduce((sum, p) => sum + Number(p.change || 0), 0) > 0" class="d-flex justify-content-between align-items-center mt-1">
         <span class="fw-bold text-success small">Kembalian:</span>
         <span class="fw-bold fs-5 text-success">
-            Rp {{ formatNumber(totalSplitPaid - total) }}
+            Rp {{ formatNumber(splitPayments.reduce((sum, p) => sum + Number(p.change || 0), 0)) }}
         </span>
     </div>
+    
     <div v-else-if="remainingSplitTagihan > 0" class="d-flex justify-content-between align-items-center mt-1">
         <span class="fw-bold text-danger small">Sisa Tagihan Pokok:</span>
         <span class="fw-bold fs-5 text-danger">
             Rp {{ formatNumber(remainingSplitTagihan) }}
         </span>
     </div>
+    
     <div v-else class="d-flex justify-content-between align-items-center mt-1">
         <span class="fw-bold text-success small">Status:</span>
         <span class="fw-bold fs-5 text-success">
