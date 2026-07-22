@@ -4379,8 +4379,8 @@ body.sidebar-open {
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="resetRatingFilter">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1" @click.prevent="resetRatingFilter()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                 </button>
             </div>
             <div class="col-12 mt-2">
@@ -9410,9 +9410,12 @@ fulfillmentOrders() {
 
     // 3. Filter Outlet
     if (this.ratingFilter.outlet !== '') {
-        // Jika nama field di database Anda beda (misal: branch / toko), sesuaikan r.outlet
-        result = result.filter(r => r.outlet === this.ratingFilter.outlet);
-    }
+    result = result.filter(r => {
+        // Jika r.outlet kosong/undefined dari database, kita anggap sebagai 'Pusat'
+        const currentOutlet = r.outlet ? r.outlet : 'Pusat';
+        return currentOutlet === this.ratingFilter.outlet;
+    });
+}
 
     // 4. Filter Opsi "Hanya yang Punya Komentar"
     if (this.ratingFilter.withComment) {
