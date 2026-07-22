@@ -10893,18 +10893,17 @@ async openRatingModal(customer) {
     this.customerRatings = [];
     this.isLoadingRatings = true;
     
-    // 2. Tampilkan Modal Bootstrap
-    const ratingModal = new bootstrap.Modal(document.getElementById('ratingHistoryModal'));
+    // 2. Tampilkan Modal Bootstrap (DIPERBAIKI)
+    const modalEl = document.getElementById('ratingHistoryModal');
+    const ratingModal = bootstrap.Modal.getOrCreateInstance(modalEl); // Mencegah penumpukan instance
     ratingModal.show();
 
     try {
-        // 3. Tarik data dari collection 'ratings' berdasarkan ID atau Nama Pelanggan
+        // 3. Tarik data dari collection 'ratings'
         let q;
         if (customer.id) {
-            // Cocokkan dengan pola simpan di file e-receipt: customerId
             q = query(collection(db, "ratings"), where("customerId", "==", customer.id));
         } else {
-            // Fallback jika customer ID tidak ada, gunakan nama
             q = query(collection(db, "ratings"), where("customerName", "==", this.selectedCustomerName));
         }
 
@@ -10915,10 +10914,17 @@ async openRatingModal(customer) {
             fetchedRatings.push(doc.data());
         });
 
-        // 4. Urutkan dari ulasan terbaru (menggunakan timestamp)
+        // 4. Urutkan dari ulasan terbaru (DIPERBAIKI agar kebal error)
         fetchedRatings.sort((a, b) => {
-            const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-            const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+            // Cek apakah toMillis() benar-benar ada. Jika tidak, gunakan waktu dari field 'date', atau 0.
+            const timeA = (a.timestamp && typeof a.timestamp.toMillis === 'function') 
+                          ? a.timestamp.toMillis() 
+                          : (a.date ? new Date(a.date).getTime() : 0);
+            
+            const timeB = (b.timestamp && typeof b.timestamp.toMillis === 'function') 
+                          ? b.timestamp.toMillis() 
+                          : (b.date ? new Date(b.date).getTime() : 0);
+                          
             return timeB - timeA; 
         });
 
