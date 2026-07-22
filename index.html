@@ -8934,8 +8934,7 @@ body.sidebar-open {
         },
 
         async mounted() {
-
-       // Jalankan pengecekan ini HANYA jika user berada di subdomain
+    // Jalankan pengecekan ini HANYA jika user berada di subdomain
     if (this.isSubdomainLokal) {
         this.isCheckingSubdomain = true;
         const currentSubdomain = this.getSubdomainName();
@@ -8955,116 +8954,53 @@ body.sidebar-open {
         this.isCheckingSubdomain = false;
     }
 
-        // =========================================================
-        // 🌟 CEK UPDATE VERSI SISTEM (TAMBAHAN KODE BARU)
-        // =========================================================
-        const lastSeenVersion = localStorage.getItem('queen_pos_last_version');
-        if (lastSeenVersion !== this.currentAppVersion) {
-            this.showUpdateBanner = true; // Munculkan banner jika beda!
-        }
-
-       // =========================================================================
-// 1. LISTENER MAINTENANCE MODE (Pemblokir Layar)
-// =========================================================================
-const globalSettingsRef = doc(db, "system_settings", "global");
-
-onSnapshot(globalSettingsRef, (docSnap) => {
-    if (docSnap.exists()) {
-        const data = docSnap.data();
-        
-        if (data.isMaintenance) {
-            // Jika Super Admin menyalakan saklar, paksa munculkan popup yang tidak bisa ditutup
-            Swal.fire({
-                icon: 'warning',
-                title: '🛠️ Sistem Sedang Perbaikan',
-                text: 'Mohon maaf, server sedang dalam pemeliharaan rutin oleh pusat. Mohon tunggu beberapa saat.',
-                allowOutsideClick: false, // Tidak bisa klik luar
-                allowEscapeKey: false,    // Tidak bisa tekan ESC
-                showConfirmButton: false, // Hilangkan tombol OK
-                backdrop: `rgba(15, 23, 42, 0.95)` // Layar belakang gelap pekat
-            });
-        } else {
-            // Jika Super Admin mematikan saklar, otomatis tutup popup
-            if (Swal.isVisible() && Swal.getTitle().textContent.includes('Sistem Sedang Perbaikan')) {
-                Swal.close();
-            }
-        }
+    // =========================================================
+    // 🌟 CEK UPDATE VERSI SISTEM
+    // =========================================================
+    const lastSeenVersion = localStorage.getItem('queen_pos_last_version');
+    if (lastSeenVersion !== this.currentAppVersion) {
+        this.showUpdateBanner = true; // Munculkan banner jika beda!
     }
-});
-
-// =========================================================================
-// 2. LISTENER PENGUMUMAN MASSAL (Broadcast Pop-up)
-// =========================================================================
-// Ambil hanya 1 pengumuman paling baru
-const broadcastQuery = query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(1));
-
-onSnapshot(broadcastQuery, (snapshot) => {
-    snapshot.docChanges().forEach((change) => {
-        // Jika ada dokumen baru yang ditambahkan oleh Super Admin
-        if (change.type === "added") {
-            const data = change.doc.data();
-            const broadcastId = change.doc.id;
-
-            // Cek di penyimpanan browser kasir (localStorage) apakah pengumuman ini sudah pernah dibaca
-            const lastReadBroadcast = localStorage.getItem('lastBroadcastId');
-
-            if (lastReadBroadcast !== broadcastId) {
-                // Munculkan Pop-up Notifikasi
-                Swal.fire({
-                    icon: 'info',
-                    title: `📢 ${data.title}`,
-                    text: data.message,
-                    confirmButtonText: 'Saya Mengerti',
-                    confirmButtonColor: '#3b82f6',
-                    backdrop: `rgba(0,0,0,0.5)`
-                }).then(() => {
-                    // Setelah kasir klik "Saya Mengerti", simpan ID pengumuman agar tidak muncul terus-menerus saat di-refresh
-                    localStorage.setItem('lastBroadcastId', broadcastId);
-                });
-            }
-        }
-    });
-});
             
-        // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
-        window.addEventListener('offline', () => {
-            this.isOffline = true;
-            Swal.fire({
-                title: 'Anda Sedang Offline ☁️',
-                text: 'Koneksi terputus. Kasir tetap bisa digunakan, data aman di memori lokal.',
-                icon: 'warning',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 4000
-            });
+    // 🌟 DETEKSI OTOMATIS SAAT INTERNET MATI
+    window.addEventListener('offline', () => {
+        this.isOffline = true;
+        Swal.fire({
+            title: 'Anda Sedang Offline ☁️',
+            text: 'Koneksi terputus. Kasir tetap bisa digunakan, data aman di memori lokal.',
+            icon: 'warning',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 4000
         });
+    });
 
-        // 🌟 DETEKSI OTOMATIS SAAT INTERNET NYALA KEMBALI
-        window.addEventListener('online', () => {
-            this.isOffline = false;
-            Swal.fire({
-                title: 'Kembali Online! 🟢',
-                text: 'Sistem sedang menyinkronkan data yang tertunda ke server...',
-                icon: 'success',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
+    // 🌟 DETEKSI OTOMATIS SAAT INTERNET NYALA KEMBALI
+    window.addEventListener('online', () => {
+        this.isOffline = false;
+        Swal.fire({
+            title: 'Kembali Online! 🟢',
+            text: 'Sistem sedang menyinkronkan data yang tertunda ke server...',
+            icon: 'success',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
         });
+    });
           
     this.resetPosDate();
 
     // =========================================================
-    // 🌟 TAMBAHAN BARU: TIMER UNTUK INDIKATOR WAKTU KANBAN
+    // 🌟 TIMER UNTUK INDIKATOR WAKTU KANBAN
     // =========================================================
-    this.currentTimeTick = new Date(); // Inisialisasi awal saat dimuat
+    this.currentTimeTick = new Date(); 
     this.timerInterval = setInterval(() => {
         this.currentTimeTick = new Date();
-    }, 60000); // Berdetak dan memperbarui waktu setiap 1 menit (60.000 ms)
+    }, 60000); 
             
-    // [TETAP] Simpan reference ke fungsi agar bisa dihapus nanti
+    // Simpan reference ke fungsi modal agar bisa dihapus nanti
     this._modalListener = (event) => {
         if (document.querySelectorAll('.modal.show').length > 0) { 
             document.body.classList.add('modal-open'); 
@@ -9072,11 +9008,7 @@ onSnapshot(broadcastQuery, (snapshot) => {
     };
     document.addEventListener('hidden.bs.modal', this._modalListener);
 
-    // 🌟 PERBAIKAN: Pemanggilan fetchOpnameHistory, fetchTransferHistory, dan fetchPaymentMethods 
-    // di sini DIHAPUS karena terlalu dini (saat ini userProfile.companyId belum di-load oleh Firebase).
-    // Fungsinya dipindahkan ke dalam 'watch: userProfile' di bawah agar otomatis jalan saat data siap.
-
-    // [TETAP] Listener untuk cetak/print
+    // Listener untuk cetak/print
     this._printListener = () => {
         setTimeout(() => {
             this.activePrintData = null; 
@@ -9085,12 +9017,68 @@ onSnapshot(broadcastQuery, (snapshot) => {
     };
     window.addEventListener('afterprint', this._printListener);
 
-    // [TETAP] Simpan fungsi unsubscribe dari Firebase
+    // =========================================================================
+    // 🌟 LISTENER SUPER ADMIN (MAINTENANCE & BROADCAST)
+    // Dipasang di luar auth agar bisa mengunci layar bahkan sebelum login
+    // =========================================================================
+    try {
+        const globalSettingsRef = doc(db, "system_settings", "global");
+        this._maintenanceUnsubscribe = onSnapshot(globalSettingsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.isMaintenance) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '🛠️ Sistem Sedang Perbaikan',
+                        text: 'Mohon maaf, server sedang dalam pemeliharaan rutin. Mohon tunggu.',
+                        allowOutsideClick: false, 
+                        allowEscapeKey: false,    
+                        showConfirmButton: false, 
+                        backdrop: `rgba(15, 23, 42, 0.95)` 
+                    });
+                } else {
+                    if (Swal.isVisible() && Swal.getTitle().textContent.includes('Sistem Sedang Perbaikan')) {
+                        Swal.close();
+                    }
+                }
+            }
+        });
+
+        const broadcastQuery = query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(1));
+        this._broadcastUnsubscribe = onSnapshot(broadcastQuery, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const data = change.doc.data();
+                    const broadcastId = change.doc.id;
+                    const lastReadBroadcast = localStorage.getItem('lastBroadcastId');
+
+                    if (lastReadBroadcast !== broadcastId && !this.isCheckingSubdomain) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: `📢 ${data.title}`,
+                            text: data.message,
+                            confirmButtonText: 'Saya Mengerti',
+                            confirmButtonColor: '#3b82f6',
+                            backdrop: `rgba(0,0,0,0.5)`
+                        }).then(() => {
+                            localStorage.setItem('lastBroadcastId', broadcastId);
+                        });
+                    }
+                }
+            });
+        });
+    } catch (err) {
+        console.warn("Gagal inisialisasi listener Super Admin:", err);
+    }
+
+    // =========================================================================
+    // 🌟 LISTENER AUTENTIKASI UTAMA
+    // =========================================================================
     this._authUnsubscribe = onAuthStateChanged(auth, async (user) => {
         if (this.isRegistering) return; 
         try {
             if (user) { 
-                await this.fetchUserProfile(user); // 🌟 Selesai ini dijalankan, watch userProfile akan terpicu otomatis
+                await this.fetchUserProfile(user); 
                 this.isLoggedIn = true; 
                 this.initAppListeners(); 
                 this.fetchUsersFromDatabase();
@@ -9107,18 +9095,20 @@ onSnapshot(broadcastQuery, (snapshot) => {
     });
 },
 
-// [TETAP] Pembersihan sisa listener saat ganti halaman utama
 beforeDestroy() {
-    // =========================================================
-    // 🌟 TAMBAHAN BARU: BERSIHKAN TIMER KANBAN
-    // =========================================================
+    // Bersihkan timer
     if (this.timerInterval) {
         clearInterval(this.timerInterval);
     }
 
+    // Bersihkan listener event browser
     if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
     if (this._printListener) window.removeEventListener('afterprint', this._printListener);
+    
+    // Bersihkan listener Firebase agar tidak bocor memori (Memory Leak)
     if (this._authUnsubscribe) this._authUnsubscribe(); 
+    if (this._maintenanceUnsubscribe) this._maintenanceUnsubscribe();
+    if (this._broadcastUnsubscribe) this._broadcastUnsubscribe();
 },
         
         computed: {
