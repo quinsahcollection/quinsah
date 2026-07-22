@@ -13049,30 +13049,29 @@ async deletePaymentMethod(id) {
         // ========================================================
         // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA (DIPERBAIKI)
         // ========================================================
-        // 1. Hitung ulang subtotal dari sisa barang (yang Qty-nya > 0)
+        // 1. Hitung ulang subtotal dari sisa barang
         trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
         
-        // 2. Logika PPN dan Biaya Layanan
-        // Jika seluruh barang diretur (subtotal jadi 0), maka PPN dan Biaya Layanan HARUS 0
-        if (trx.subtotal === 0) {
-            trx.taxAmt = 0;
-            trx.serviceFee = 0;
-        } else {
-            // (Opsional) Jika subtotal tidak 0 dan Anda ingin PPN turun proporsional:
-            // Jika PPN toko fix 11%:
-            // trx.taxAmt = Math.round(trx.subtotal * 0.11);
-        }
-
+        // 2. KOREKSI: Hapus paksaan nilai 0 pada serviceFee & taxAmt. 
+        // Biarkan uang tersebut tetap tercatat sebagai pendapatan toko 
+        // karena uang tersebut (Rp 350) tidak ikut di-refund ke pelanggan.
+        
         // 3. Update Total Akhir (Grand Total)
-        // Gunakan penjumlahan ulang, BUKAN sekadar dikurangi refundTotal
         trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0);
         
         // 4. Update sisa tagihan untuk hutang
         trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
 
+        // 5. KOREKSI: Potong "Uang Diterima" agar UI & hitungan kembalian tidak kacau
+        trx.amountReceived = (trx.amountReceived || 0) - refundTotal;
+        if (trx.amountReceived < 0) trx.amountReceived = 0;
+
+        trx.cashSubmitted = (trx.cashSubmitted || 0) - refundTotal;
+        if (trx.cashSubmitted < 0) trx.cashSubmitted = 0;
+
         let isSisaBarangAda = trx.items.some(i => i.qty > 0);
         trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-        trx.status = trx.paymentStatus; // Update status utama juga
+        trx.status = trx.paymentStatus; 
 
         trx.paymentHistory = trx.paymentHistory || [];
         trx.paymentHistory.push({
@@ -13089,9 +13088,14 @@ async deletePaymentMethod(id) {
             items: trx.items,
             total: trx.total,
             subtotal: trx.subtotal,
-            taxAmt: trx.taxAmt || 0,         // <-- TAMBAHAN: Simpan ulang nilai pajak
-            serviceFee: trx.serviceFee || 0, // <-- TAMBAHAN: Simpan ulang biaya layanan
+            taxAmt: trx.taxAmt || 0,         
+            serviceFee: trx.serviceFee || 0, 
             sisaTagihan: trx.sisaTagihan,
+            
+            // 🔥 TAMBAHKAN DUA BARIS INI KE FIREBASE
+            amountReceived: trx.amountReceived, 
+            cashSubmitted: trx.cashSubmitted,   
+            
             paymentStatus: trx.paymentStatus,
             status: trx.status,
             paymentHistory: trx.paymentHistory,
