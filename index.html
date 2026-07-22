@@ -7405,12 +7405,39 @@ body.sidebar-open {
                                 </button>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded border">
-                                <span class="fw-bold text-muted small">Sisa Tagihan Pokok:</span>
-                                <span class="fw-bold fs-6 fs-md-5" :class="remainingSplitTagihan > 0 ? 'text-danger' : 'text-success'">
-                                    Rp {{ formatNumber(remainingSplitTagihan) }}
-                                </span>
-                            </div>
+                            <!-- 🌟 Ringkasan Split Payment Dinamis -->
+<div class="mt-3 p-2 bg-light rounded border shadow-sm">
+    <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+        <span class="fw-bold text-muted">Total Tagihan:</span>
+        <span class="fw-bold text-dark">Rp {{ formatNumber(total) }}</span>
+    </div>
+    <div class="d-flex justify-content-between mb-2" style="font-size: 0.85rem;">
+        <span class="fw-bold text-muted">Total Diterima (Split):</span>
+        <span class="fw-bold text-primary-custom">Rp {{ formatNumber(totalSplitPaid) }}</span>
+    </div>
+    
+    <hr class="my-2 border-secondary border-opacity-25">
+    
+    <!-- Indikator Kembalian / Sisa Hutang / Lunas -->
+    <div v-if="totalSplitPaid > total" class="d-flex justify-content-between align-items-center mt-1">
+        <span class="fw-bold text-success small">Kembalian:</span>
+        <span class="fw-bold fs-5 text-success">
+            Rp {{ formatNumber(totalSplitPaid - total) }}
+        </span>
+    </div>
+    <div v-else-if="remainingSplitTagihan > 0" class="d-flex justify-content-between align-items-center mt-1">
+        <span class="fw-bold text-danger small">Sisa Tagihan Pokok:</span>
+        <span class="fw-bold fs-5 text-danger">
+            Rp {{ formatNumber(remainingSplitTagihan) }}
+        </span>
+    </div>
+    <div v-else class="d-flex justify-content-between align-items-center mt-1">
+        <span class="fw-bold text-success small">Status:</span>
+        <span class="fw-bold fs-5 text-success">
+            <i class="bi bi-check-circle-fill me-1"></i> LUNAS
+        </span>
+    </div>
+</div>
                         </div>
 
                         <div v-show="!isSplitPayment || (isSplitPayment && remainingSplitTagihan > 0)">
