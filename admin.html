@@ -1002,17 +1002,54 @@
                 this.isSaving = false;
             },
 
-            async hapusTenant(tenant) {
+async hapusTenant(tenant) {
                 Swal.fire({
-                    title: 'Hapus Permanen?',
-                    text: `Anda yakin menghapus data toko "${tenant.namaUsaha}"?`,
-                    icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!'
+                    title: 'Hapus Permanen Semua Data?',
+                    html: `Anda yakin menghapus toko <b>"${tenant.namaUsaha}"</b>?<br><br><span class="text-danger small">Peringatan: Seluruh data Transaksi, Produk, Kasir, dan Tagihan milik toko ini akan lenyap selamanya!</span>`,
+                    icon: 'warning', 
+                    showCancelButton: true, 
+                    confirmButtonColor: '#d33', 
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Sapu Bersih!'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
-                        Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-                        await deleteDoc(doc(db, "companies", tenant.id));
-                        Swal.fire('Terhapus!', 'Toko berhasil dihapus.', 'success');
-                        this.fetchTenants();
+                        Swal.fire({ 
+                            title: 'Membersihkan Data...', 
+                            text: 'Mohon jangan tutup halaman ini. Sedang menyapu semua koleksi database...',
+                            allowOutsideClick: false, 
+                            didOpen: () => { Swal.showLoading(); }
+                        });
+
+                        try {
+                            // 🌟 DAFTAR SEMUA KOLEKSI YANG MENGGUNAKAN 'companyId'
+                            // Sesuaikan dengan daftar di Firestore Anda
+                            const collectionsToClean = [
+                                "billings", "cash_registers", "categories", "customers", 
+                                "identifierGroups", "memberships", "outlets", "payment_methods", 
+                                "products", "purchases", "ratings", "roles", "settings", 
+                                "stockLogs", "stockOpnames", "stockTransfers", "suppliers", 
+                                "tags", "transactions", "uoms", "users"
+                            ];
+
+                            // 1. Looping ke setiap koleksi untuk mencari dan menghapus data anak
+                            for (const colName of collectionsToClean) {
+                                const q = query(collection(db, colName), where("companyId", "==", tenant.id));
+                                const snapshot = await getDocs(q);
+                                
+                                // Hapus dokumen yang ditemukan secara bersamaan (paralel) agar cepat
+                                const deletePromises = snapshot.docs.map(docItem => deleteDoc(docItem.ref));
+                                await Promise.all(deletePromises);
+                            }
+
+                            // 2. Terakhir, hapus dokumen utama di koleksi 'companies'
+                            await deleteDoc(doc(db, "companies", tenant.id));
+                            
+                            Swal.fire('Terhapus!', 'Toko dan seluruh data terkait berhasil dibersihkan.', 'success');
+                            this.fetchTenants();
+                        } catch (error) {
+                            console.error("Gagal sapu bersih tenant:", error);
+                            Swal.fire('Error', 'Terjadi kesalahan saat menghapus data. Periksa konsol.', 'error');
+                        }
                     }
                 });
             },
