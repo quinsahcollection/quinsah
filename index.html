@@ -11229,36 +11229,35 @@ async fetchAllRatings() {
     }
     }, 
 
-    // 1. Fungsi untuk mencari ID Cabang/Outlet berdasarkan Review
+    // 1. KEMBALIKAN KE LOGIKA ASLI: Cari ID Cabang (Bukan Company ID)
     getOutletIdForReview(review) {
-        // Cek dari database ulasan (termasuk companyId yang kita simpan saat submit rating)
-        let outletId = review.companyId || review.outlet || review.cabang || review.outletId;
+        // Hapus companyId, biarkan murni mencari outlet/cabang
+        let outletId = review.outlet || review.cabang || review.outletId;
         
-        // Tangkap semua kemungkinan nama variabel riwayat penjualan di sistem Anda
         const dataPenjualan = this.sales || this.transactions || this.penjualan || this.allTransactions || [];
         
-        // Jika di ulasan tidak ada, lakukan pencarian silang ke riwayat penjualan
         if (!outletId && dataPenjualan.length > 0) {
             let trx = dataPenjualan.find(s => 
                 String(s.invoiceId || s.id || s.invoice) === String(review.invoiceId)
             );
             if (trx) {
-                outletId = trx.companyId || trx.cabang || trx.outlet || trx.outletId; 
+                outletId = trx.cabang || trx.outlet || trx.outletId; 
             }
         }
         return outletId;
     },
 
-    // 2. Fungsi untuk mengubah ID Cabang menjadi Teks Nama Cabang
+    // 2. PERBAIKAN TAMPILAN: Jangan pernah mencetak ID aneh ke layar
     getOutletNameForReview(review) {
         const id = this.getOutletIdForReview(review);
         if (!id) return 'Pusat'; 
         
         const outletsList = this.outlets || this.cabangList || [];
         
-        // Kebal tipe data (Angka vs String) & cek jika ID ternyata sudah berupa Nama Outlet
         const cabang = outletsList.find(x => String(x.id) === String(id) || String(x.name) === String(id));
-        return cabang ? cabang.name : (id || 'Pusat');
+        
+        // Pastikan jika data tidak ketemu di array outlets, kembalikan teks 'Pusat'
+        return cabang ? cabang.name : 'Pusat';
     },
 
     // 3. BARU & PINTAR: Fungsi untuk Mencari Nomor Telepon Pelanggan
