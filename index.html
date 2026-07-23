@@ -4431,18 +4431,16 @@ body.sidebar-open {
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
                         <div>
-    <!-- Nama Pelanggan -->
     <div class="fw-bold text-primary" style="font-size:0.95rem;">
         {{ review.customerName || 'Pelanggan' }}
     </div>
     
-    <!-- PERBAIKAN: Hapus review.customerId -->
+    <!-- PANGGIL FUNGSI PINTAR BARU DI SINI -->
     <div class="text-secondary mt-1" style="font-size: 0.75rem;">
         <i class="bi bi-telephone-fill me-1"></i> 
-        {{ review.customerPhone || review.phone || 'Nomor tidak tersedia' }}
+        {{ getCustomerPhone(review) }}
     </div>
 
-    <!-- Invoice Badge -->
     <span class="badge bg-light text-dark border border-secondary shadow-sm mt-2" style="font-size:0.7rem;">
         Inv: {{ review.invoiceId }}
     </span>
@@ -11231,42 +11229,62 @@ async fetchAllRatings() {
     }
     }, 
 
-    // Fungsi untuk mencari ID Cabang berdasarkan Invoice
+    // 1. Fungsi untuk mencari ID Cabang/Outlet berdasarkan Review
     getOutletIdForReview(review) {
-        // 1. Cek dari database ulasan langsung
-        let outletId = review.outlet || review.cabang || review.outletId;
+        // Cek dari database ulasan (termasuk companyId yang kita simpan saat submit rating)
+        let outletId = review.companyId || review.outlet || review.cabang || review.outletId;
         
-        // 2. Tangkap semua kemungkinan nama variabel riwayat penjualan di sistem Anda
+        // Tangkap semua kemungkinan nama variabel riwayat penjualan di sistem Anda
         const dataPenjualan = this.sales || this.transactions || this.penjualan || this.allTransactions || [];
         
-        // BANTUAN DEBUGGING: Untuk mengecek apakah data penjualan tersedia di halaman ini
-        if (!outletId && dataPenjualan.length === 0) {
-            console.warn(`[Info] Tidak bisa melacak cabang untuk ${review.invoiceId} karena data riwayat penjualan tidak diload di halaman ini.`);
-        }
-
-        // 3. Pencarian silang ke riwayat penjualan (kebal beda tipe data)
+        // Jika di ulasan tidak ada, lakukan pencarian silang ke riwayat penjualan
         if (!outletId && dataPenjualan.length > 0) {
             let trx = dataPenjualan.find(s => 
-                String(s.invoiceId) === String(review.invoiceId) || 
-                String(s.id) === String(review.invoiceId) ||
-                String(s.invoice) === String(review.invoiceId)
+                String(s.invoiceId || s.id || s.invoice) === String(review.invoiceId)
             );
             if (trx) {
-                outletId = trx.cabang || trx.outlet || trx.outletId; 
+                outletId = trx.companyId || trx.cabang || trx.outlet || trx.outletId; 
             }
         }
         return outletId;
     },
 
-    // Fungsi untuk mengubah ID Cabang yang ditemukan menjadi Teks Nama Cabang
+    // 2. Fungsi untuk mengubah ID Cabang menjadi Teks Nama Cabang
     getOutletNameForReview(review) {
         const id = this.getOutletIdForReview(review);
         if (!id) return 'Pusat'; 
         
-        // 4. DIPERBAIKI: Gunakan String() agar kebal beda tipe data (Angka vs Teks)
-        const cabang = this.outlets.find(x => String(x.id) === String(id));
-        return cabang ? cabang.name : 'Pusat';
-    },        
+        const outletsList = this.outlets || this.cabangList || [];
+        
+        // Kebal tipe data (Angka vs String) & cek jika ID ternyata sudah berupa Nama Outlet
+        const cabang = outletsList.find(x => String(x.id) === String(id) || String(x.name) === String(id));
+        return cabang ? cabang.name : (id || 'Pusat');
+    },
+
+    // 3. BARU & PINTAR: Fungsi untuk Mencari Nomor Telepon Pelanggan
+    getCustomerPhone(review) {
+        // Cek apakah di ulasan sudah ada nomor telp langsung
+        let phone = review.customerPhone || review.phone || review.telepon || review.noHp;
+        if (phone) return phone;
+
+        const customerId = review.customerId;
+        
+        // Tangkap semua kemungkinan nama array data pelanggan di sistem Anda
+        const dataPelanggan = this.customers || this.pelanggan || this.customerList || [];
+
+        // Lakukan pencarian silang berdasarkan customerId (kebal beda tipe data)
+        if (customerId && dataPelanggan.length > 0) {
+            let cust = dataPelanggan.find(c => 
+                String(c.id) === String(customerId) || 
+                String(c.customerId) === String(customerId)
+            );
+            if (cust) {
+                phone = cust.phone || cust.telepon || cust.noHp || cust.customerPhone;
+            }
+        }
+
+        return phone || 'Nomor tidak tersedia';
+    },   
             
         // =========================================================
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
