@@ -8357,6 +8357,13 @@ body.sidebar-open {
                         <td style="padding: 8px 10px; text-align: right; color: #991b1b; font-weight: bold;">- Rp {{ formatNumber(Math.abs(activePrintData.items.filter(i => i.productId === 'EXCHANGE').reduce((sum, i) => sum + (i.qty * (i.finalPrice || i.sellPrice)), 0))) }}</td>
                     </tr>
 
+                    <tr v-if="(activePrintData.discountAmt || 0) > 0 || (activePrintData.globalDiscountAmt || 0) > 0">
+                        <td style="padding: 8px 10px; color: #dc2626; border-bottom: 1px solid #e5e7eb;">Total Diskon</td>
+                        <td style="padding: 8px 10px; text-align: right; color: #dc2626; font-weight: bold; border-bottom: 1px solid #e5e7eb;">
+                            - Rp {{ formatNumber(Number(activePrintData.discountAmt || 0) + Number(activePrintData.globalDiscountAmt || 0)) }}
+                        </td>
+                    </tr>
+
                     <tr v-if="(activePrintData.taxAmt || activePrintData.taxAmount || 0) > 0">
                         <td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb;">PPN (Tax)</td>
                         <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #e5e7eb;">Rp {{ formatNumber(activePrintData.taxAmt || activePrintData.taxAmount) }}</td>
