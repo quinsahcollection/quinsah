@@ -15365,6 +15365,10 @@ async fetchRolesFromDatabase() {
             }).then((result) => {
                 if (result.isConfirmed) {
                     this.cart = [];
+                    
+                    // 🌟 TAMBAHKAN BARIS INI: Sapu bersih memori Tukar Tambah
+                    this.pendingTradeIn = null; 
+                    
                     this.selectedCustomer = null;
                     this.globalDiscountValue = 0;
                     this.globalDiscountType = 'none';
@@ -17005,6 +17009,22 @@ let item = {
                 
                 // LOGIKA ASLI ANDA: Hapus otomatis dari keranjang jika qty di bawah 1
                 if(item.qty < 1) {
+                    
+                    // 🌟 TAMBAHKAN PENGECEKAN INI 🌟
+                    // Jika yang terhapus adalah Saldo Tukar Tambah, bersihkan memorinya!
+                    if (item.productId === 'EXCHANGE' || item.sku === 'TUKAR-01') {
+                        this.pendingTradeIn = null; 
+                        
+                        // Opsional: Berikan notifikasi kecil ke kasir
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Tukar Tambah Batal',
+                            text: 'Saldo retur dihapus dari keranjang. Transaksi invoice lama tidak jadi dipotong.',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                    }
+
                     this.cart = this.cart.filter(c => c.cartId !== cartId);
                 }
             }
