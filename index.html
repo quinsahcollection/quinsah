@@ -4395,13 +4395,13 @@ body.sidebar-open {
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label small fw-bold">Outlet</label>
-            <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
-                <option value="">Semua Outlet</option>
-                <!-- PERBAIKAN: value diubah menjadi o.id agar sinkron dengan r.companyId di JavaScript -->
-                <option v-for="o in outlets" :key="o.id" :value="o.id">{{ o.name }}</option>
-            </select>
-        </div>
+    <label class="form-label small fw-bold">Outlet</label>
+    <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
+        <option value="">Semua Outlet</option>
+        <!-- Gunakan o.name sebagai value -->
+        <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }}</option>
+    </select>
+</div>
         <div class="col-md-3">
             <label class="form-label small fw-bold">Urutkan</label>
             <select class="form-select form-select-sm" v-model="ratingFilter.sort">
@@ -4431,23 +4431,22 @@ body.sidebar-open {
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
                         <div>
-                            <!-- Nama Pelanggan -->
-                            <div class="fw-bold text-primary" style="font-size:0.95rem;">
-                                {{ review.customerName || 'Pelanggan' }}
-                            </div>
-                            
-                            <!-- TAMBAHAN: Nomor Telepon Pelanggan -->
-                            <div class="text-secondary mt-1" style="font-size: 0.75rem;">
-                                <i class="bi bi-telephone-fill me-1"></i> 
-                                <!-- Ganti review.customerId dengan variabel yang menyimpan No Telp di database Anda jika berbeda -->
-                                {{ review.customerId || review.customerPhone || 'Tidak ada nomor' }}
-                            </div>
+    <!-- Nama Pelanggan -->
+    <div class="fw-bold text-primary" style="font-size:0.95rem;">
+        {{ review.customerName || 'Pelanggan' }}
+    </div>
+    
+    <!-- PERBAIKAN: Hapus review.customerId -->
+    <div class="text-secondary mt-1" style="font-size: 0.75rem;">
+        <i class="bi bi-telephone-fill me-1"></i> 
+        {{ review.customerPhone || review.phone || 'Nomor tidak tersedia' }}
+    </div>
 
-                            <!-- Invoice Badge -->
-                            <span class="badge bg-light text-dark border border-secondary shadow-sm mt-2" style="font-size:0.7rem;">
-                                Inv: {{ review.invoiceId }}
-                            </span>
-                        </div>
+    <!-- Invoice Badge -->
+    <span class="badge bg-light text-dark border border-secondary shadow-sm mt-2" style="font-size:0.7rem;">
+        Inv: {{ review.invoiceId }}
+    </span>
+</div>
                         
                         <div class="text-end">
                             <!-- Bintang -->
@@ -9461,9 +9460,12 @@ fulfillmentOrders() {
     }
 
    // 3. Filter Outlet
-    if (this.ratingFilter.outlet && this.ratingFilter.outlet !== '' && this.ratingFilter.outlet !== 'Semua Outlet') {
-        // Langsung cocokkan companyId dari data ulasan dengan value dari dropdown outlet
-        result = result.filter(r => r.companyId === this.ratingFilter.outlet);
+    if (this.ratingFilter.outlet && this.ratingFilter.outlet !== '') {
+        result = result.filter(r => {
+            // Ambil nama outlet menggunakan fungsi yang sama dengan yang ada di Card HTML
+            const outletName = this.getOutletNameForReview(r);
+            return outletName === this.ratingFilter.outlet;
+        });
     }
 
     // 4. Filter Opsi "Hanya yang Punya Komentar"
