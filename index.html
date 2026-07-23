@@ -13513,32 +13513,30 @@ async deletePaymentMethod(id) {
         let isBatalTotal = (trx.subtotal === 0);
 
         if (isBatalTotal) {
-            // BATAL TOTAL: Pelanggan berhak menerima kembali full 100% uangnya, 
-            // termasuk Pajak & Biaya Layanan yang tadinya dibebankan.
             let nominalPajakDikembalikan = trx.taxAmt || 0;
-            let nominalLayananDikembalikan = trx.serviceFee || 0;
+            
+            // 🌟 PERBAIKAN: Gabungkan SEMUA kemungkinan nama variabel biaya tambahan
+            let nominalLayananDikembalikan = (trx.serviceFee || 0) + (trx.serviceAmt || 0) + (trx.surchargeFee || 0) + (trx.mdrFee || 0);
 
-            // Tambahkan nilai pajak & biaya layanan ke total uang yang di-refund ke pelanggan
+            // Tambahkan nilai pajak & biaya layanan ke total uang yang di-refund
             refundTotal = refundTotal + nominalPajakDikembalikan + nominalLayananDikembalikan;
 
-            // Nol-kan nilai di struk agar toko tidak mencatat piutang fiktif
+            // Nol-kan SEMUA variabel biaya di struk agar tidak mencatat piutang fiktif
             trx.taxAmt = 0;
             trx.serviceFee = 0;
-        } else {
-            // RETUR SEBAGIAN: Biaya Layanan (serviceFee) TIDAK DIKEMBALIKAN karena 
-            // transaksi pada dasarnya tetap sah terjadi.
-            
-            // (Opsional: Jika PPN Anda proporsional per barang, Anda bisa update taxAmt di sini. 
-            // Tapi jika flat/tidak ada, biarkan saja logika ini kosong).
+            trx.serviceAmt = 0;
+            trx.surchargeFee = 0;
+            trx.mdrFee = 0;
         }
 
         // 3. Update Total Akhir (Grand Total) untuk sisa barang di struk
-        trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0);
+        // 🌟 PERBAIKAN: Gunakan semua variabel biaya agar hitungannya akurat
+        trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0) + (trx.serviceAmt || 0) + (trx.surchargeFee || 0) + (trx.mdrFee || 0);
         
         // 4. Update sisa tagihan untuk hutang
         trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
 
-        // 5. POTONG UANG YANG DITERIMA (Mencegah Layar UI Kacau / Minus)
+        // 5. POTONG UANG YANG DITERIMA
         trx.amountReceived = (trx.amountReceived || 0) - refundTotal;
         if (trx.amountReceived < 0) trx.amountReceived = 0;
 
@@ -13566,14 +13564,17 @@ async deletePaymentMethod(id) {
             items: trx.items,
             total: trx.total,
             subtotal: trx.subtotal,
+            
+            // 🌟 PERBAIKAN: Pastikan semua variabel biaya ikut disimpan dengan nilai barunya
             taxAmt: trx.taxAmt || 0,
             serviceFee: trx.serviceFee || 0,
-            sisaTagihan: trx.sisaTagihan,
+            serviceAmt: trx.serviceAmt || 0,
+            surchargeFee: trx.surchargeFee || 0,
+            mdrFee: trx.mdrFee || 0,
             
-            // Wajib ditambahkan agar Firebase tahu uang kasirnya sudah berkurang
+            sisaTagihan: trx.sisaTagihan,
             amountReceived: trx.amountReceived,
             cashSubmitted: trx.cashSubmitted,
-            
             paymentStatus: trx.paymentStatus,
             status: trx.status,
             paymentHistory: trx.paymentHistory,
