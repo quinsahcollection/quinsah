@@ -13525,7 +13525,8 @@ async deletePaymentMethod(id) {
             trx.serviceAmt = 0;
             trx.surchargeFee = 0;
             trx.mdrFee = 0;
-            
+            trx.discountAmt = 0;
+            trx.globalDiscountAmt = 0;
             // 🌟 KUNCI TAMBAHAN: Nol-kan juga riwayat kembalian agar UI benar-benar bersih
             trx.changeAmount = 0; 
         }
@@ -13564,6 +13565,9 @@ async deletePaymentMethod(id) {
             items: trx.items,
             total: trx.total,
             subtotal: trx.subtotal,
+
+            discountAmt: trx.discountAmt || 0,
+            globalDiscountAmt: trx.globalDiscountAmt || 0,
             
             // 🌟 PERBAIKAN: Pastikan semua variabel biaya ikut disimpan dengan nilai barunya
             taxAmt: trx.taxAmt || 0,
