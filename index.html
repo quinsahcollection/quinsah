@@ -4407,9 +4407,9 @@ body.sidebar-open {
                                 <div class="text-warning fs-6">
                                     <i v-for="s in 5" :key="s" class="bi" :class="s <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
                                 </div>
-                                <div class="text-muted mt-1 fw-bold" style="font-size: 0.65rem;">
-                                 <i class="bi bi-shop me-1"></i>{{ getOutletName(review.outlet) === '-' ? 'Pusat' : getOutletName(review.outlet) }}
-                                </div>
+                               <div class="text-muted mt-1 fw-bold" style="font-size: 0.65rem;">
+                               <i class="bi bi-shop me-1"></i>{{ getOutletNameForReview(review) }}
+                               </div>
                             </div>
                         </div>
                         <p class="mb-2 text-dark fst-italic" style="font-size: 0.85em; line-height: 1.4;">
@@ -9410,7 +9410,7 @@ fulfillmentOrders() {
 
     // 3. Filter Outlet
     if (this.ratingFilter.outlet !== '') {
-    result = result.filter(r => r.outlet === this.ratingFilter.outlet);
+    result = result.filter(r => this.getOutletIdForReview(r) === this.ratingFilter.outlet);
     }
 
     // 4. Filter Opsi "Hanya yang Punya Komentar"
@@ -11117,6 +11117,33 @@ async fetchAllRatings() {
         console.error("Gagal menarik keseluruhan data rating:", error);
     }
     }, 
+
+    // Fungsi untuk mencari ID Cabang berdasarkan Invoice
+    getOutletIdForReview(review) {
+        // 1. Cek apakah ulasan sudah menyimpan ID Cabang
+        let outletId = review.outlet || review.cabang || review.outletId;
+        
+        // 2. Jika tidak ada, KITA CARI DARI RIWAYAT PENJUALAN!
+        // ⚠️ PENTING: Jika variabel riwayat penjualan Anda BUKAN "this.sales", 
+        // silakan ganti menjadi "this.transactions" atau "this.penjualan" sesuai sistem Anda.
+        if (!outletId && this.sales) {
+            let trx = this.sales.find(s => s.invoiceId === review.invoiceId || s.id === review.invoiceId);
+            if (trx) {
+                // Ambil ID cabang dari transaksi tersebut
+                outletId = trx.cabang || trx.outlet || trx.outletId; 
+            }
+        }
+        return outletId;
+    },
+
+    // Fungsi untuk mengubah ID Cabang yang ditemukan menjadi Teks Nama Cabang
+    getOutletNameForReview(review) {
+        const id = this.getOutletIdForReview(review);
+        if (!id) return 'Pusat'; // Jika tetap tidak ketemu, baru anggap Pusat
+        
+        const cabang = this.outlets.find(x => x.id === id);
+        return cabang ? cabang.name : 'Pusat';
+    },        
             
         // =========================================================
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
