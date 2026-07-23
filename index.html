@@ -13408,7 +13408,7 @@ async deletePaymentMethod(id) {
 
         async processReturn() {
     // 1. Validasi Jumlah
-    let refundTotal = this.calculateRefundAmount();
+    let refundTotal = Number(this.calculateRefundAmount()) || 0;
     if (refundTotal <= 0) {
         Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin diretur!', 'warning');
         return;
@@ -13506,41 +13506,41 @@ async deletePaymentMethod(id) {
         // ========================================================
         // C. UPDATE TOTALAN UANG INVOICE & STATUSNYA (ATURAN PASAR)
         // ========================================================
-        // 1. Hitung ulang subtotal dari sisa barang (yang Qty-nya > 0)
-        trx.subtotal = trx.items.reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
+        // 1. Hitung ulang subtotal
+        trx.subtotal = trx.items.reduce((sum, item) => sum + (Number(item.qty) * Number(item.finalPrice || item.sellPrice || item.price || 0)), 0);
         
-        // 2. LOGIKA ATURAN PASAR (PENGEMBALIAN BIAYA LAYANAN & PAJAK)
+        // 2. LOGIKA ATURAN PASAR 
         let isBatalTotal = (trx.subtotal === 0);
 
         if (isBatalTotal) {
-            let nominalPajakDikembalikan = trx.taxAmt || 0;
-            
-            // 🌟 PERBAIKAN: Gabungkan SEMUA kemungkinan nama variabel biaya tambahan
-            let nominalLayananDikembalikan = (trx.serviceFee || 0) + (trx.serviceAmt || 0) + (trx.surchargeFee || 0) + (trx.mdrFee || 0);
+            let nominalPajakDikembalikan = Number(trx.taxAmt || 0);
+            let nominalLayananDikembalikan = Number(trx.serviceFee || 0) + Number(trx.serviceAmt || 0) + Number(trx.surchargeFee || 0) + Number(trx.mdrFee || 0);
 
-            // Tambahkan nilai pajak & biaya layanan ke total uang yang di-refund
-            refundTotal = refundTotal + nominalPajakDikembalikan + nominalLayananDikembalikan;
+            // Dipaksa menjadi Number agar tidak terjadi penggabungan teks
+            refundTotal = Number(refundTotal) + nominalPajakDikembalikan + nominalLayananDikembalikan;
 
-            // Nol-kan SEMUA variabel biaya di struk agar tidak mencatat piutang fiktif
+            // Nol-kan SEMUA variabel biaya
             trx.taxAmt = 0;
             trx.serviceFee = 0;
             trx.serviceAmt = 0;
             trx.surchargeFee = 0;
             trx.mdrFee = 0;
+            
+            // 🌟 KUNCI TAMBAHAN: Nol-kan juga riwayat kembalian agar UI benar-benar bersih
+            trx.changeAmount = 0; 
         }
 
-        // 3. Update Total Akhir (Grand Total) untuk sisa barang di struk
-        // 🌟 PERBAIKAN: Gunakan semua variabel biaya agar hitungannya akurat
-        trx.total = trx.subtotal + (trx.taxAmt || 0) + (trx.serviceFee || 0) + (trx.serviceAmt || 0) + (trx.surchargeFee || 0) + (trx.mdrFee || 0);
+        // 3. Update Total Akhir 
+        trx.total = trx.subtotal + Number(trx.taxAmt || 0) + Number(trx.serviceFee || 0) + Number(trx.serviceAmt || 0) + Number(trx.surchargeFee || 0) + Number(trx.mdrFee || 0);
         
-        // 4. Update sisa tagihan untuk hutang
-        trx.sisaTagihan = (trx.sisaTagihan - refundTotal > 0) ? (trx.sisaTagihan - refundTotal) : 0;
+        // 4. Update sisa tagihan
+        trx.sisaTagihan = (Number(trx.sisaTagihan) - refundTotal > 0) ? (Number(trx.sisaTagihan) - refundTotal) : 0;
 
-        // 5. POTONG UANG YANG DITERIMA
-        trx.amountReceived = (trx.amountReceived || 0) - refundTotal;
+        // 5. POTONG UANG YANG DITERIMA SECARA MATEMATIS
+        trx.amountReceived = Number(trx.amountReceived || 0) - refundTotal;
         if (trx.amountReceived < 0) trx.amountReceived = 0;
 
-        trx.cashSubmitted = (trx.cashSubmitted || 0) - refundTotal;
+        trx.cashSubmitted = Number(trx.cashSubmitted || 0) - refundTotal;
         if (trx.cashSubmitted < 0) trx.cashSubmitted = 0;
 
         // 6. Tentukan Status
@@ -13548,7 +13548,7 @@ async deletePaymentMethod(id) {
         trx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
         trx.status = trx.paymentStatus;
 
-        // 7. Catat Histori Pembayaran Uang Keluar (Refund)
+        // 7. Catat Histori
         trx.paymentHistory = trx.paymentHistory || [];
         trx.paymentHistory.push({
             date: new Date().toLocaleString('id-ID'),
@@ -13604,7 +13604,7 @@ async deletePaymentMethod(id) {
         
         async prosesTukarTambah() {
     // 1. Hitung total refund dari form retur
-    let refundTotal = this.calculateRefundAmount();
+    let refundTotal = Number(this.calculateRefundAmount()) || 0;
     if (refundTotal <= 0) {
         return Swal.fire('Perhatian', 'Isi kuantitas barang yang ingin ditukar!', 'warning');
     }
