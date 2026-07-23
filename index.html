@@ -10943,16 +10943,6 @@ bukaModalKonfirmasi(bill) {
     }
     this.modalKonfirmasiBayarInstance.show();
 },
-
-getOutletName(outletData) {
-    if (!outletData) return 'Pusat'; // Jika kosong, anggap Pusat
-    
-    // Cari cabang di daftar outlets yang ID-nya cocok
-    const cabang = this.outlets.find(o => o.id === outletData);
-    
-    // Jika ketemu tampilkan namanya, jika tidak kembalikan data aslinya (berjaga-jaga jika isinya sudah teks)
-    return cabang ? cabang.name : outletData;
-},
     
 // Salin nomor rekening ke Clipboard
 salinRekening(nomor) {
@@ -15828,6 +15818,7 @@ await setDoc(doc(db, "users", res.user.uid), {
             formatNumber(num) { return new Intl.NumberFormat('id-ID').format(Math.round(num) || 0); },
             getMembershipDiscount(id) { if (!id) return 0; const m = this.memberships.find(x => x.id === id); return m ? (m.discountPercent || 0) : 0; },
             getMembershipName(id) { if (!id) return 'Reguler'; const m = this.memberships.find(x => x.id === id); return m ? (m.tierName || 'Reguler') : 'Reguler'; },
+            getOutletName(outletData) { if (!outletData) return 'Pusat'; const cabang = this.outlets.find(o => o.id === outletData); return cabang ? cabang.name : outletData; },
             getOutletAddress(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.location : '-'; },
             getOutletName(id) { if (!id) return '-'; const o = this.outlets.find(x => x.id === id); return o ? o.name : '-'; },
             getSupplierName(id) { if (!id) return '-'; const s = this.suppliers.find(x => x.id === id); return s ? s.name : '-'; },
