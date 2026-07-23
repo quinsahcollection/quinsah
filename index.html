@@ -17595,47 +17595,10 @@ let item = {
         // 7.5 EKSEKUSI TUKAR TAMBAH (JIKA ADA PENDING TRADE-IN)
         // =================================================================
         if (this.pendingTradeIn && this.pendingTradeIn.originalInvoice) {
-                let oldTrx = this.pendingTradeIn.originalInvoice;
-                let refundTotal = this.pendingTradeIn.refundAmount;
+            let oldTrx = this.pendingTradeIn.originalInvoice;
+            let refundTotal = this.pendingTradeIn.refundAmount;
 
-                // A. Update Status dan Total Invoice Lama (DIPERBAIKI)
-                // 1. Hitung ulang subtotal sisa barang
-                oldTrx.subtotal = (oldTrx.items || []).reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
-                
-                // 2. Terapkan Aturan Pasar
-                let isBatalTotal = (oldTrx.subtotal === 0);
-                if (isBatalTotal) {
-                    oldTrx.taxAmt = 0;
-                    oldTrx.serviceFee = 0;
-                    // Batal total: Hapus seluruh riwayat uang masuk agar tidak gantung/minus
-                    oldTrx.amountReceived = 0;
-                    oldTrx.cashSubmitted = 0;
-                } else {
-                    // Tukar sebagian: Potong uang sesuai nominal barang yang ditukar
-                    oldTrx.amountReceived = (oldTrx.amountReceived || 0) - refundTotal;
-                    if (oldTrx.amountReceived < 0) oldTrx.amountReceived = 0;
-
-                    oldTrx.cashSubmitted = (oldTrx.cashSubmitted || 0) - refundTotal;
-                    if (oldTrx.cashSubmitted < 0) oldTrx.cashSubmitted = 0;
-                }
-
-                // 3. Set Total Akhir 
-                oldTrx.total = oldTrx.subtotal + (oldTrx.taxAmt || 0) + (oldTrx.serviceFee || 0);
-                oldTrx.sisaTagihan = (oldTrx.sisaTagihan - refundTotal > 0) ? (oldTrx.sisaTagihan - refundTotal) : 0;
-
-                let isSisaBarangAda = (oldTrx.items || []).some(i => i.qty > 0);
-                oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
-                oldTrx.status = oldTrx.paymentStatus;
-
-                oldTrx.paymentHistory = oldTrx.paymentHistory || [];
-                oldTrx.paymentHistory.push({
-                    date: new Date().toLocaleString('id-ID'),
-                    method: 'SALDO TUKAR',
-                    amount: -refundTotal,
-                    note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
-                });
-
-            // B. Loop Barang yang Diretur & Kembalikan Stok ke Gudang
+            // 🌟 LANGKAH 1: POTONG DULU QTY BARANGNYA
             let itemsToReturn = this.pendingTradeIn.itemsToReturn || [];
             for (let retItem of itemsToReturn) {
                 let invItem = (oldTrx.items || []).find(item => item.name === retItem.name && (item.variantSku || null) === (retItem.variantSku || null));
@@ -17653,12 +17616,11 @@ let item = {
                     });
                 }
 
-                // Kembalikan Stok
+                // Kembalikan Stok (Sama seperti sebelumnya)
                 let prod = (this.products || []).find(p => p.sku === retItem.sku || p.name === retItem.name);
                 if (prod) {
                     let prodCopy = JSON.parse(JSON.stringify(prod));
                     if (retItem.variantSku) {
-                        // [DIPERBAIKI] Pengaman saat findIndex variant
                         let vList = prodCopy.variants || [];
                         let vIdx = vList.findIndex(v => v.variantSku === retItem.variantSku);
                         if (vIdx !== -1) {
@@ -17670,13 +17632,11 @@ let item = {
                         prodCopy.baseOutletStocks[oldTrx.outletId] = (prodCopy.baseOutletStocks[oldTrx.outletId] || 0) + retItem.returnQty;
                     }
 
-                    // Masukkan update stok ke Batch
                     batch.update(doc(db, "products", prod.id), {
                         variants: prodCopy.variants || [],
                         baseOutletStocks: prodCopy.baseOutletStocks || {}
                     });
 
-                    // Catat ke Log Mutasi Stok (IN)
                     let tradeLogRef = doc(collection(db, "stockLogs"));
                     batch.set(tradeLogRef, {
                         companyId: this.userProfile?.companyId || '',
@@ -17698,23 +17658,58 @@ let item = {
                 }
             }
 
-            // C. Masukkan Update Invoice Lama ke Batch Firebase
-            batch.update(doc(db, "transactions", oldTrx.id), {
-                    items: oldTrx.items || [],
-                    total: oldTrx.total,
-                    subtotal: oldTrx.subtotal, // <-- Wajib ditambahkan
-                    taxAmt: oldTrx.taxAmt || 0,
-                    serviceFee: oldTrx.serviceFee || 0,
-                    sisaTagihan: oldTrx.sisaTagihan,
-                    
-                    // 🔥 WAJIB DITAMBAHKAN:
-                    amountReceived: oldTrx.amountReceived,
-                    cashSubmitted: oldTrx.cashSubmitted,
+            // 🌟 LANGKAH 2: SETELAH BARANG DIKURANGI, BARU HITUNG ULANG TOTAL!
+            oldTrx.subtotal = (oldTrx.items || []).reduce((sum, item) => sum + (item.qty * (item.finalPrice || item.sellPrice || item.price || 0)), 0);
+            
+            let isBatalTotal = (oldTrx.subtotal === 0);
+            if (isBatalTotal) {
+                // Semua biaya tambahan dihapus jika transaksi lama ternyata batal semua
+                oldTrx.taxAmt = 0;
+                oldTrx.serviceFee = 0;
+                oldTrx.serviceAmt = 0;
+                oldTrx.surchargeFee = 0;
+                oldTrx.mdrFee = 0;
+            }
 
-                    paymentStatus: oldTrx.paymentStatus,
-                    status: oldTrx.status,
-                    paymentHistory: oldTrx.paymentHistory || [],
-                    returHistory: oldTrx.returHistory || [],
+            oldTrx.total = oldTrx.subtotal + (oldTrx.taxAmt || 0) + (oldTrx.serviceFee || 0) + (oldTrx.serviceAmt || 0) + (oldTrx.surchargeFee || 0) + (oldTrx.mdrFee || 0);
+            oldTrx.sisaTagihan = 0; // Transaksi lama tidak mungkin ada sisa tagihan lagi setelah di-refund
+
+            // Potong uang kasir
+            oldTrx.amountReceived = (oldTrx.amountReceived || 0) - refundTotal;
+            if (oldTrx.amountReceived < 0) oldTrx.amountReceived = 0;
+            
+            oldTrx.cashSubmitted = (oldTrx.cashSubmitted || 0) - refundTotal;
+            if (oldTrx.cashSubmitted < 0) oldTrx.cashSubmitted = 0;
+
+            let isSisaBarangAda = (oldTrx.items || []).some(i => i.qty > 0);
+            oldTrx.paymentStatus = isSisaBarangAda ? 'RETUR SEBAGIAN' : 'RETUR FULL';
+            oldTrx.status = oldTrx.paymentStatus;
+
+            oldTrx.paymentHistory = oldTrx.paymentHistory || [];
+            oldTrx.paymentHistory.push({
+                date: new Date().toLocaleString('id-ID'),
+                method: 'SALDO TUKAR',
+                amount: -refundTotal,
+                note: `Dipakai sbg potongan ke Inv Baru: ${trxData.id}`
+            });
+
+            // 🌟 LANGKAH 3: SIMPAN KE BATCH FIREBASE
+            batch.update(doc(db, "transactions", oldTrx.id), {
+                items: oldTrx.items || [],
+                total: oldTrx.total,
+                subtotal: oldTrx.subtotal,
+                taxAmt: oldTrx.taxAmt || 0,
+                serviceFee: oldTrx.serviceFee || 0,
+                serviceAmt: oldTrx.serviceAmt || 0,
+                surchargeFee: oldTrx.surchargeFee || 0,
+                mdrFee: oldTrx.mdrFee || 0,
+                sisaTagihan: oldTrx.sisaTagihan,
+                amountReceived: oldTrx.amountReceived,
+                cashSubmitted: oldTrx.cashSubmitted,
+                paymentStatus: oldTrx.paymentStatus,
+                status: oldTrx.status,
+                paymentHistory: oldTrx.paymentHistory || [],
+                returHistory: oldTrx.returHistory || []
             });
         }
         
