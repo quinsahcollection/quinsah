@@ -4346,6 +4346,37 @@ body.sidebar-open {
             </button>
         </div>
 
+        <!-- FITUR BARU: RINGKASAN & STATISTIK -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-4">
+                <div class="card bg-primary-custom text-white h-100 border-0 rounded-4 shadow-sm">
+                    <div class="card-body text-center d-flex flex-column justify-content-center py-4">
+                        <h6 class="mb-2 fw-normal">Rata-rata Rating</h6>
+                        <h1 class="display-4 fw-bold mb-0">{{ averageRating }}</h1>
+                        <div class="text-warning fs-5 mt-1">
+                            <i v-for="s in 5" :key="s" class="bi" :class="s <= Math.round(averageRating) ? 'bi-star-fill' : 'bi-star'"></i>
+                        </div>
+                        <small class="mt-2" style="opacity: 0.9;">Berdasarkan {{ totalReviews }} Ulasan</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card h-100 border bg-light shadow-sm rounded-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3 small text-muted">Distribusi Bintang</h6>
+                        <!-- Bar Progress Bintang 5 sampai 1 -->
+                        <div v-for="star in [5,4,3,2,1]" :key="star" class="d-flex align-items-center mb-2" style="font-size: 0.85rem;">
+                            <div style="width: 45px;" class="text-muted fw-bold">{{ star }} <i class="bi bi-star-fill text-warning"></i></div>
+                            <div class="progress flex-grow-1 mx-2" style="height: 8px;">
+                                <div class="progress-bar bg-warning" role="progressbar" :style="{ width: getRatingPercentage(star) + '%' }" :aria-valuenow="getRatingPercentage(star)" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div style="width: 40px; text-align: right;" class="text-muted">{{ getRatingCount(star) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filter Area -->
         <div class="row g-2 mb-4 bg-light p-3 rounded border">
             <div class="col-md-3">
@@ -9433,6 +9464,16 @@ fulfillmentOrders() {
     return result;
     }, 
 
+    totalReviews() {
+    return this.filteredAllRatings.length;
+    },
+            
+    averageRating() {
+    if (this.totalReviews === 0) return "0.0";
+    const total = this.filteredAllRatings.reduce((sum, r) => sum + Number(r.rating || 0), 0);
+    return (total / this.totalReviews).toFixed(1);
+    },
+
         jumlahTagihanBelumLunas() {
         return (this.billings || []).filter(b => b.status === 'UNPAID').length;
         },
@@ -11101,6 +11142,54 @@ async openRatingModal(customer) {
     };
 },
 
+getRatingCount(star) {
+    return this.filteredAllRatings.filter(r => Number(r.rating) === star).length;
+},
+            
+getRatingPercentage(star) {
+    if (this.totalReviews === 0) return 0;
+    return (this.getRatingCount(star) / this.totalReviews) * 100;
+},
+            
+exportRatingsToCSV() {
+    if (this.filteredAllRatings.length === 0) {
+        alert('Tidak ada data ulasan untuk diekspor.');
+        return;
+    }
+
+    // 1. Buat Header CSV
+    let csvContent = "Nama Pelanggan,No Invoice,Outlet,Rating,Ulasan,Tanggal\n";
+
+    // 2. Loop Data Ulasan (data yang terekspor akan mengikuti filter yang aktif)
+    this.filteredAllRatings.forEach(r => {
+        let name = r.customerName ? r.customerName.replace(/,/g, " ") : "Pelanggan";
+        let invoice = r.invoiceId || "-";
+        let outlet = this.getOutletName(r.outlet) === '-' ? 'Pusat' : this.getOutletName(r.outlet);
+        let rating = r.rating || 0;
+        // Tangani tanda kutip (") dan enter di dalam teks ulasan agar format CSV tidak rusak
+        let review = r.review ? `"${r.review.replace(/"/g, '""').replace(/\n/g, ' ')}"` : "-";
+        let date = r.date || "-";
+
+        csvContent += `${name},${invoice},${outlet},${rating},${review},${date}\n`;
+    });
+
+    // 3. Eksekusi Download File CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    // Nama file otomatis mengikuti tanggal hari ini
+    const today = new Date().toISOString().slice(0,10);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Data_Ulasan_${today}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+},
+
 // Fungsi untuk menarik semua rating dari koleksi 'ratings' di Firebase
 async fetchAllRatings() {
     try {
@@ -11120,16 +11209,25 @@ async fetchAllRatings() {
 
     // Fungsi untuk mencari ID Cabang berdasarkan Invoice
     getOutletIdForReview(review) {
-        // 1. Cek apakah ulasan sudah menyimpan ID Cabang
+        // 1. Cek dari database ulasan langsung
         let outletId = review.outlet || review.cabang || review.outletId;
         
-        // 2. Jika tidak ada, KITA CARI DARI RIWAYAT PENJUALAN!
-        // ⚠️ PENTING: Jika variabel riwayat penjualan Anda BUKAN "this.sales", 
-        // silakan ganti menjadi "this.transactions" atau "this.penjualan" sesuai sistem Anda.
-        if (!outletId && this.sales) {
-            let trx = this.sales.find(s => s.invoiceId === review.invoiceId || s.id === review.invoiceId);
+        // 2. Tangkap semua kemungkinan nama variabel riwayat penjualan di sistem Anda
+        const dataPenjualan = this.sales || this.transactions || this.penjualan || this.allTransactions || [];
+        
+        // BANTUAN DEBUGGING: Untuk mengecek apakah data penjualan tersedia di halaman ini
+        if (!outletId && dataPenjualan.length === 0) {
+            console.warn(`[Info] Tidak bisa melacak cabang untuk ${review.invoiceId} karena data riwayat penjualan tidak diload di halaman ini.`);
+        }
+
+        // 3. Pencarian silang ke riwayat penjualan (kebal beda tipe data)
+        if (!outletId && dataPenjualan.length > 0) {
+            let trx = dataPenjualan.find(s => 
+                String(s.invoiceId) === String(review.invoiceId) || 
+                String(s.id) === String(review.invoiceId) ||
+                String(s.invoice) === String(review.invoiceId)
+            );
             if (trx) {
-                // Ambil ID cabang dari transaksi tersebut
                 outletId = trx.cabang || trx.outlet || trx.outletId; 
             }
         }
@@ -11139,9 +11237,10 @@ async fetchAllRatings() {
     // Fungsi untuk mengubah ID Cabang yang ditemukan menjadi Teks Nama Cabang
     getOutletNameForReview(review) {
         const id = this.getOutletIdForReview(review);
-        if (!id) return 'Pusat'; // Jika tetap tidak ketemu, baru anggap Pusat
+        if (!id) return 'Pusat'; 
         
-        const cabang = this.outlets.find(x => x.id === id);
+        // 4. DIPERBAIKI: Gunakan String() agar kebal beda tipe data (Angka vs Teks)
+        const cabang = this.outlets.find(x => String(x.id) === String(id));
         return cabang ? cabang.name : 'Pusat';
     },        
             
