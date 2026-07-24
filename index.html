@@ -4424,13 +4424,21 @@ body.sidebar-open {
         <label class="form-label small fw-bold text-primary">Sampai Tanggal</label>
         <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.endDate">
     </div>
-    <div class="col-12 col-md-6 mt-3 d-flex align-items-center">
+    <div class="col-12 col-md-4 mt-3 d-flex align-items-center">
         <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" id="withCommentOnly" v-model="ratingFilter.withComment">
             <label class="form-check-label small text-muted mt-1" for="withCommentOnly" style="cursor: pointer;">
-                Hanya tampilkan ulasan yang memiliki komentar/pesan
+                Hanya ulasan yang memiliki teks
             </label>
         </div>
+    </div>
+    
+    <!-- 🌟 TOMBOL EXPORT BARU -->
+    <div class="col-12 col-md-2 mt-2 mt-md-3">
+        <label class="form-label small d-none d-md-block">&nbsp;</label>
+        <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" @click.prevent="exportToExcel()">
+            <i class="bi bi-file-earmark-excel-fill me-1"></i> Export
+        </button>
     </div>
 </div>
 
@@ -11677,6 +11685,57 @@ async fetchAllRatings() {
 
         return phone || 'Nomor tidak tersedia';
     },   
+
+    exportToExcel() {
+        // 1. Ambil data yang sedang tampil di layar (sudah difilter)
+        const dataToExport = this.filteredAllRatings;
+
+        if (!dataToExport || dataToExport.length === 0) {
+            alert('Tidak ada data ulasan untuk diexport!');
+            return;
+        }
+
+        // 2. Siapkan Judul Kolom (Header) Excel
+        let csvContent = "Tanggal,Invoice,Nama Pelanggan,No Telepon,Outlet,Bintang,Ulasan\n";
+
+        // 3. Susun Baris Data
+        dataToExport.forEach(r => {
+            let date = r.date || '-';
+            let invoice = r.invoiceId || '-';
+            
+            // Ambil nama pelanggan dan hilangkan tanda kutip ganda jika ada
+            let name = (r.customerName || 'Pelanggan').replace(/"/g, '""');
+            
+            // Panggil fungsi pintar untuk mengambil nama Outlet dan Nomor Telepon
+            let phone = this.getCustomerPhone(r);
+            let outlet = this.getOutletNameForReview(r);
+            let rating = r.rating || 0;
+            
+            // Amankan teks ulasan (Ubah "Enter" jadi spasi agar struktur kolom Excel tidak jebol)
+            let message = (r.message || '-').replace(/"/g, '""').replace(/\n/g, ' '); 
+
+            // Susun menjadi satu baris CSV, setiap data dibungkus tanda kutip agar rapi
+            let row = `"${date}","${invoice}","${name}","${phone}","${outlet}","${rating}","${message}"`;
+            csvContent += row + "\n";
+        });
+
+        // 4. Proses Pembuatan File dan Auto-Download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        
+        // Buat nama file otomatis dengan tanggal hari ini
+        const today = new Date().toISOString().split('T')[0];
+        const fileName = `Laporan_Ulasan_Pelanggan_${today}.csv`;
+
+        // Trigger Download
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    },
             
         // =========================================================
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
