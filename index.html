@@ -4749,202 +4749,314 @@ body.sidebar-open {
         </div>
     </div>
 
-                <ul class="nav nav-pills mb-4 pb-2 border-bottom overflow-auto flex-nowrap" style="scrollbar-width: none;">
-                    <li class="nav-item me-2">
-                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'keuangan' ? 'active shadow-sm' : 'bg-white text-secondary'" @click="reportTab = 'keuangan'">
-                            <i class="bi bi-wallet2 me-1"></i> Transaksi & Laba
-                        </button>
-                    </li>
-                    <li class="nav-item me-2">
-                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'produk' ? 'active shadow-sm bg-success border-success' : 'bg-white text-secondary'" @click="reportTab = 'produk'">
-                            <i class="bi bi-trophy me-1"></i> Produk Terlaris
-                        </button>
-                    </li>
-                    <li class="nav-item me-2">
-                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'kategori' ? 'active shadow-sm bg-primary border-primary' : 'bg-white text-secondary'" @click="reportTab = 'kategori'">
-                            <i class="bi bi-tags me-1"></i> Per Kategori
-                        </button>
-                    </li>
-                    <li class="nav-item me-2">
-                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'pembayaran' ? 'active shadow-sm bg-info text-white border-info' : 'bg-white text-secondary'" @click="reportTab = 'pembayaran'">
-                            <i class="bi bi-credit-card me-1"></i> Pembayaran
-                        </button>
-                    </li>
-                    <li class="nav-item me-2">
-                        <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'peakhour' ? 'active shadow-sm bg-warning text-dark border-warning' : 'bg-white text-secondary'" @click="reportTab = 'peakhour'">
-                            <i class="bi bi-clock-history me-1"></i> Jam Sibuk
-                        </button>
-                    </li>
-                </ul>
+    <ul class="nav nav-pills mb-4 pb-2 border-bottom overflow-auto flex-nowrap" style="scrollbar-width: none;">
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'keuangan' ? 'active shadow-sm' : 'bg-white text-secondary'" @click="reportTab = 'keuangan'">
+                <i class="bi bi-wallet2 me-1"></i> Transaksi & Laba
+            </button>
+        </li>
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'produk' ? 'active shadow-sm bg-success border-success' : 'bg-white text-secondary'" @click="reportTab = 'produk'">
+                <i class="bi bi-trophy me-1"></i> Produk Terlaris
+            </button>
+        </li>
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'kategori' ? 'active shadow-sm bg-primary border-primary' : 'bg-white text-secondary'" @click="reportTab = 'kategori'">
+                <i class="bi bi-tags me-1"></i> Per Kategori
+            </button>
+        </li>
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'pembayaran' ? 'active shadow-sm bg-info text-white border-info' : 'bg-white text-secondary'" @click="reportTab = 'pembayaran'">
+                <i class="bi bi-credit-card me-1"></i> Pembayaran
+            </button>
+        </li>
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'peakhour' ? 'active shadow-sm bg-warning text-dark border-warning' : 'bg-white text-secondary'" @click="reportTab = 'peakhour'">
+                <i class="bi bi-clock-history me-1"></i> Jam Sibuk
+            </button>
+        </li>
+    </ul>
 
-                <div v-html="'<style>@keyframes sR { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } } .anim-slide-right { animation: sR 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: left; } @keyframes sU { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } } .anim-scale-up { animation: sU 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: bottom; }</style>'"></div>
+    <div v-html="'<style>@keyframes sR { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } } .anim-slide-right { animation: sR 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: left; } @keyframes sU { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } } .anim-scale-up { animation: sU 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: bottom; }</style>'"></div>
 
-                <div v-if="reportTab === 'keuangan'">
-                    <div class="card border rounded-3 shadow-none mb-4">
-                        <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Rincian per Transaksi</h6>
-                            <span class="badge bg-white text-dark border fw-normal shadow-sm">Berdasarkan Filter</span>
-                        </div>
-                        <div class="card-body p-0 bg-white rounded-bottom-3">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
-                                    <thead class="table-light text-secondary border-bottom">
-                                        <tr>
-                                            <th class="ps-3 py-2 fw-semibold">INVOICE & WAKTU</th>
-                                            <th class="fw-semibold">CABANG</th>
-                                            <th class="text-end fw-semibold">OMSET BERSIH</th>
-                                            <th class="text-end fw-semibold">MODAL HPP</th>
-                                            <th class="text-end fw-semibold">LABA (PROFIT)</th>
-                                            <th class="text-center pe-3 fw-semibold">MARGIN</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-    <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
-        <td class="ps-3 py-2">
-            <!-- 🌟 PERBAIKAN: Invoice bisa diklik untuk buka modal detail -->
-            <!-- Pastikan nama fungsi "viewTransaction" sesuai dengan fungsi buka modal Anda (bisa jg showInvoiceDetail) -->
-            <a href="#" @click.prevent="viewTransaction(trx)" class="fw-bold text-primary text-decoration-none">
-                <i class="bi bi-box-arrow-up-right me-1 small"></i>{{ trx.id }}
-            </a>
-            <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
-        </td>
-        <td><span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span></td>
-        
-        <!-- 🌟 PERBAIKAN: Panggil omsetReport yang benar -->
-        <td class="text-end fw-semibold text-success">
-            Rp {{ formatNumber(trx.omsetReport !== undefined ? trx.omsetReport : trx.total) }}
-        </td>
-        
-        <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
-        <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(trx.profit) }}</td>
-        <td class="text-center pe-3">
-            <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">{{ (trx.margin || 0).toFixed(1) }}%</span>
-        </td>
-    </tr>
-    <tr v-if="processedReportData.length === 0">
-        <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
-            <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
-            <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
-        </td>
-    </tr>
-</tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="reportTab === 'produk'">
-                    <div class="card border rounded-3 shadow-none">
-                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 10 Produk Paling Cepat Laku (Berdasarkan Qty)</h6>
-                        </div>
-                        <div class="card-body p-4">
-                            <div v-for="(p, index) in analyticsData.topProducts" :key="index" class="mb-4">
-                                <div class="d-flex justify-content-between align-items-end mb-1">
-                                    <div class="fw-semibold text-dark text-truncate pe-2">
-                                        <span class="text-muted me-1">#{{ index + 1 }}</span> {{ p.name }}
-                                    </div>
-                                    <div class="fw-bold text-success">{{ p.qty }} Terjual</div>
-                                </div>
-                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
-                                    <div class="progress-bar bg-success rounded-pill anim-slide-right" :style="{ width: ((p.qty / analyticsData.maxProdQty) * 100) + '%' }"></div>
-                                </div>
-                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Omset: Rp {{ formatNumber(p.omset) }}</div>
-                            </div>
-                            <div v-if="analyticsData.topProducts.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan produk.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="reportTab === 'kategori'">
-                    <div class="card border rounded-3 shadow-none">
-                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Distribusi Pendapatan per Kategori Produk</h6>
-                        </div>
-                        <div class="card-body p-4">
-                            <div v-for="(c, index) in analyticsData.topCategories" :key="index" class="mb-4">
-                                <div class="d-flex justify-content-between align-items-end mb-1">
-                                    <div class="fw-semibold text-dark">{{ c.name }}</div>
-                                    <div class="fw-bold text-primary">Rp {{ formatNumber(c.omset) }}</div>
-                                </div>
-                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
-                                    <div class="progress-bar bg-primary rounded-pill anim-slide-right" :style="{ width: ((c.omset / analyticsData.maxCatOmset) * 100) + '%' }"></div>
-                                </div>
-                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Total Terjual: {{ c.qty }} Item</div>
-                            </div>
-                            <div v-if="analyticsData.topCategories.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan kategori.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="reportTab === 'pembayaran'">
-                    <div class="card border rounded-3 shadow-none">
-                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-credit-card-2-front-fill text-info me-2"></i>Rekap Metode Pembayaran (Kasir)</h6>
-                        </div>
-                        <div class="card-body p-4">
-                            <div v-for="(p, index) in analyticsData.paymentMethods" :key="index" class="mb-4">
-                                <div class="d-flex justify-content-between align-items-end mb-1">
-                                    <div class="fw-semibold text-dark">{{ p.name }}</div>
-                                    <div class="fw-bold text-info">Rp {{ formatNumber(p.total) }}</div>
-                                </div>
-                                <div class="progress" style="height: 12px; background-color: #e9ecef;">
-                                    <div class="progress-bar bg-info rounded-pill anim-slide-right" 
-                                         :style="{ width: ((p.total / analyticsData.maxPayment) * 100) + '%', transition: 'width 1s ease-out' }">
-                                    </div>
-                                </div>
-                                <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Digunakan pada {{ p.count }} Transaksi</div>
-                            </div>
-                            <div v-if="!analyticsData.paymentMethods || analyticsData.paymentMethods.length === 0" class="text-center py-5 text-muted">
-                                Belum ada riwayat metode pembayaran tercatat.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="reportTab === 'peakhour'" class="px-1">
-                    <div class="card border rounded-3 shadow-none">
-                        <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-warning me-2"></i>Frekuensi Transaksi per Jam (00:00 - 23:59)</h6>
-                        </div>
-                        <div class="card-body p-2 p-md-4">
-                            <div class="overflow-auto pb-3" style="scrollbar-width: thin;">
-                                
-                                <div class="d-flex align-items-end justify-content-between pt-4" style="height: 380px; gap: 8px; min-width: 900px; padding: 0 10px;">
-                                    
-                                    <div v-for="h in analyticsData.peakHours" :key="h.jam" 
-     class="grafik-tiang-wrapper d-flex flex-column align-items-center justify-content-end flex-fill h-100" style="cursor: pointer;">
-    
-    <div class="w-100 position-relative d-flex align-items-end justify-content-center" 
-         :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 60) + '%' : '0%' }">
-         
-         <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
-              style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; transition: all 0.2s ease-in-out; pointer-events: none;">
-             <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
-             <div class="small fw-semibold">{{ h.count }} Transaksi</div>
-             <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
-             <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
-         </div>
-
-         <!-- Tambahkan class grafik-bar di sini -->
-         <div class="grafik-bar bg-warning w-100 h-100 rounded-top anim-scale-up" style="transform-origin: bottom; transition: 0.2s;"></div>
+    <!-- 🌟 TOMBOL SAKLAR GRAFIK / TABEL -->
+    <div class="d-flex justify-content-end mb-3" v-if="reportTab !== 'keuangan'">
+        <div class="btn-group btn-group-sm shadow-sm" role="group">
+            <button type="button" class="btn" :class="reportViewMode === 'chart' ? 'btn-danger fw-bold' : 'btn-outline-danger'" @click="reportViewMode = 'chart'">
+                <i class="bi bi-bar-chart-fill me-1"></i> Grafik
+            </button>
+            <button type="button" class="btn" :class="reportViewMode === 'table' ? 'btn-danger fw-bold' : 'btn-outline-danger'" @click="reportViewMode = 'table'">
+                <i class="bi bi-table me-1"></i> Tabel Data
+            </button>
+        </div>
     </div>
-    
-    <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
-</div>
-                                    
-                                </div>
-                            </div>
-                            <div class="text-center mt-3 small text-muted border-top pt-3 px-2">
-                                Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.<br>
-                                <span class="d-inline d-md-none">(Geser grafik ke kanan/kiri untuk melihat jam lainnya)</span>
-                                <span class="d-none d-md-inline">(Arahkan kursor Anda ke tiang grafik untuk melihat detailnya)</span>
-                            </div>
-                        </div>
-                    </div>
+
+    <div v-if="reportTab === 'keuangan'">
+        <div class="card border rounded-3 shadow-none mb-4">
+            <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text text-primary me-2"></i>Rincian per Transaksi</h6>
+                <span class="badge bg-white text-dark border fw-normal shadow-sm">Berdasarkan Filter</span>
+            </div>
+            <div class="card-body p-0 bg-white rounded-bottom-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.8rem;">
+                        <thead class="table-light text-secondary border-bottom">
+                            <tr>
+                                <th class="ps-3 py-2 fw-semibold">INVOICE & WAKTU</th>
+                                <th class="fw-semibold">CABANG</th>
+                                <th class="text-end fw-semibold">OMSET BERSIH</th>
+                                <th class="text-end fw-semibold">MODAL HPP</th>
+                                <th class="text-end fw-semibold">LABA (PROFIT)</th>
+                                <th class="text-center pe-3 fw-semibold">MARGIN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="trx in processedReportData" :key="trx.id" class="border-bottom-0">
+                                <td class="ps-3 py-2">
+                                    <a href="#" @click.prevent="viewTransaction(trx)" class="fw-bold text-primary text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right me-1 small"></i>{{ trx.id }}
+                                    </a>
+                                    <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border fw-normal">{{ getOutletName(trx.outletId) || 'Global' }}</span></td>
+                                <td class="text-end fw-semibold text-success">
+                                    Rp {{ formatNumber(trx.omsetReport !== undefined ? trx.omsetReport : trx.total) }}
+                                </td>
+                                <td class="text-end text-primary">Rp {{ formatNumber(trx.totalHppNota) }}</td>
+                                <td class="text-end fw-bold" :class="trx.profit >= 0 ? 'text-info-emphasis' : 'text-danger'">Rp {{ formatNumber(trx.profit) }}</td>
+                                <td class="text-center pe-3">
+                                    <span class="badge rounded-pill fw-normal" :class="trx.margin >= 30 ? 'bg-success' : (trx.margin >= 15 ? 'bg-primary' : 'bg-warning text-dark')">{{ (trx.margin || 0).toFixed(1) }}%</span>
+                                </td>
+                            </tr>
+                            <tr v-if="processedReportData.length === 0">
+                                <td colspan="6" class="text-center py-5 text-muted bg-light bg-opacity-50">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                                    <span class="d-block small">Belum ada riwayat keuangan pada filter ini.</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div v-if="reportTab === 'produk'">
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-trophy-fill text-warning me-2"></i>Top 10 Produk Paling Cepat Laku (Berdasarkan Qty)</h6>
+            </div>
+            <div class="card-body p-4">
+                
+                <!-- 🌟 TAMPILAN GRAFIK -->
+                <div v-show="reportViewMode === 'chart'">
+                    <div v-for="(p, index) in analyticsData.topProducts" :key="'cp'+index" class="mb-4">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <div class="fw-semibold text-dark text-truncate pe-2">
+                                <span class="text-muted me-1">#{{ index + 1 }}</span> {{ p.name }}
+                            </div>
+                            <div class="fw-bold text-success">{{ p.qty }} Terjual</div>
+                        </div>
+                        <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                            <div class="progress-bar bg-success rounded-pill anim-slide-right" :style="{ width: ((p.qty / analyticsData.maxProdQty) * 100) + '%' }"></div>
+                        </div>
+                        <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Omset: Rp {{ formatNumber(p.omset) }}</div>
+                    </div>
+                    <div v-if="analyticsData.topProducts.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan produk.</div>
+                </div>
+
+                <!-- 🌟 TAMPILAN TABEL -->
+                <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">Rank</th>
+                                <th>Nama Produk / Varian</th>
+                                <th class="text-end">Qty Terjual</th>
+                                <th class="text-end">Total Omset</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(p, index) in analyticsData.topProducts" :key="'tp'+index">
+                                <td class="text-center fw-bold text-muted">#{{ index + 1 }}</td>
+                                <td class="fw-bold">{{ p.name }}</td>
+                                <td class="text-end"><span class="badge bg-primary rounded-pill px-3">{{ p.qty }}</span></td>
+                                <td class="text-end fw-bold text-success">Rp {{ formatNumber(p.omset) }}</td>
+                            </tr>
+                            <tr v-if="analyticsData.topProducts.length === 0"><td colspan="4" class="text-center py-4 text-muted">Belum ada data penjualan.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div v-if="reportTab === 'kategori'">
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Distribusi Pendapatan per Kategori Produk</h6>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- 🌟 TAMPILAN GRAFIK -->
+                <div v-show="reportViewMode === 'chart'">
+                    <div v-for="(c, index) in analyticsData.topCategories" :key="'cc'+index" class="mb-4">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <div class="fw-semibold text-dark">{{ c.name }}</div>
+                            <div class="fw-bold text-primary">Rp {{ formatNumber(c.omset) }}</div>
+                        </div>
+                        <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                            <div class="progress-bar bg-primary rounded-pill anim-slide-right" :style="{ width: ((c.omset / analyticsData.maxCatOmset) * 100) + '%' }"></div>
+                        </div>
+                        <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Total Terjual: {{ c.qty }} Item</div>
+                    </div>
+                    <div v-if="analyticsData.topCategories.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan kategori.</div>
+                </div>
+
+                <!-- 🌟 TAMPILAN TABEL -->
+                <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">Rank</th>
+                                <th>Nama Kategori</th>
+                                <th class="text-end">Qty Terjual</th>
+                                <th class="text-end">Total Omset</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(c, index) in analyticsData.topCategories" :key="'tc'+index">
+                                <td class="text-center fw-bold text-muted">#{{ index + 1 }}</td>
+                                <td class="fw-bold">{{ c.name }}</td>
+                                <td class="text-end"><span class="badge bg-warning text-dark rounded-pill px-3">{{ c.qty }}</span></td>
+                                <td class="text-end fw-bold text-success">Rp {{ formatNumber(c.omset) }}</td>
+                            </tr>
+                            <tr v-if="analyticsData.topCategories.length === 0"><td colspan="4" class="text-center py-4 text-muted">Belum ada data kategori.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div v-if="reportTab === 'pembayaran'">
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-credit-card-2-front-fill text-info me-2"></i>Rekap Metode Pembayaran (Kasir)</h6>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- 🌟 TAMPILAN GRAFIK -->
+                <div v-show="reportViewMode === 'chart'">
+                    <div v-for="(p, index) in analyticsData.paymentMethods" :key="'cpym'+index" class="mb-4">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <div class="fw-semibold text-dark">{{ p.name }}</div>
+                            <div class="fw-bold text-info">Rp {{ formatNumber(p.total) }}</div>
+                        </div>
+                        <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                            <div class="progress-bar bg-info rounded-pill anim-slide-right" 
+                                 :style="{ width: ((p.total / analyticsData.maxPayment) * 100) + '%', transition: 'width 1s ease-out' }">
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Digunakan pada {{ p.count }} Transaksi</div>
+                    </div>
+                    <div v-if="!analyticsData.paymentMethods || analyticsData.paymentMethods.length === 0" class="text-center py-5 text-muted">
+                        Belum ada riwayat metode pembayaran tercatat.
+                    </div>
+                </div>
+
+                <!-- 🌟 TAMPILAN TABEL -->
+                <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">Rank</th>
+                                <th>Metode Pembayaran</th>
+                                <th class="text-center">Jumlah Transaksi (Struk)</th>
+                                <th class="text-end">Total Nominal Masuk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(p, index) in analyticsData.paymentMethods" :key="'tpym'+index">
+                                <td class="text-center fw-bold text-muted">#{{ index + 1 }}</td>
+                                <td class="fw-bold"><i class="bi bi-wallet2 me-2 text-muted"></i>{{ p.name }}</td>
+                                <td class="text-center">{{ p.count }}x Transaksi</td>
+                                <td class="text-end fw-bold text-success">Rp {{ formatNumber(p.total) }}</td>
+                            </tr>
+                            <tr v-if="!analyticsData.paymentMethods || analyticsData.paymentMethods.length === 0"><td colspan="4" class="text-center py-4 text-muted">Belum ada riwayat pembayaran.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div v-if="reportTab === 'peakhour'" class="px-1">
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-activity text-warning me-2"></i>Frekuensi Transaksi per Jam (00:00 - 23:59)</h6>
+            </div>
+            <div class="card-body p-2 p-md-4">
+                
+                <!-- 🌟 TAMPILAN GRAFIK -->
+                <div v-show="reportViewMode === 'chart'" class="overflow-auto pb-3" style="scrollbar-width: thin;">
+                    <div class="d-flex align-items-end justify-content-between pt-4" style="height: 380px; gap: 8px; min-width: 900px; padding: 0 10px;">
+                        
+                        <div v-for="h in analyticsData.peakHours" :key="'ch'+h.jam" 
+                             class="grafik-tiang-wrapper d-flex flex-column align-items-center justify-content-end flex-fill h-100" style="cursor: pointer;">
+        
+                            <div class="w-100 position-relative d-flex align-items-end justify-content-center" 
+                                 :style="{ height: analyticsData.maxHourCount > 0 ? ((h.count / analyticsData.maxHourCount) * 60) + '%' : '0%' }">
+                                 
+                                 <div class="hover-tooltip position-absolute bg-dark text-white rounded-3 p-2 text-center shadow-lg" 
+                                      style="bottom: 100%; left: 50%; transform: translate(-50%, 0); margin-bottom: 5px; z-index: 1050; white-space: nowrap; transition: all 0.2s ease-in-out; pointer-events: none;">
+                                     <div class="fw-bold text-warning mb-1 border-bottom border-secondary pb-1">Jam {{ String(h.jam).padStart(2, '0') }}:00</div>
+                                     <div class="small fw-semibold">{{ h.count }} Transaksi</div>
+                                     <div class="small text-white-50">Rp {{ formatNumber(h.omset) }}</div>
+                                     <div class="position-absolute" style="bottom: -5px; left: 50%; transform: translateX(-50%); border-width: 5px 5px 0; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
+                                 </div>
+
+                                 <div class="grafik-bar bg-warning w-100 h-100 rounded-top anim-scale-up" style="transform-origin: bottom; transition: 0.2s;"></div>
+                            </div>
+                            
+                            <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem;">{{ String(h.jam).padStart(2, '0') }}</div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3 small text-muted border-top pt-3 px-2">
+                        Semakin tinggi tiang warna kuning, semakin padat jumlah transaksi di jam tersebut.<br>
+                        <span class="d-inline d-md-none">(Geser grafik ke kanan/kiri untuk melihat jam lainnya)</span>
+                        <span class="d-none d-md-inline">(Arahkan kursor Anda ke tiang grafik untuk melihat detailnya)</span>
+                    </div>
+                </div>
+
+                <!-- 🌟 TAMPILAN TABEL -->
+                <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rentang Waktu (Jam)</th>
+                                <th class="text-center">Jumlah Transaksi</th>
+                                <th class="text-end">Total Omset</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="h in analyticsData.peakHours.filter(h => h.count > 0).sort((a, b) => b.count - a.count)" :key="'th'+h.jam">
+                                <td class="fw-bold text-primary"><i class="bi bi-clock me-2"></i>{{ String(h.jam).padStart(2, '0') }}:00 - {{ String(h.jam).padStart(2, '0') }}:59</td>
+                                <td class="text-center"><span class="badge bg-secondary rounded-pill px-3">{{ h.count }}x</span></td>
+                                <td class="text-end fw-bold text-success">Rp {{ formatNumber(h.omset) }}</td>
+                            </tr>
+                            <tr v-if="analyticsData.peakHours.filter(h => h.count > 0).length === 0"><td colspan="3" class="text-center py-4 text-muted">Belum ada data transaksi untuk dianalisis.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- SALES VIEW -->
             <div v-if="currentView === 'sales'" class="dashboard-card mb-4 fade-in">
@@ -8999,7 +9111,7 @@ body.sidebar-open {
                 batchModalItem: null,
                 batchModalVariant: null,
                 batchList: [], 
-            
+                
                 // PENCARIAN & FILTER BARU
                 catalogProductSearch: '', catalogVariantSearch: '', catalogVariantOutletFilter: '',
                 reportSearchQuery: '', purchaseSearchQuery: '',
@@ -9110,6 +9222,9 @@ body.sidebar-open {
                 
                 // STATE TAB NAVIGASI LAPORAN
                 reportTab: 'keuangan', 
+
+                // Variabel untuk saklar tampilan Laporan (default: 'chart')
+                reportViewMode: 'chart',
                 
                 // STATE FILTER DASHBOARD LAPORAN
                 reportStartDate: '',
