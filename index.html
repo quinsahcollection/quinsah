@@ -14164,28 +14164,71 @@ copyEReceiptLinkOnly(trx) {
 },
 
 getPaymentBreakdown(trx) {
-    if (!trx) return []; // 🌟 AMAN: Kembalikan array kosong jika objek transaksi kosong
-    
-    let history = [];
-    let actualPaidAmount = this.getActualPaid(trx);
-    let historyTotal = 0;
+            let breakdown = [];
+            let totalFromHistory = 0;
 
-    if (trx.paymentHistory && trx.paymentHistory.length > 0) {
-        trx.paymentHistory.forEach(ph => {
-            let amt = ph.amount || 0;
-            history.push({ method: (ph.method || 'CASH').toUpperCase(), amount: amt });
-            historyTotal += amt;
-        });
-    }
+            // 1. Ambil dari histori pembayaran / cicilan (jika ada)
+            if (trx.paymentHistory && trx.paymentHistory.length > 0) {
+                trx.paymentHistory.forEach(ph => {
+                    let amt = Number(ph.amount || 0);
+                    // Abaikan nilai minus (seperti retur) agar tidak merusak tampilan breakdown
+                    if (amt > 0) {
+                        breakdown.push({ method: ph.method, amount: amt });
+                        totalFromHistory += amt;
+                    }
+                });
+            }
 
-    let unaccounted = actualPaidAmount - historyTotal;
-    if (unaccounted > 0) {
-        // 🌟 AMAN: Ganti ke optional chaining agar tidak crash jika objek paymentData null
-        let method = trx.paymentMethod || trx.paymentData?.method || 'CASH';
-        history.unshift({ method: method.toUpperCase(), amount: unaccounted }); 
-    }
-    return history;
-},
+            // 2. Cek apakah ada pembayaran awal (saat kasir checkout)
+            let actualPaid = Number(this.getActualPaid(trx)) || 0;
+            let unaccounted = actualPaid - totalFromHistory;
+
+            if (unaccounted > 0) {
+                // Cari data SPLIT dari berbagai kemungkinan nama variabel
+                let details = trx.splitPayments || (trx.paymentData ? trx.paymentData.splitPayments : null) || trx.splitDetails || trx.splits || trx.paymentDetails;
+                
+                // Jika berbentuk string JSON, parse dulu
+                if (typeof details === 'string' && (details.startsWith('{') || details.startsWith('['))) {
+                    try { details = JSON.parse(details); } catch(e) {}
+                }
+
+                // Jika benar-benar pakai SPLIT, bongkar datanya!
+                if (Array.isArray(details) && details.length > 0) {
+                    let totalSplitAmt = details.reduce((sum, d) => sum + Number(d.amount || d.nominal || 0), 0);
+                    
+                    details.forEach(d => {
+                        let m = d.method || d.paymentMethod || 'CASH';
+                        let amt = Number(d.amount || d.nominal || 0);
+                        
+                        // Hitung proporsi jika nilainya sedikit berbeda dari uang bersih
+                        if (totalSplitAmt > 0 && unaccounted !== totalSplitAmt) {
+                            amt = (amt / totalSplitAmt) * unaccounted;
+                        }
+                        
+                        if (amt > 0) {
+                            breakdown.push({ method: m, amount: amt });
+                        }
+                    });
+                } else {
+                    // Jika bukan SPLIT, tampilkan nama metode biasa (QRIS, CASH, dll)
+                    let rawMethod = String(trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : '') || 'CASH').toUpperCase();
+                    breakdown.push({ method: rawMethod, amount: unaccounted });
+                }
+            }
+
+            // 3. Gabungkan jika ada metode yang sama (Misal: Bayar awal CASH, cicilan juga CASH)
+            let finalBreakdown = [];
+            breakdown.forEach(b => {
+                let existing = finalBreakdown.find(f => f.method === b.method);
+                if (existing) {
+                    existing.amount += b.amount;
+                } else {
+                    finalBreakdown.push({ method: b.method, amount: b.amount });
+                }
+            });
+
+            return finalBreakdown;
+        },
         
         addModifierGroupToProduct() {
     if (!this.formProduct) this.formProduct = {}; // Proteksi tambahan
