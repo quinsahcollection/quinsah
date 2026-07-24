@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
 /* ==========================================================================
@@ -4435,11 +4436,12 @@ body.sidebar-open {
     
     <!-- 🌟 TOMBOL EXPORT BARU -->
     <div class="col-12 col-md-2 mt-2 mt-md-3">
-        <label class="form-label small d-none d-md-block">&nbsp;</label>
-        <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" @click.prevent="exportToExcel()">
-            <i class="bi bi-file-earmark-excel-fill me-1"></i> Export
-        </button>
-    </div>
+    <label class="form-label small d-none d-md-block">&nbsp;</label>
+    <!-- Ubah @click menjadi membuka modal -->
+    <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" @click.prevent="exportConfig.showModal = true">
+        <i class="bi bi-file-earmark-excel-fill me-1"></i> Export
+    </button>
+</div>
 </div>
 
     <!-- Tampilan Card Ulasan (Dibuat Rapat untuk Mobile) -->
@@ -4498,7 +4500,53 @@ body.sidebar-open {
             <p class="small mb-0">Belum ada ulasan atau tidak ada yang cocok dengan kriteria filter Anda.</p>
         </div>
     </div>
+
+    <!-- Modal Export Kustom -->
+<div v-if="exportConfig.showModal" class="modal-backdrop fade show"></div>
+<div v-if="exportConfig.showModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body p-4">
+                
+                <!-- Format Selection (Mirip Screenshot) -->
+                <div class="row mb-4 align-items-center">
+                    <div class="col-3">
+                        <span class="fw-bold text-dark">Format</span>
+                    </div>
+                    <div class="col-9">
+                        <div class="btn-group shadow-sm" role="group">
+                            <input type="radio" class="btn-check" id="btnCsv" value="csv" v-model="exportConfig.format">
+                            <label class="btn px-4" :class="exportConfig.format === 'csv' ? 'btn-light border-secondary fw-bold' : 'btn-white border'" for="btnCsv">
+                                <i class="bi bi-check2 me-1" v-if="exportConfig.format === 'csv'"></i>
+                                <i class="bi bi-filetype-csv text-secondary" v-else></i> CSV
+                            </label>
+
+                            <input type="radio" class="btn-check" id="btnXlsx" value="xlsx" v-model="exportConfig.format">
+                            <label class="btn px-4" :class="exportConfig.format === 'xlsx' ? 'btn-light border-secondary fw-bold' : 'btn-white border'" for="btnXlsx">
+                                <i class="bi bi-check2 me-1" v-if="exportConfig.format === 'xlsx'"></i>
+                                <i class="bi bi-file-earmark-excel-fill text-success" v-else></i> XLSX
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Jumlah Data (Mirip Screenshot) -->
+                <div class="p-3 rounded" style="background-color: #aed9e6; color: #2c3e50;">
+                    <i class="bi bi-exclamation-circle-fill me-2" style="color: #34495e;"></i>
+                    Exporting data from 1 - {{ filteredAllRatings.length.toLocaleString() }}
+                </div>
+                
+            </div>
+            
+            <div class="modal-footer bg-light border-0">
+                <!-- Tombol Batal untuk menutup modal -->
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" @click="exportConfig.showModal = false">Batal</button>
+                <button type="button" class="btn btn-primary btn-sm px-4 fw-bold" @click="processExport()">Unduh File</button>
+            </div>
+        </div>
+    </div>
 </div>
+</div>    
 </div>
          
             <!-- OUTLETS VIEW -->
@@ -9418,6 +9466,11 @@ body.sidebar-open {
                 reportEndDate: '',
                 reportOutletFilter: '', 
                 selectedOutletFilter: '', 
+
+                exportConfig: {
+                format: 'csv', // Default format yang dipilih
+                showModal: false // Untuk menampilkan/menyembunyikan modal
+                },
                 
                 // STATE TRANSFER STOK ANTAR TOKO
                 isEditingTransfer: false,
@@ -11686,8 +11739,7 @@ async fetchAllRatings() {
         return phone || 'Nomor tidak tersedia';
     },   
 
-    exportToExcel() {
-        // 1. Ambil data yang sedang tampil di layar (sudah difilter)
+    processExport() {
         const dataToExport = this.filteredAllRatings;
 
         if (!dataToExport || dataToExport.length === 0) {
@@ -11695,46 +11747,55 @@ async fetchAllRatings() {
             return;
         }
 
-        // 2. Siapkan Judul Kolom (Header) Excel
-        let csvContent = "Tanggal,Invoice,Nama Pelanggan,No Telepon,Outlet,Bintang,Ulasan\n";
-
-        // 3. Susun Baris Data
-        dataToExport.forEach(r => {
-            let date = r.date || '-';
-            let invoice = r.invoiceId || '-';
-            
-            // Ambil nama pelanggan dan hilangkan tanda kutip ganda jika ada
-            let name = (r.customerName || 'Pelanggan').replace(/"/g, '""');
-            
-            // Panggil fungsi pintar untuk mengambil nama Outlet dan Nomor Telepon
-            let phone = this.getCustomerPhone(r);
-            let outlet = this.getOutletNameForReview(r);
-            let rating = r.rating || 0;
-            
-            // Amankan teks ulasan (Ubah "Enter" jadi spasi agar struktur kolom Excel tidak jebol)
-            let message = (r.message || '-').replace(/"/g, '""').replace(/\n/g, ' '); 
-
-            // Susun menjadi satu baris CSV, setiap data dibungkus tanda kutip agar rapi
-            let row = `"${date}","${invoice}","${name}","${phone}","${outlet}","${rating}","${message}"`;
-            csvContent += row + "\n";
+        // 1. Siapkan data mentah menjadi bentuk Array Object yang rapi
+        const formattedData = dataToExport.map(r => {
+            return {
+                "Tanggal": r.date || '-',
+                "Invoice": r.invoiceId || '-',
+                "Nama Pelanggan": r.customerName || 'Pelanggan',
+                "No Telepon": this.getCustomerPhone(r),
+                "Outlet": this.getOutletNameForReview(r),
+                "Bintang": r.rating || 0,
+                "Ulasan": (r.message || '-').replace(/\n/g, ' ')
+            };
         });
 
-        // 4. Proses Pembuatan File dan Auto-Download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        
-        // Buat nama file otomatis dengan tanggal hari ini
         const today = new Date().toISOString().split('T')[0];
-        const fileName = `Laporan_Ulasan_Pelanggan_${today}.csv`;
+        const fileName = `Laporan_Ulasan_Pelanggan_${today}`;
 
-        // Trigger Download
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 2. Eksekusi Berdasarkan Format Pilihan
+        if (this.exportConfig.format === 'xlsx') {
+            // PROSES XLSX MENGGUNAKAN SHEETJS
+            if (typeof XLSX === 'undefined') {
+                alert("Library Excel belum dimuat. Pastikan Anda sudah memasang script SheetJS.");
+                return;
+            }
+            const worksheet = XLSX.utils.json_to_sheet(formattedData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Ulasan");
+            XLSX.writeFile(workbook, `${fileName}.xlsx`);
+
+        } else {
+            // PROSES CSV MURNI (Tanpa Library)
+            let csvContent = "Tanggal,Invoice,Nama Pelanggan,No Telepon,Outlet,Bintang,Ulasan\n";
+            formattedData.forEach(row => {
+                let csvRow = `"${row['Tanggal']}","${row['Invoice']}","${row['Nama Pelanggan']}","${row['No Telepon']}","${row['Outlet']}","${row['Bintang']}","${row['Ulasan']}"`;
+                csvContent += csvRow + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${fileName}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 3. Tutup Modal setelah selesai download
+        this.exportConfig.showModal = false;
     },
             
         // =========================================================
