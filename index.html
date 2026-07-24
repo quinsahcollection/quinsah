@@ -10608,15 +10608,22 @@ fulfillmentOrders() {
             return total;
         },
 
-        // 3. MESIN ANALITIK UNTUK GRAFIK (PRODUK, KATEGORI, JAM SIBUK)
+        // 3. MESIN ANALITIK UNTUK GRAFIK (PRODUK, KATEGORI, JAM SIBUK, PELANGGAN & PAJAK)
         analyticsData() {
             let products = {};
             let categories = {};
-            // Siapkan array kosong untuk 24 jam (00:00 - 23:59)
             let hours = Array(24).fill(0).map((_, i) => ({ jam: i, qty: 0, omset: 0, count: 0 }));
-            
-            // Wadah penampung untuk metode pembayaran
             let payments = {}; 
+
+            // 🌟 WADAH BARU UNTUK PELANGGAN DAN PAJAK/DISKON
+            let customers = {};
+            let taxDiscount = {
+                totalDiskonItem: 0,
+                totalDiskonGlobal: 0,
+                totalPajak: 0,
+                trxWithDiscount: 0,
+                trxWithTax: 0
+            };
 
             this.processedReportData.forEach(trx => {
                 // --- A. ANALITIK PEAK HOUR (JAM SIBUK) ---
@@ -10630,27 +10637,23 @@ fulfillmentOrders() {
                 if (dateObj && !isNaN(dateObj.getTime())) {
                     let h = dateObj.getHours();
                     hours[h].count += 1; 
-                    // 🌟 Gunakan Omset Asli untuk Peak Hour, bukan total kasir
-                    hours[h].omset += (trx.omsetReport !== undefined ? trx.omsetReport : (trx.total || 0)); 
+                    hours[h].omset += Number(trx.omsetReport !== undefined ? trx.omsetReport : (trx.total || 0)); 
                 }
 
                 // --- B. ANALITIK PRODUK & KATEGORI ---
                 if (trx.items && Array.isArray(trx.items)) {
-                    // Filter lagi agar "Tukar Tambah" tidak masuk chart produk terlaris!
                     let barangAsli = trx.items.filter(item => item.productId !== 'EXCHANGE');
 
                     barangAsli.forEach(item => {
-                        // 1. Deteksi Harga & Omset (Pencegah Kosong/Blank)
                         let itemPrice = Number(item.price) || Number(item.sellPrice) || Number(item.basePrice) || 0;
                         let itemQty = Number(item.qty) || 0;
                         let itemSubtotal = item.subtotal !== undefined ? Number(item.subtotal) : (itemPrice * itemQty);
                         
-                        // Jika harga 0 tapi nota punya total (Kasus Diskon/Manual)
                         if (itemSubtotal === 0 && trx.omsetReport > 0 && barangAsli.length === 1) {
                             itemSubtotal = trx.omsetReport;
                         }
 
-                        // 2. Rekap Produk Terlaris
+                        // Rekap Produk
                         let key = item.variantSku || item.productId || 'Item_Umum';
                         let name = item.name || 'Produk Kustom';
                         if (item.variantName && item.variantName !== '-') name += ' - ' + item.variantName;
@@ -10659,7 +10662,7 @@ fulfillmentOrders() {
                         products[key].qty += itemQty;
                         products[key].omset += itemSubtotal;
 
-                        // 3. Rekap Penjualan per Kategori (Mencocokkan dengan Master Produk)
+                        // Rekap Kategori
                         let catName = 'Kategori Umum / Lainnya';
                         if (this.products && this.products.length > 0) {
                             let prodMaster = this.products.find(p => p.id === item.productId);
@@ -10682,25 +10685,20 @@ fulfillmentOrders() {
                 // --- C. METODE PEMBAYARAN (DIPERBAIKI UNTUK SPLIT) ---
                 let details = trx.splitPayments || (trx.paymentData ? trx.paymentData.splitPayments : null) || trx.splits || trx.paymentDetails;
                 
-                // Jika berbentuk string JSON, parse dulu menjadi Array
                 if (typeof details === 'string' && (details.startsWith('{') || details.startsWith('['))) {
                     try { details = JSON.parse(details); } catch(e) {}
                 }
 
-                // Jika ini adalah pembayaran SPLIT (Campuran)
                 if (Array.isArray(details) && details.length > 0) {
                     details.forEach(d => {
                         let m = String(d.method || d.paymentMethod || 'CASH').toUpperCase();
                         let amt = Number(d.amount || d.nominal || 0);
                         
                         if (!payments[m]) payments[m] = { name: m, total: 0, count: 0 };
-                        
-                        // Hitung proporsi masing-masing metode masuk ke grafik
                         payments[m].total += amt;
                         payments[m].count += 1;
                     });
                 } else {
-                    // Jika pembayaran tunggal normal (Non-Split)
                     let payMethod = String(trx.paymentMethod || 'CASH').toUpperCase(); 
                     if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
                     
@@ -10708,24 +10706,46 @@ fulfillmentOrders() {
                     payments[payMethod].count += 1;
                 }
 
+                // --- D. ANALITIK PELANGGAN SETIA (CRM) ---
+                let rawCustName = trx.customer || (typeof this.getCustomerName === 'function' ? this.getCustomerName(trx.customerId) : null);
+                let custName = rawCustName ? String(rawCustName).trim() : 'Pelanggan Umum / Non-Member';
+                
+                // Masukkan ke grafik hanya jika bukan pelanggan umum
+                if (custName !== '' && custName.toLowerCase() !== 'pelanggan umum / non-member' && custName.toLowerCase() !== 'umum') {
+                    if (!customers[custName]) customers[custName] = { name: custName, omset: 0, count: 0 };
+                    customers[custName].omset += Number(trx.omsetReport !== undefined ? trx.omsetReport : (trx.total || 0));
+                    customers[custName].count += 1;
+                }
+
+                // --- E. ANALITIK PROMO, DISKON & PAJAK ---
+                let dItem = Number(trx.discountAmt || 0);
+                let dGlobal = Number(trx.globalDiscountAmt || 0);
+                let tax = Number(trx.taxAmt || trx.taxAmount || 0);
+
+                taxDiscount.totalDiskonItem += dItem;
+                taxDiscount.totalDiskonGlobal += dGlobal;
+                taxDiscount.totalPajak += tax;
+
+                if (dItem > 0 || dGlobal > 0) taxDiscount.trxWithDiscount += 1;
+                if (tax > 0) taxDiscount.trxWithTax += 1;
+
             });
 
-            // Urutkan Data (Sorting) dari yang Terlaris
+            // Urutkan Data (Sorting)
             let topProducts = Object.values(products).sort((a, b) => b.qty - a.qty).slice(0, 10);
             let topCategories = Object.values(categories).sort((a, b) => b.omset - a.omset);
-            
-            // Sorting Metode Pembayaran
             let topPayments = Object.values(payments).sort((a, b) => b.total - a.total);
             
-            // Cari nilai skala maksimum untuk tinggi tiang animasi
+            // Urutkan Top 20 Pelanggan
+            let topCustomers = Object.values(customers).sort((a, b) => b.omset - a.omset).slice(0, 20);
+
+            // Cari nilai skala maksimum untuk tinggi grafik
             let maxHourCount = Math.max(...hours.map(h => h.count), 1); 
             let maxProdQty = topProducts.length > 0 ? topProducts[0].qty : 1;
             let maxCatOmset = topCategories.length > 0 ? topCategories[0].omset : 1;
-            
-            // Mencari nilai omset pembayaran tertinggi untuk skala grafik
             let maxPayment = topPayments.length > 0 ? topPayments[0].total : 1;
+            let maxCustomerOmset = topCustomers.length > 0 ? topCustomers[0].omset : 1;
 
-            // Memasukkan paymentMethods & maxPayment ke dalam Return
             return { 
                 topProducts, 
                 topCategories, 
@@ -10734,7 +10754,12 @@ fulfillmentOrders() {
                 maxProdQty, 
                 maxCatOmset,
                 paymentMethods: topPayments, 
-                maxPayment: maxPayment 
+                maxPayment,
+                
+                // 🌟 DATA BARU YANG DIKIRIM KE HTML
+                topCustomers, 
+                maxCustomerOmset, 
+                taxDiscount 
             };
         },
 
