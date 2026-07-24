@@ -4378,49 +4378,61 @@ body.sidebar-open {
     </div>
 
     <!-- Filter Area -->
-    <div class="row g-2 mb-4 bg-light p-3 rounded border">
-        <div class="col-md-3">
-            <label class="form-label small fw-bold">Pencarian</label>
-            <input type="text" class="form-control form-control-sm" v-model="ratingFilter.search" placeholder="Cari nama atau invoice...">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small fw-bold">Filter Bintang</label>
-            <select class="form-select form-select-sm" v-model="ratingFilter.stars">
-                <option value="">Semua Bintang</option>
-                <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-                <option value="4">⭐⭐⭐⭐ (4)</option>
-                <option value="3">⭐⭐⭐ (3)</option>
-                <option value="2">⭐⭐ (2)</option>
-                <option value="1">⭐ (1)</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-    <label class="form-label small fw-bold">Outlet</label>
-    <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
-        <option value="">Semua Outlet</option>
-        <!-- Gunakan o.name sebagai value -->
-        <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }}</option>
-    </select>
-</div>
-        <div class="col-md-3">
-            <label class="form-label small fw-bold">Urutkan</label>
-            <select class="form-select form-select-sm" v-model="ratingFilter.sort">
-                <option value="newest">Ulasan Terbaru</option>
-                <option value="oldest">Ulasan Terlama</option>
-            </select>
-        </div>
-        <div class="col-md-2 d-flex align-items-end">
-            <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1" @click.prevent="resetRatingFilter()">
-                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-            </button>
-        </div>
-        <div class="col-12 mt-1">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="withCommentOnly" v-model="ratingFilter.withComment">
-                <label class="form-check-label small text-muted" for="withCommentOnly">Hanya tampilkan ulasan yang memiliki komentar/pesan</label>
-            </div>
+<div class="row g-2 mb-4 bg-light p-3 rounded border align-items-end">
+    <!-- Baris 1: Pencarian, Bintang, Outlet, Urutkan -->
+    <div class="col-12 col-md-3">
+        <label class="form-label small fw-bold">Pencarian</label>
+        <input type="text" class="form-control form-control-sm" v-model="ratingFilter.search" placeholder="Cari nama atau invoice...">
+    </div>
+    <div class="col-6 col-md-2">
+        <label class="form-label small fw-bold">Filter Bintang</label>
+        <select class="form-select form-select-sm" v-model="ratingFilter.stars">
+            <option value="">Semua</option>
+            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+            <option value="4">⭐⭐⭐⭐ (4)</option>
+            <option value="3">⭐⭐⭐ (3)</option>
+            <option value="2">⭐⭐ (2)</option>
+            <option value="1">⭐ (1)</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label small fw-bold">Outlet</label>
+        <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
+            <option value="">Semua Outlet</option>
+            <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }}</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-2">
+        <label class="form-label small fw-bold">Urutkan</label>
+        <select class="form-select form-select-sm" v-model="ratingFilter.sort">
+            <option value="newest">Terbaru</option>
+            <option value="oldest">Terlama</option>
+        </select>
+    </div>
+    <div class="col-12 col-md-2">
+        <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1" @click.prevent="resetRatingFilter()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+        </button>
+    </div>
+
+    <!-- Baris 2: Rentang Tanggal & Togle Komentar -->
+    <div class="col-6 col-md-3 mt-2 mt-md-3">
+        <label class="form-label small fw-bold text-primary">Dari Tanggal</label>
+        <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.startDate">
+    </div>
+    <div class="col-6 col-md-3 mt-2 mt-md-3">
+        <label class="form-label small fw-bold text-primary">Sampai Tanggal</label>
+        <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.endDate">
+    </div>
+    <div class="col-12 col-md-6 mt-3 d-flex align-items-center">
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="withCommentOnly" v-model="ratingFilter.withComment">
+            <label class="form-check-label small text-muted mt-1" for="withCommentOnly" style="cursor: pointer;">
+                Hanya tampilkan ulasan yang memiliki komentar/pesan
+            </label>
         </div>
     </div>
+</div>
 
     <!-- Tampilan Card Ulasan (Dibuat Rapat untuk Mobile) -->
     <!-- PERBAIKAN: Menggunakan g-2 untuk mobile, g-md-3 untuk layar besar -->
@@ -9317,7 +9329,9 @@ body.sidebar-open {
                 stars: '',
                 outlet: '',
                 sort: 'newest',
-                withComment: false
+                withComment: false,
+                startDate: '',
+                endDate: '',
                 },
 
                 // SETELAN APLIKASI UTAMA
@@ -9729,6 +9743,38 @@ fulfillmentOrders() {
 
         filteredAllRatings() {
     let result = this.allRatings;
+
+    // Filter Rentang Tanggal (BARU)
+    if (this.ratingFilter.startDate || this.ratingFilter.endDate) {
+        result = result.filter(r => {
+            if (!r.date) return true; // Abaikan jika tidak ada tanggal
+
+            // Memisahkan "23/7/2026, 09.01.36" mengambil bagian "23/7/2026" saja
+            let dateStr = String(r.date).split(',')[0].trim(); 
+            let parts = dateStr.split('/');
+            
+            // Format ulang menjadi standar YYYY-MM-DD
+            if (parts.length === 3) {
+                let day = parts[0].padStart(2, '0');
+                let month = parts[1].padStart(2, '0');
+                let year = parts[2];
+                let isoReviewDate = `${year}-${month}-${day}`;
+
+                let isAfterStart = true;
+                let isBeforeEnd = true;
+
+                if (this.ratingFilter.startDate) {
+                    isAfterStart = isoReviewDate >= this.ratingFilter.startDate;
+                }
+                if (this.ratingFilter.endDate) {
+                    isBeforeEnd = isoReviewDate <= this.ratingFilter.endDate;
+                }
+
+                return isAfterStart && isBeforeEnd;
+            }
+            return true;
+        });
+    }
 
     // 1. Filter Pencarian (Cari berdasarkan Nama atau Invoice)
     if (this.ratingFilter.search) {
@@ -11505,7 +11551,9 @@ async openRatingModal(customer) {
         stars: '',
         outlet: '',
         sort: 'newest',
-        withComment: false
+        withComment: false,
+        startDate: '',
+        endDate: '',
     };
 },
 
