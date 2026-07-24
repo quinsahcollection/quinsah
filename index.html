@@ -4683,6 +4683,7 @@ body.sidebar-open {
         <div class="text-muted small">Analitik Omset, HPP, Laba Rugi, dan Performa Cabang</div>
     </div>
 
+    <!-- KARTU RINGKASAN ATAS -->
     <div class="row g-2 mb-3">
         <div class="col-6 col-md-3">
             <div class="card border border-success border-opacity-50 bg-success bg-opacity-10 rounded-3 h-100 shadow-none">
@@ -4722,6 +4723,7 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- FILTER PENCARIAN -->
     <div class="card border rounded-3 mb-3 shadow-none overflow-hidden">
         <div class="card-body p-3 bg-white">
             <div class="row g-2">
@@ -4749,6 +4751,7 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- MENU TAB LAPORAN -->
     <ul class="nav nav-pills mb-4 pb-2 border-bottom overflow-auto flex-nowrap" style="scrollbar-width: none;">
         <li class="nav-item me-2">
             <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'keuangan' ? 'active shadow-sm' : 'bg-white text-secondary'" @click="reportTab = 'keuangan'">
@@ -4775,11 +4778,23 @@ body.sidebar-open {
                 <i class="bi bi-clock-history me-1"></i> Jam Sibuk
             </button>
         </li>
+        <!-- TAB BARU: PELANGGAN & PAJAK -->
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'pelanggan' ? 'active shadow-sm bg-danger border-danger text-white' : 'bg-white text-secondary'" @click="reportTab = 'pelanggan'">
+                <i class="bi bi-people-fill me-1"></i> Pelanggan Setia
+            </button>
+        </li>
+        <li class="nav-item me-2">
+            <button class="nav-link rounded-pill border py-2 px-3 fw-semibold text-nowrap" :class="reportTab === 'pajak_diskon' ? 'active shadow-sm bg-secondary border-secondary text-white' : 'bg-white text-secondary'" @click="reportTab = 'pajak_diskon'">
+                <i class="bi bi-receipt-cutoff me-1"></i> Promo & Pajak
+            </button>
+        </li>
     </ul>
 
+    <!-- CSS ANIMASI -->
     <div v-html="'<style>@keyframes sR { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } } .anim-slide-right { animation: sR 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: left; } @keyframes sU { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } } .anim-scale-up { animation: sU 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform-origin: bottom; }</style>'"></div>
 
-    <!-- 🌟 TOMBOL SAKLAR GRAFIK / TABEL -->
+    <!-- TOMBOL SAKLAR GRAFIK / TABEL -->
     <div class="d-flex justify-content-end mb-3" v-if="reportTab !== 'keuangan'">
         <div class="btn-group btn-group-sm shadow-sm" role="group">
             <button type="button" class="btn" :class="reportViewMode === 'chart' ? 'btn-danger fw-bold' : 'btn-outline-danger'" @click="reportViewMode = 'chart'">
@@ -4791,6 +4806,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 1. TAB KEUANGAN (TRANSAKSI & LABA)         -->
+    <!-- ========================================== -->
     <div v-if="reportTab === 'keuangan'">
         <div class="card border rounded-3 shadow-none mb-4">
             <div class="card-header bg-light border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
@@ -4841,6 +4859,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 2. TAB PRODUK TERLARIS                     -->
+    <!-- ========================================== -->
     <div v-if="reportTab === 'produk'">
         <div class="card border rounded-3 shadow-none">
             <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
@@ -4848,7 +4869,7 @@ body.sidebar-open {
             </div>
             <div class="card-body p-4">
                 
-                <!-- 🌟 TAMPILAN GRAFIK -->
+                <!-- TAMPILAN GRAFIK -->
                 <div v-show="reportViewMode === 'chart'">
                     <div v-for="(p, index) in analyticsData.topProducts" :key="'cp'+index" class="mb-4">
                         <div class="d-flex justify-content-between align-items-end mb-1">
@@ -4865,7 +4886,7 @@ body.sidebar-open {
                     <div v-if="analyticsData.topProducts.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan produk.</div>
                 </div>
 
-                <!-- 🌟 TAMPILAN TABEL -->
+                <!-- TAMPILAN TABEL -->
                 <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
                     <table class="table table-hover table-sm align-middle mb-0">
                         <thead class="table-light">
@@ -4892,6 +4913,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 3. TAB KATEGORI TERLARIS                   -->
+    <!-- ========================================== -->
     <div v-if="reportTab === 'kategori'">
         <div class="card border rounded-3 shadow-none">
             <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
@@ -4899,7 +4923,7 @@ body.sidebar-open {
             </div>
             <div class="card-body p-4">
 
-                <!-- 🌟 TAMPILAN GRAFIK -->
+                <!-- TAMPILAN GRAFIK -->
                 <div v-show="reportViewMode === 'chart'">
                     <div v-for="(c, index) in analyticsData.topCategories" :key="'cc'+index" class="mb-4">
                         <div class="d-flex justify-content-between align-items-end mb-1">
@@ -4914,7 +4938,7 @@ body.sidebar-open {
                     <div v-if="analyticsData.topCategories.length === 0" class="text-center py-5 text-muted">Belum ada data penjualan kategori.</div>
                 </div>
 
-                <!-- 🌟 TAMPILAN TABEL -->
+                <!-- TAMPILAN TABEL -->
                 <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
                     <table class="table table-hover table-sm align-middle mb-0">
                         <thead class="table-light">
@@ -4941,6 +4965,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 4. TAB METODE PEMBAYARAN                   -->
+    <!-- ========================================== -->
     <div v-if="reportTab === 'pembayaran'">
         <div class="card border rounded-3 shadow-none">
             <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
@@ -4948,7 +4975,7 @@ body.sidebar-open {
             </div>
             <div class="card-body p-4">
 
-                <!-- 🌟 TAMPILAN GRAFIK -->
+                <!-- TAMPILAN GRAFIK -->
                 <div v-show="reportViewMode === 'chart'">
                     <div v-for="(p, index) in analyticsData.paymentMethods" :key="'cpym'+index" class="mb-4">
                         <div class="d-flex justify-content-between align-items-end mb-1">
@@ -4967,7 +4994,7 @@ body.sidebar-open {
                     </div>
                 </div>
 
-                <!-- 🌟 TAMPILAN TABEL -->
+                <!-- TAMPILAN TABEL -->
                 <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
                     <table class="table table-hover table-sm align-middle mb-0">
                         <thead class="table-light">
@@ -4994,6 +5021,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 5. TAB JAM SIBUK                           -->
+    <!-- ========================================== -->
     <div v-if="reportTab === 'peakhour'" class="px-1">
         <div class="card border rounded-3 shadow-none">
             <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
@@ -5001,7 +5031,7 @@ body.sidebar-open {
             </div>
             <div class="card-body p-2 p-md-4">
                 
-                <!-- 🌟 TAMPILAN GRAFIK -->
+                <!-- TAMPILAN GRAFIK -->
                 <div v-show="reportViewMode === 'chart'" class="overflow-auto pb-3" style="scrollbar-width: thin;">
                     <div class="d-flex align-items-end justify-content-between pt-4" style="height: 380px; gap: 8px; min-width: 900px; padding: 0 10px;">
                         
@@ -5032,7 +5062,7 @@ body.sidebar-open {
                     </div>
                 </div>
 
-                <!-- 🌟 TAMPILAN TABEL -->
+                <!-- TAMPILAN TABEL -->
                 <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
                     <table class="table table-hover table-sm align-middle mb-0">
                         <thead class="table-light">
@@ -5056,8 +5086,133 @@ body.sidebar-open {
             </div>
         </div>
     </div>
-</div>
 
+    <!-- ========================================== -->
+    <!-- 6. TAB PELANGGAN SETIA (CRM)               -->
+    <!-- ========================================== -->
+    <div v-if="reportTab === 'pelanggan'">
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-stars text-danger me-2"></i>Top 20 Pelanggan Paling Loyal (Member)</h6>
+            </div>
+            <div class="card-body p-4">
+
+                <!-- TAMPILAN GRAFIK -->
+                <div v-show="reportViewMode === 'chart'">
+                    <div v-for="(c, index) in analyticsData.topCustomers" :key="'ccust'+index" class="mb-4">
+                        <div class="d-flex justify-content-between align-items-end mb-1">
+                            <div class="fw-semibold text-dark text-truncate pe-2">
+                                <span class="badge bg-danger rounded-pill me-2">Rank {{ index + 1 }}</span> {{ c.name }}
+                            </div>
+                            <div class="fw-bold text-danger">Rp {{ formatNumber(c.omset) }}</div>
+                        </div>
+                        <div class="progress" style="height: 12px; background-color: #e9ecef;">
+                            <div class="progress-bar bg-danger rounded-pill anim-slide-right" :style="{ width: ((c.omset / analyticsData.maxCustomerOmset) * 100) + '%' }"></div>
+                        </div>
+                        <div class="small text-muted mt-1 text-end" style="font-size: 0.7rem;">Kunjungan/Transaksi: {{ c.count }}x</div>
+                    </div>
+                    <div v-if="!analyticsData.topCustomers || analyticsData.topCustomers.length === 0" class="text-center py-5 text-muted">Belum ada data pelanggan spesifik tercatat.</div>
+                </div>
+
+                <!-- TAMPILAN TABEL -->
+                <div v-if="reportViewMode === 'table'" class="table-responsive border rounded shadow-sm">
+                    <table class="table table-hover table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">Rank</th>
+                                <th>Nama Pelanggan</th>
+                                <th class="text-center">Jumlah Kedatangan</th>
+                                <th class="text-end">Total Belanja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(c, index) in analyticsData.topCustomers" :key="'tcust'+index">
+                                <td class="text-center fw-bold text-muted">#{{ index + 1 }}</td>
+                                <td class="fw-bold"><i class="bi bi-person-badge me-2 text-muted"></i>{{ c.name }}</td>
+                                <td class="text-center"><span class="badge bg-secondary rounded-pill px-3">{{ c.count }}x</span></td>
+                                <td class="text-end fw-bold text-danger">Rp {{ formatNumber(c.omset) }}</td>
+                            </tr>
+                            <tr v-if="!analyticsData.topCustomers || analyticsData.topCustomers.length === 0"><td colspan="4" class="text-center py-4 text-muted">Belum ada riwayat belanja pelanggan.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 7. TAB PROMO, DISKON & PAJAK               -->
+    <!-- ========================================== -->
+    <div v-if="reportTab === 'pajak_diskon'">
+        
+        <!-- RINGKASAN PAJAK & DISKON (Hanya muncul di mode Grafik untuk meringkas visual) -->
+        <div v-show="reportViewMode === 'chart'" class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card border border-warning rounded-3 shadow-none bg-warning bg-opacity-10 h-100">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-ticket-perforated fs-1 text-warning mb-2 d-block"></i>
+                        <h6 class="fw-bold text-dark mb-1">Total Promo / Diskon Diberikan</h6>
+                        <h3 class="fw-bold text-warning-emphasis mb-2">Rp {{ formatNumber(analyticsData.taxDiscount.totalDiskonItem + analyticsData.taxDiscount.totalDiskonGlobal) }}</h3>
+                        <div class="small text-muted">Diberikan pada <span class="fw-bold">{{ analyticsData.taxDiscount.trxWithDiscount }}</span> Transaksi</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border border-info rounded-3 shadow-none bg-info bg-opacity-10 h-100">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-receipt fs-1 text-info mb-2 d-block"></i>
+                        <h6 class="fw-bold text-dark mb-1">Total PPN / Pajak Terkumpul</h6>
+                        <h3 class="fw-bold text-info-emphasis mb-2">Rp {{ formatNumber(analyticsData.taxDiscount.totalPajak) }}</h3>
+                        <div class="small text-muted">Dipungut dari <span class="fw-bold">{{ analyticsData.taxDiscount.trxWithTax }}</span> Transaksi</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border rounded-3 shadow-none">
+            <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center rounded-top-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-card-list text-secondary me-2"></i>Daftar Transaksi dengan Promo atau Pajak</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
+                        <thead class="table-light text-secondary border-bottom">
+                            <tr>
+                                <th class="ps-3 fw-semibold">No. Invoice & Tanggal</th>
+                                <th class="fw-semibold">Pelanggan</th>
+                                <th class="text-end fw-semibold text-warning-emphasis">Diskon Diberikan</th>
+                                <th class="text-end fw-semibold text-info-emphasis">Pajak Dipungut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="trx in processedReportData.filter(t => t.discountAmt > 0 || t.globalDiscountAmt > 0 || t.taxAmt > 0 || t.taxAmount > 0)" :key="'tpj'+trx.id">
+                                <td class="ps-3 py-2">
+                                    <span class="fw-bold text-dark">{{ trx.id }}</span>
+                                    <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ trx.dateStr }}</div>
+                                </td>
+                                <td>{{ trx.customer || 'Umum' }}</td>
+                                <td class="text-end fw-bold text-warning-emphasis">
+                                    Rp {{ formatNumber(Number(trx.discountAmt || 0) + Number(trx.globalDiscountAmt || 0)) }}
+                                </td>
+                                <td class="text-end fw-bold text-info-emphasis">
+                                    Rp {{ formatNumber(trx.taxAmt || trx.taxAmount || 0) }}
+                                </td>
+                            </tr>
+                            <tr v-if="processedReportData.filter(t => t.discountAmt > 0 || t.globalDiscountAmt > 0 || t.taxAmt > 0 || t.taxAmount > 0).length === 0">
+                                <td colspan="4" class="text-center py-5 text-muted bg-light bg-opacity-50">
+                                    <i class="bi bi-slash-circle fs-2 d-block mb-2 opacity-50"></i>
+                                    Tidak ada transaksi yang dikenakan pajak atau promo diskon pada filter ini.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
             <!-- SALES VIEW -->
             <div v-if="currentView === 'sales'" class="dashboard-card mb-4 fade-in">
     <h6 class="fw-bold mb-3 pb-2 border-bottom">Riwayat Transaksi Penjualan (POS)</h6>
