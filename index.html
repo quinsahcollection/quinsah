@@ -5103,6 +5103,10 @@ body.sidebar-open {
                         <div class="d-flex justify-content-between align-items-end mb-1">
                             <div class="fw-semibold text-dark text-truncate pe-2">
                                 <span class="badge bg-danger rounded-pill me-2">Rank {{ index + 1 }}</span> {{ c.name }}
+                                <!-- 🌟 MUNCULKAN NOMOR TELP DI GRAFIK -->
+                                <span v-if="c.phone && c.phone !== '-'" class="small text-muted ms-1 fw-normal" style="font-size: 0.75rem;">
+                                    (<i class="bi bi-telephone-fill" style="font-size: 0.7rem;"></i> {{ c.phone }})
+                                </span>
                             </div>
                             <div class="fw-bold text-danger">Rp {{ formatNumber(c.omset) }}</div>
                         </div>
@@ -5120,7 +5124,7 @@ body.sidebar-open {
                         <thead class="table-light">
                             <tr>
                                 <th class="text-center" style="width: 50px;">Rank</th>
-                                <th>Nama Pelanggan</th>
+                                <th>Nama Pelanggan & Kontak</th>
                                 <th class="text-center">Jumlah Kedatangan</th>
                                 <th class="text-end">Total Belanja</th>
                             </tr>
@@ -5128,7 +5132,13 @@ body.sidebar-open {
                         <tbody>
                             <tr v-for="(c, index) in analyticsData.topCustomers" :key="'tcust'+index">
                                 <td class="text-center fw-bold text-muted">#{{ index + 1 }}</td>
-                                <td class="fw-bold"><i class="bi bi-person-badge me-2 text-muted"></i>{{ c.name }}</td>
+                                <td>
+                                    <div class="fw-bold"><i class="bi bi-person-badge me-2 text-muted"></i>{{ c.name }}</div>
+                                    <!-- 🌟 MUNCULKAN NOMOR WA/TELP DI TABEL -->
+                                    <div v-if="c.phone && c.phone !== '-'" class="small text-muted mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-whatsapp text-success me-1"></i> {{ c.phone }}
+                                    </div>
+                                </td>
                                 <td class="text-center"><span class="badge bg-secondary rounded-pill px-3">{{ c.count }}x</span></td>
                                 <td class="text-end fw-bold text-danger">Rp {{ formatNumber(c.omset) }}</td>
                             </tr>
@@ -5140,7 +5150,7 @@ body.sidebar-open {
             </div>
         </div>
     </div>
-
+                
     <!-- ========================================== -->
     <!-- 7. TAB PROMO, DISKON & PAJAK               -->
     <!-- ========================================== -->
@@ -10710,9 +10720,18 @@ fulfillmentOrders() {
                 let rawCustName = trx.customer || (typeof this.getCustomerName === 'function' ? this.getCustomerName(trx.customerId) : null);
                 let custName = rawCustName ? String(rawCustName).trim() : 'Pelanggan Umum / Non-Member';
                 
+                // 🌟 TANGKAP NOMOR TELEPON DARI INVOICE
+                let custPhone = trx.customerPhone || '-'; 
+                
                 // Masukkan ke grafik hanya jika bukan pelanggan umum
                 if (custName !== '' && custName.toLowerCase() !== 'pelanggan umum / non-member' && custName.toLowerCase() !== 'umum') {
-                    if (!customers[custName]) customers[custName] = { name: custName, omset: 0, count: 0 };
+                    if (!customers[custName]) {
+                        customers[custName] = { name: custName, phone: custPhone, omset: 0, count: 0 };
+                    } else if (customers[custName].phone === '-' && custPhone !== '-') {
+                        // Jika transaksi sebelumnya tidak ada nomor telp, tapi di transaksi terbaru ada, maka perbarui
+                        customers[custName].phone = custPhone;
+                    }
+
                     customers[custName].omset += Number(trx.omsetReport !== undefined ? trx.omsetReport : (trx.total || 0));
                     customers[custName].count += 1;
                 }
