@@ -11904,275 +11904,304 @@ async fetchAllRatings() {
         return phone || 'Nomor tidak tersedia';
     },   
 
-    // ==============================================
-    // FUNGSI EXPORT (PELANGGAN, SUPPLIER, RATING)
-    // ==============================================
+   // ==============================================
+// FUNGSI EXPORT & TEMPLATE (AMAN & MULTI-TENANT)
+// ==============================================
 
-    previewExportData() {
-        this.exportConfig.showPreview = true;
-        this.exportConfig.previewData = [];
+previewExportData() {
+    this.exportConfig.showPreview = true;
+    this.exportConfig.previewData = [];
+    
+    let dataSumber = [];
+
+    if (this.exportConfig.target === 'customers') {
+        this.exportConfig.previewHeaders = ['Nama', 'No. Telepon', 'Alamat', 'Diskon Member'];
+        dataSumber = this.filteredCustomers || [];
         
-        let dataSumber = [];
-
-        if (this.exportConfig.target === 'customers') {
-            this.exportConfig.previewHeaders = ['Nama', 'No. Telepon', 'Alamat', 'Diskon Member'];
-            dataSumber = this.filteredCustomers || [];
-            
-            this.exportConfig.previewData = dataSumber.slice(0, 5).map(c => ({
-                col1: c.name,
-                col2: c.phone,
-                col3: c.address || '-',
-                col4: this.getMembershipDiscount(c.membershipId) + '%'
-            }));
-            
-        } else if (this.exportConfig.target === 'suppliers') {
-            this.exportConfig.previewHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
-            dataSumber = this.filteredSuppliers || [];
-            
-            this.exportConfig.previewData = dataSumber.slice(0, 5).map(s => ({
-                col1: s.name,
-                col2: s.phone,
-                col3: s.address || '-'
-            }));
-            
-        } else if (this.exportConfig.target === 'ratings') {
-            this.exportConfig.previewHeaders = ['Tanggal', 'Pelanggan', 'Invoice', 'Rating', 'Ulasan'];
-            dataSumber = this.filteredAllRatings || [];
-            
-            this.exportConfig.previewData = dataSumber.slice(0, 5).map(r => ({
-                col1: r.date,
-                col2: r.customerName || '-',
-                col3: r.invoiceId,
-                col4: r.rating + ' Bintang',
-                col5: r.review || '-'
-            }));
-        }
-    },
-            
-    processExport() {
-        let dataToExport = [];
-        let formattedData = [];
-        const today = new Date().toISOString().split('T')[0];
-        let fileName = `Data_${this.exportConfig.target}_${today}`;
-
-        // 1. Tentukan sumber data berdasarkan target
-        if (this.exportConfig.target === 'customers') {
-            dataToExport = this.filteredCustomers;
-            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data pelanggan untuk diexport!');
-            
-            formattedData = dataToExport.map(c => ({
-                "Nama Pelanggan": c.name || '-',
-                "No Telepon": c.phone || '-',
-                "Alamat": c.address || '-',
-                "Diskon Member": this.getMembershipDiscount(c.membershipId) + '%'
-            }));
-
-        } else if (this.exportConfig.target === 'suppliers') {
-            dataToExport = this.filteredSuppliers;
-            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data supplier untuk diexport!');
-            
-            formattedData = dataToExport.map(s => ({
-                "Nama Supplier": s.name || '-',
-                "No Telepon": s.phone || '-',
-                "Alamat": s.address || '-'
-            }));
-
-        } else if (this.exportConfig.target === 'ratings') {
-            dataToExport = this.filteredAllRatings;
-            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data ulasan untuk diexport!');
-            
-            formattedData = dataToExport.map(r => ({
-                "Tanggal": r.date || '-',
-                "Invoice": r.invoiceId || '-',
-                "Nama Pelanggan": r.customerName || 'Pelanggan',
-                "No Telepon": this.getCustomerPhone ? this.getCustomerPhone(r) : '-',
-                "Outlet": this.getOutletNameForReview ? this.getOutletNameForReview(r) : '-',
-                "Bintang": r.rating || 0,
-                "Ulasan": (r.review || '-').replace(/\n/g, ' ')
-            }));
-        } else {
-            return alert("Error: Target export tidak dikenali.");
-        }
-
-        // 2. Eksekusi Berdasarkan Format Pilihan
-        if (this.exportConfig.format === 'xlsx') {
-            if (typeof XLSX === 'undefined') {
-                alert("Library Excel belum dimuat. Pastikan Anda sudah memasukkan script SheetJS di index.html.");
-                return;
-            }
-            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Export");
-            XLSX.writeFile(workbook, `${fileName}.xlsx`);
-
-        } else if (this.exportConfig.format === 'csv') {
-            const headers = Object.keys(formattedData[0]);
-            let csvContent = headers.join(',') + "\n";
-            
-            formattedData.forEach(row => {
-                let csvRow = headers.map(header => {
-                    let cellData = row[header] === null || row[header] === undefined ? '' : String(row[header]);
-                    return `"${cellData.replace(/"/g, '""')}"`;
-                }).join(',');
-                csvContent += csvRow + "\n";
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `${fileName}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // 3. Tutup Modal setelah selesai
-        this.exportConfig.showModal = false;
-    },
-
-    // FUNGSI BARU: Download Template Excel
-    downloadTemplate() {
-        let headers = [];
-        let fileName = `Template_${this.importConfig.target}.xlsx`;
-
-        // Tentukan header berdasarkan target
-        if (this.importConfig.target === 'customers') {
-            headers = ['Nama', 'No. Telepon', 'Alamat'];
-        } else if (this.importConfig.target === 'suppliers') {
-            headers = ['Nama Supplier', 'No. Telepon', 'Alamat'];
-        } else {
-            return alert('Template tidak tersedia untuk data ini.');
-        }
-
-        // Buat file Excel menggunakan SheetJS
-        if (typeof XLSX !== 'undefined') {
-            const worksheet = XLSX.utils.aoa_to_sheet([headers]);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
-            XLSX.writeFile(workbook, fileName);
-        } else {
-            alert("Library Excel belum dimuat!");
-        }
-    },
-            
-    // ==============================================
-    // FUNGSI IMPORT (MEMBACA EXCEL & SIMPAN DATA)
-    // ==============================================
-
-    handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+        this.exportConfig.previewData = dataSumber.slice(0, 5).map(c => ({
+            col1: c.name,
+            col2: c.phone,
+            col3: c.address || '-',
+            col4: this.getMembershipDiscount(c.membershipId) + '%'
+        }));
         
-        this.importConfig.fileName = file.name;
-        this.importConfig.errorMessage = null; // Reset error sebelumnya
+    } else if (this.exportConfig.target === 'suppliers') {
+        this.exportConfig.previewHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
+        dataSumber = this.filteredSuppliers || [];
+        
+        this.exportConfig.previewData = dataSumber.slice(0, 5).map(s => ({
+            col1: s.name,
+            col2: s.phone,
+            col3: s.address || '-'
+        }));
+        
+    } else if (this.exportConfig.target === 'ratings') {
+        this.exportConfig.previewHeaders = ['Tanggal', 'Pelanggan', 'Invoice', 'Rating', 'Ulasan'];
+        dataSumber = this.filteredAllRatings || [];
+        
+        this.exportConfig.previewData = dataSumber.slice(0, 5).map(r => ({
+            col1: r.date,
+            col2: r.customerName || '-',
+            col3: r.invoiceId,
+            col4: r.rating + ' Bintang',
+            col5: r.review || '-'
+        }));
+    }
+},
+        
+processExport() {
+    let dataToExport = [];
+    let formattedData = [];
+    const today = new Date().toISOString().split('T')[0];
+    let fileName = `Data_${this.exportConfig.target}_${today}`;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+    // 1. Tentukan sumber data berdasarkan target
+    if (this.exportConfig.target === 'customers') {
+        dataToExport = this.filteredCustomers;
+        if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data pelanggan untuk diexport!');
+        
+        formattedData = dataToExport.map(c => ({
+            "Nama Pelanggan": c.name || '-',
+            "No Telepon": c.phone || '-',
+            "Alamat": c.address || '-',
+            "Diskon Member": this.getMembershipDiscount(c.membershipId) + '%'
+        }));
 
-                if (jsonData.length > 0) {
-                    const uploadedHeaders = jsonData[0]; // Baris pertama dianggap header
-                    
-                    // 1. Tentukan Header Standar yang diharapkan
-                    let expectedHeaders = [];
-                    if (this.importConfig.target === 'customers') {
-                        expectedHeaders = ['Nama', 'No. Telepon', 'Alamat'];
-                    } else if (this.importConfig.target === 'suppliers') {
-                        expectedHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
-                    }
+    } else if (this.exportConfig.target === 'suppliers') {
+        dataToExport = this.filteredSuppliers;
+        if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data supplier untuk diexport!');
+        
+        formattedData = dataToExport.map(s => ({
+            "Nama Supplier": s.name || '-',
+            "No Telepon": s.phone || '-',
+            "Alamat": s.address || '-'
+        }));
 
-                    // 2. Validasi Header (Cek apakah kolom wajib ada di file yang diupload)
-                    let isFormatValid = true;
-                    // Kita cek dari header yang diharapkan, apakah ada di file upload (case-insensitive)
-                    const uploadedHeadersLower = uploadedHeaders.map(h => String(h).toLowerCase().trim());
-                    
-                    for (let i = 0; i < expectedHeaders.length; i++) {
-                        let expected = expectedHeaders[i].toLowerCase();
-                        if (!uploadedHeadersLower.includes(expected)) {
-                            isFormatValid = false;
-                            break;
-                        }
-                    }
+    } else if (this.exportConfig.target === 'ratings') {
+        dataToExport = this.filteredAllRatings;
+        if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data ulasan untuk diexport!');
+        
+        formattedData = dataToExport.map(r => ({
+            "Tanggal": r.date || '-',
+            "Invoice": r.invoiceId || '-',
+            "Nama Pelanggan": r.customerName || 'Pelanggan',
+            "No Telepon": this.getCustomerPhone ? this.getCustomerPhone(r) : '-',
+            "Outlet": this.getOutletNameForReview ? this.getOutletNameForReview(r) : '-',
+            "Bintang": r.rating || 0,
+            "Ulasan": (r.review || '-').replace(/\n/g, ' ')
+        }));
+    } else {
+        return alert("Error: Target export tidak dikenali.");
+    }
 
-                    // 3. Blokir jika format tidak valid
-                    if (!isFormatValid) {
-                        this.importConfig.errorMessage = `Anda mengupload data yang salah. Untuk import ${this.importConfig.target}, pastikan file memiliki kolom: "${expectedHeaders.join('", "')}". Silakan download template terlebih dahulu.`;
-                        event.target.value = ''; // Reset file input
-                        return; // Hentikan proses, jangan lanjut ke step 2
-                    }
+    // 2. Eksekusi Berdasarkan Format Pilihan
+    if (this.exportConfig.format === 'xlsx') {
+        if (typeof XLSX === 'undefined') {
+            alert("Library Excel belum dimuat. Pastikan Anda sudah memasukkan script SheetJS di index.html.");
+            return;
+        }
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Data Export");
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
 
-                    // 4. Jika Valid, lanjut ke preview
-                    this.importConfig.previewHeaders = uploadedHeaders; 
-                    this.importConfig.fullImportData = jsonData.slice(1).filter(row => row.length > 0); // Buang baris kosong
-                    
-                    this.importConfig.previewData = this.importConfig.fullImportData.slice(0, 5).map(row => {
-                        let obj = {};
-                        this.importConfig.previewHeaders.forEach((head, idx) => {
-                            obj['col' + (idx + 1)] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '-'; 
-                        });
-                        return obj;
-                    });
+    } else if (this.exportConfig.format === 'csv') {
+        const headers = Object.keys(formattedData[0]);
+        let csvContent = headers.join(',') + "\n";
+        
+        formattedData.forEach(row => {
+            let csvRow = headers.map(header => {
+                let cellData = row[header] === null || row[header] === undefined ? '' : String(row[header]);
+                return `"${cellData.replace(/"/g, '""')}"`;
+            }).join(',');
+            csvContent += csvRow + "\n";
+        });
 
-                    this.importConfig.step = 2; // Pindah ke Step Preview
-                } else {
-                    this.importConfig.errorMessage = "File Excel kosong. Tidak ada data yang ditemukan.";
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${fileName}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 3. Tutup Modal setelah selesai
+    this.exportConfig.showModal = false;
+},
+
+downloadTemplate() {
+    let headers = [];
+    let fileName = `Template_${this.importConfig.target}.xlsx`;
+
+    if (this.importConfig.target === 'customers') {
+        headers = ['Nama', 'No. Telepon', 'Alamat'];
+    } else if (this.importConfig.target === 'suppliers') {
+        headers = ['Nama Supplier', 'No. Telepon', 'Alamat'];
+    } else {
+        return alert('Template tidak tersedia untuk data ini.');
+    }
+
+    if (typeof XLSX !== 'undefined') {
+        const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+        XLSX.writeFile(workbook, fileName);
+    } else {
+        alert("Library Excel belum dimuat!");
+    }
+},
+
+// ==============================================
+// FUNGSI IMPORT (VALIDASI URUTAN & CHUNKING BATCH)
+// ==============================================
+
+handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    this.importConfig.fileName = file.name;
+    this.importConfig.errorMessage = null; 
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+
+            if (jsonData.length > 0) {
+                const uploadedHeaders = jsonData[0]; 
+                
+                let expectedHeaders = [];
+                if (this.importConfig.target === 'customers') {
+                    expectedHeaders = ['Nama', 'No. Telepon', 'Alamat'];
+                } else if (this.importConfig.target === 'suppliers') {
+                    expectedHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
                 }
-            } catch (error) {
-                this.importConfig.errorMessage = "Gagal membaca file. Pastikan format file benar (.xlsx atau .csv) dan tidak rusak.";
-            }
-        };
-        
-        reader.readAsArrayBuffer(file);
-        event.target.value = ''; // Reset file input
-    },
 
-    processImport() {
-        const dataRows = this.importConfig.fullImportData;
+                // Validasi Header (Urutan harus SAMA PERSIS dengan template)
+                let isFormatValid = true;
+                const uploadedHeadersLower = uploadedHeaders.map(h => String(h || '').toLowerCase().trim());
+                
+                for (let i = 0; i < expectedHeaders.length; i++) {
+                    let expected = expectedHeaders[i].toLowerCase();
+                    if (uploadedHeadersLower[i] !== expected) {
+                        isFormatValid = false;
+                        break;
+                    }
+                }
+
+                if (!isFormatValid) {
+                    this.importConfig.errorMessage = `Format kolom file salah! Untuk import ${this.importConfig.target}, urutan kolom wajib: "${expectedHeaders.join('", "')}". Silakan download template resmi kami.`;
+                    event.target.value = ''; 
+                    return; 
+                }
+
+                this.importConfig.previewHeaders = uploadedHeaders; 
+                this.importConfig.fullImportData = jsonData.slice(1).filter(row => row.length > 0); 
+                
+                this.importConfig.previewData = this.importConfig.fullImportData.slice(0, 5).map(row => {
+                    let obj = {};
+                    this.importConfig.previewHeaders.forEach((head, idx) => {
+                        obj['col' + (idx + 1)] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '-'; 
+                    });
+                    return obj;
+                });
+
+                this.importConfig.step = 2; 
+            } else {
+                this.importConfig.errorMessage = "File Excel kosong. Tidak ada data yang ditemukan.";
+            }
+        } catch (error) {
+            this.importConfig.errorMessage = "Gagal membaca file. Pastikan format file benar (.xlsx atau .csv) dan tidak rusak.";
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+    event.target.value = ''; 
+},
+
+async processImport() {
+    const compId = this.getMyCompanyId();
+    if (!compId) {
+        return Swal.fire('Error', 'Sistem belum memuat data Perusahaan Anda. Mohon tunggu beberapa detik atau refresh halaman.', 'error');
+    }
+
+    const dataRows = this.importConfig.fullImportData;
+    if (!dataRows || dataRows.length === 0) {
+        return Swal.fire('Peringatan', 'Tidak ada data valid yang ditemukan untuk diimport.', 'warning');
+    }
+
+    this.isProcessing = true;
+    
+    try {
+        const collectionName = this.importConfig.target === 'customers' ? "customers" : "suppliers";
         let successCount = 0;
 
-        if (this.importConfig.target === 'customers') {
-            dataRows.forEach((row, index) => {
-                if (!row[0]) return; 
-
-                this.customers.push({
-                    // Ditambahkan index agar ID terjamin unik
-                    id: 'CUST-' + Date.now() + '-' + index + '-' + Math.floor(Math.random() * 1000),
-                    name: row[0].toString(),
-                    phone: row[1] ? row[1].toString() : '',
-                    address: row[2] ? row[2].toString() : '',
-                    membershipId: null
-                });
-                successCount++;
-            });
-        } 
-        else if (this.importConfig.target === 'suppliers') {
-            dataRows.forEach((row, index) => {
-                if (!row[0]) return; 
-
-                this.suppliers.push({
-                    id: 'SUPP-' + Date.now() + '-' + index + '-' + Math.floor(Math.random() * 1000),
-                    name: row[0].toString(),
-                    phone: row[1] ? row[1].toString() : '',
-                    address: row[2] ? row[2].toString() : ''
-                });
-                successCount++;
-            });
+        // Pecah array menjadi bagian kecil maksimal 450 data per batch (Amankan limit Firebase 500)
+        const BATCH_LIMIT = 450; 
+        const chunks = [];
+        for (let i = 0; i < dataRows.length; i += BATCH_LIMIT) {
+            chunks.push(dataRows.slice(i, i + BATCH_LIMIT));
         }
 
-        this.importConfig.step = 3;
-        alert(`Berhasil mengimport ${successCount} data!`);
+        for (const chunk of chunks) {
+            const batch = writeBatch(db); 
+            
+            chunk.forEach((row) => {
+                if (!row[0]) return; 
+
+                const newDocRef = doc(collection(db, collectionName)); 
+                let payload = {
+                    companyId: compId, // 🌟 Mengunci data agar masuk khusus ke tenant yang aktif
+                    name: row[0].toString().trim(),
+                    phone: row[1] ? row[1].toString().trim() : '',
+                    address: row[2] ? row[2].toString().trim() : '',
+                    createdAt: new Date(),
+                    createdBy: this.userProfile?.name || this.currentUser?.name || "Admin",
+                    updatedBy: this.userProfile?.name || this.currentUser?.name || "Admin"
+                };
+
+                if (this.importConfig.target === 'customers') {
+                    payload.membershipId = ''; 
+                }
+
+                batch.set(newDocRef, payload);
+                successCount++;
+            });
+
+            await batch.commit(); 
+        }
+
+        this.importConfig.step = 3; 
         
+        if (this.importConfig.target === 'customers' && typeof this.fetchCustomers === 'function') {
+            await this.fetchCustomers();
+        } else if (this.importConfig.target === 'suppliers' && typeof this.fetchSuppliers === 'function') {
+            await this.fetchSuppliers();
+        }
+
+        Swal.fire('Berhasil', `${successCount} data ${this.importConfig.target} berhasil diimport dan disimpan di database!`, 'success');
+
         setTimeout(() => {
             this.importConfig.showModal = false;
+            this.importConfig.step = 1; 
+            this.importConfig.fullImportData = [];
+            this.importConfig.fileName = null;
         }, 2000);
-    },
+
+    } catch (error) {
+        console.error("Gagal melakukan bulk import ke Firebase: ", error);
+        Swal.fire('Error', 'Gagal menyimpan data ke database. Silakan cek koneksi internet Anda.', 'error');
+    } finally {
+        this.isProcessing = false;
+    }
+},
             
         // =========================================================
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
