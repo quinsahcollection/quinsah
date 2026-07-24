@@ -4228,11 +4228,27 @@ body.sidebar-open {
         <li class="nav-item"><a class="nav-link" :class="{active: crmTab==='ratings', 'bg-primary-custom': crmTab==='ratings'}" href="#" @click.prevent="crmTab='ratings'; fetchAllRatings()">Ulasan & Rating</a></li>
     </ul>
 
+    <!-- ============================================== -->
     <!-- TAB PELANGGAN -->
+    <!-- ============================================== -->
     <div v-if="crmTab==='customers'" class="dashboard-card">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
             <h6 class="fw-bold mb-0">Database Pelanggan</h6>
-            <button class="btn btn-sm btn-primary-custom" @click="openModal('addCustomerModal')"><i class="bi bi-person-plus me-1"></i>Tambah Baru</button>
+            
+            <!-- 🌟 TOMBOL PEMANGGUL IMPORT, EXPORT & TAMBAH PELANGGAN 🌟 -->
+            <div class="d-flex align-items-center gap-2">
+                <div class="btn-group shadow-sm" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary bg-white text-dark" @click="importConfig.showModal = true; importConfig.target = 'customers'; importConfig.step = 1">
+                        <i class="bi bi-download text-primary me-1"></i> Import
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary bg-white text-dark" @click="exportConfig.showModal = true; exportConfig.target = 'customers'; exportConfig.showPreview = false">
+                        <i class="bi bi-upload text-primary me-1"></i> Export
+                    </button>
+                </div>
+                <button class="btn btn-sm btn-primary-custom shadow-sm" @click="openModal('addCustomerModal')">
+                    <i class="bi bi-person-plus me-1"></i>Tambah Baru
+                </button>
+            </div>
         </div>
 
         <div class="row g-2 mb-3 bg-light p-3 rounded border">
@@ -4252,6 +4268,7 @@ body.sidebar-open {
                 <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="customerSearchQuery=''; customerPromoFilter=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
             </div>
         </div>
+
         <div class="table-responsive">
             <table class="table table-custom align-middle">
                 <thead><tr><th>Nama</th><th>Kontak & Alamat</th><th>Membership (Diskon)</th><th>Aksi</th></tr></thead>
@@ -4261,7 +4278,7 @@ body.sidebar-open {
                         <td class="small">{{ c.phone }}<br><span class="text-muted" style="font-size:0.7rem;">{{ c.address || '-' }}</span></td>
                         <td><span class="badge bg-warning text-dark">{{ getMembershipName(c.membershipId) }} ({{ getMembershipDiscount(c.membershipId) }}%)</span></td>
                         <td>
-                            <!-- Tombol Lihat Ulasan (SUDAH DIPERBAIKI) -->
+                            <!-- Tombol Lihat Ulasan -->
                             <button class="btn btn-sm btn-light border text-warning me-1 px-2 py-1" @click="openRatingModal(c)" title="Lihat Ulasan Pelanggan">
                                 <i class="bi bi-star-fill"></i>
                             </button>
@@ -4278,7 +4295,9 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ============================================== -->
     <!-- TAB MEMBERSHIP -->
+    <!-- ============================================== -->
     <div v-if="crmTab==='memberships'" class="dashboard-card">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
             <h6 class="fw-bold mb-0">Tier Membership</h6>
@@ -4300,11 +4319,27 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ============================================== -->
     <!-- TAB SUPPLIER -->
+    <!-- ============================================== -->
     <div v-if="crmTab==='suppliers'" class="dashboard-card">
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
             <h6 class="fw-bold mb-0">Database Supplier (Pemasok)</h6>
-            <button class="btn btn-sm btn-primary-custom" @click="openModal('addSupplierModal')"><i class="bi bi-truck me-1"></i>Tambah Supplier</button>
+            
+            <!-- 🌟 TOMBOL PEMANGGUL IMPORT, EXPORT & TAMBAH SUPPLIER 🌟 -->
+            <div class="d-flex align-items-center gap-2">
+                <div class="btn-group shadow-sm" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary bg-white text-dark" @click="importConfig.showModal = true; importConfig.target = 'suppliers'; importConfig.step = 1">
+                        <i class="bi bi-download text-primary me-1"></i> Import
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary bg-white text-dark" @click="exportConfig.showModal = true; exportConfig.target = 'suppliers'; exportConfig.showPreview = false">
+                        <i class="bi bi-upload text-primary me-1"></i> Export
+                    </button>
+                </div>
+                <button class="btn btn-sm btn-primary-custom shadow-sm" @click="openModal('addSupplierModal')">
+                    <i class="bi bi-truck me-1"></i>Tambah Supplier
+                </button>
+            </div>
         </div>
 
         <div class="row g-2 mb-3 bg-light p-3 rounded border">
@@ -4316,6 +4351,7 @@ body.sidebar-open {
                 <button class="btn btn-sm btn-outline-danger w-100 fw-bold py-1 bg-white" @click="supplierSearchQuery=''"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
             </div>
         </div>
+
         <div class="table-responsive">
             <table class="table table-custom align-middle">
                 <thead><tr><th>Nama Pemasok</th><th>No. Telp/WA</th><th>Alamat Pemasok</th><th>Aksi</th></tr></thead>
@@ -4338,215 +4374,165 @@ body.sidebar-open {
         </div>
     </div>
 
+    <!-- ============================================== -->
     <!-- TAB BARU: ULASAN & RATING -->
-<div v-if="crmTab==='ratings'" class="dashboard-card">
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold mb-0">Semua Ulasan & Rating Pelanggan</h6>
-        <button class="btn btn-sm btn-outline-primary" @click="fetchAllRatings">
-            <i class="bi bi-arrow-clockwise me-1"></i> Segarkan Data
-        </button>
-    </div>
-
-    <!-- FITUR BARU: RINGKASAN & STATISTIK -->
-    <div class="row mb-4 g-3">
-        <div class="col-md-4">
-            <div class="card text-white h-100 border-0 rounded-4 shadow-sm" style="background-color: #991b1b;">
-                <div class="card-body text-center d-flex flex-column justify-content-center py-4">
-                    <h6 class="mb-2 fw-normal text-white">Rata-rata Rating</h6>
-                    <h1 class="display-4 fw-bold mb-0 text-white">{{ averageRating }}</h1>
-                    <div class="text-warning fs-5 mt-1">
-                        <i v-for="s in 5" :key="s" class="bi" :class="s <= Math.round(averageRating) ? 'bi-star-fill' : 'bi-star'"></i>
-                    </div>
-                    <small class="mt-2 text-white" style="opacity: 0.9;">Berdasarkan {{ totalReviews }} Ulasan</small>
-                </div>
-            </div>
+    <!-- ============================================== -->
+    <div v-if="crmTab==='ratings'" class="dashboard-card">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Semua Ulasan & Rating Pelanggan</h6>
+            <button class="btn btn-sm btn-outline-primary" @click="fetchAllRatings">
+                <i class="bi bi-arrow-clockwise me-1"></i> Segarkan Data
+            </button>
         </div>
-        <div class="col-md-8">
-            <div class="card h-100 border bg-light shadow-sm rounded-4">
-                <div class="card-body p-3">
-                    <h6 class="fw-bold mb-3 small text-muted">Distribusi Bintang</h6>
-                    <!-- Bar Progress Bintang 5 sampai 1 -->
-                    <div v-for="star in [5,4,3,2,1]" :key="star" class="d-flex align-items-center mb-2" style="font-size: 0.85rem;">
-                        <div style="width: 45px;" class="text-muted fw-bold">{{ star }} <i class="bi bi-star-fill text-warning"></i></div>
-                        <div class="progress flex-grow-1 mx-2" style="height: 8px;">
-                            <div class="progress-bar bg-warning" role="progressbar" :style="{ width: getRatingPercentage(star) + '%' }" :aria-valuenow="getRatingPercentage(star)" aria-valuemin="0" aria-valuemax="100"></div>
+
+        <!-- FITUR BARU: RINGKASAN & STATISTIK -->
+        <div class="row mb-4 g-3">
+            <div class="col-md-4">
+                <div class="card text-white h-100 border-0 rounded-4 shadow-sm" style="background-color: #991b1b;">
+                    <div class="card-body text-center d-flex flex-column justify-content-center py-4">
+                        <h6 class="mb-2 fw-normal text-white">Rata-rata Rating</h6>
+                        <h1 class="display-4 fw-bold mb-0 text-white">{{ averageRating }}</h1>
+                        <div class="text-warning fs-5 mt-1">
+                            <i v-for="s in 5" :key="s" class="bi" :class="s <= Math.round(averageRating) ? 'bi-star-fill' : 'bi-star'"></i>
                         </div>
-                        <div style="width: 40px; text-align: right;" class="text-muted">{{ getRatingCount(star) }}</div>
+                        <small class="mt-2 text-white" style="opacity: 0.9;">Berdasarkan {{ totalReviews }} Ulasan</small>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Filter Area -->
-<div class="row g-2 mb-4 bg-light p-3 rounded border align-items-end">
-    <!-- Baris 1: Pencarian, Bintang, Outlet, Urutkan -->
-    <div class="col-12 col-md-3">
-        <label class="form-label small fw-bold">Pencarian</label>
-        <input type="text" class="form-control form-control-sm" v-model="ratingFilter.search" placeholder="Cari nama atau invoice...">
-    </div>
-    <div class="col-6 col-md-2">
-        <label class="form-label small fw-bold">Filter Bintang</label>
-        <select class="form-select form-select-sm" v-model="ratingFilter.stars">
-            <option value="">Semua</option>
-            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-            <option value="4">⭐⭐⭐⭐ (4)</option>
-            <option value="3">⭐⭐⭐ (3)</option>
-            <option value="2">⭐⭐ (2)</option>
-            <option value="1">⭐ (1)</option>
-        </select>
-    </div>
-    <div class="col-6 col-md-3">
-        <label class="form-label small fw-bold">Outlet</label>
-        <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
-            <option value="">Semua Outlet</option>
-            <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }}</option>
-        </select>
-    </div>
-    <div class="col-12 col-md-2">
-        <label class="form-label small fw-bold">Urutkan</label>
-        <select class="form-select form-select-sm" v-model="ratingFilter.sort">
-            <option value="newest">Terbaru</option>
-            <option value="oldest">Terlama</option>
-        </select>
-    </div>
-    <div class="col-12 col-md-2">
-        <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1" @click.prevent="resetRatingFilter()">
-            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-        </button>
-    </div>
-
-    <!-- Baris 2: Rentang Tanggal & Togle Komentar -->
-    <div class="col-6 col-md-3 mt-2 mt-md-3">
-        <label class="form-label small fw-bold text-primary">Dari Tanggal</label>
-        <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.startDate">
-    </div>
-    <div class="col-6 col-md-3 mt-2 mt-md-3">
-        <label class="form-label small fw-bold text-primary">Sampai Tanggal</label>
-        <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.endDate">
-    </div>
-    <div class="col-12 col-md-4 mt-3 d-flex align-items-center">
-        <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" id="withCommentOnly" v-model="ratingFilter.withComment">
-            <label class="form-check-label small text-muted mt-1" for="withCommentOnly" style="cursor: pointer;">
-                Hanya ulasan yang memiliki teks
-            </label>
-        </div>
-    </div>
-    
-    <!-- 🌟 TOMBOL EXPORT BARU -->
-    <div class="col-12 col-md-2 mt-2 mt-md-3">
-    <label class="form-label small d-none d-md-block">&nbsp;</label>
-    <!-- Ubah @click menjadi membuka modal -->
-    <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" @click.prevent="exportConfig.showModal = true">
-        <i class="bi bi-file-earmark-excel-fill me-1"></i> Export
-    </button>
-</div>
-</div>
-
-    <!-- Tampilan Card Ulasan (Dibuat Rapat untuk Mobile) -->
-    <!-- PERBAIKAN: Menggunakan g-2 untuk mobile, g-md-3 untuk layar besar -->
-    <div class="row g-2 g-md-3">
-        <!-- PERBAIKAN: col-12 memastikan 1 baris penuh di HP, col-md-6 untuk tablet, col-lg-4 untuk laptop -->
-        <div class="col-12 col-md-6 col-lg-4" v-for="(review, idx) in filteredAllRatings" :key="idx">
-            <div class="card border-0 shadow-sm h-100 rounded-3">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
-                        <div>
-    <div class="fw-bold text-primary" style="font-size:0.95rem;">
-        {{ review.customerName || 'Pelanggan' }}
-    </div>
-    
-    <!-- PANGGIL FUNGSI PINTAR BARU DI SINI -->
-    <div class="text-secondary mt-1" style="font-size: 0.75rem;">
-        <i class="bi bi-telephone-fill me-1"></i> 
-        {{ getCustomerPhone(review) }}
-    </div>
-
-    <span class="badge bg-light text-dark border border-secondary shadow-sm mt-2" style="font-size:0.7rem;">
-        Inv: {{ review.invoiceId }}
-    </span>
-</div>
-                        
-                        <div class="text-end">
-                            <!-- Bintang -->
-                            <div class="text-warning" style="font-size: 0.9rem;">
-                                <i v-for="s in 5" :key="s" class="bi" :class="s <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
+            <div class="col-md-8">
+                <div class="card h-100 border bg-light shadow-sm rounded-4">
+                    <div class="card-body p-3">
+                        <h6 class="fw-bold mb-3 small text-muted">Distribusi Bintang</h6>
+                        <!-- Bar Progress Bintang 5 sampai 1 -->
+                        <div v-for="star in [5,4,3,2,1]" :key="star" class="d-flex align-items-center mb-2" style="font-size: 0.85rem;">
+                            <div style="width: 45px;" class="text-muted fw-bold">{{ star }} <i class="bi bi-star-fill text-warning"></i></div>
+                            <div class="progress flex-grow-1 mx-2" style="height: 8px;">
+                                <div class="progress-bar bg-warning" role="progressbar" :style="{ width: getRatingPercentage(star) + '%' }" :aria-valuenow="getRatingPercentage(star)" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
-                            <!-- Nama Outlet -->
-                            <div class="text-muted mt-1 fw-bold" style="font-size: 0.7rem;">
-                                <i class="bi bi-shop me-1"></i>{{ getOutletNameForReview(review) }}
-                            </div>
+                            <div style="width: 40px; text-align: right;" class="text-muted">{{ getRatingCount(star) }}</div>
                         </div>
-                    </div>
-                    
-                    <!-- Isi Ulasan -->
-                    <p class="mb-2 text-dark fst-italic" style="font-size: 0.85em; line-height: 1.4;">
-                        "{{ review.review || 'Pelanggan hanya memberikan rating tanpa teks ulasan.' }}"
-                    </p>
-                    
-                    <!-- Tanggal Ulasan -->
-                    <div class="text-muted text-end mt-2" style="font-size: 0.7rem;">
-                        <i class="bi bi-calendar-event me-1"></i> {{ review.date }}
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Empty State -->
-        <div v-if="filteredAllRatings.length === 0" class="col-12 text-center py-5 text-muted bg-white rounded shadow-sm border">
-            <i class="bi bi-search fs-1 d-block mb-3 text-secondary" style="opacity: 0.5;"></i>
-            <h6 class="fw-bold text-dark mb-1">Tidak ada data ditemukan</h6>
-            <p class="small mb-0">Belum ada ulasan atau tidak ada yang cocok dengan kriteria filter Anda.</p>
-        </div>
-    </div>
 
-    <!-- Modal Export Kustom -->
-<div v-if="exportConfig.showModal" class="modal-backdrop fade show"></div>
-<div v-if="exportConfig.showModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-body p-4">
-                
-                <!-- Format Selection (Mirip Screenshot) -->
-                <div class="row mb-4 align-items-center">
-                    <div class="col-3">
-                        <span class="fw-bold text-dark">Format</span>
-                    </div>
-                    <div class="col-9">
-                        <div class="btn-group shadow-sm" role="group">
-                            <input type="radio" class="btn-check" id="btnCsv" value="csv" v-model="exportConfig.format">
-                            <label class="btn px-4" :class="exportConfig.format === 'csv' ? 'btn-light border-secondary fw-bold' : 'btn-white border'" for="btnCsv">
-                                <i class="bi bi-check2 me-1" v-if="exportConfig.format === 'csv'"></i>
-                                <i class="bi bi-filetype-csv text-secondary" v-else></i> CSV
-                            </label>
+        <!-- Filter Area -->
+        <div class="row g-2 mb-4 bg-light p-3 rounded border align-items-end">
+            <!-- Baris 1: Pencarian, Bintang, Outlet, Urutkan -->
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-bold">Pencarian</label>
+                <input type="text" class="form-control form-control-sm" v-model="ratingFilter.search" placeholder="Cari nama atau invoice...">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-bold">Filter Bintang</label>
+                <select class="form-select form-select-sm" v-model="ratingFilter.stars">
+                    <option value="">Semua</option>
+                    <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                    <option value="4">⭐⭐⭐⭐ (4)</option>
+                    <option value="3">⭐⭐⭐ (3)</option>
+                    <option value="2">⭐⭐ (2)</option>
+                    <option value="1">⭐ (1)</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-bold">Outlet</label>
+                <select class="form-select form-select-sm" v-model="ratingFilter.outlet">
+                    <option value="">Semua Outlet</option>
+                    <option v-for="o in outlets" :key="o.id" :value="o.name">{{ o.name }}</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label small fw-bold">Urutkan</label>
+                <select class="form-select form-select-sm" v-model="ratingFilter.sort">
+                    <option value="newest">Terbaru</option>
+                    <option value="oldest">Terlama</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <button type="button" class="btn btn-sm btn-danger w-100 fw-bold py-1" @click.prevent="resetRatingFilter()">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                </button>
+            </div>
 
-                            <input type="radio" class="btn-check" id="btnXlsx" value="xlsx" v-model="exportConfig.format">
-                            <label class="btn px-4" :class="exportConfig.format === 'xlsx' ? 'btn-light border-secondary fw-bold' : 'btn-white border'" for="btnXlsx">
-                                <i class="bi bi-check2 me-1" v-if="exportConfig.format === 'xlsx'"></i>
-                                <i class="bi bi-file-earmark-excel-fill text-success" v-else></i> XLSX
-                            </label>
-                        </div>
-                    </div>
+            <!-- Baris 2: Rentang Tanggal & Togle Komentar -->
+            <div class="col-6 col-md-3 mt-2 mt-md-3">
+                <label class="form-label small fw-bold text-primary">Dari Tanggal</label>
+                <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.startDate">
+            </div>
+            <div class="col-6 col-md-3 mt-2 mt-md-3">
+                <label class="form-label small fw-bold text-primary">Sampai Tanggal</label>
+                <input type="date" class="form-control form-control-sm border-primary" v-model="ratingFilter.endDate">
+            </div>
+            <div class="col-12 col-md-4 mt-3 d-flex align-items-center">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="withCommentOnly" v-model="ratingFilter.withComment">
+                    <label class="form-check-label small text-muted mt-1" for="withCommentOnly" style="cursor: pointer;">
+                        Hanya ulasan yang memiliki teks
+                    </label>
                 </div>
-
-                <!-- Info Jumlah Data (Mirip Screenshot) -->
-                <div class="p-3 rounded" style="background-color: #aed9e6; color: #2c3e50;">
-                    <i class="bi bi-exclamation-circle-fill me-2" style="color: #34495e;"></i>
-                    Exporting data from 1 - {{ filteredAllRatings.length.toLocaleString() }}
-                </div>
-                
             </div>
             
-            <div class="modal-footer bg-light border-0">
-                <!-- Tombol Batal untuk menutup modal -->
-                <button type="button" class="btn btn-outline-secondary btn-sm px-3" @click="exportConfig.showModal = false">Batal</button>
-                <button type="button" class="btn btn-primary btn-sm px-4 fw-bold" @click="processExport()">Unduh File</button>
+            <!-- 🌟 TOMBOL EXPORT ULASAN (DISESUAIKAN KE EXPORT CONFIG) 🌟 -->
+            <div class="col-12 col-md-2 mt-2 mt-md-3">
+                <label class="form-label small d-none d-md-block">&nbsp;</label>
+                <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1 shadow-sm" @click.prevent="exportConfig.showModal = true; exportConfig.target = 'ratings'; exportConfig.showPreview = false">
+                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Tampilan Card Ulasan -->
+        <div class="row g-2 g-md-3">
+            <div class="col-12 col-md-6 col-lg-4" v-for="(review, idx) in filteredAllRatings" :key="idx">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2 border-bottom pb-2">
+                            <div>
+                                <div class="fw-bold text-primary" style="font-size:0.95rem;">
+                                    {{ review.customerName || 'Pelanggan' }}
+                                </div>
+                                <div class="text-secondary mt-1" style="font-size: 0.75rem;">
+                                    <i class="bi bi-telephone-fill me-1"></i> 
+                                    {{ getCustomerPhone(review) }}
+                                </div>
+                                <span class="badge bg-light text-dark border border-secondary shadow-sm mt-2" style="font-size:0.7rem;">
+                                    Inv: {{ review.invoiceId }}
+                                </span>
+                            </div>
+                            
+                            <div class="text-end">
+                                <!-- Bintang -->
+                                <div class="text-warning" style="font-size: 0.9rem;">
+                                    <i v-for="s in 5" :key="s" class="bi" :class="s <= review.rating ? 'bi-star-fill' : 'bi-star'"></i>
+                                </div>
+                                <!-- Nama Outlet -->
+                                <div class="text-muted mt-1 fw-bold" style="font-size: 0.7rem;">
+                                    <i class="bi bi-shop me-1"></i>{{ getOutletNameForReview(review) }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Isi Ulasan -->
+                        <p class="mb-2 text-dark fst-italic" style="font-size: 0.85em; line-height: 1.4;">
+                            "{{ review.review || 'Pelanggan hanya memberikan rating tanpa teks ulasan.' }}"
+                        </p>
+                        
+                        <!-- Tanggal Ulasan -->
+                        <div class="text-muted text-end mt-2" style="font-size: 0.7rem;">
+                            <i class="bi bi-calendar-event me-1"></i> {{ review.date }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Empty State -->
+            <div v-if="filteredAllRatings.length === 0" class="col-12 text-center py-5 text-muted bg-white rounded shadow-sm border">
+                <i class="bi bi-search fs-1 d-block mb-3 text-secondary" style="opacity: 0.5;"></i>
+                <h6 class="fw-bold text-dark mb-1">Tidak ada data ditemukan</h6>
+                <p class="small mb-0">Belum ada ulasan atau tidak ada yang cocok dengan kriteria filter Anda.</p>
             </div>
         </div>
     </div>
-</div>
-</div>    
 </div>
          
             <!-- OUTLETS VIEW -->
@@ -9170,6 +9156,186 @@ body.sidebar-open {
         </div>
     </div>
 </div>
+
+    <!-- ============================================== -->
+<!-- 1. MODAL EXPORT DENGAN PREVIEW -->
+<!-- ============================================== -->
+<div class="modal fade show d-block" v-if="exportConfig.showModal" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
+    <div class="modal-dialog" :class="{'modal-lg': exportConfig.showPreview}">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-upload text-primary me-2"></i>
+                    Export Data <span class="text-capitalize">{{ exportConfig.target }}</span>
+                </h6>
+                <button type="button" class="btn-close" @click="exportConfig.showModal = false"></button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- Pilihan Format -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Pilih Format File:</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" v-model="exportConfig.format" value="excel" id="exportExcel">
+                            <label class="form-check-label" for="exportExcel"><i class="bi bi-file-earmark-excel text-success"></i> Excel (.xlsx)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" v-model="exportConfig.format" value="csv" id="exportCsv">
+                            <label class="form-check-label" for="exportCsv"><i class="bi bi-filetype-csv text-info"></i> CSV (.csv)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr v-if="!exportConfig.showPreview">
+
+                <!-- Tombol Load Preview -->
+                <div class="text-center" v-if="!exportConfig.showPreview">
+                    <button class="btn btn-sm btn-outline-primary" @click="exportConfig.showPreview = true">
+                        <i class="bi bi-eye"></i> Lihat Preview Data Sebelum Didownload
+                    </button>
+                </div>
+
+                <!-- Tampilan Preview Data -->
+                <div v-if="exportConfig.showPreview" class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold small text-muted">Preview Data (5 baris pertama):</span>
+                        <button class="btn btn-sm btn-link text-danger p-0" @click="exportConfig.showPreview = false">Tutup Preview</button>
+                    </div>
+                    <div class="table-responsive border rounded" style="max-height: 250px;">
+                        <table class="table table-sm table-striped table-hover mb-0" style="font-size: 0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th v-for="header in exportConfig.previewHeaders" :key="header">{{ header }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, index) in exportConfig.previewData" :key="index">
+                                    <td>{{ row.col1 }}</td>
+                                    <td>{{ row.col2 }}</td>
+                                    <td>{{ row.col3 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" @click="exportConfig.showModal = false">Batal</button>
+                <button type="button" class="btn btn-sm btn-primary">
+                    <i class="bi bi-download me-1"></i> Download File
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================== -->
+<!-- 2. MODAL IMPORT (WIZARD 3 STEP: Upload -> Preview -> Finish) -->
+<!-- ============================================== -->
+<div class="modal fade show d-block" v-if="importConfig.showModal" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-download text-primary me-2"></i>
+                    Import Data <span class="text-capitalize">{{ importConfig.target }}</span>
+                </h6>
+                <button type="button" class="btn-close" @click="importConfig.showModal = false"></button>
+            </div>
+            <div class="modal-body py-4">
+                
+                <!-- Indikator Stepper -->
+                <div class="d-flex justify-content-between position-relative px-5 mb-5">
+                    <div class="position-absolute top-50 translate-middle-y" style="height: 2px; background-color: #dee2e6; left: 15%; right: 15%; z-index: 0;"></div>
+                    
+                    <div class="position-relative text-center" style="z-index: 1;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" 
+                             :class="importConfig.step >= 1 ? 'bg-primary' : 'bg-secondary'" style="width: 35px; height: 35px;">1</div>
+                        <small class="fw-bold text-muted" :class="{'text-primary': importConfig.step >= 1}">Upload File</small>
+                    </div>
+                    
+                    <div class="position-relative text-center" style="z-index: 1;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" 
+                             :class="importConfig.step >= 2 ? 'bg-primary' : 'bg-secondary'" style="width: 35px; height: 35px;">2</div>
+                        <small class="fw-bold text-muted" :class="{'text-primary': importConfig.step >= 2}">Preview Data</small>
+                    </div>
+                    
+                    <div class="position-relative text-center" style="z-index: 1;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-1 text-white shadow-sm" 
+                             :class="importConfig.step >= 3 ? 'bg-success' : 'bg-secondary'" style="width: 35px; height: 35px;"><i class="bi bi-check"></i></div>
+                        <small class="fw-bold text-muted" :class="{'text-success': importConfig.step >= 3}">Selesai</small>
+                    </div>
+                </div>
+
+                <!-- STEP 1: UPLOAD FILE -->
+                <div v-if="importConfig.step === 1" class="px-3">
+                    <div class="border border-2 border-dashed rounded p-5 text-center bg-light" style="border-style: dashed !important; cursor: pointer;">
+                        <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
+                        <h6 class="mt-3 fw-bold">Pilih atau Tarik File Kesini</h6>
+                        <p class="text-muted small mb-3">Mendukung format .csv dan .xlsx (Maks 5MB)</p>
+                        <input class="form-control form-control-sm mx-auto" type="file" accept=".csv, .xlsx" style="max-width: 300px;">
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="#" class="text-decoration-none small"><i class="bi bi-file-earmark-arrow-down"></i> Download Template Format {{ importConfig.target }}</a>
+                    </div>
+                </div>
+
+                <!-- STEP 2: PREVIEW DATA -->
+                <div v-if="importConfig.step === 2" class="px-2">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i> Ditemukan <b>152 Baris</b> data dari file yang diupload. Silakan periksa kembali sebelum menyimpan.
+                    </div>
+                    <div class="table-responsive border rounded" style="max-height: 300px;">
+                        <table class="table table-sm table-striped table-hover mb-0" style="font-size: 0.8rem;">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th v-for="header in importConfig.previewHeaders" :key="header">{{ header }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, index) in importConfig.previewData" :key="index">
+                                    <td>{{ row.col1 }}</td>
+                                    <td>{{ row.col2 }}</td>
+                                    <td>{{ row.col3 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STEP 3: FINISH -->
+                <div v-if="importConfig.step === 3" class="text-center py-5">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 fw-bold">Import Data Berhasil!</h4>
+                    <p class="text-muted">Semua data berhasil disimpan ke dalam database sistem.</p>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light">
+                <!-- Navigasi Bawah -->
+                <button v-if="importConfig.step === 1 || importConfig.step === 2" type="button" class="btn btn-sm btn-secondary" @click="importConfig.showModal = false">Batal</button>
+                
+                <button v-if="importConfig.step === 2" type="button" class="btn btn-sm btn-outline-secondary" @click="importConfig.step = 1">
+                    <i class="bi bi-arrow-left"></i> Kembali
+                </button>
+                
+                <button v-if="importConfig.step === 1" type="button" class="btn btn-sm btn-primary" @click="importConfig.step = 2">
+                    Lanjut Preview <i class="bi bi-arrow-right"></i>
+                </button>
+                
+                <button v-if="importConfig.step === 2" type="button" class="btn btn-sm btn-success" @click="importConfig.step = 3">
+                    <i class="bi bi-save"></i> Simpan Data ke Sistem
+                </button>
+                
+                <button v-if="importConfig.step === 3" type="button" class="btn btn-sm btn-primary" @click="importConfig.showModal = false">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -9325,6 +9491,26 @@ body.sidebar-open {
                     isActive: true
                 },
 
+                // Konfigurasi Modal Export Terpusat
+        exportConfig: {
+            showModal: false,
+            target: '', // 'customers', 'suppliers', atau 'ratings'
+            format: 'excel',
+            showPreview: false,
+            previewHeaders: [], // Kosongkan
+            previewData: []     // Kosongkan
+        },
+
+        // Konfigurasi Modal Import Terpusat
+        importConfig: {
+            showModal: false,
+            target: '', // 'customers', atau 'suppliers'
+            step: 1, 
+            fileName: '',
+            previewHeaders: [], // Kosongkan
+            previewData: []     // Kosongkan
+        },
+                
                 billings: [],
                 isLoadingBilling: false,
                 modalTagihanInstance: null,
