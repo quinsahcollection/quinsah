@@ -10280,7 +10280,7 @@ fulfillmentOrders() {
                 }
                 
                 // Kurangi diskon global/invoice jika ada
-                omsetMurni -= (trx.globalDiscountAmt || 0);
+                omsetMurni -= Number(trx.globalDiscountAmt || 0);
                 if (omsetMurni < 0) omsetMurni = 0; // Keamanan agar tidak minus
                 
                 let omset = omsetMurni; 
@@ -10310,10 +10310,10 @@ fulfillmentOrders() {
             let totalTrx = this.processedReportData.length;
 
             this.processedReportData.forEach(t => {
-                // 🌟 PENTING: Gunakan omsetReport (murni), bukan t.total (yang sudah terpotong tukar tambah)
-                totalOmset += (t.omsetReport !== undefined ? t.omsetReport : (t.total || 0));
-                totalHpp += (t.totalHppNota || 0);
-                totalDiskon += (t.discountAmt || 0) + (t.globalDiscountAmt || 0);
+                // 🌟 KUNCI NUMBER: Cegah angka menjadi teks (1000 + 1000 = 10001000)
+                totalOmset += Number(t.omsetReport !== undefined ? t.omsetReport : (t.total || 0));
+                totalHpp += Number(t.totalHppNota || 0);
+                totalDiskon += Number(t.discountAmt || 0) + Number(t.globalDiscountAmt || 0);
             });
 
             let labaBersih = totalOmset - totalHpp;
@@ -10321,7 +10321,7 @@ fulfillmentOrders() {
 
             return { totalOmset, totalHpp, labaBersih, totalDiskon, marginRataRata, totalTrx };
         },
-
+            
         totalPotensiOmset() {
             let total = 0;
             this.filteredInventoryProducts.forEach(p => {
@@ -10409,13 +10409,34 @@ fulfillmentOrders() {
                     });
                 }
 
-                // --- C. METODE PEMBAYARAN ---
-                let payMethod = trx.paymentMethod || 'Tunai / Cash'; 
-                if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
+                // --- C. METODE PEMBAYARAN (DIPERBAIKI UNTUK SPLIT) ---
+                let details = trx.splitPayments || (trx.paymentData ? trx.paymentData.splitPayments : null) || trx.splits || trx.paymentDetails;
                 
-                // Khusus Chart Payment Method, kita pakai trx.total (Kas Uang Riil yang dibayar Pelanggan)
-                payments[payMethod].total += (trx.total || 0);
-                payments[payMethod].count += 1;
+                // Jika berbentuk string JSON, parse dulu menjadi Array
+                if (typeof details === 'string' && (details.startsWith('{') || details.startsWith('['))) {
+                    try { details = JSON.parse(details); } catch(e) {}
+                }
+
+                // Jika ini adalah pembayaran SPLIT (Campuran)
+                if (Array.isArray(details) && details.length > 0) {
+                    details.forEach(d => {
+                        let m = String(d.method || d.paymentMethod || 'CASH').toUpperCase();
+                        let amt = Number(d.amount || d.nominal || 0);
+                        
+                        if (!payments[m]) payments[m] = { name: m, total: 0, count: 0 };
+                        
+                        // Hitung proporsi masing-masing metode masuk ke grafik
+                        payments[m].total += amt;
+                        payments[m].count += 1;
+                    });
+                } else {
+                    // Jika pembayaran tunggal normal (Non-Split)
+                    let payMethod = String(trx.paymentMethod || 'CASH').toUpperCase(); 
+                    if (!payments[payMethod]) payments[payMethod] = { name: payMethod, total: 0, count: 0 };
+                    
+                    payments[payMethod].total += Number(trx.total || 0);
+                    payments[payMethod].count += 1;
+                }
 
             });
 
