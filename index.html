@@ -9273,17 +9273,32 @@ body.sidebar-open {
                 </div>
 
                 <!-- STEP 1: UPLOAD FILE -->
-                <div v-if="importConfig.step === 1" class="px-3">
-                    <div class="border border-2 border-dashed rounded p-5 text-center bg-light" style="border-style: dashed !important; cursor: pointer;">
-                        <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
-                        <h6 class="mt-3 fw-bold">Pilih atau Tarik File Kesini</h6>
-                        <p class="text-muted small mb-3">Mendukung format .csv dan .xlsx (Maks 5MB)</p>
-                        <input class="form-control form-control-sm mx-auto" type="file" accept=".csv, .xlsx, .xls" style="max-width: 300px;" @change="handleFileUpload">
-                    </div>
-                    <div class="mt-3 text-center">
-                        <a href="#" class="text-decoration-none small"><i class="bi bi-file-earmark-arrow-down"></i> Download Template Format {{ importConfig.target }}</a>
-                    </div>
-                </div>
+<div v-if="importConfig.step === 1" class="px-3">
+    
+    <!-- NOTIFIKASI ERROR JIKA FORMAT SALAH -->
+    <div v-if="importConfig.errorMessage" class="alert alert-danger d-flex align-items-center p-3 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            <h6 class="alert-heading fw-bold mb-1">Format File Tidak Sesuai!</h6>
+            <div class="small">{{ importConfig.errorMessage }}</div>
+        </div>
+        <button type="button" class="btn-close ms-auto" @click="importConfig.errorMessage = null"></button>
+    </div>
+
+    <div class="border border-2 border-dashed rounded p-5 text-center bg-light" style="border-style: dashed !important; cursor: pointer;">
+        <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
+        <h6 class="mt-3 fw-bold">Pilih atau Tarik File Kesini</h6>
+        <p class="text-muted small mb-3">Mendukung format .csv dan .xlsx (Maks 5MB)</p>
+        <input class="form-control form-control-sm mx-auto" type="file" accept=".csv, .xlsx, .xls" style="max-width: 300px;" @change="handleFileUpload">
+    </div>
+    
+    <div class="mt-3 text-center">
+        <!-- PERBAIKAN: Menambahkan @click.prevent="downloadTemplate" -->
+        <a href="#" @click.prevent="downloadTemplate" class="text-decoration-none small">
+            <i class="bi bi-file-earmark-arrow-down"></i> Download Template Format <span class="text-capitalize">{{ importConfig.target }}</span>
+        </a>
+    </div>
+</div>
 
                 <!-- STEP 2: PREVIEW DATA -->
                 <div v-if="importConfig.step === 2" class="px-2">
@@ -12017,6 +12032,31 @@ async fetchAllRatings() {
         this.exportConfig.showModal = false;
     },
 
+    // FUNGSI BARU: Download Template Excel
+    downloadTemplate() {
+        let headers = [];
+        let fileName = `Template_${this.importConfig.target}.xlsx`;
+
+        // Tentukan header berdasarkan target
+        if (this.importConfig.target === 'customers') {
+            headers = ['Nama', 'No. Telepon', 'Alamat'];
+        } else if (this.importConfig.target === 'suppliers') {
+            headers = ['Nama Supplier', 'No. Telepon', 'Alamat'];
+        } else {
+            return alert('Template tidak tersedia untuk data ini.');
+        }
+
+        // Buat file Excel menggunakan SheetJS
+        if (typeof XLSX !== 'undefined') {
+            const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+            XLSX.writeFile(workbook, fileName);
+        } else {
+            alert("Library Excel belum dimuat!");
+        }
+    },
+            
     // ==============================================
     // FUNGSI IMPORT (MEMBACA EXCEL & SIMPAN DATA)
     // ==============================================
@@ -12026,39 +12066,71 @@ async fetchAllRatings() {
         if (!file) return;
         
         this.importConfig.fileName = file.name;
+        this.importConfig.errorMessage = null; // Reset error sebelumnya
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
 
-            if (jsonData.length > 1) {
-                this.importConfig.previewHeaders = jsonData[0]; 
-                this.importConfig.fullImportData = jsonData.slice(1); 
-                
-                this.importConfig.previewData = this.importConfig.fullImportData.slice(0, 5).map(row => {
-                    let obj = {};
-                    this.importConfig.previewHeaders.forEach((head, idx) => {
-                        obj['col' + (idx + 1)] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '-'; 
+                if (jsonData.length > 0) {
+                    const uploadedHeaders = jsonData[0]; // Baris pertama dianggap header
+                    
+                    // 1. Tentukan Header Standar yang diharapkan
+                    let expectedHeaders = [];
+                    if (this.importConfig.target === 'customers') {
+                        expectedHeaders = ['Nama', 'No. Telepon', 'Alamat'];
+                    } else if (this.importConfig.target === 'suppliers') {
+                        expectedHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
+                    }
+
+                    // 2. Validasi Header (Cek apakah kolom wajib ada di file yang diupload)
+                    let isFormatValid = true;
+                    // Kita cek dari header yang diharapkan, apakah ada di file upload (case-insensitive)
+                    const uploadedHeadersLower = uploadedHeaders.map(h => String(h).toLowerCase().trim());
+                    
+                    for (let i = 0; i < expectedHeaders.length; i++) {
+                        let expected = expectedHeaders[i].toLowerCase();
+                        if (!uploadedHeadersLower.includes(expected)) {
+                            isFormatValid = false;
+                            break;
+                        }
+                    }
+
+                    // 3. Blokir jika format tidak valid
+                    if (!isFormatValid) {
+                        this.importConfig.errorMessage = `Anda mengupload data yang salah. Untuk import ${this.importConfig.target}, pastikan file memiliki kolom: "${expectedHeaders.join('", "')}". Silakan download template terlebih dahulu.`;
+                        event.target.value = ''; // Reset file input
+                        return; // Hentikan proses, jangan lanjut ke step 2
+                    }
+
+                    // 4. Jika Valid, lanjut ke preview
+                    this.importConfig.previewHeaders = uploadedHeaders; 
+                    this.importConfig.fullImportData = jsonData.slice(1).filter(row => row.length > 0); // Buang baris kosong
+                    
+                    this.importConfig.previewData = this.importConfig.fullImportData.slice(0, 5).map(row => {
+                        let obj = {};
+                        this.importConfig.previewHeaders.forEach((head, idx) => {
+                            obj['col' + (idx + 1)] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '-'; 
+                        });
+                        return obj;
                     });
-                    return obj;
-                });
 
-                this.importConfig.step = 2; 
-            } else {
-                alert("File Excel kosong atau format tidak sesuai.");
+                    this.importConfig.step = 2; // Pindah ke Step Preview
+                } else {
+                    this.importConfig.errorMessage = "File Excel kosong. Tidak ada data yang ditemukan.";
+                }
+            } catch (error) {
+                this.importConfig.errorMessage = "Gagal membaca file. Pastikan format file benar (.xlsx atau .csv) dan tidak rusak.";
             }
         };
         
         reader.readAsArrayBuffer(file);
-        
-        // Reset nilai file input agar user bisa upload ulang file yang sama jika perlu
-        event.target.value = '';
+        event.target.value = ''; // Reset file input
     },
 
     processImport() {
