@@ -15,6 +15,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
 /* ==========================================================================
@@ -9157,7 +9158,7 @@ body.sidebar-open {
     </div>
 </div>
 
-    <!-- ============================================== -->
+<!-- ============================================== -->
 <!-- 1. MODAL EXPORT DENGAN PREVIEW -->
 <!-- ============================================== -->
 <div class="modal fade show d-block" v-if="exportConfig.showModal" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
@@ -9177,7 +9178,8 @@ body.sidebar-open {
                     <label class="form-label fw-bold small">Pilih Format File:</label>
                     <div class="d-flex gap-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" v-model="exportConfig.format" value="excel" id="exportExcel">
+                            <!-- PERBAIKAN: value diubah menjadi "xlsx" -->
+                            <input class="form-check-input" type="radio" v-model="exportConfig.format" value="xlsx" id="exportExcel">
                             <label class="form-check-label" for="exportExcel"><i class="bi bi-file-earmark-excel text-success"></i> Excel (.xlsx)</label>
                         </div>
                         <div class="form-check">
@@ -9191,7 +9193,8 @@ body.sidebar-open {
 
                 <!-- Tombol Load Preview -->
                 <div class="text-center" v-if="!exportConfig.showPreview">
-                    <button class="btn btn-sm btn-outline-primary" @click="exportConfig.showPreview = true">
+                    <!-- PERBAIKAN: Memanggil method previewExportData -->
+                    <button class="btn btn-sm btn-outline-primary" @click="previewExportData">
                         <i class="bi bi-eye"></i> Lihat Preview Data Sebelum Didownload
                     </button>
                 </div>
@@ -9211,9 +9214,8 @@ body.sidebar-open {
                             </thead>
                             <tbody>
                                 <tr v-for="(row, index) in exportConfig.previewData" :key="index">
-                                    <td>{{ row.col1 }}</td>
-                                    <td>{{ row.col2 }}</td>
-                                    <td>{{ row.col3 }}</td>
+                                    <!-- PERBAIKAN: Looping dinamis agar semua kolom tampil -->
+                                    <td v-for="(value, key) in row" :key="key">{{ value }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -9223,7 +9225,8 @@ body.sidebar-open {
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-sm btn-secondary" @click="exportConfig.showModal = false">Batal</button>
-                <button type="button" class="btn btn-sm btn-primary">
+                <!-- PERBAIKAN: Ditambahkan @click="processExport" -->
+                <button type="button" class="btn btn-sm btn-primary" @click="processExport">
                     <i class="bi bi-download me-1"></i> Download File
                 </button>
             </div>
@@ -9232,7 +9235,7 @@ body.sidebar-open {
 </div>
 
 <!-- ============================================== -->
-<!-- 2. MODAL IMPORT (WIZARD 3 STEP: Upload -> Preview -> Finish) -->
+<!-- 2. MODAL IMPORT (WIZARD 3 STEP) -->
 <!-- ============================================== -->
 <div class="modal fade show d-block" v-if="importConfig.showModal" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
     <div class="modal-dialog modal-lg">
@@ -9275,7 +9278,7 @@ body.sidebar-open {
                         <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 3rem;"></i>
                         <h6 class="mt-3 fw-bold">Pilih atau Tarik File Kesini</h6>
                         <p class="text-muted small mb-3">Mendukung format .csv dan .xlsx (Maks 5MB)</p>
-                        <input class="form-control form-control-sm mx-auto" type="file" accept=".csv, .xlsx" style="max-width: 300px;">
+                        <input class="form-control form-control-sm mx-auto" type="file" accept=".csv, .xlsx, .xls" style="max-width: 300px;" @change="handleFileUpload">
                     </div>
                     <div class="mt-3 text-center">
                         <a href="#" class="text-decoration-none small"><i class="bi bi-file-earmark-arrow-down"></i> Download Template Format {{ importConfig.target }}</a>
@@ -9285,7 +9288,8 @@ body.sidebar-open {
                 <!-- STEP 2: PREVIEW DATA -->
                 <div v-if="importConfig.step === 2" class="px-2">
                     <div class="alert alert-info py-2 small mb-3">
-                        <i class="bi bi-info-circle me-1"></i> Ditemukan <b>152 Baris</b> data dari file yang diupload. Silakan periksa kembali sebelum menyimpan.
+                        <!-- PERBAIKAN: Jumlah baris dinamis -->
+                        <i class="bi bi-info-circle me-1"></i> Ditemukan <b>{{ importConfig.fullImportData ? importConfig.fullImportData.length : 0 }} Baris</b> data dari file yang diupload. Silakan periksa kembali sebelum menyimpan.
                     </div>
                     <div class="table-responsive border rounded" style="max-height: 300px;">
                         <table class="table table-sm table-striped table-hover mb-0" style="font-size: 0.8rem;">
@@ -9296,9 +9300,8 @@ body.sidebar-open {
                             </thead>
                             <tbody>
                                 <tr v-for="(row, index) in importConfig.previewData" :key="index">
-                                    <td>{{ row.col1 }}</td>
-                                    <td>{{ row.col2 }}</td>
-                                    <td>{{ row.col3 }}</td>
+                                    <!-- PERBAIKAN: Looping dinamis agar semua kolom tampil -->
+                                    <td v-for="(value, key) in row" :key="key">{{ value }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -9314,18 +9317,17 @@ body.sidebar-open {
 
             </div>
             <div class="modal-footer bg-light">
-                <!-- Navigasi Bawah -->
                 <button v-if="importConfig.step === 1 || importConfig.step === 2" type="button" class="btn btn-sm btn-secondary" @click="importConfig.showModal = false">Batal</button>
                 
                 <button v-if="importConfig.step === 2" type="button" class="btn btn-sm btn-outline-secondary" @click="importConfig.step = 1">
                     <i class="bi bi-arrow-left"></i> Kembali
                 </button>
                 
-                <button v-if="importConfig.step === 1" type="button" class="btn btn-sm btn-primary" @click="importConfig.step = 2">
+                <button v-if="importConfig.step === 1" type="button" class="btn btn-sm btn-primary" @click="importConfig.step = 2" :disabled="!importConfig.fullImportData || importConfig.fullImportData.length === 0">
                     Lanjut Preview <i class="bi bi-arrow-right"></i>
                 </button>
                 
-                <button v-if="importConfig.step === 2" type="button" class="btn btn-sm btn-success" @click="importConfig.step = 3">
+                <button v-if="importConfig.step === 2" type="button" class="btn btn-sm btn-success" @click="processImport">
                     <i class="bi bi-save"></i> Simpan Data ke Sistem
                 </button>
                 
@@ -9507,8 +9509,9 @@ body.sidebar-open {
             target: '', // 'customers', atau 'suppliers'
             step: 1, 
             fileName: '',
-            previewHeaders: [], // Kosongkan
-            previewData: []     // Kosongkan
+            previewHeaders: [],
+            previewData: [],   
+            fullImportData: []
         },
                 
                 billings: [],
@@ -11812,45 +11815,6 @@ getRatingPercentage(star) {
     if (this.totalReviews === 0) return 0;
     return (this.getRatingCount(star) / this.totalReviews) * 100;
 },
-            
-exportRatingsToCSV() {
-    if (this.filteredAllRatings.length === 0) {
-        alert('Tidak ada data ulasan untuk diekspor.');
-        return;
-    }
-
-    // 1. Buat Header CSV
-    let csvContent = "Nama Pelanggan,No Invoice,Outlet,Rating,Ulasan,Tanggal\n";
-
-    // 2. Loop Data Ulasan (data yang terekspor akan mengikuti filter yang aktif)
-    this.filteredAllRatings.forEach(r => {
-        let name = r.customerName ? r.customerName.replace(/,/g, " ") : "Pelanggan";
-        let invoice = r.invoiceId || "-";
-        let outlet = this.getOutletName(r.outlet) === '-' ? 'Pusat' : this.getOutletName(r.outlet);
-        let rating = r.rating || 0;
-        // Tangani tanda kutip (") dan enter di dalam teks ulasan agar format CSV tidak rusak
-        let review = r.review ? `"${r.review.replace(/"/g, '""').replace(/\n/g, ' ')}"` : "-";
-        let date = r.date || "-";
-
-        csvContent += `${name},${invoice},${outlet},${rating},${review},${date}\n`;
-    });
-
-    // 3. Eksekusi Download File CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    // Nama file otomatis mengikuti tanggal hari ini
-    const today = new Date().toISOString().slice(0,10);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Data_Ulasan_${today}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-},
 
 // Fungsi untuk menarik semua rating dari koleksi 'ratings' di Firebase
 async fetchAllRatings() {
@@ -11925,47 +11889,116 @@ async fetchAllRatings() {
         return phone || 'Nomor tidak tersedia';
     },   
 
-    processExport() {
-        const dataToExport = this.filteredAllRatings;
+    // ==============================================
+    // FUNGSI EXPORT (PELANGGAN, SUPPLIER, RATING)
+    // ==============================================
 
-        if (!dataToExport || dataToExport.length === 0) {
-            alert('Tidak ada data ulasan untuk diexport!');
-            return;
+    previewExportData() {
+        this.exportConfig.showPreview = true;
+        this.exportConfig.previewData = [];
+        
+        let dataSumber = [];
+
+        if (this.exportConfig.target === 'customers') {
+            this.exportConfig.previewHeaders = ['Nama', 'No. Telepon', 'Alamat', 'Diskon Member'];
+            dataSumber = this.filteredCustomers || [];
+            
+            this.exportConfig.previewData = dataSumber.slice(0, 5).map(c => ({
+                col1: c.name,
+                col2: c.phone,
+                col3: c.address || '-',
+                col4: this.getMembershipDiscount(c.membershipId) + '%'
+            }));
+            
+        } else if (this.exportConfig.target === 'suppliers') {
+            this.exportConfig.previewHeaders = ['Nama Supplier', 'No. Telepon', 'Alamat'];
+            dataSumber = this.filteredSuppliers || [];
+            
+            this.exportConfig.previewData = dataSumber.slice(0, 5).map(s => ({
+                col1: s.name,
+                col2: s.phone,
+                col3: s.address || '-'
+            }));
+            
+        } else if (this.exportConfig.target === 'ratings') {
+            this.exportConfig.previewHeaders = ['Tanggal', 'Pelanggan', 'Invoice', 'Rating', 'Ulasan'];
+            dataSumber = this.filteredAllRatings || [];
+            
+            this.exportConfig.previewData = dataSumber.slice(0, 5).map(r => ({
+                col1: r.date,
+                col2: r.customerName || '-',
+                col3: r.invoiceId,
+                col4: r.rating + ' Bintang',
+                col5: r.review || '-'
+            }));
         }
+    },
+            
+    processExport() {
+        let dataToExport = [];
+        let formattedData = [];
+        const today = new Date().toISOString().split('T')[0];
+        let fileName = `Data_${this.exportConfig.target}_${today}`;
 
-        // 1. Siapkan data mentah menjadi bentuk Array Object yang rapi
-        const formattedData = dataToExport.map(r => {
-            return {
+        // 1. Tentukan sumber data berdasarkan target
+        if (this.exportConfig.target === 'customers') {
+            dataToExport = this.filteredCustomers;
+            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data pelanggan untuk diexport!');
+            
+            formattedData = dataToExport.map(c => ({
+                "Nama Pelanggan": c.name || '-',
+                "No Telepon": c.phone || '-',
+                "Alamat": c.address || '-',
+                "Diskon Member": this.getMembershipDiscount(c.membershipId) + '%'
+            }));
+
+        } else if (this.exportConfig.target === 'suppliers') {
+            dataToExport = this.filteredSuppliers;
+            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data supplier untuk diexport!');
+            
+            formattedData = dataToExport.map(s => ({
+                "Nama Supplier": s.name || '-',
+                "No Telepon": s.phone || '-',
+                "Alamat": s.address || '-'
+            }));
+
+        } else if (this.exportConfig.target === 'ratings') {
+            dataToExport = this.filteredAllRatings;
+            if (!dataToExport || dataToExport.length === 0) return alert('Tidak ada data ulasan untuk diexport!');
+            
+            formattedData = dataToExport.map(r => ({
                 "Tanggal": r.date || '-',
                 "Invoice": r.invoiceId || '-',
                 "Nama Pelanggan": r.customerName || 'Pelanggan',
-                "No Telepon": this.getCustomerPhone(r),
-                "Outlet": this.getOutletNameForReview(r),
+                "No Telepon": this.getCustomerPhone ? this.getCustomerPhone(r) : '-',
+                "Outlet": this.getOutletNameForReview ? this.getOutletNameForReview(r) : '-',
                 "Bintang": r.rating || 0,
-                "Ulasan": (r.message || '-').replace(/\n/g, ' ')
-            };
-        });
-
-        const today = new Date().toISOString().split('T')[0];
-        const fileName = `Laporan_Ulasan_Pelanggan_${today}`;
+                "Ulasan": (r.review || '-').replace(/\n/g, ' ')
+            }));
+        } else {
+            return alert("Error: Target export tidak dikenali.");
+        }
 
         // 2. Eksekusi Berdasarkan Format Pilihan
         if (this.exportConfig.format === 'xlsx') {
-            // PROSES XLSX MENGGUNAKAN SHEETJS
             if (typeof XLSX === 'undefined') {
-                alert("Library Excel belum dimuat. Pastikan Anda sudah memasang script SheetJS.");
+                alert("Library Excel belum dimuat. Pastikan Anda sudah memasukkan script SheetJS di index.html.");
                 return;
             }
             const worksheet = XLSX.utils.json_to_sheet(formattedData);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Ulasan");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Export");
             XLSX.writeFile(workbook, `${fileName}.xlsx`);
 
-        } else {
-            // PROSES CSV MURNI (Tanpa Library)
-            let csvContent = "Tanggal,Invoice,Nama Pelanggan,No Telepon,Outlet,Bintang,Ulasan\n";
+        } else if (this.exportConfig.format === 'csv') {
+            const headers = Object.keys(formattedData[0]);
+            let csvContent = headers.join(',') + "\n";
+            
             formattedData.forEach(row => {
-                let csvRow = `"${row['Tanggal']}","${row['Invoice']}","${row['Nama Pelanggan']}","${row['No Telepon']}","${row['Outlet']}","${row['Bintang']}","${row['Ulasan']}"`;
+                let csvRow = headers.map(header => {
+                    let cellData = row[header] === null || row[header] === undefined ? '' : String(row[header]);
+                    return `"${cellData.replace(/"/g, '""')}"`;
+                }).join(',');
                 csvContent += csvRow + "\n";
             });
 
@@ -11980,8 +12013,93 @@ async fetchAllRatings() {
             document.body.removeChild(link);
         }
 
-        // 3. Tutup Modal setelah selesai download
+        // 3. Tutup Modal setelah selesai
         this.exportConfig.showModal = false;
+    },
+
+    // ==============================================
+    // FUNGSI IMPORT (MEMBACA EXCEL & SIMPAN DATA)
+    // ==============================================
+
+    handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        this.importConfig.fileName = file.name;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+
+            if (jsonData.length > 1) {
+                this.importConfig.previewHeaders = jsonData[0]; 
+                this.importConfig.fullImportData = jsonData.slice(1); 
+                
+                this.importConfig.previewData = this.importConfig.fullImportData.slice(0, 5).map(row => {
+                    let obj = {};
+                    this.importConfig.previewHeaders.forEach((head, idx) => {
+                        obj['col' + (idx + 1)] = row[idx] !== undefined && row[idx] !== null ? row[idx] : '-'; 
+                    });
+                    return obj;
+                });
+
+                this.importConfig.step = 2; 
+            } else {
+                alert("File Excel kosong atau format tidak sesuai.");
+            }
+        };
+        
+        reader.readAsArrayBuffer(file);
+        
+        // Reset nilai file input agar user bisa upload ulang file yang sama jika perlu
+        event.target.value = '';
+    },
+
+    processImport() {
+        const dataRows = this.importConfig.fullImportData;
+        let successCount = 0;
+
+        if (this.importConfig.target === 'customers') {
+            dataRows.forEach((row, index) => {
+                if (!row[0]) return; 
+
+                this.customers.push({
+                    // Ditambahkan index agar ID terjamin unik
+                    id: 'CUST-' + Date.now() + '-' + index + '-' + Math.floor(Math.random() * 1000),
+                    name: row[0].toString(),
+                    phone: row[1] ? row[1].toString() : '',
+                    address: row[2] ? row[2].toString() : '',
+                    membershipId: null
+                });
+                successCount++;
+            });
+        } 
+        else if (this.importConfig.target === 'suppliers') {
+            dataRows.forEach((row, index) => {
+                if (!row[0]) return; 
+
+                this.suppliers.push({
+                    id: 'SUPP-' + Date.now() + '-' + index + '-' + Math.floor(Math.random() * 1000),
+                    name: row[0].toString(),
+                    phone: row[1] ? row[1].toString() : '',
+                    address: row[2] ? row[2].toString() : ''
+                });
+                successCount++;
+            });
+        }
+
+        this.importConfig.step = 3;
+        alert(`Berhasil mengimport ${successCount} data!`);
+        
+        setTimeout(() => {
+            this.importConfig.showModal = false;
+        }, 2000);
     },
             
         // =========================================================
