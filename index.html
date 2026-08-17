@@ -3514,15 +3514,19 @@ body.sidebar-open {
                     <tr v-for="p in filteredCatalogProducts" :key="p.id">
                         <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
                         <td>
-                            <template v-if="p.imageBase64 && p.imageBase64.trim() !== ''">
-                                <img :src="p.imageBase64" width="40" height="40" class="rounded object-fit-cover shadow-sm">
-                            </template>
-                            <template v-else>
-                                <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 40px; height: 40px;">
-                                    <i class="bi bi-box-seam text-muted" style="font-size: 0.8rem;"></i>
-                                </div>
-                            </template>
-                        </td>
+    <!-- Kita cek apakah ada gambar di array images (dari Cloudflare) atau pakai base64 lama -->
+    <template v-if="(p.images && p.images.length > 0 && p.images[0].url) || (p.imageBase64 && p.imageBase64.trim() !== '')">
+        <img :src="p.images && p.images.length > 0 ? p.images[0].url : p.imageBase64" 
+             width="40" height="40" 
+             class="rounded object-fit-cover shadow-sm">
+    </template>
+    <template v-else>
+        <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 40px; height: 40px;">
+            <i class="bi bi-box-seam text-muted" style="font-size: 0.8rem;"></i>
+        </div>
+    </template>
+</td>
+
                         <td class="fw-bold">
                             {{ p.name || '-' }}
                             
