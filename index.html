@@ -12505,6 +12505,31 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
+    // HELPER BARU UNTUK FOTO DI PENCARIAN POS
+    getSearchItemImage(prod, variant = null) {
+        if (!prod) return '';
+
+        // 1. Cek foto spesifik varian (Jika yang diklik adalah varian)
+        if (variant) {
+            if (variant.imageUrl) return variant.imageUrl;
+            if (variant.imageBase64 && variant.imageBase64.trim() !== '') return variant.imageBase64;
+        }
+
+        // 2. Jika varian tidak punya foto, ATAU ini adalah produk tanpa varian:
+        // Cek foto utama dari Cloudflare R2 (array images)
+        if (prod.images && Array.isArray(prod.images) && prod.images.length > 0 && prod.images[0].url) {
+            return prod.images[0].url;
+        }
+
+        // 3. Fallback terakhir ke base64 (format lama)
+        if (prod.imageBase64 && prod.imageBase64.trim() !== '') {
+            return prod.imageBase64;
+        }
+
+        // Jika tidak ada foto sama sekali
+        return '';
+    },
+
     // Helper untuk mengambil URL foto keranjang dari berbagai kemungkinan properti
     getCartItemImage(item) {
         if (!item) return '';
