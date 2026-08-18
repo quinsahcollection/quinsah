@@ -1217,17 +1217,15 @@ body.sidebar-open {
                         <!-- PRODUK TANPA VARIAN -->
                         <div v-if="!prod.variants || prod.variants.length === 0" :key="'sp-'+prod.id" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
                             
-                            <template v-if="(product.images && product.images.length > 0 && product.images[0].url) || (product.imageBase64 && product.imageBase64.trim() !== '')">
-                <img :src="product.images && product.images.length > 0 ? product.images[0].url : product.imageBase64" 
-                     class="product-img" 
-                     @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
-            </template>
-            <template v-else>
-                <div class="product-img-placeholder">
-                    <i class="bi bi-box-seam" style="font-size: 1.5rem;"></i>
-                    <span style="font-size: 0.5rem; font-weight: 500;">NO IMAGE</span>
-                </div>
-            </template>
+                            <template v-if="prod.imageBase64 && prod.imageBase64.trim() !== ''">
+                                <img :src="prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="prod.imageBase64 = ''">
+                            </template>
+                            <template v-else>
+                                <div class="product-img-placeholder me-3 border shadow-sm" style="width: 45px; height: 45px; min-width: 45px; border-radius: 6px;">
+                                    <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 2px;"></i>
+                                    <span style="font-size: 0.45rem; font-weight: 500;">NO IMAGE</span>
+                                </div>
+                            </template>
 
                             <div class="flex-grow-1 overflow-hidden pe-2">
                                 <div class="fw-bold text-dark lh-sm mb-1" style="font-size: 0.85rem;">{{ prod.name }}</div>
@@ -1308,17 +1306,19 @@ body.sidebar-open {
     <!-- 🌟 UPDATE: Ubah class col-6 menjadi col-4 agar jadi 3 kolom di mobile -->
     <div class="col-xl-2 col-lg-3 col-md-4 col-sm-4 col-4" v-for="product in filteredProducts" :key="product.id">
         <div class="product-card h-100 d-flex flex-column" @click="openPosModifier(product)">
-
-                <!-- 🌟 PERBAIKAN FOTO GRID: Gunakan placeholder jika kosong atau error -->
-                <template v-if="product.imageBase64 && product.imageBase64.trim() !== ''">
-                    <img :src="product.imageBase64" class="product-img" @error="product.imageBase64 = ''">
-                </template>
-                <template v-else>
-                    <div class="product-img-placeholder">
-                        <i class="bi bi-box-seam" style="font-size: 1.8rem; margin-bottom: 4px;"></i>
-                        <span style="font-size: 0.65rem; font-weight: 500; letter-spacing: 0.5px;">NO IMAGE</span>
-                    </div>
-                </template>
+                
+               <!-- 🌟 PERBAIKAN: Cek images (URL Cloudflare) ATAU base64 -->
+            <template v-if="(product.images && product.images.length > 0 && product.images[0].url) || (product.imageBase64 && product.imageBase64.trim() !== '')">
+                <img :src="product.images && product.images.length > 0 ? product.images[0].url : product.imageBase64" 
+                     class="product-img" 
+                     @error="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
+            </template>
+            <template v-else>
+                <div class="product-img-placeholder">
+                    <i class="bi bi-box-seam" style="font-size: 1.5rem;"></i>
+                    <span style="font-size: 0.5rem; font-weight: 500;">NO IMAGE</span>
+                </div>
+            </template>
                 
                 <h6 class="mb-1 fw-bold text-dark lh-sm" style="font-size: 0.85rem;">{{ product.name || 'Tanpa Nama' }}</h6>
                 <div class="mb-1"><span class="sku-badge">{{ product.sku || 'N/A' }}</span></div>
