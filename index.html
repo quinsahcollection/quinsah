@@ -6899,17 +6899,22 @@ body.sidebar-open {
         <div class="cart-item mb-2 pb-2 border-bottom" v-for="item in cart" :key="item.cartId">
             <div class="d-flex gap-2">
                 
-                <!-- 📸 KOTAK FOTO PRODUK KIRI -->
+        <!-- 📸 KOTAK FOTO PRODUK KIRI -->
                 <div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
-                    <template v-if="item.imageBase64 && item.imageBase64.trim() !== ''">
-                        <img :src="item.imageBase64" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" class="border shadow-sm" @error="item.imageBase64 = ''">
+                    
+                    <!-- 🌟 PERBAIKAN FOTO KERANJANG: Cek format Cloudflare (images) ATAU base64 lama -->
+                    <template v-if="(item.images && item.images.length > 0 && item.images[0].url) || (item.imageBase64 && item.imageBase64.trim() !== '')">
+                        <img :src="item.images && item.images.length > 0 ? item.images[0].url : item.imageBase64" 
+                             style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" 
+                             class="border shadow-sm" 
+                             @error="item.imageBase64 = ''; if(item.images) item.images = []">
                     </template>
                     <template v-else>
                         <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
                             <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
                             <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
                         </div>
-                    </template>
+                    </template>    
                 </div>
 
                 <!-- 📝 KOTAK INFO PRODUK KANAN -->
