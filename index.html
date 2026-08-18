@@ -6901,23 +6901,23 @@ body.sidebar-open {
         <div class="cart-item mb-2 pb-2 border-bottom" v-for="item in cart" :key="item.cartId">
             <div class="d-flex gap-2">
                 
-        <!-- 📸 KOTAK FOTO PRODUK KIRI -->
-                <div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
-                    
-                    <!-- 🌟 PERBAIKAN FOTO KERANJANG: Cek format Cloudflare (images) ATAU base64 lama -->
-                    <template v-if="(item.images && item.images.length > 0 && item.images[0].url) || (item.imageBase64 && item.imageBase64.trim() !== '')">
-                        <img :src="item.images && item.images.length > 0 ? item.images[0].url : item.imageBase64" 
-                             style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" 
-                             class="border shadow-sm" 
-                             @error="item.imageBase64 = ''; if(item.images) item.images = []">
-                    </template>
-                    <template v-else>
-                        <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
-                            <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
-                            <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
-                        </div>
-                    </template>    
-                </div>
+<!-- 📸 KOTAK FOTO PRODUK KIRI -->
+<div class="cursor-pointer" style="width: 48px; flex-shrink: 0;" @click="openEditCartItem(item)">
+    
+    <!-- 🌟 PENGECEKAN LENGKAP: images (array), imageUrl (string), vImageUrl, atau imageBase64 -->
+    <template v-if="getCartItemImage(item)">
+        <img :src="getCartItemImage(item)" 
+             style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;" 
+             class="border shadow-sm" 
+             @error="handleCartImgError(item)">
+    </template>
+    <template v-else>
+        <div class="d-flex flex-column align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width: 48px; height: 48px; border-radius: 6px;">
+            <i class="bi bi-box-seam" style="font-size: 0.9rem; margin-bottom: 1px;"></i>
+            <span style="font-size: 0.35rem; font-weight: 500;">NO IMAGE</span>
+        </div>
+    </template>
+</div>
 
                 <!-- 📝 KOTAK INFO PRODUK KANAN -->
                 <div class="flex-grow-1 overflow-hidden">
@@ -12495,6 +12495,35 @@ financeAPList() {
             // Memaksa input URL menjadi huruf kecil dan tanpa spasi/simbol
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
+
+    // Helper untuk mengambil URL foto keranjang dari berbagai kemungkinan properti
+    getCartItemImage(item) {
+        if (!item) return '';
+        
+        // 1. Cek foto varian spesifik dulu jika ada
+        if (item.vImageUrl) return item.vImageUrl;
+        if (item.vImageBase64) return item.vImageBase64;
+        
+        // 2. Cek array images dari Cloudflare R2
+        if (item.images && Array.isArray(item.images) && item.images.length > 0 && item.images[0].url) {
+            return item.images[0].url;
+        }
+        
+        // 3. Cek properti string imageUrl atau imageBase64
+        if (item.imageUrl) return item.imageUrl;
+        if (item.imageBase64 && item.imageBase64.trim() !== '') return item.imageBase64;
+        
+        return '';
+    },
+
+    // Handlers jika gambar error
+    handleCartImgError(item) {
+        item.vImageUrl = '';
+        item.vImageBase64 = '';
+        item.imageUrl = '';
+        item.imageBase64 = '';
+        if (item.images) item.images = [];
+    },
 
     async uploadToCloudflareR2(file, tenantId) {
         const filename = encodeURIComponent(file.name);
@@ -20840,23 +20869,29 @@ let finalPromo = Number(basePromo || 0) + Number(modifierTotal || 0);
 let finalSell = Number(baseSell || 0) + Number(modifierTotal || 0);
 
 let item = {
-    cartId: Date.now() + Math.random().toString(36).substring(7),
-    productId: prod.id,
-    imageBase64: variant ? (variant.imageBase64 || prod.imageBase64) : prod.imageBase64,
-    name: prod.name,
-    sku: prod.sku,
-    uom: prod.uom,
-    qty: 1,
-    basePrice: prod.basePrice || prod.hppPrice, 
-    sellPrice: finalSell, 
-    promoPrice: finalPromo, 
-    modifierPrice: Number(modifierTotal || 0), // PERBAIKAN: Simpan harga topping di memori terpisah!
-    posDiscountType: 'none', 
-    posDiscountValue: 0,
-    note: modifierNotes.join(', '), 
-    linkedModifiers: linkedProductIds,
-    tiers: JSON.parse(JSON.stringify(prod.tiers || []))
-};
+                    cartId: Date.now() + Math.random().toString(36).substring(7),
+                    productId: prod.id,
+                    
+                    // Foto Lama
+                    imageBase64: variant ? (variant.imageBase64 || prod.imageBase64) : prod.imageBase64,
+                    
+                    // 🌟 KUNCI PERBAIKAN: Bawa foto dari Cloudflare ikut masuk ke keranjang!
+                    images: variant && variant.imageUrl ? [{ url: variant.imageUrl }] : (prod.images ? JSON.parse(JSON.stringify(prod.images)) : []),
+                    
+                    name: prod.name,
+                    sku: prod.sku,
+                    uom: prod.uom,
+                    qty: 1,
+                    basePrice: prod.basePrice || prod.hppPrice, 
+                    sellPrice: finalSell, 
+                    promoPrice: finalPromo, 
+                    modifierPrice: Number(modifierTotal || 0), 
+                    posDiscountType: 'none', 
+                    posDiscountValue: 0,
+                    note: modifierNotes.join(', '), 
+                    linkedModifiers: linkedProductIds,
+                    tiers: JSON.parse(JSON.stringify(prod.tiers || []))
+                };
                 
                 if (variant) {
                     item.variantName = variant.name || variant.attributes;
