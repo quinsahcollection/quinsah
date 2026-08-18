@@ -8857,9 +8857,9 @@ body.sidebar-open {
                                  
                                 <div class="card-body p-2 d-flex align-items-center">
                                     
-                                    <!-- 🌟 PERBAIKAN FOTO VARIAN: Gunakan placeholder jika kosong atau error -->
-                                    <template v-if="v.imageBase64 || activeProduct.imageBase64">
-                                        <img :src="v.imageBase64 || activeProduct.imageBase64" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageBase64 = ''; activeProduct.imageBase64 = ''">
+                                    <!-- 🌟 PERBAIKAN FOTO VARIAN: Gunakan helper method -->
+                                    <template v-if="getSearchItemImage(activeProduct, v)">
+                                        <img :src="getSearchItemImage(activeProduct, v)" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageUrl = ''; v.imageBase64 = ''; activeProduct.imageBase64 = ''; if(activeProduct.images) activeProduct.images = []">
                                     </template>
                                     <template v-else>
                                         <div class="product-img-placeholder me-3 border shadow-sm" style="width: 55px; height: 55px; min-width: 55px;">
