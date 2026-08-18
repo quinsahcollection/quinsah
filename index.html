@@ -3521,19 +3521,17 @@ body.sidebar-open {
                 <tbody>
                     <tr v-for="p in filteredCatalogProducts" :key="p.id">
                         <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
+                        <!-- FOTO TABEL PRODUK INDUK -->
                         <td>
-    <!-- Kita cek apakah ada gambar di array images (dari Cloudflare) atau pakai base64 lama -->
-    <template v-if="(p.images && p.images.length > 0 && p.images[0].url) || (p.imageBase64 && p.imageBase64.trim() !== '')">
-        <img :src="p.images && p.images.length > 0 ? p.images[0].url : p.imageBase64" 
-             width="40" height="40" 
-             class="rounded object-fit-cover shadow-sm">
-    </template>
-    <template v-else>
-        <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 40px; height: 40px;">
-            <i class="bi bi-box-seam text-muted" style="font-size: 0.8rem;"></i>
-        </div>
-    </template>
-</td>
+                            <template v-if="getProductDbImage(p)">
+                                <img :src="getProductDbImage(p)" width="40" height="40" class="rounded object-fit-cover shadow-sm border" @error="p.imageUrl = ''; p.imageBase64 = ''">
+                            </template>
+                            <template v-else>
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-box-seam text-muted" style="font-size: 0.8rem;"></i>
+                                </div>
+                            </template>
+                        </td>
 
                         <td class="fw-bold">
                             {{ p.name || '-' }}
@@ -3601,10 +3599,10 @@ body.sidebar-open {
                 <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>{{ catalogVariantOutletFilter ? 'Stok Outlet' : 'Stok Total' }}</th></tr></thead>
                 <tbody>
                     <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
+                        <!-- FOTO TABEL DATABASE SKU VARIAN -->
                         <td>
-                            <!-- 🌟 PERBAIKAN: Cek URL Cloudflare (imageUrl) ATAU format lama (imageBase64) -->
-                            <template v-if="(v.imageUrl && v.imageUrl.trim() !== '') || (v.imageBase64 && v.imageBase64.trim() !== '')">
-                                <img :src="v.imageUrl || v.imageBase64" width="35" height="35" class="rounded object-fit-cover shadow-sm border" @error="v.imageUrl = ''; v.imageBase64 = ''">
+                            <template v-if="getVariantDbImage(v)">
+                                <img :src="getVariantDbImage(v)" width="35" height="35" class="rounded object-fit-cover shadow-sm border" @error="v.imageUrl = ''; v.imageBase64 = ''">
                             </template>
                             <template v-else>
                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 35px; height: 35px;">
@@ -12506,6 +12504,36 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
+    // HELPER FOTO TABEL PRODUK INDUK
+    getProductDbImage(p) {
+        if (!p) return '';
+        if (p.imageUrl) return p.imageUrl; // Cek URL Cloudflare tunggal
+        if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0].url) return p.images[0].url; // Cek array images
+        if (p.imageBase64 && p.imageBase64.trim() !== '') return p.imageBase64; // Cek base64 lama
+        return '';
+    },
+
+    // HELPER FOTO TABEL VARIAN
+    getVariantDbImage(v) {
+        if (!v) return '';
+        // 1. Cek foto variannya sendiri dulu
+        if (v.imageUrl) return v.imageUrl;
+        if (v.imageBase64 && v.imageBase64.trim() !== '') return v.imageBase64;
+        
+        // 2. Jika varian kosong, pinjam foto produk induknya!
+        let parentId = v.productId || v.parentId;
+        if (parentId && this.products) {
+            let p = this.products.find(x => x.id === parentId);
+            if (p) return this.getProductDbImage(p);
+        }
+        
+        // 3. Fallback alternatif
+        if (v.parentImageUrl) return v.parentImageUrl;
+        if (v.parentImageBase64) return v.parentImageBase64;
+        
+        return '';
+    },
+            
     // HELPER BARU UNTUK FOTO DI PENCARIAN POS
     getSearchItemImage(prod, variant = null) {
         if (!prod) return '';
