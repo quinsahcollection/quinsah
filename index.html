@@ -3602,11 +3602,12 @@ body.sidebar-open {
                 <tbody>
                     <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
                         <td>
-                            <template v-if="v.imageBase64 && v.imageBase64.trim() !== ''">
-                                <img :src="v.imageBase64" width="35" height="35" class="rounded object-fit-cover">
+                            <!-- 🌟 PERBAIKAN: Cek URL Cloudflare (imageUrl) ATAU format lama (imageBase64) -->
+                            <template v-if="(v.imageUrl && v.imageUrl.trim() !== '') || (v.imageBase64 && v.imageBase64.trim() !== '')">
+                                <img :src="v.imageUrl || v.imageBase64" width="35" height="35" class="rounded object-fit-cover shadow-sm border" @error="v.imageUrl = ''; v.imageBase64 = ''">
                             </template>
                             <template v-else>
-                                <div class="d-flex align-items-center justify-content-center bg-light border rounded" style="width: 35px; height: 35px;">
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded shadow-sm" style="width: 35px; height: 35px;">
                                     <i class="bi bi-box-seam text-muted" style="font-size: 0.7rem;"></i>
                                 </div>
                             </template>
