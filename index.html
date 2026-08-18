@@ -7292,12 +7292,21 @@ body.sidebar-open {
                                             <!-- PERBAIKAN: Bungkus teks dan gambar menjadi satu baris -->
                                             <div class="d-flex align-items-center me-auto overflow-hidden">
                                                 
-                                                <!-- FOTO PRODUK KECIL (Thumbnail) -->
+                                            <!-- FOTO PRODUK KECIL (Thumbnail) -->
                                                 <div class="border rounded bg-light d-flex align-items-center justify-content-center text-secondary" 
                                                      style="width: 45px; height: 45px; flex-shrink: 0; overflow: hidden;">
-                                                     <!-- Jika gambar ada, tampilkan. Jika tidak, tampilkan ikon image bawaan -->
-                                                    <img v-if="item.gambar" :src="item.gambar" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
-                                                    <i v-else class="bi bi-image" style="font-size: 1.2rem;"></i>
+                                                     
+                                                    <!-- 🌟 PERBAIKAN: Gunakan helper method untuk menarik URL gambar -->
+                                                    <template v-if="getCartItemImage(item)">
+                                                        <img :src="getCartItemImage(item)" 
+                                                             alt="Foto" 
+                                                             style="width: 100%; height: 100%; object-fit: cover;"
+                                                             @error="handleCartImgError(item)">
+                                                    </template>
+                                                    <template v-else>
+                                                        <i class="bi bi-box-seam" style="font-size: 1.2rem;"></i>
+                                                    </template>
+                                                    
                                                 </div>
                                                 
                                                 <!-- NAMA & SKU PRODUK -->
@@ -19986,7 +19995,7 @@ await setDoc(doc(db, "users", res.user.uid), {
         }
     },
 
-    // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
+   // --- FUNGSI BARU UNTUK MODE CONTINUOUS SCAN ---
     handleContinuousScan(decodedText) {
         const q = decodedText.trim().toLowerCase(); 
         let foundProduct = null; 
@@ -20004,8 +20013,8 @@ await setDoc(doc(db, "users", res.user.uid), {
         if (foundProduct) { 
             
             // 🔊 --- PANGGIL FUNGSI BEEP SYNTHETIC --- 🔊
-        this.playBeep();
-        // ------------------------------------------
+            this.playBeep();
+            // ------------------------------------------
 
             let scannedSku = foundVariant ? foundVariant.variantSku : foundProduct.sku;
             let existingItem = this.tempScannedItems.find(item => item.sku === scannedSku);
@@ -20019,22 +20028,24 @@ await setDoc(doc(db, "users", res.user.uid), {
                     prodName = prodName + (varName ? ' - ' + varName : '');
                 }
 
-                // --- PERBAIKAN: Gunakan variabel imageBase64 sesuai dengan sistem Anda ---
-                let fotoKecil = '';
-                if (foundVariant && foundVariant.imageBase64) {
-                    fotoKecil = foundVariant.imageBase64;
-                } else if (foundProduct.imageBase64) {
-                    fotoKecil = foundProduct.imageBase64;
-                }
-
+                // --- 🌟 KUNCI PERBAIKAN FOTO SCANNER 🌟 ---
+                // Menyalin SELURUH kemungkinan properti gambar agar helper getCartItemImage(item) bisa bekerja!
                 let newItem = {
                     product: foundProduct,
                     variant: foundVariant,
                     qty: 1,
                     nama: prodName,
                     sku: scannedSku,
-                    gambar: fotoKecil, // <--- Sekarang variabelnya sudah sesuai
-                    highlighted: false 
+                    highlighted: false,
+                    
+                    // FORMAT LAMA: base64
+                    imageBase64: foundProduct.imageBase64 || '',
+                    vImageBase64: foundVariant ? foundVariant.imageBase64 : '',
+                    
+                    // FORMAT BARU: Cloudflare URL
+                    images: foundProduct.images ? JSON.parse(JSON.stringify(foundProduct.images)) : [],
+                    imageUrl: (foundProduct.images && foundProduct.images.length > 0) ? foundProduct.images[0].url : '',
+                    vImageUrl: foundVariant ? foundVariant.imageUrl : ''
                 };
 
                 this.tempScannedItems.push(newItem);
