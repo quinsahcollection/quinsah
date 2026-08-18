@@ -3521,7 +3521,7 @@ body.sidebar-open {
                 <tbody>
                     <tr v-for="p in filteredCatalogProducts" :key="p.id">
                         <td><span class="sku-badge" title="Klik lihat barcode" @click="showBarcode(p.sku)"><i class="bi bi-upc-scan me-1"></i>{{ p.sku || 'N/A' }}</span></td>
-                        <!-- FOTO TABEL PRODUK INDUK -->
+                        <!-- FOTO DAFTAR INDUK PRODUK -->
                         <td>
                             <template v-if="getProductDbImage(p)">
                                 <img :src="getProductDbImage(p)" width="40" height="40" class="rounded object-fit-cover shadow-sm border" @error="p.imageUrl = ''; p.imageBase64 = ''">
@@ -3599,7 +3599,7 @@ body.sidebar-open {
                 <thead><tr><th>Foto</th><th>Induk & Kategori</th><th>Nama Varian</th><th>Kode Varian</th><th>HPP (Modal)</th><th>Harga Jual</th><th>{{ catalogVariantOutletFilter ? 'Stok Outlet' : 'Stok Total' }}</th></tr></thead>
                 <tbody>
                     <tr v-for="(v, index) in filteredAllVariantsList" :key="index">
-                        <!-- FOTO TABEL DATABASE SKU VARIAN -->
+                        <!-- FOTO DATABASE SKU VARIAN -->
                         <td>
                             <template v-if="getVariantDbImage(v)">
                                 <img :src="getVariantDbImage(v)" width="35" height="35" class="rounded object-fit-cover shadow-sm border" @error="v.imageUrl = ''; v.imageBase64 = ''">
@@ -12504,33 +12504,40 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
-    // HELPER FOTO TABEL PRODUK INDUK
+    // 1. HELPER FOTO TABEL PRODUK INDUK
     getProductDbImage(p) {
         if (!p) return '';
-        if (p.imageUrl) return p.imageUrl; // Cek URL Cloudflare tunggal
-        if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0].url) return p.images[0].url; // Cek array images
+        if (p.imageUrl) return p.imageUrl; // Cek URL Cloudflare hasil upload baru
+        if (p.images && Array.isArray(p.images) && p.images.length > 0 && p.images[0].url) return p.images[0].url; // Cek array bawaan
         if (p.imageBase64 && p.imageBase64.trim() !== '') return p.imageBase64; // Cek base64 lama
         return '';
     },
 
-    // HELPER FOTO TABEL VARIAN
+    // 2. HELPER FOTO TABEL VARIAN (Mampu melacak dari SKU)
     getVariantDbImage(v) {
         if (!v) return '';
-        // 1. Cek foto variannya sendiri dulu
+
+        // Cek langsung jika data imageUrl/imageBase64 ada terbawa
         if (v.imageUrl) return v.imageUrl;
         if (v.imageBase64 && v.imageBase64.trim() !== '') return v.imageBase64;
-        
-        // 2. Jika varian kosong, pinjam foto produk induknya!
-        let parentId = v.productId || v.parentId;
-        if (parentId && this.products) {
-            let p = this.products.find(x => x.id === parentId);
-            if (p) return this.getProductDbImage(p);
+
+        // Jika tidak ada, kita lacak produk aslinya di this.products berdasarkan SKU
+        if (this.products) {
+            for (let prod of this.products) {
+                if (prod.variants && prod.variants.length > 0) {
+                    // Cari varian yang SKU-nya cocok
+                    let realVariant = prod.variants.find(vx => vx.variantSku === v.sku || vx.sku === v.sku);
+                    if (realVariant) {
+                        // Ketemu! Cek foto spesifik variannya
+                        if (realVariant.imageUrl) return realVariant.imageUrl;
+                        if (realVariant.imageBase64) return realVariant.imageBase64;
+                        
+                        // Kalau varian asli tidak punya foto, pinjam foto produk induk!
+                        return this.getProductDbImage(prod);
+                    }
+                }
+            }
         }
-        
-        // 3. Fallback alternatif
-        if (v.parentImageUrl) return v.parentImageUrl;
-        if (v.parentImageBase64) return v.parentImageBase64;
-        
         return '';
     },
             
