@@ -20638,12 +20638,65 @@ try {
                 });
             },
 
+            // FUNGSI UPLOAD FOTO (VARIAN/LOGO) - KOMPRES DULU BARU KE CLOUDFLARE R2
             handleImageUpload(e, targetObj, isVariant=false) {
-                const file = e.target.files[0]; if (!file) return; const r = new FileReader();
-                r.onload = (ev) => { const img = new Image(); img.onload = () => {
-                    const canvas = document.createElement('canvas'); const scale = 400 / img.width; canvas.width = 400; canvas.height = img.height * scale;
-                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); targetObj.imageBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-                }; img.src = ev.target.result; }; r.readAsDataURL(file);
+                const file = e.target.files[0]; 
+                if (!file) return; 
+                
+                const r = new FileReader();
+                r.onload = (ev) => { 
+                    const img = new Image(); 
+                    img.onload = () => {
+                        // 1. KOMPRES GAMBAR (Script Lama Anda yang Bagus)
+                        const canvas = document.createElement('canvas'); 
+                        const scale = 400 / img.width; 
+                        canvas.width = 400; 
+                        canvas.height = img.height * scale;
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); 
+                        
+                        // 2. UBAH GAMBAR KECIL JADI FILE (Blob) UNTUK DIKIRIM KE R2
+                        canvas.toBlob(async (blob) => {
+                            try {
+                                // Tentukan nama toko (tenant)
+                                const hostname = window.location.hostname;
+                                const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
+                                
+                                // Bersihkan nama file
+                                let rawFilename = file.name || `foto_${Date.now()}.jpg`;
+                                let safeFilename = encodeURIComponent(rawFilename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_]/g, ''));
+                                
+                                // URL Cloudflare Worker Anda
+                                const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?companyId=${tenantId}&filename=${safeFilename}`;
+
+                                // Kirim file kecil tersebut ke Cloudflare
+                                const response = await fetch(workerUrl, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "image/jpeg" },
+                                    body: blob
+                                });
+
+                                const result = await response.json();
+                                
+                                if (result.success) {
+                                    // 3. SIMPAN URL CLOUDFLARE KE VARIABEL
+                                    targetObj.imageUrl = result.url;
+                                    
+                                    // Hapus sisa-sisa base64 lama jika sebelumnya ada
+                                    targetObj.imageBase64 = ''; 
+                                } else {
+                                    alert("Gagal mengupload foto ke Cloudflare: " + result.error);
+                                }
+                            } catch (error) {
+                                console.error("Error upload:", error);
+                                alert("Terjadi kesalahan jaringan saat mengupload foto.");
+                            } finally {
+                                e.target.value = ''; // Reset input tombol upload
+                            }
+                        }, 'image/jpeg', 0.6); // Kualitas JPEG 60%
+                    }; 
+                    img.src = ev.target.result; 
+                }; 
+                r.readAsDataURL(file);
             },
 
             getEffectiveBasePrice(p) {
