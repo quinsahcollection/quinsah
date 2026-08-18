@@ -1348,9 +1348,12 @@ body.sidebar-open {
             <div class="card border-0 shadow-sm cursor-pointer mb-1" @click="openPosModifier(product)">
                 <div class="card-body p-2 d-flex align-items-center bg-white rounded border border-light">
                     
-                    <!-- 🌟 PERBAIKAN FOTO LIST: Gunakan placeholder jika kosong atau error -->
-                    <template v-if="product.imageBase64 && product.imageBase64.trim() !== ''">
-                        <img :src="product.imageBase64" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="product.imageBase64 = ''">
+                    <!-- 🌟 PERBAIKAN FOTO LIST: Cek format Cloudflare (images) ATAU base64 lama -->
+                    <template v-if="(product.images && product.images.length > 0 && product.images[0].url) || (product.imageBase64 && product.imageBase64.trim() !== '')">
+                        <img :src="product.images && product.images.length > 0 ? product.images[0].url : product.imageBase64" 
+                             style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" 
+                             class="me-3 border shadow-sm" 
+                             @error="product.imageBase64 = ''; if(product.images) product.images = []">
                     </template>
                     <template v-else>
                         <div class="product-img-placeholder me-3 border shadow-sm" style="width: 60px; height: 60px; min-width: 60px;">
