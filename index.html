@@ -1217,8 +1217,9 @@ body.sidebar-open {
                         <!-- PRODUK TANPA VARIAN -->
                         <div v-if="!prod.variants || prod.variants.length === 0" :key="'sp-'+prod.id" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
                             
-                            <template v-if="prod.imageBase64 && prod.imageBase64.trim() !== ''">
-                                <img :src="prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="prod.imageBase64 = ''">
+                            <!-- 🌟 PERBAIKAN: Cek format Cloudflare ATAU base64 untuk produk tanpa varian -->
+                            <template v-if="(prod.images && prod.images.length > 0 && prod.images[0].url) || (prod.imageBase64 && prod.imageBase64.trim() !== '')">
+                                <img :src="prod.images && prod.images.length > 0 ? prod.images[0].url : prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="prod.imageBase64 = ''; if(prod.images) prod.images = []">
                             </template>
                             <template v-else>
                                 <div class="product-img-placeholder me-3 border shadow-sm" style="width: 45px; height: 45px; min-width: 45px; border-radius: 6px;">
@@ -1238,8 +1239,9 @@ body.sidebar-open {
                         <template v-else>
                             <div v-for="(v, vIdx) in prod.variants" :key="'sv-'+prod.id+'-'+vIdx" class="p-2 border-bottom cursor-pointer d-flex align-items-center bg-light hover-bg-white" @click="openPosModifier(prod); searchQuery=''; isSearchFocused=false;">
                                 
-                                <template v-if="(v.imageBase64 || prod.imageBase64) && (v.imageBase64 || prod.imageBase64).trim() !== ''">
-                                    <img :src="v.imageBase64 || prod.imageBase64" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageBase64 = ''; prod.imageBase64 = ''">
+                                <!-- 🌟 PERBAIKAN: Cek foto varian spesifik (imageUrl/base64), jika kosong ambil foto produk utama -->
+                                <template v-if="(v.imageUrl || v.imageBase64) || (prod.images && prod.images.length > 0 && prod.images[0].url) || (prod.imageBase64 && prod.imageBase64.trim() !== '')">
+                                    <img :src="v.imageUrl || v.imageBase64 || (prod.images && prod.images.length > 0 ? prod.images[0].url : prod.imageBase64)" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px;" class="me-3 border shadow-sm" @error="v.imageUrl = ''; v.imageBase64 = ''; prod.imageBase64 = ''; if(prod.images) prod.images = []">
                                 </template>
                                 <template v-else>
                                     <div class="product-img-placeholder me-3 border shadow-sm" style="width: 45px; height: 45px; min-width: 45px; border-radius: 6px;">
