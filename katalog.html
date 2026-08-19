@@ -550,7 +550,18 @@
                         this.products = prodSnap.docs.map(doc => {
                             const data = doc.data();
                             
-                            let finalImage = data.imageBase64 || data.imageUrl || data.foto || data.image || data.gambar || '';
+                            // --- 🌟 PERBAIKAN FOTO: Dukungan untuk Cloudflare & Array Images 🌟 ---
+                            let finalImage = '';
+                            if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.trim() !== '') {
+                                finalImage = data.imageUrl;
+                            } else if (data.images && Array.isArray(data.images) && data.images.length > 0 && data.images[0].url) {
+                                finalImage = data.images[0].url;
+                            } else if (data.imageBase64 && typeof data.imageBase64 === 'string' && data.imageBase64.trim() !== '') {
+                                finalImage = data.imageBase64;
+                            } else {
+                                finalImage = data.foto || data.image || data.gambar || '';
+                            }
+                            // ----------------------------------------------------------------------
                             let finalPrice = this.getFinalPrice(data);
                             let originalPrice = this.getOriginalPrice(data);
 
