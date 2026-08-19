@@ -61,7 +61,7 @@
                 <p class="text-xs text-red-600 px-4">Kami tidak dapat menemukan data toko untuk subdomain ini. Pastikan alamat URL Anda sudah benar.</p>
             </div>
 
-            <!-- HERO BANNER (DIPERBESAR) -->
+            <!-- HERO BANNER (DIPERBESAR h-44) -->
             <div v-if="companyIdValid" class="mb-5 relative rounded-2xl overflow-hidden bg-zinc-900 text-white shadow-[0_10px_20px_rgba(0,0,0,0.1)] group">
                 <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop" class="w-full h-44 object-cover opacity-60">
                 <div class="absolute inset-0 p-5 flex flex-col justify-center">
@@ -197,7 +197,7 @@
             <img :src="zoomedImage" class="max-w-[90%] max-h-[85vh] object-contain animate-scale-in drop-shadow-2xl">
         </div>
 
-        <!-- BOTTOM SHEET: DETAIL PRODUK & VARIAN -->
+        <!-- BOTTOM SHEET: DETAIL PRODUK (UKURAN TEKS DIKECILKAN) -->
         <div v-if="selectedProduct" class="fixed inset-0 z-50 flex items-end justify-center">
             <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="closeProductDetail"></div>
             <div class="relative w-full max-w-[480px] bg-white h-[100dvh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
@@ -207,99 +207,99 @@
 
                 <div class="flex-1 overflow-y-auto pb-28">
                     <!-- 🌟 TAMPILAN FOTO UTAMA & ZOOM -->
-                    <div class="w-full bg-zinc-50 relative h-[350px] flex flex-col justify-center cursor-zoom-in" 
+                    <div class="w-full bg-zinc-50 relative h-[300px] flex flex-col justify-center cursor-zoom-in" 
                          @click="(selectedProduct.selectedPhoto || selectedProduct.displayImage) ? zoomedImage = (selectedProduct.selectedPhoto || selectedProduct.displayImage) : null">
                         
                         <div class="flex-1 flex items-center justify-center p-4">
-                            <img v-if="selectedProduct.selectedPhoto" :src="selectedProduct.selectedPhoto" class="img-contain max-h-[300px]">
-                            <img v-else-if="selectedProduct.displayImage" :src="selectedProduct.displayImage" class="img-contain max-h-[300px]">
+                            <img v-if="selectedProduct.selectedPhoto" :src="selectedProduct.selectedPhoto" class="img-contain max-h-[260px]">
+                            <img v-else-if="selectedProduct.displayImage" :src="selectedProduct.displayImage" class="img-contain max-h-[260px]">
                             <i v-else class="fa-solid fa-image text-6xl text-zinc-300"></i>
                         </div>
                         
-                        <div v-if="selectedProduct.displayImage || selectedProduct.selectedPhoto" class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-zinc-600 shadow-sm pointer-events-none z-10">
+                        <div v-if="selectedProduct.displayImage || selectedProduct.selectedPhoto" class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-[9px] font-bold text-zinc-600 shadow-sm pointer-events-none z-10">
                             <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Zoom
                         </div>
                     </div>
                     
-                    <div class="p-6 border-b border-zinc-100 bg-white relative -mt-5 rounded-t-[24px]">
+                    <div class="p-5 border-b border-zinc-100 bg-white relative -mt-5 rounded-t-[24px]">
 
                         <!-- 🌟 PERBAIKAN: GALLERY THUMBNAIL RATA KIRI 🌟 -->
-                                    <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 pb-5 mb-5 border-b border-zinc-100 scrollbar-hide snap-x">
-                                        <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
-                                             @click="selectedProduct.selectedPhoto = img"
-                                             class="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
-                                             :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
-                                            <img :src="img" class="w-full h-full object-cover">
-                                        </div>
-                                    </div>
+                        <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 pb-4 mb-4 border-b border-zinc-100 scrollbar-hide snap-x">
+                            <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
+                                 @click="selectedProduct.selectedPhoto = img"
+                                 class="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
+                                 :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
+                                <img :src="img" class="w-full h-full object-cover">
+                            </div>
+                        </div>
                         
                         <!-- Menampilkan Tag di Detail Produk -->
-                        <div v-if="selectedProduct.tags && selectedProduct.tags.length > 0" class="flex flex-wrap gap-1.5 mb-3">
-                            <span v-for="t in selectedProduct.tags" :key="'det-'+t" class="bg-red-50 text-red-600 border border-red-100 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                        <div v-if="selectedProduct.tags && selectedProduct.tags.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                            <span v-for="t in selectedProduct.tags" :key="'det-'+t" class="bg-red-50 text-red-600 border border-red-100 px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider">
                                 {{ t }}
                             </span>
                         </div>
 
                         <!-- Info SKU & Stok -->
                         <div class="flex flex-wrap gap-2 mb-2">
-                            <div v-if="activeVariant && activeVariant.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[10px] font-bold tracking-wider border border-zinc-200">
+                            <div v-if="activeVariant && activeVariant.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold tracking-wider border border-zinc-200">
                                 <i class="fa-solid fa-barcode"></i> SKU: {{ activeVariant.sku }}
                             </div>
-                            <div v-else-if="selectedProduct.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[10px] font-bold tracking-wider border border-zinc-200">
+                            <div v-else-if="selectedProduct.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold tracking-wider border border-zinc-200">
                                 <i class="fa-solid fa-barcode"></i> SKU: {{ selectedProduct.sku }}
                             </div>
 
-                            <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-[10px] font-bold uppercase tracking-wider border border-green-100 whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-[9px] font-bold uppercase tracking-wider border border-green-100 whitespace-nowrap">
                                 <i class="fa-solid fa-box"></i> Stok: {{ selectedProduct.stock > 900 ? 'Tersedia' : selectedProduct.stock }}
                             </div>
                         </div>
 
-                        <div class="flex justify-between items-start mb-2">
-                            <h2 class="text-xl font-extrabold text-zinc-900 leading-tight flex-1 pr-4">{{ selectedProduct.name }}</h2>
+                        <div class="flex justify-between items-start mb-1">
+                            <h2 class="text-lg font-extrabold text-zinc-900 leading-tight flex-1 pr-4">{{ selectedProduct.name }}</h2>
                         </div>
                         
                         <!-- Harga Coret di Detail -->
                         <div class="flex items-end gap-2 mt-1">
-                            <p class="text-2xl font-black text-red-600 leading-none">Rp{{ formatRupiah(selectedProduct.price) }}</p>
-                            <p v-if="selectedProduct.originalPrice > selectedProduct.price" class="text-sm font-bold text-zinc-400 line-through mb-0.5">Rp{{ formatRupiah(selectedProduct.originalPrice) }}</p>
+                            <p class="text-xl font-black text-red-600 leading-none">Rp{{ formatRupiah(selectedProduct.price) }}</p>
+                            <p v-if="selectedProduct.originalPrice > selectedProduct.price" class="text-xs font-bold text-zinc-400 line-through mb-0.5">Rp{{ formatRupiah(selectedProduct.originalPrice) }}</p>
                         </div>
                     </div>
                     
-                    <div v-if="selectedProduct.variants && selectedProduct.variants.length > 0" class="p-6 border-b border-zinc-100 bg-white">
-                        <h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-4">Pilih Varian</h3>
-                        <div class="flex flex-wrap gap-2.5">
+                    <div v-if="selectedProduct.variants && selectedProduct.variants.length > 0" class="p-5 border-b border-zinc-100 bg-white">
+                        <h3 class="text-[10px] font-bold text-zinc-800 uppercase tracking-widest mb-3">Pilih Varian</h3>
+                        <div class="flex flex-wrap gap-2">
                             <button v-for="(v, index) in selectedProduct.variants" :key="index" 
                                     @click="activeVariant = v; if(v.displayImage) selectedProduct.selectedPhoto = v.displayImage" 
                                     :class="activeVariant === v ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200'" 
-                                    class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200">
+                                    class="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200">
                                 {{ v.name }}
                             </button>
                         </div>
                     </div>
 
                     <!-- 🌟 PERBAIKAN: DESKRIPSI PRODUK RATA KIRI 🌟 -->
-                        <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="p-6 border-b border-zinc-100 bg-white">
-                            <h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-3">Detail Produk</h3>
-                            <div class="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap break-words" 
-                                 v-html="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail">
-                            </div>
+                    <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="p-5 border-b border-zinc-100 bg-white">
+                        <h3 class="text-[10px] font-bold text-zinc-800 uppercase tracking-widest mb-2">Detail Produk</h3>
+                        <div class="text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap break-words" 
+                             v-html="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail">
                         </div>
+                    </div>
                 </div>
 
                 <!-- 🌟 PERBAIKAN: BOTTOM BAR KERANJANG CERDAS 🌟 -->
-                <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] flex gap-3 items-center z-50">
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] flex gap-3 items-center z-50">
                     
                     <!-- Icon Akses Keranjang Cepat -->
                     <button @click="isCartOpen = true" class="relative w-12 h-12 flex-shrink-0 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-700 hover:bg-zinc-100 transition-colors">
                         <i class="fa-solid fa-bag-shopping text-lg"></i>
-                        <span v-if="cartCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 min-w-[20px] text-center rounded-full border-2 border-white shadow-sm animate-scale-in">
+                        <span v-if="cartCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[20px] text-center rounded-full border-2 border-white shadow-sm animate-scale-in">
                             {{ cartCount }}
                         </span>
                     </button>
 
                     <!-- Logic: Jika Barang Belum Ada di Keranjang -->
                     <template v-if="getQtyInCart(selectedProduct, activeVariant) === 0">
-                        <button @click="addToCartFromDetail" :disabled="selectedProduct.stock <= 0 || isAddingToCart" :class="selectedProduct.stock <= 0 ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : (isAddingToCart ? 'bg-green-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98] shadow-md')" class="flex-1 h-12 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300">
+                        <button @click="addToCartFromDetail" :disabled="selectedProduct.stock <= 0 || isAddingToCart" :class="selectedProduct.stock <= 0 ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : (isAddingToCart ? 'bg-green-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98] shadow-md')" class="flex-1 h-12 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 transition-all duration-300">
                             <template v-if="selectedProduct.stock <= 0"><i class="fa-solid fa-ban"></i> Habis</template>
                             <template v-else-if="isAddingToCart"><i class="fa-solid fa-circle-check animate-scale-in"></i> Masuk Keranjang</template>
                             <template v-else><i class="fa-solid fa-cart-plus"></i> Masukkan Keranjang</template>
@@ -309,14 +309,14 @@
                     <!-- Logic: Jika Barang Sudah Ada di Keranjang (Tampil +/-) -->
                     <template v-else>
                         <div class="flex-1 flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-xl p-1 h-12">
-                            <button @click="updateCartQtyFromDetail(-1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-minus"></i></button>
+                            <button @click="updateCartQtyFromDetail(-1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-minus text-[10px]"></i></button>
                             
                             <div class="flex flex-col items-center justify-center leading-none">
-                                <span class="text-base font-black text-zinc-900">{{ getQtyInCart(selectedProduct, activeVariant) }}</span>
-                                <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">Di Keranjang</span>
+                                <span class="text-sm font-black text-zinc-900">{{ getQtyInCart(selectedProduct, activeVariant) }}</span>
+                                <span class="text-[8px] text-zinc-500 font-bold uppercase tracking-wider mt-1">Di Keranjang</span>
                             </div>
                             
-                            <button @click="updateCartQtyFromDetail(1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-plus"></i></button>
+                            <button @click="updateCartQtyFromDetail(1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-plus text-[10px]"></i></button>
                         </div>
                     </template>
                 </div>
@@ -395,20 +395,20 @@
             </div>
         </div>
 
-        <!-- BOTTOM SHEET: PILIH KATEGORI -->
-        <div v-if="isCategoryOpen" class="fixed inset-0 z-[80] flex justify-center">
-            <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="isCategoryOpen = false"></div>
-            <div class="relative w-full max-w-[480px] bg-zinc-50 mt-auto rounded-t-[32px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
-                <div class="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-300 rounded-full z-20"></div>
-                <div class="p-5 pt-8 bg-white border-b border-zinc-100 flex items-center justify-between rounded-t-[32px]">
-                    <h2 class="font-extrabold text-base text-zinc-900 flex items-center gap-2">
-                        <div class="w-8 h-8 bg-zinc-100 text-zinc-700 rounded-full flex items-center justify-center"><i class="fa-solid fa-layer-group text-sm"></i></div>
+        <!-- BOTTOM SHEET: PILIH KATEGORI (SEKARANG FULL SCREEN) -->
+        <div v-if="isCategoryOpen" class="fixed inset-0 z-[80] flex justify-center bg-white animate-slide-up">
+            <div class="relative w-full max-w-[480px] bg-white h-[100dvh] flex flex-col overflow-hidden">
+                <!-- Header Full Screen Kategori -->
+                <div class="p-5 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                    <h2 class="font-extrabold text-lg text-zinc-900 flex items-center gap-2">
                         Pilih Kategori
                     </h2>
-                    <button @click="isCategoryOpen = false" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center hover:bg-zinc-200 transition-colors"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    <button @click="isCategoryOpen = false" class="w-8 h-8 bg-zinc-50 border border-zinc-100 rounded-full flex items-center justify-center hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-xmark text-sm text-zinc-600"></i>
+                    </button>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-4 space-y-2">
+                <div class="flex-1 overflow-y-auto p-4 space-y-2 pb-20">
                     <!-- Tombol Semua Kategori -->
                     <button @click="selectCategory(''); isCategoryOpen = false" 
                             :class="selectedCategory === '' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'" 
@@ -426,19 +426,19 @@
                         <!-- Jarak Padding Kiri Otomatis Sesuai Level -->
                         <div class="flex items-center gap-2" :style="{ paddingLeft: (cat.treeLevel * 24) + 'px' }">
                             
-                            <!-- 🌟 PERBAIKAN: Icon untuk Level 2, Level 3, dst (Warnanya cerdas) -->
+                            <!-- Icon untuk Level 2, Level 3, dst (Warnanya cerdas) -->
                             <i v-if="cat.treeLevel > 0" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-xs mr-1" 
                                :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-300'"></i>
                             
-                            <!-- 🌟 PERBAIKAN: Icon Folder untuk Induk Level 0 yang punya anak -->
+                            <!-- Icon Folder untuk Induk Level 0 yang punya anak -->
                             <i v-if="cat.treeLevel === 0 && cat.isParent" class="fa-regular fa-folder text-sm mr-1" 
                                :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
                             
-                            <!-- 🌟 PERBAIKAN: Icon Tag untuk Level 0 yang tidak punya anak -->
+                            <!-- Icon Tag untuk Level 0 yang tidak punya anak -->
                             <i v-if="cat.treeLevel === 0 && !cat.isParent" class="fa-solid fa-tag text-sm mr-1" 
                                :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
                             
-                            <!-- 🌟 PERBAIKAN: Teks tidak hitam jika di-select -->
+                            <!-- Teks tidak hitam jika di-select -->
                             <span class="text-sm" :class="[
                                 cat.treeLevel === 0 ? 'font-extrabold' : 'font-semibold',
                                 selectedCategory === cat.id ? 'text-white' : (cat.treeLevel === 0 ? 'text-zinc-900' : 'text-zinc-500')
@@ -499,7 +499,7 @@
             },
             
             computed: {
-                // 🌟 PERBAIKAN: BREADCRUMB NAMA KATEGORI (Misal: Pria / Atasan / Kaos)
+                // BREADCRUMB NAMA KATEGORI (Misal: Pria / Atasan / Kaos)
                 selectedCategoryPath() {
                     if (!this.selectedCategory) return 'Semua Produk';
                     
@@ -526,7 +526,7 @@
                     let categories = this.categories;
                     let addedIds = new Set(); // Untuk melacak kategori yang sudah diproses
 
-                    // 🌟 Fungsi Rekursif untuk menggali sedalam apa pun levelnya 🌟
+                    // Fungsi Rekursif untuk menggali sedalam apa pun levelnya
                     const buildTree = (parentId, level) => {
                         // Cari anak-anak dari parentId saat ini
                         let children = categories.filter(c => {
@@ -545,7 +545,7 @@
                                 id: child.id,
                                 name: child.name || child.nama || 'Tanpa Nama',
                                 isParent: hasChildren,
-                                treeLevel: level // 👈 Ini kunci untuk mengatur jarak inden menjorok
+                                treeLevel: level
                             });
                             
                             addedIds.add(child.id);
@@ -593,7 +593,7 @@
                         
                         let matchesCategory = true;
                         
-                        // 🌟 PERBAIKAN FILTER KATEGORI: Induk membaca semua data Anaknya 🌟
+                        // FILTER KATEGORI: Induk membaca semua data Anaknya
                         if (this.selectedCategory) {
                             let targetCatIds = [this.selectedCategory];
                             
@@ -686,7 +686,7 @@
                 }
             },
             methods: {
-                // 🌟 TAMBAHAN FUNGSI CYCLING UNTUK MENGUBAH TAMPILAN
+                // FUNGSI CYCLING UNTUK MENGUBAH TAMPILAN
                 cycleViewMode() {
                     if (this.viewMode === 'list') this.viewMode = 'grid2';
                     else if (this.viewMode === 'grid2') this.viewMode = 'grid3';
@@ -754,7 +754,7 @@
                         this.products = prodSnap.docs.map(doc => {
                             const data = doc.data();
                             
-                            // --- 🌟 PERBAIKAN FOTO: Dukungan untuk Cloudflare & Array Images 🌟 ---
+                            // --- PERBAIKAN FOTO: Dukungan untuk Cloudflare & Array Images ---
                             let finalImage = '';
                             if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.trim() !== '') {
                                 finalImage = data.imageUrl;
@@ -765,7 +765,7 @@
                             } else {
                                 finalImage = data.foto || data.image || data.gambar || '';
                             }
-                            // ----------------------------------------------------------------------
+                            
                             let finalPrice = this.getFinalPrice(data);
                             let originalPrice = this.getOriginalPrice(data);
 
@@ -790,7 +790,7 @@
                             
                             if (isNaN(finalStock)) finalStock = 0;
 
-                            // --- 🌟 KUMPULKAN SEMUA FOTO & FOTO VARIAN 🌟 ---
+                            // --- KUMPULKAN SEMUA FOTO & FOTO VARIAN ---
                             let allPhotos = [];
                             if (finalImage) allPhotos.push(finalImage);
                             
@@ -880,7 +880,7 @@
                     this.activeVariant = null;
                 },
 
-                // --- 🌟 HELPER KERANJANG CERDAS 🌟 ---
+                // --- HELPER KERANJANG CERDAS ---
                 getQtyInCart(product, variant) {
                     if (!product) return 0;
                     const cartItemId = product.id + '-' + (variant ? variant.name : 'default');
@@ -929,9 +929,9 @@
                         
                         this.isAddingToCart = false;
                         
-                        // PERBAIKAN: Fungsi this.closeProductDetail() DIHAPUS agar layar tetap terbuka!
+                        // Fungsi this.closeProductDetail() DIHAPUS agar layar tetap terbuka
                         this.showToast("Berhasil masuk keranjang!", "fa-solid fa-cart-arrow-down");
-                    }, 400); // Dipercepat dari 600ms ke 400ms agar lebih responsif
+                    }, 400); // Dipercepat agar responsif
                 },
                 
                 updateQty(index, change) {
