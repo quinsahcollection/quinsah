@@ -434,19 +434,25 @@
                         <i v-if="selectedCategory === ''" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
                     </button>
                     
-                    <!-- Tombol List Kategori Hierarki -->
+                    <!-- Tombol List Kategori Hierarki (Mendukung Level 3+) -->
                     <button v-for="cat in structuredCatalogCategories" :key="cat.id" 
                             @click="selectCategory(cat.id); isCategoryOpen = false" 
-                            :class="[
-                                selectedCategory === cat.id ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50',
-                                cat.isParent ? 'mt-4' : 'ml-6'
-                            ]" 
-                            class="w-full flex items-center justify-between p-3.5 rounded-xl transition-all text-left">
+                            :class="selectedCategory === cat.id ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50'" 
+                            class="w-full flex items-center justify-between p-3.5 mb-2 rounded-xl transition-all text-left">
                         
-                        <div class="flex items-center gap-2">
-                            <i v-if="!cat.isParent" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-zinc-300 text-xs mr-1"></i>
-                            <i v-if="cat.isParent" class="fa-regular fa-folder text-zinc-400 text-sm mr-1"></i>
-                            <span class="text-sm" :class="cat.isParent ? 'font-extrabold' : 'font-semibold text-zinc-500'">{{ cat.name }}</span>
+                        <!-- Jarak Padding Kiri Otomatis Sesuai Level -->
+                        <div class="flex items-center gap-2" :style="{ paddingLeft: (cat.treeLevel * 24) + 'px' }">
+                            
+                            <!-- Icon untuk Level 2, Level 3, dst -->
+                            <i v-if="cat.treeLevel > 0" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-zinc-300 text-xs mr-1"></i>
+                            
+                            <!-- Icon Folder untuk Induk Level 0 yang punya anak -->
+                            <i v-if="cat.treeLevel === 0 && cat.isParent" class="fa-regular fa-folder text-zinc-400 text-sm mr-1"></i>
+                            
+                            <!-- Icon Tag untuk Level 0 yang tidak punya anak -->
+                            <i v-if="cat.treeLevel === 0 && !cat.isParent" class="fa-solid fa-tag text-zinc-400 text-sm mr-1"></i>
+                            
+                            <span class="text-sm" :class="cat.treeLevel === 0 ? 'font-extrabold text-zinc-900' : 'font-semibold text-zinc-500'">{{ cat.name }}</span>
                         </div>
 
                         <i v-if="selectedCategory === cat.id" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
@@ -505,48 +511,56 @@
             computed: {
                 structuredCatalogCategories() {
                     let result = [];
-                    // Kumpulkan semua kategori Induk (yang tidak memiliki parentId)
-                    let parents = this.categories.filter(c => !c.parentId || c.parentId === "");
-                    
-                    // Urutkan kategori Induk secara alfabetis
-                    parents.sort((a, b) => (a.name || a.nama || '').localeCompare(b.name || b.nama || ''));
+                    let categories = this.categories;
+                    let addedIds = new Set(); // Untuk melacak kategori yang sudah diproses
 
-                    parents.forEach(parent => {
-                        let parentName = parent.name || parent.nama || 'Tanpa Nama';
-                        result.push({
-                            id: parent.id,
-                            name: parentName,
-                            isParent: true
+                    // 🌟 Fungsi Rekursif untuk menggali sedalam apa pun levelnya 🌟
+                    const buildTree = (parentId, level) => {
+                        // Cari anak-anak dari parentId saat ini
+                        let children = categories.filter(c => {
+                            if (!parentId) return !c.parentId || c.parentId === "";
+                            return c.parentId === parentId;
                         });
 
-                        // Cari semua Sub-kategori yang terhubung ke Induk ini
-                        let children = this.categories.filter(c => c.parentId === parent.id);
+                        // Urutkan A-Z
                         children.sort((a, b) => (a.name || a.nama || '').localeCompare(b.name || b.nama || ''));
 
                         children.forEach(child => {
-                            let childName = child.name || child.nama || 'Tanpa Nama';
+                            // Cek apakah kategori ini punya anak lagi di bawahnya
+                            let hasChildren = categories.some(c => c.parentId === child.id);
+                            
                             result.push({
                                 id: child.id,
-                                name: childName,
-                                isParent: false,
-                                parentId: parent.id
+                                name: child.name || child.nama || 'Tanpa Nama',
+                                isParent: hasChildren,
+                                treeLevel: level // 👈 Ini kunci untuk mengatur jarak inden menjorok
                             });
+                            
+                            addedIds.add(child.id);
+                            
+                            // Gali terus ke bawah (Level + 1)
+                            buildTree(child.id, level + 1);
                         });
-                    });
+                    };
 
-                    // Tangani jika ada Sub-kategori yatim (Induknya sudah terhapus)
-                    let orphans = this.categories.filter(c => c.parentId && c.parentId !== "" && !parents.find(p => p.id === c.parentId));
+                    // Mulai dari Induk Utama (Level 0)
+                    buildTree(null, 0);
+
+                    // Berjaga-jaga jika ada kategori yang terputus dari induknya (Orphan)
+                    let orphans = categories.filter(c => !addedIds.has(c.id));
                     orphans.forEach(orphan => {
-                        let orphanName = orphan.name || orphan.nama || 'Tanpa Nama';
+                        let hasChildren = categories.some(c => c.parentId === orphan.id);
                         result.push({
                             id: orphan.id,
-                            name: orphanName,
-                            isParent: true 
+                            name: orphan.name || orphan.nama || 'Tanpa Nama',
+                            isParent: hasChildren,
+                            treeLevel: 0
                         });
                     });
 
                     return result;
                 },
+                
                 validCategories() {
                     let uniqueCats = [];
                     let names = [];
@@ -559,6 +573,7 @@
                     });
                     return uniqueCats;
                 },
+                
                 filteredProducts() {
                     let result = this.products.filter(p => {
                         const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
