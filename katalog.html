@@ -61,72 +61,55 @@
                 <p class="text-xs text-red-600 px-4">Kami tidak dapat menemukan data toko untuk subdomain ini. Pastikan alamat URL Anda sudah benar.</p>
             </div>
 
-            <!-- HERO BANNER -->
+            <!-- HERO BANNER (DIPERBESAR) -->
             <div v-if="companyIdValid" class="mb-5 relative rounded-2xl overflow-hidden bg-zinc-900 text-white shadow-[0_10px_20px_rgba(0,0,0,0.1)] group">
-                <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop" class="w-full h-32 object-cover opacity-60">
+                <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop" class="w-full h-44 object-cover opacity-60">
                 <div class="absolute inset-0 p-5 flex flex-col justify-center">
                     <span class="text-[10px] font-bold tracking-widest text-zinc-300 mb-1 uppercase drop-shadow-md">Katalog Online</span>
                     <h2 class="text-xl font-black leading-tight drop-shadow-md">Temukan Gaya Terbaikmu</h2>
                 </div>
             </div>
 
-            <!-- TOOLBAR: SEARCH, SORT & VIEW MODE -->
-            <div v-if="companyIdValid" class="flex flex-col gap-3 mb-4">
-                <div class="flex gap-2 w-full">
-                    <!-- Search Input -->
-                    <div class="relative flex-1">
-                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-zinc-400 text-sm"></i>
-                        <input type="text" v-model="searchQuery" placeholder="Cari produk atau SKU..." class="w-full pl-9 pr-8 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:border-zinc-900 focus:bg-white text-sm transition-all placeholder:text-zinc-400">
-                        <i v-if="searchQuery" @click="searchQuery = ''" class="fa-solid fa-circle-xmark absolute right-3 top-3 text-zinc-300 text-sm cursor-pointer hover:text-zinc-500"></i>
-                    </div>
+            <!-- TOOLBAR SATU BARIS: SEARCH, FILTER, SORT & VIEW MODE -->
+            <div v-if="companyIdValid" class="flex gap-2 items-center w-full mb-6">
+                <!-- Search -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-zinc-400 text-sm"></i>
+                    <input type="text" v-model="searchQuery" placeholder="Cari produk..." class="w-full pl-9 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:border-zinc-900 text-sm shadow-sm transition-all placeholder:text-zinc-400">
+                    <i v-if="searchQuery" @click="searchQuery = ''" class="fa-solid fa-circle-xmark absolute right-3 top-3 text-zinc-300 text-sm cursor-pointer hover:text-zinc-500"></i>
                 </div>
 
-                <div class="flex gap-2 items-center justify-between w-full">
-                    <!-- Sort Dropdown -->
-                    <div class="relative">
-                        <select v-model="sortBy" class="appearance-none bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs font-semibold rounded-xl pl-3 pr-8 py-2.5 focus:outline-none focus:border-zinc-900 cursor-pointer shadow-sm">
-                            <option value="default">Urutkan</option>
-                            <option value="termurah">Termurah</option>
-                            <option value="termahal">Termahal</option>
-                            <option value="az">A - Z</option>
-                            <option value="za">Z - A</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-zinc-400 text-[10px] pointer-events-none"></i>
-                    </div>
+                <!-- Filter Kategori (Icon Only) -->
+                <button @click="isCategoryOpen = true" class="relative w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <i class="fa-solid fa-layer-group text-sm"></i>
+                    <span v-if="selectedCategory" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
 
-                    <!-- View Toggles (List, Grid 2, Grid 3) -->
-                    <div class="flex bg-zinc-50 border border-zinc-200 rounded-xl p-1 shadow-sm">
-                        <button @click="viewMode = 'list'" :class="viewMode === 'list' ? 'bg-white shadow border border-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'" class="w-8 h-7 rounded-lg flex items-center justify-center transition-all" title="List Mode">
-                            <i class="fa-solid fa-list text-xs"></i>
-                        </button>
-                        <button @click="viewMode = 'grid2'" :class="viewMode === 'grid2' ? 'bg-white shadow border border-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'" class="w-8 h-7 rounded-lg flex items-center justify-center transition-all mx-1" title="2 Grid Mode">
-                            <i class="fa-solid fa-table-cells-large text-xs"></i>
-                        </button>
-                        <button @click="viewMode = 'grid3'" :class="viewMode === 'grid3' ? 'bg-white shadow border border-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'" class="w-8 h-7 rounded-lg flex items-center justify-center transition-all" title="3 Grid Mode">
-                            <i class="fa-solid fa-table-cells text-xs"></i>
-                        </button>
-                    </div>
+                <!-- Sort Dropdown (Icon Only Layout) -->
+                <div class="relative w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <select v-model="sortBy" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        <option value="default">Urutkan</option>
+                        <option value="termurah">Termurah</option>
+                        <option value="termahal">Termahal</option>
+                        <option value="az">A - Z</option>
+                        <option value="za">Z - A</option>
+                    </select>
+                    <i class="fa-solid fa-arrow-down-a-z text-sm pointer-events-none"></i>
                 </div>
+
+                <!-- View Toggle (Cycling Icon) -->
+                <button @click="cycleViewMode" class="w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <i v-if="viewMode === 'list'" class="fa-solid fa-list text-sm"></i>
+                    <i v-if="viewMode === 'grid2'" class="fa-solid fa-table-cells-large text-sm"></i>
+                    <i v-if="viewMode === 'grid3'" class="fa-solid fa-table-cells text-sm"></i>
+                </button>
             </div>
             
-            <!-- TOMBOL FILTER KATEGORI (Diperbarui dengan Breadcrumb) -->
-            <div v-if="companyIdValid" class="mb-5">
-                <button @click="isCategoryOpen = true" class="w-full flex items-center justify-between bg-white border border-zinc-200 px-4 py-3 rounded-xl hover:bg-zinc-50 active:scale-[0.98] transition-all shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-600">
-                            <i class="fa-solid fa-layer-group text-sm"></i>
-                        </div>
-                        <div class="flex flex-col items-start leading-tight">
-                            <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Filter Kategori</span>
-                            <span class="text-sm font-extrabold text-zinc-800 line-clamp-1 text-left">
-                                {{ selectedCategoryPath }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="w-8 h-8 flex items-center justify-center bg-zinc-50 border border-zinc-100 rounded-full text-zinc-400">
-                        <i class="fa-solid fa-chevron-down text-xs"></i>
-                    </div>
-                </button>
+            <!-- Breadcrumb Kategori Aktif (Muncul jika ada filter kategori) -->
+            <div v-if="companyIdValid && selectedCategory" class="flex items-center gap-2 mb-4 -mt-2">
+                <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Kategori:</span>
+                <span class="text-xs font-bold text-zinc-800 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm">{{ selectedCategoryPath }}</span>
+                <button @click="selectedCategory = ''" class="text-zinc-400 hover:text-red-500 ml-auto"><i class="fa-solid fa-circle-xmark text-sm"></i></button>
             </div>
             
             <!-- SKELETON LOADING UI (Animasi Pemuatan Keren) -->
@@ -703,6 +686,13 @@
                 }
             },
             methods: {
+                // 🌟 TAMBAHAN FUNGSI CYCLING UNTUK MENGUBAH TAMPILAN
+                cycleViewMode() {
+                    if (this.viewMode === 'list') this.viewMode = 'grid2';
+                    else if (this.viewMode === 'grid2') this.viewMode = 'grid3';
+                    else this.viewMode = 'list';
+                },
+
                 getOriginalPrice(item) {
                     if (!item) return 0;
                     let sp = Number(item.sellPrice || 0);
