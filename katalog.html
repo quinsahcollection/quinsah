@@ -1,4 +1,965 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Katalog Produk</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f4f5; }
+        [v-cloak] { display: none !important; }
+        .app-container {
+            max-width: 480px; margin: 0 auto; background-color: #ffffff;
+            min-height: 100vh; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.05); overflow-x: hidden;
+        }
+        
+        /* CLASS BARU UNTUK MENCEGAH SCROLL HALAMAN BELAKANG */
+        .prevent-scroll { overscroll-behavior: contain; }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fade-in-up { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .toast-enter { animation: fade-in-up 0.3s ease-out forwards; }
+        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .img-cover { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        .img-contain { width: 100%; height: 100%; object-fit: contain; background-color: #f8f9fa; }
+    </style>
+</head>
+<body class="text-zinc-800 antialiased selection:bg-zinc-900 selection:text-white">
+
+    <div id="app" v-cloak class="app-container">
+        
+        <!-- HEADER (Nama Toko Dinamis) -->
+        <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-lg border-b border-zinc-100 px-5 py-4 flex items-center justify-between">
+            <div class="flex flex-col">
+                <span class="text-[10px] text-zinc-400 font-bold tracking-widest uppercase mb-0.5">{{ storeSubtitle }}</span>
+                <span class="text-xl font-extrabold text-zinc-900 tracking-tight leading-none truncate max-w-[250px]">{{ storeName }}</span>
+            </div>
+            
+            <button @click="isCartOpen = true" class="relative p-2.5 bg-zinc-50 rounded-full border border-zinc-100 text-zinc-700 hover:bg-zinc-100 active:scale-95 transition-all">
+                <i class="fa-solid fa-bag-shopping"></i>
+                <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-[18px] h-[18px] flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                    {{ cartCount }}
+                </span>
+            </button>
+        </header>
+
+        <!-- KONTEN UTAMA -->
+        <main class="px-5 py-6 pb-28">
+            
+            <!-- STATE ERROR COMPANY ID -->
+            <div v-if="!companyIdValid && !isLoading" class="text-center py-16 bg-red-50 rounded-3xl border border-red-100 flex flex-col items-center justify-center mb-6">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-red-200">
+                    <i class="fa-solid fa-link-slash text-2xl text-red-500"></i>
+                </div>
+                <h3 class="font-bold text-red-700 mb-1">Toko Tidak Ditemukan</h3>
+                <p class="text-xs text-red-600 px-4">Kami tidak dapat menemukan data toko untuk subdomain ini. Pastikan alamat URL Anda sudah benar.</p>
+            </div>
+
+            <!-- HERO BANNER (DIPERBESAR h-44) -->
+            <div v-if="companyIdValid" class="mb-5 relative rounded-2xl overflow-hidden bg-zinc-900 text-white shadow-[0_10px_20px_rgba(0,0,0,0.1)] group">
+                <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop" class="w-full h-44 object-cover opacity-60">
+                <div class="absolute inset-0 p-5 flex flex-col justify-center">
+                    <span class="text-[10px] font-bold tracking-widest text-zinc-300 mb-1 uppercase drop-shadow-md">Katalog Online</span>
+                    <h2 class="text-xl font-black leading-tight drop-shadow-md">Temukan Gaya Terbaikmu</h2>
+                </div>
+            </div>
+
+            <!-- TOOLBAR SATU BARIS: SEARCH, FILTER, SORT & VIEW MODE -->
+            <div v-if="companyIdValid" class="flex gap-2 items-center w-full mb-6">
+                <!-- Search -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-zinc-400 text-sm"></i>
+                    <input type="text" v-model="searchQuery" placeholder="Cari produk..." class="w-full pl-9 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:border-zinc-900 text-sm shadow-sm transition-all placeholder:text-zinc-400">
+                    <i v-if="searchQuery" @click="searchQuery = ''" class="fa-solid fa-circle-xmark absolute right-3 top-3 text-zinc-300 text-sm cursor-pointer hover:text-zinc-500"></i>
+                </div>
+
+                <!-- Filter Kategori (Icon Only) -->
+                <button @click="isCategoryOpen = true" class="relative w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <i class="fa-solid fa-layer-group text-sm"></i>
+                    <span v-if="selectedCategory" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+
+                <!-- Sort Dropdown (Icon Only Layout) -->
+                <div class="relative w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <select v-model="sortBy" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        <option value="default">Urutkan</option>
+                        <option value="termurah">Termurah</option>
+                        <option value="termahal">Termahal</option>
+                        <option value="az">A - Z</option>
+                        <option value="za">Z - A</option>
+                    </select>
+                    <i class="fa-solid fa-arrow-down-a-z text-sm pointer-events-none"></i>
+                </div>
+
+                <!-- View Toggle (Cycling Icon) -->
+                <button @click="cycleViewMode" class="w-11 h-[42px] flex-shrink-0 bg-white border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-600 hover:bg-zinc-50 shadow-sm transition-all">
+                    <i v-if="viewMode === 'list'" class="fa-solid fa-list text-sm"></i>
+                    <i v-if="viewMode === 'grid2'" class="fa-solid fa-table-cells-large text-sm"></i>
+                    <i v-if="viewMode === 'grid3'" class="fa-solid fa-table-cells text-sm"></i>
+                </button>
+            </div>
+            
+            <!-- Breadcrumb Kategori Aktif -->
+            <div v-if="companyIdValid && selectedCategory" class="flex items-center gap-2 mb-4 -mt-2">
+                <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Kategori:</span>
+                <span class="text-xs font-bold text-zinc-800 bg-white px-2.5 py-1 rounded-md border border-zinc-200 shadow-sm">{{ selectedCategoryPath }}</span>
+                <button @click="selectedCategory = ''" class="text-zinc-400 hover:text-red-500 ml-auto"><i class="fa-solid fa-circle-xmark text-sm"></i></button>
+            </div>
+            
+            <!-- SKELETON LOADING UI -->
+            <div v-if="isLoading && companyIdValid" class="grid w-full gap-3 animate-pulse" :class="{'grid-cols-1': viewMode === 'list', 'grid-cols-2': viewMode === 'grid2', 'grid-cols-3': viewMode === 'grid3'}">
+                <div v-for="n in 6" :key="n" class="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden flex relative" :class="viewMode === 'list' ? 'flex-row h-32' : 'flex-col'">
+                    <div class="bg-zinc-200 flex-shrink-0" :class="viewMode === 'list' ? 'w-32 h-full' : 'aspect-square w-full'"></div>
+                    <div class="flex flex-col flex-1 justify-between p-3">
+                        <div>
+                            <div class="h-2 bg-zinc-200 rounded-full w-1/3 mb-2"></div>
+                            <div class="h-3 bg-zinc-200 rounded-full w-3/4 mb-1"></div>
+                            <div class="h-3 bg-zinc-200 rounded-full w-1/2"></div>
+                        </div>
+                        <div class="flex flex-col justify-end mt-auto gap-1">
+                            <div class="h-2 bg-zinc-200 rounded-full w-1/4"></div>
+                            <div class="h-4 bg-zinc-200 rounded-full w-1/3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATE KOSONG -->
+            <div v-if="filteredProducts.length === 0 && companyIdValid && !isLoading" class="text-center py-16 bg-zinc-50 rounded-3xl border border-zinc-100 flex flex-col items-center justify-center">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-zinc-100">
+                    <i class="fa-solid fa-box-open text-2xl text-zinc-300"></i>
+                </div>
+                <p class="text-sm font-semibold text-zinc-600">Produk tidak ditemukan</p>
+            </div>
+
+            <!-- GRID PRODUK AKTIF -->
+            <div v-if="companyIdValid && !isLoading && filteredProducts.length > 0" 
+                 class="grid w-full gap-3" 
+                 :class="{
+                    'grid-cols-1': viewMode === 'list',
+                    'grid-cols-2': viewMode === 'grid2',
+                    'grid-cols-3': viewMode === 'grid3'
+                 }">
+                 
+                <div v-for="prod in filteredProducts" :key="prod.id" @click="openProductDetail(prod)" 
+                     class="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden relative cursor-pointer active:scale-[0.97] transition-all hover:shadow-md"
+                     :class="viewMode === 'list' ? 'flex flex-row h-32' : 'flex flex-col'">
+                    
+                    <div :class="viewMode === 'list' ? 'w-32 h-full flex-shrink-0 border-r border-zinc-100' : 'aspect-square w-full border-b border-zinc-100'" class="relative overflow-hidden bg-zinc-50 flex items-center justify-center">
+                        
+                        <div v-if="prod.tags && prod.tags.length > 0" class="absolute top-2 left-2 flex flex-col gap-1 z-20">
+                            <span v-for="t in prod.tags" :key="t" class="bg-red-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                                {{ t }}
+                            </span>
+                        </div>
+
+                        <template v-if="prod.displayImage">
+                            <img :src="prod.displayImage" @error="handleImageError(prod)" class="img-cover">
+                        </template>
+                        <template v-else>
+                            <i class="fa-solid fa-image text-3xl text-zinc-300"></i>
+                        </template>
+                        
+                        <div v-if="prod.stock <= 0" class="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center z-10">
+                            <span class="bg-zinc-900 text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">Habis</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col flex-1 justify-between bg-white" :class="viewMode === 'grid3' ? 'p-2' : 'p-3'">
+                        <div>
+                            <div v-if="prod.sku" class="text-[9px] text-zinc-400 font-semibold mb-0.5"><i class="fa-solid fa-barcode mr-1"></i>{{ prod.sku }}</div>
+                            <h3 class="font-bold text-zinc-800 line-clamp-2 leading-snug mb-1" :class="viewMode === 'grid3' ? 'text-[10px]' : 'text-xs'">{{ prod.name }}</h3>
+                        </div>
+                        
+                        <div class="flex flex-col justify-end mt-auto">
+                            <span v-if="prod.originalPrice > prod.price" class="font-bold text-zinc-400 line-through decoration-zinc-400 -mb-0.5" :class="viewMode === 'grid3' ? 'text-[9px]' : 'text-[10px]'">Rp{{ formatRupiah(prod.originalPrice) }}</span>
+                            <span class="font-extrabold text-red-600" :class="viewMode === 'grid3' ? 'text-xs' : 'text-sm'">Rp{{ formatRupiah(prod.price) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 🌟 DETAIL PRODUK 🌟 -->
+        <div v-if="selectedProduct" class="fixed inset-0 z-50 flex items-end justify-center">
+            <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="closeProductDetail"></div>
+            
+            <!-- Ditambahkan class prevent-scroll -->
+            <div class="relative w-full max-w-[480px] bg-white h-[95dvh] flex flex-col shadow-2xl animate-slide-up overflow-hidden rounded-t-[32px] prevent-scroll">
+                
+                <button @click="closeProductDetail" class="absolute top-4 right-5 w-8 h-8 bg-black/30 backdrop-blur-md rounded-full text-white flex items-center justify-center z-20 hover:bg-black/50 transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+
+                <div class="flex-1 overflow-y-auto pb-28">
+                    
+                    <!-- 🌟 FOTO DIPERBESAR (h-[450px]) -->
+                    <div class="w-full bg-zinc-50 relative h-[450px] flex flex-col justify-center">
+                        <div class="flex-1 flex items-center justify-center p-4">
+                            <img v-if="selectedProduct.selectedPhoto" :src="selectedProduct.selectedPhoto" class="img-contain max-h-[420px]">
+                            <img v-else-if="selectedProduct.displayImage" :src="selectedProduct.displayImage" class="img-contain max-h-[420px]">
+                            <i v-else class="fa-solid fa-image text-6xl text-zinc-300"></i>
+                        </div>
+                        
+                        <!-- Floating Zoom Button -->
+                        <button v-if="selectedProduct.displayImage || selectedProduct.selectedPhoto" 
+                                @click="zoomedImage = (selectedProduct.selectedPhoto || selectedProduct.displayImage)"
+                                class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-[10px] font-bold text-zinc-800 shadow-lg flex items-center gap-2 hover:bg-white transition-all z-10">
+                            <i class="fa-solid fa-expand"></i> ZOOM FOTO
+                        </button>
+                    </div>
+                    
+                    <div class="p-5 border-b border-zinc-100 bg-white relative">
+
+                        <!-- Gallery Thumbnails -->
+                        <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 pb-4 mb-4 border-b border-zinc-100 scrollbar-hide snap-x">
+                            <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
+                                 @click="selectedProduct.selectedPhoto = img"
+                                 class="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
+                                 :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
+                                <img :src="img" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        
+                        <!-- Tags -->
+                        <div v-if="selectedProduct.tags && selectedProduct.tags.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                            <span v-for="t in selectedProduct.tags" :key="'det-'+t" class="bg-red-50 text-red-600 border border-red-100 px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                {{ t }}
+                            </span>
+                        </div>
+
+                        <!-- Info SKU & Stok -->
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <div v-if="activeVariant && activeVariant.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold tracking-wider border border-zinc-200">
+                                <i class="fa-solid fa-barcode"></i> SKU: {{ activeVariant.sku }}
+                            </div>
+                            <div v-else-if="selectedProduct.sku" class="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-600 rounded text-[9px] font-bold tracking-wider border border-zinc-200">
+                                <i class="fa-solid fa-barcode"></i> SKU: {{ selectedProduct.sku }}
+                            </div>
+
+                            <div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-[9px] font-bold uppercase tracking-wider border border-green-100 whitespace-nowrap">
+                                <i class="fa-solid fa-box"></i> Stok: {{ selectedProduct.stock > 900 ? 'Tersedia' : selectedProduct.stock }}
+                            </div>
+                        </div>
+
+                        <!-- Nama & Harga -->
+                        <div class="flex justify-between items-start mb-1">
+                            <h2 class="text-lg font-extrabold text-zinc-900 leading-tight flex-1 pr-4">{{ selectedProduct.name }}</h2>
+                        </div>
+                        <div class="flex items-end gap-2 mt-1">
+                            <p class="text-xl font-black text-red-600 leading-none">Rp{{ formatRupiah(selectedProduct.price) }}</p>
+                            <p v-if="selectedProduct.originalPrice > selectedProduct.price" class="text-xs font-bold text-zinc-400 line-through mb-0.5">Rp{{ formatRupiah(selectedProduct.originalPrice) }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Varian -->
+                    <div v-if="selectedProduct.variants && selectedProduct.variants.length > 0" class="p-5 border-b border-zinc-100 bg-white">
+                        <h3 class="text-[10px] font-bold text-zinc-800 uppercase tracking-widest mb-3">Pilih Varian</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button v-for="(v, index) in selectedProduct.variants" :key="index" 
+                                    @click="activeVariant = v; if(v.displayImage) selectedProduct.selectedPhoto = v.displayImage" 
+                                    :class="activeVariant === v ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200'" 
+                                    class="px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200">
+                                {{ v.name }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Deskripsi -->
+                    <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="p-5 border-b border-zinc-100 bg-white">
+                        <h3 class="text-[10px] font-bold text-zinc-800 uppercase tracking-widest mb-2">Detail Produk</h3>
+                        <div class="text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap break-words" 
+                             v-html="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Bar Keranjang Cerdas -->
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] flex gap-3 items-center z-50">
+                    
+                    <button @click="isCartOpen = true" class="relative w-12 h-12 flex-shrink-0 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-700 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-bag-shopping text-lg"></i>
+                        <span v-if="cartCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 min-w-[20px] text-center rounded-full border-2 border-white shadow-sm animate-scale-in">
+                            {{ cartCount }}
+                        </span>
+                    </button>
+
+                    <template v-if="getQtyInCart(selectedProduct, activeVariant) === 0">
+                        <button @click="addToCartFromDetail" :disabled="selectedProduct.stock <= 0 || isAddingToCart" :class="selectedProduct.stock <= 0 ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : (isAddingToCart ? 'bg-green-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98] shadow-md')" class="flex-1 h-12 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 transition-all duration-300">
+                            <template v-if="selectedProduct.stock <= 0"><i class="fa-solid fa-ban"></i> Habis</template>
+                            <template v-else-if="isAddingToCart"><i class="fa-solid fa-circle-check animate-scale-in"></i> Masuk Keranjang</template>
+                            <template v-else><i class="fa-solid fa-cart-plus"></i> Masukkan Keranjang</template>
+                        </button>
+                    </template>
+                    
+                    <template v-else>
+                        <div class="flex-1 flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-xl p-1 h-12">
+                            <button @click="updateCartQtyFromDetail(-1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                            
+                            <div class="flex flex-col items-center justify-center leading-none">
+                                <span class="text-sm font-black text-zinc-900">{{ getQtyInCart(selectedProduct, activeVariant) }}</span>
+                                <span class="text-[8px] text-zinc-500 font-bold uppercase tracking-wider mt-1">Di Keranjang</span>
+                            </div>
+                            
+                            <button @click="updateCartQtyFromDetail(1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🌟 ZOOM OVERLAY PROFESIONAL (Black Background) 🌟 -->
+        <div v-if="zoomedImage" class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" @click="zoomedImage = null">
+            <img :src="zoomedImage" class="max-w-full max-h-full object-contain animate-scale-in">
+            <button class="absolute top-6 right-6 text-white text-xl w-10 h-10 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- SLIDE KANTONG BELANJA (CART) -->
+        <div v-if="isCartOpen" class="fixed inset-0 z-50 flex justify-center">
+            <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="isCartOpen = false"></div>
+            
+            <!-- Ditambahkan class prevent-scroll -->
+            <div class="relative w-full max-w-[480px] bg-zinc-50 mt-auto rounded-t-[32px] h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden prevent-scroll">
+                <div class="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-300 rounded-full z-20"></div>
+                <div class="p-5 pt-8 bg-white border-b border-zinc-100 flex items-center justify-between rounded-t-[32px]">
+                    <h2 class="font-extrabold text-base text-zinc-900 flex items-center gap-2">
+                        <div class="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-bag-shopping text-sm"></i></div>
+                        Keranjang Saya
+                    </h2>
+                    <button @click="isCartOpen = false" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center hover:bg-zinc-200 transition-colors"><i class="fa-solid fa-xmark text-sm"></i></button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                    <div v-if="cart.length === 0" class="text-center py-24 flex flex-col items-center">
+                        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm border border-zinc-100 mb-4">
+                            <i class="fa-solid fa-cart-shopping text-3xl text-zinc-200"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-zinc-600">Keranjang masih kosong</p>
+                    </div>
+                    
+                    <div v-for="(item, idx) in cart" :key="idx" class="flex gap-4 bg-white p-3 rounded-2xl border border-zinc-100 shadow-sm">
+                        <div class="w-20 h-24 bg-zinc-50 rounded-xl overflow-hidden border border-zinc-100 flex items-center justify-center flex-shrink-0 relative">
+                            <img v-if="item.displayImage" :src="item.displayImage" class="img-cover">
+                            <i v-else class="fa-solid fa-image text-zinc-300"></i>
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between py-0.5">
+                            <div>
+                                <div class="flex justify-between items-start gap-2">
+                                    <h4 class="text-[13px] font-bold text-zinc-800 line-clamp-2 leading-tight">{{ item.name }}</h4>
+                                    <button @click="removeItem(idx)" class="text-zinc-400 hover:text-red-500"><i class="fa-regular fa-trash-can text-sm"></i></button>
+                                </div>
+                                <span v-if="item.variant" class="inline-block mt-1.5 px-2 py-0.5 bg-zinc-100 text-zinc-600 text-[10px] font-bold rounded">Varian: {{ item.variant }}</span>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <div class="flex flex-col justify-end">
+                                    <span v-if="item.originalPrice > item.price" class="text-[10px] font-bold text-zinc-400 line-through decoration-zinc-400 -mb-0.5">Rp{{ formatRupiah(item.originalPrice) }}</span>
+                                    <span class="text-sm font-black text-zinc-900">Rp{{ formatRupiah(item.price) }}</span>
+                                </div>
+                                <div class="flex items-center bg-zinc-50 border border-zinc-200 rounded-lg p-0.5">
+                                    <button @click="updateQty(idx, -1)" class="w-7 h-7 flex items-center justify-center text-zinc-600 hover:bg-white rounded-md transition-all"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                                    <span class="text-xs font-bold w-8 text-center">{{ item.qty }}</span>
+                                    <button @click="updateQty(idx, 1)" class="w-7 h-7 flex items-center justify-center text-zinc-600 hover:bg-white rounded-md transition-all"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-5 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+                    <div class="flex justify-between items-center mb-4 px-1">
+                        <span class="text-sm text-zinc-500 font-semibold">Total Pembayaran</span>
+                        <span class="text-xl font-black text-red-600">Rp {{ formatRupiah(cartTotal) }}</span>
+                    </div>
+                    <button @click="checkoutWhatsApp" :disabled="cart.length === 0" :class="cart.length === 0 ? 'bg-zinc-300 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.98] shadow-md'" class="w-full text-white py-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2.5 transition-all">
+                        <i class="fa-brands fa-whatsapp text-xl"></i> Checkout via WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST NOTIFICATION -->
+        <div v-if="toast.show" class="fixed bottom-10 left-1/2 z-[60] toast-enter">
+            <div class="bg-zinc-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-sm font-medium">
+                <i :class="toast.icon" class="text-green-400"></i>
+                {{ toast.message }}
+            </div>
+        </div>
+
+        <!-- 🌟 BOTTOM SHEET: PILIH KATEGORI (FULL SCREEN PUTIH SOLID) 🌟 -->
+        <div v-if="isCategoryOpen" class="fixed inset-0 z-[80] flex justify-center bg-white animate-slide-up prevent-scroll">
+            <div class="relative w-full max-w-[480px] bg-white h-[100dvh] flex flex-col overflow-hidden">
+                <!-- Header Full Screen Kategori -->
+                <div class="p-5 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-10 shadow-sm">
+                    <h2 class="font-extrabold text-lg text-zinc-900 flex items-center gap-2">
+                        Pilih Kategori
+                    </h2>
+                    <button @click="isCategoryOpen = false" class="w-8 h-8 bg-zinc-50 border border-zinc-200 rounded-full flex items-center justify-center hover:bg-zinc-100 transition-colors text-zinc-600">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 space-y-2 pb-20">
+                    <!-- Tombol Semua Kategori -->
+                    <button @click="selectCategory(''); isCategoryOpen = false" 
+                            :class="selectedCategory === '' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'" 
+                            class="w-full flex items-center justify-between p-4 rounded-xl transition-all">
+                        <span class="font-bold text-sm">Semua Produk</span>
+                        <i v-if="selectedCategory === ''" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+                    </button>
+                    
+                    <!-- Tombol List Kategori Hierarki -->
+                    <button v-for="cat in structuredCatalogCategories" :key="cat.id" 
+                            @click="selectCategory(cat.id); isCategoryOpen = false" 
+                            :class="selectedCategory === cat.id ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50'" 
+                            class="w-full flex items-center justify-between p-3.5 mb-2 rounded-xl transition-all text-left">
+                        
+                        <!-- Jarak Padding Kiri Otomatis Sesuai Level -->
+                        <div class="flex items-center gap-2" :style="{ paddingLeft: (cat.treeLevel * 24) + 'px' }">
+                            
+                            <!-- Icon Level -->
+                            <i v-if="cat.treeLevel > 0" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-xs mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-300'"></i>
+                            
+                            <!-- Icon Folder -->
+                            <i v-if="cat.treeLevel === 0 && cat.isParent" class="fa-regular fa-folder text-sm mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
+                            
+                            <!-- Icon Tag -->
+                            <i v-if="cat.treeLevel === 0 && !cat.isParent" class="fa-solid fa-tag text-sm mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
+                            
+                            <!-- Nama Kategori -->
+                            <span class="text-sm" :class="[
+                                cat.treeLevel === 0 ? 'font-extrabold' : 'font-semibold',
+                                selectedCategory === cat.id ? 'text-white' : (cat.treeLevel === 0 ? 'text-zinc-900' : 'text-zinc-500')
+                            ]">{{ cat.name }}</span>
+                        </div>
+
+                        <i v-if="selectedCategory === cat.id" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT VUE & FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { createApp } from "https://unpkg.com/vue@3/dist/vue.esm-browser.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", 
+            authDomain: "quinsahcollection-36926.firebaseapp.com", 
+            projectId: "quinsahcollection-36926" 
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        createApp({
+            data() {
+                return {
+                    companyId: null,
+                    companyIdValid: true, 
+                    storeName: "Memuat Toko...", 
+                    storeSubtitle: "KATALOG ONLINE",
+                    whatsappNumber: "6285760035568", 
+                    products: [],
+                    categories: [],
+                    cart: [],
+                    
+                    searchQuery: '',
+                    selectedCategory: '',
+                    sortBy: 'default',
+                    viewMode: 'grid2',
+                    
+                    isLoading: true,
+                    isCartOpen: false,
+                    isCategoryOpen: false,
+                    selectedProduct: null,
+                    activeVariant: null,
+                    
+                    zoomedImage: null,
+                    isAddingToCart: false,
+                    
+                    toast: { show: false, message: '', icon: 'fa-solid fa-circle-check' }
+                }
+            },
+            
+            computed: {
+                selectedCategoryPath() {
+                    if (!this.selectedCategory) return 'Semua Produk';
+                    
+                    let path = [];
+                    let currentId = this.selectedCategory;
+                    
+                    let depth = 0; 
+                    while (currentId && depth < 10) {
+                        let cat = this.categories.find(c => c.id === currentId);
+                        if (cat) {
+                            path.unshift(cat.name || cat.nama || 'Tanpa Nama');
+                            currentId = cat.parentId; 
+                        } else {
+                            break;
+                        }
+                        depth++;
+                    }
+                    
+                    return path.length > 0 ? path.join(' / ') : 'Kategori Terpilih';
+                },
+
+                structuredCatalogCategories() {
+                    let result = [];
+                    let categories = this.categories;
+                    let addedIds = new Set(); 
+
+                    const buildTree = (parentId, level) => {
+                        let children = categories.filter(c => {
+                            if (!parentId) return !c.parentId || c.parentId === "";
+                            return c.parentId === parentId;
+                        });
+
+                        children.sort((a, b) => (a.name || a.nama || '').localeCompare(b.name || b.nama || ''));
+
+                        children.forEach(child => {
+                            let hasChildren = categories.some(c => c.parentId === child.id);
+                            
+                            result.push({
+                                id: child.id,
+                                name: child.name || child.nama || 'Tanpa Nama',
+                                isParent: hasChildren,
+                                treeLevel: level
+                            });
+                            
+                            addedIds.add(child.id);
+                            buildTree(child.id, level + 1);
+                        });
+                    };
+
+                    buildTree(null, 0);
+
+                    let orphans = categories.filter(c => !addedIds.has(c.id));
+                    orphans.forEach(orphan => {
+                        let hasChildren = categories.some(c => c.parentId === orphan.id);
+                        result.push({
+                            id: orphan.id,
+                            name: orphan.name || orphan.nama || 'Tanpa Nama',
+                            isParent: hasChildren,
+                            treeLevel: 0
+                        });
+                    });
+
+                    return result;
+                },
+                
+                validCategories() {
+                    let uniqueCats = [];
+                    let names = [];
+                    this.categories.forEach(cat => {
+                        let cName = cat.name || cat.nama;
+                        if (cName && !names.includes(cName)) {
+                            names.push(cName);
+                            uniqueCats.push(cat);
+                        }
+                    });
+                    return uniqueCats;
+                },
+                
+                filteredProducts() {
+                    let result = this.products.filter(p => {
+                        const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+                                              (p.sku && p.sku.toLowerCase().includes(this.searchQuery.toLowerCase()));
+                        
+                        let matchesCategory = true;
+                        
+                        if (this.selectedCategory) {
+                            let targetCatIds = [this.selectedCategory];
+                            
+                            const getChildrenIds = (id) => {
+                                let children = this.categories.filter(c => c.parentId === id).map(c => c.id);
+                                children.forEach(childId => {
+                                    if (!targetCatIds.includes(childId)) {
+                                        targetCatIds.push(childId);
+                                        getChildrenIds(childId); 
+                                    }
+                                });
+                            };
+                            getChildrenIds(this.selectedCategory);
+                            
+                            let targetCatNames = targetCatIds.map(id => {
+                                let c = this.categories.find(cat => cat.id === id);
+                                return c ? (c.name || c.nama) : null;
+                            }).filter(n => n);
+
+                            matchesCategory = targetCatIds.includes(p.categoryId) ||
+                                              targetCatIds.includes(p.kategoriId) ||
+                                              targetCatNames.includes(p.category) ||
+                                              targetCatNames.includes(p.kategori);
+                        }
+                        
+                        return matchesSearch && matchesCategory;
+                    });
+
+                    if (this.sortBy === 'termurah') {
+                        result = result.sort((a, b) => a.price - b.price);
+                    } else if (this.sortBy === 'termahal') {
+                        result = result.sort((a, b) => b.price - a.price);
+                    } else if (this.sortBy === 'az') {
+                        result = result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    } else if (this.sortBy === 'za') {
+                        result = result.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+                    }
+
+                    return result;
+                },
+                cartCount() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
+                cartTotal() { return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0); }
+            },
+                 
+            async mounted() {
+                try {
+                    this.isLoading = true;
+                    let foundCompanyId = null;
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    foundCompanyId = urlParams.get('company');
+
+                    if (!foundCompanyId) {
+                        const hostname = window.location.hostname;
+                        const parts = hostname.split('.');
+                        
+                        if (hostname !== 'localhost' && hostname !== '127.0.0.1' && parts.length >= 2 && parts[0] !== 'www') {
+                            const subdomain = parts[0]; 
+                            
+                            const qCompany = query(collection(db, "companies"), where("urlToko", "==", subdomain));
+                            const companySnap = await getDocs(qCompany);
+                            
+                            if (!companySnap.empty) {
+                                foundCompanyId = companySnap.docs[0].id;
+                            }
+                        }
+                    }
+
+                    if (!foundCompanyId) {
+                        foundCompanyId = localStorage.getItem('companyId') || localStorage.getItem('activeCompanyId');
+                    }
+
+                    if (foundCompanyId) {
+                        this.companyId = foundCompanyId;
+                        this.companyIdValid = true;
+                        
+                        await this.fetchStoreData();
+                        await this.fetchData();
+                    } else {
+                        this.companyIdValid = false;
+                        this.isLoading = false;
+                    }
+                } catch (error) {
+                    console.error("Gagal mendeteksi toko:", error);
+                    this.companyIdValid = false;
+                    this.isLoading = false;
+                }
+            },
+            methods: {
+                cycleViewMode() {
+                    if (this.viewMode === 'list') this.viewMode = 'grid2';
+                    else if (this.viewMode === 'grid2') this.viewMode = 'grid3';
+                    else this.viewMode = 'list';
+                },
+
+                getOriginalPrice(item) {
+                    if (!item) return 0;
+                    let sp = Number(item.sellPrice || 0);
+                    let p = Number(item.price || 0);
+                    let explicit = Number(item.originalPrice || item.hargaNormal || item.hargaCoret || item.basePrice || 0);
+                    
+                    let finalPrice = this.getFinalPrice(item);
+                    if (explicit > finalPrice) return explicit;
+                    
+                    if (p > sp && sp > 0) return p;
+
+                    let disc = Number(item.discountValue || item.discount || 0);
+                    if (disc > 0) return (sp > 0) ? sp : p; 
+                    
+                    return 0;
+                },
+                getFinalPrice(item) {
+                    if (!item) return 0;
+                    let sp = Number(item.sellPrice || 0);
+                    let p = Number(item.price || 0);
+                    
+                    let explicit = Number(item.originalPrice || item.hargaNormal || item.hargaCoret || item.basePrice || 0);
+                    let basePrice = (sp > 0) ? sp : p;
+                    
+                    if (p > sp && sp > 0) basePrice = sp;
+                    if (explicit > basePrice) return basePrice;
+
+                    let disc = Number(item.discountValue || item.discount || 0);
+                    if (disc > 0 && basePrice > disc) return basePrice - disc;
+                    
+                    return basePrice;
+                },
+
+                async fetchStoreData() {
+                    try {
+                        const settingsSnap = await getDoc(doc(db, "settings", this.companyId));
+                        if (settingsSnap.exists()) {
+                            const data = settingsSnap.data();
+                            this.storeName = data.storeName || data.namaToko || data.nama || 'Katalog Eksklusif';
+                            if(data.whatsappNumber || data.wa) this.whatsappNumber = data.whatsappNumber || data.wa;
+                        } else {
+                            this.storeName = "Katalog Toko";
+                        }
+                    } catch (error) {
+                        this.storeName = "Katalog Toko";
+                    }
+                },
+                async fetchData() {
+                    try {
+                        this.isLoading = true;
+                        
+                        let catRef = query(collection(db, "categories"), where("companyId", "==", this.companyId));
+                        const catSnap = await getDocs(catRef);
+                        this.categories = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                        let prodRef = query(collection(db, "products"), where("companyId", "==", this.companyId));
+                        const prodSnap = await getDocs(prodRef);
+                        
+                        this.products = prodSnap.docs.map(doc => {
+                            const data = doc.data();
+                            
+                            let finalImage = '';
+                            if (data.imageUrl && typeof data.imageUrl === 'string' && data.imageUrl.trim() !== '') {
+                                finalImage = data.imageUrl;
+                            } else if (data.images && Array.isArray(data.images) && data.images.length > 0 && data.images[0].url) {
+                                finalImage = data.images[0].url;
+                            } else if (data.imageBase64 && typeof data.imageBase64 === 'string' && data.imageBase64.trim() !== '') {
+                                finalImage = data.imageBase64;
+                            } else {
+                                finalImage = data.foto || data.image || data.gambar || '';
+                            }
+                            
+                            let finalPrice = this.getFinalPrice(data);
+                            let originalPrice = this.getOriginalPrice(data);
+
+                            let tagList = [];
+                            if (data.tag && typeof data.tag === 'string') tagList.push(data.tag);
+                            if (data.tags && Array.isArray(data.tags)) tagList = tagList.concat(data.tags);
+                            if (data.productTags && Array.isArray(data.productTags)) tagList = tagList.concat(data.productTags);
+                            tagList = [...new Set(tagList)]; 
+
+                            let finalStock = 999;
+                            if (data.stock !== undefined) {
+                                if (typeof data.stock === 'object' && data.stock !== null) {
+                                    finalStock = Object.values(data.stock).reduce((a, b) => a + (Number(b) || 0), 0);
+                                } else {
+                                    finalStock = Number(data.stock);
+                                }
+                            } else if (data.qty !== undefined) {
+                                finalStock = Number(data.qty);
+                            } else if (data.stok !== undefined) {
+                                finalStock = Number(data.stok);
+                            }
+                            
+                            if (isNaN(finalStock)) finalStock = 0;
+
+                            let allPhotos = [];
+                            if (finalImage) allPhotos.push(finalImage);
+                            
+                            if (data.images && Array.isArray(data.images)) {
+                                data.images.forEach(img => {
+                                    let url = img.url || img;
+                                    if (url && !allPhotos.includes(url)) allPhotos.push(url);
+                                });
+                            }
+
+                            let productVariants = [];
+                            if (data.variants && Array.isArray(data.variants)) {
+                                productVariants = data.variants.map(v => {
+                                    if (typeof v === 'object') {
+                                        let vImg = '';
+                                        if (v.imageUrl && typeof v.imageUrl === 'string' && v.imageUrl.trim() !== '') vImg = v.imageUrl;
+                                        else if (v.images && Array.isArray(v.images) && v.images.length > 0 && v.images[0].url) vImg = v.images[0].url;
+                                        else if (v.imageBase64 && typeof v.imageBase64 === 'string' && v.imageBase64.trim() !== '') vImg = v.imageBase64;
+                                        else vImg = v.foto || v.image || v.gambar || '';
+                                        
+                                        if (vImg && !allPhotos.includes(vImg)) allPhotos.push(vImg);
+
+                                        return {
+                                            name: v.name || v.nama || 'Unnamed',
+                                            sku: v.variantSku || v.sku || v.kode || v.code || '',
+                                            price: v.price || finalPrice,
+                                            displayImage: vImg 
+                                        };
+                                    }
+                                    return { name: v, sku: '', price: finalPrice, displayImage: '' };
+                                }).filter(v => v.name);
+                            }
+
+                            return {
+                                id: doc.id,
+                                ...data,
+                                name: data.name || data.nama || 'Tanpa Nama',
+                                description: data.description || data.deskripsi || data.detail || '',
+                                sku: data.sku || data.kode || data.code || '', 
+                                price: finalPrice,
+                                originalPrice: originalPrice,
+                                tags: tagList,
+                                stock: finalStock,
+                                displayImage: finalImage,
+                                allPhotos: allPhotos,
+                                selectedPhoto: null,
+                                variants: productVariants,
+                                category: data.category || data.kategori || data.categoryId || ''
+                            };
+                        });
+                        
+                        this.products.sort((a, b) => a.name.localeCompare(b.name));
+
+                    } catch (error) {
+                        console.error("Error memuat produk:", error);
+                        this.showToast("Gagal memuat katalog", "fa-solid fa-triangle-exclamation");
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                
+                showToast(message, icon = 'fa-solid fa-circle-check') {
+                    this.toast.message = message;
+                    this.toast.icon = icon;
+                    this.toast.show = true;
+                    setTimeout(() => { this.toast.show = false; }, 2500);
+                },
+
+                selectCategory(catId) { this.selectedCategory = catId; }, 
+                
+                openProductDetail(product) {
+                    this.selectedProduct = product;
+                    this.selectedProduct.selectedPhoto = null; 
+                    this.activeVariant = product.variants && product.variants.length > 0 ? product.variants[0] : null;
+                    
+                    if (this.activeVariant && this.activeVariant.displayImage) {
+                        this.selectedProduct.selectedPhoto = this.activeVariant.displayImage;
+                    }
+                },
+                
+                closeProductDetail() {
+                    this.selectedProduct = null;
+                    this.activeVariant = null;
+                },
+
+                getQtyInCart(product, variant) {
+                    if (!product) return 0;
+                    const cartItemId = product.id + '-' + (variant ? variant.name : 'default');
+                    const item = this.cart.find(i => i.cartItemId === cartItemId);
+                    return item ? item.qty : 0;
+                },
+                updateCartQtyFromDetail(change) {
+                    if (!this.selectedProduct) return;
+                    const cartItemId = this.selectedProduct.id + '-' + (this.activeVariant ? this.activeVariant.name : 'default');
+                    const index = this.cart.findIndex(i => i.cartItemId === cartItemId);
+                    if (index !== -1) this.updateQty(index, change);
+                },
+                
+                addToCartFromDetail() {
+                    if (!this.selectedProduct) return;
+                    if (this.selectedProduct.stock <= 0) {
+                        this.showToast("Maaf, stok produk habis", "fa-solid fa-ban text-red-400");
+                        return;
+                    }
+                    
+                    if (this.selectedProduct.variants && this.selectedProduct.variants.length > 0 && !this.activeVariant) {
+                        this.showToast("Pilih varian terlebih dahulu", "fa-solid fa-circle-exclamation text-yellow-400");
+                        return;
+                    }
+
+                    this.isAddingToCart = true;
+                    
+                    setTimeout(() => {
+                        const cartItemId = this.selectedProduct.id + '-' + (this.activeVariant ? this.activeVariant.name : 'default');
+                        const existingItem = this.cart.find(item => item.cartItemId === cartItemId);
+                        
+                        if (existingItem) {
+                            existingItem.qty++;
+                        } else {
+                            this.cart.unshift({
+                                cartItemId: cartItemId,
+                                id: this.selectedProduct.id,
+                                name: this.selectedProduct.name,
+                                price: this.activeVariant && this.activeVariant.price ? this.activeVariant.price : this.selectedProduct.price,
+                                originalPrice: this.selectedProduct.originalPrice,
+                                displayImage: this.selectedProduct.selectedPhoto || this.selectedProduct.displayImage, 
+                                variant: this.activeVariant ? this.activeVariant.name : null, 
+                                qty: 1
+                            });
+                        }
+                        
+                        this.isAddingToCart = false;
+                        this.showToast("Berhasil masuk keranjang!", "fa-solid fa-cart-arrow-down");
+                    }, 400); 
+                },
+                
+                updateQty(index, change) {
+                    const item = this.cart[index];
+                    const newQty = item.qty + change;
+                    if (newQty <= 0) {
+                        this.removeItem(index);
+                    } else {
+                        item.qty = newQty;
+                    }
+                },
+
+                removeItem(index) {
+                    this.cart.splice(index, 1);
+                },
+
+                handleImageError(product) { 
+                    product.displayImage = ''; 
+                },
+                
+                formatRupiah(val) { return new Intl.NumberFormat('id-ID').format(val || 0); },
+                
+                checkoutWhatsApp() {
+                    if (this.cart.length === 0) return;
+                    
+                    let text = `*ORDER BARU - ${this.storeName.toUpperCase()}*\n`;
+                    text += `----------------------------------\n\n`;
+                    
+                    this.cart.forEach((item, index) => {
+                        text += `${index + 1}. *${item.name}*\n`;
+                        if(item.variant) {
+                            text += `   Varian: ${item.variant}\n`;
+                        }
+                        text += `   Jumlah: ${item.qty} pcs\n`;
+                        text += `   Harga: Rp${this.formatRupiah(item.price)}/pcs\n\n`;
+                    });
+                    
+                    text += `----------------------------------\n`;
+                    text += `*TOTAL BELANJA: Rp${this.formatRupiah(this.cartTotal)}*\n\n`;
+                    text += `Halo admin, saya mau order produk di atas ya.`;
+                    
+                    const waUrl = `https://api.whatsapp.com/send?phone=${this.whatsappNumber}&text=${encodeURIComponent(text)}`;
+                    window.open(waUrl, '_blank');
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
 <html lang="id">
 <head>
     <meta charset="UTF-8">
