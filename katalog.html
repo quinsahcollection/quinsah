@@ -203,8 +203,7 @@
         <!-- BOTTOM SHEET: DETAIL PRODUK & VARIAN -->
         <div v-if="selectedProduct" class="fixed inset-0 z-50 flex items-end justify-center">
             <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="closeProductDetail"></div>
-            <div class="relative w-full max-w-[480px] bg-white rounded-t-[32px] h-[90vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
-                <div class="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-300 rounded-full z-20"></div>
+            <div class="relative w-full max-w-[480px] bg-white h-[100dvh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
                 <button @click="closeProductDetail" class="absolute top-4 right-5 w-8 h-8 bg-black/30 backdrop-blur-md rounded-full text-white flex items-center justify-center z-20 hover:bg-black/50 transition-colors">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
@@ -290,18 +289,39 @@
                         </div>
                 </div>
 
-                <div class="absolute bottom-0 left-0 right-0 p-5 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
-                    <button @click="addToCartFromDetail" :disabled="selectedProduct.stock <= 0 || isAddingToCart" :class="selectedProduct.stock <= 0 ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : (isAddingToCart ? 'bg-green-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98] shadow-md')" class="w-full py-4 rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300">
-                        <template v-if="selectedProduct.stock <= 0">
-                            <i class="fa-solid fa-ban"></i> Stok Habis
-                        </template>
-                        <template v-else-if="isAddingToCart">
-                            <i class="fa-solid fa-circle-check animate-scale-in"></i> Berhasil Ditambahkan
-                        </template>
-                        <template v-else>
-                            <i class="fa-solid fa-cart-plus"></i> Masukkan Keranjang
-                        </template>
+                <!-- 🌟 PERBAIKAN: BOTTOM BAR KERANJANG CERDAS 🌟 -->
+                <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] flex gap-3 items-center z-50">
+                    
+                    <!-- Icon Akses Keranjang Cepat -->
+                    <button @click="isCartOpen = true" class="relative w-12 h-12 flex-shrink-0 bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-700 hover:bg-zinc-100 transition-colors">
+                        <i class="fa-solid fa-bag-shopping text-lg"></i>
+                        <span v-if="cartCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 min-w-[20px] text-center rounded-full border-2 border-white shadow-sm animate-scale-in">
+                            {{ cartCount }}
+                        </span>
                     </button>
+
+                    <!-- Logic: Jika Barang Belum Ada di Keranjang -->
+                    <template v-if="getQtyInCart(selectedProduct, activeVariant) === 0">
+                        <button @click="addToCartFromDetail" :disabled="selectedProduct.stock <= 0 || isAddingToCart" :class="selectedProduct.stock <= 0 ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed' : (isAddingToCart ? 'bg-green-500 text-white' : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.98] shadow-md')" class="flex-1 h-12 rounded-xl font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all duration-300">
+                            <template v-if="selectedProduct.stock <= 0"><i class="fa-solid fa-ban"></i> Habis</template>
+                            <template v-else-if="isAddingToCart"><i class="fa-solid fa-circle-check animate-scale-in"></i> Masuk Keranjang</template>
+                            <template v-else><i class="fa-solid fa-cart-plus"></i> Masukkan Keranjang</template>
+                        </button>
+                    </template>
+                    
+                    <!-- Logic: Jika Barang Sudah Ada di Keranjang (Tampil +/-) -->
+                    <template v-else>
+                        <div class="flex-1 flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-xl p-1 h-12">
+                            <button @click="updateCartQtyFromDetail(-1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-minus"></i></button>
+                            
+                            <div class="flex flex-col items-center justify-center leading-none">
+                                <span class="text-base font-black text-zinc-900">{{ getQtyInCart(selectedProduct, activeVariant) }}</span>
+                                <span class="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">Di Keranjang</span>
+                            </div>
+                            
+                            <button @click="updateCartQtyFromDetail(1)" class="w-12 h-full flex items-center justify-center text-zinc-600 hover:bg-white rounded-lg shadow-sm transition-all"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -703,6 +723,20 @@
                     this.activeVariant = null;
                 },
 
+                // --- 🌟 HELPER KERANJANG CERDAS 🌟 ---
+                getQtyInCart(product, variant) {
+                    if (!product) return 0;
+                    const cartItemId = product.id + '-' + (variant ? variant.name : 'default');
+                    const item = this.cart.find(i => i.cartItemId === cartItemId);
+                    return item ? item.qty : 0;
+                },
+                updateCartQtyFromDetail(change) {
+                    if (!this.selectedProduct) return;
+                    const cartItemId = this.selectedProduct.id + '-' + (this.activeVariant ? this.activeVariant.name : 'default');
+                    const index = this.cart.findIndex(i => i.cartItemId === cartItemId);
+                    if (index !== -1) this.updateQty(index, change);
+                },
+                
                 addToCartFromDetail() {
                     if (!this.selectedProduct) return;
                     if (this.selectedProduct.stock <= 0) {
@@ -715,7 +749,6 @@
                         return;
                     }
 
-                    // Mulai Micro-interaction Animasi
                     this.isAddingToCart = true;
                     
                     setTimeout(() => {
@@ -729,17 +762,19 @@
                                 cartItemId: cartItemId,
                                 id: this.selectedProduct.id,
                                 name: this.selectedProduct.name,
-                                price: this.selectedProduct.price,
+                                price: this.activeVariant && this.activeVariant.price ? this.activeVariant.price : this.selectedProduct.price,
                                 originalPrice: this.selectedProduct.originalPrice,
-                                displayImage: this.selectedProduct.displayImage,
+                                displayImage: this.selectedProduct.selectedPhoto || this.selectedProduct.displayImage, 
                                 variant: this.activeVariant ? this.activeVariant.name : null, 
                                 qty: 1
                             });
                         }
                         
-                        this.isAddingToCart = false; // matikan animasi
-                        this.closeProductDetail();
-                    }, 600); // Tahan tombol Hijau "Berhasil" selama 0.6 detik
+                        this.isAddingToCart = false;
+                        
+                        // PERBAIKAN: Fungsi this.closeProductDetail() DIHAPUS agar layar tetap terbuka!
+                        this.showToast("Berhasil masuk keranjang!", "fa-solid fa-cart-arrow-down");
+                    }, 400); // Dipercepat dari 600ms ke 400ms agar lebih responsif
                 },
                 
                 updateQty(index, change) {
