@@ -109,12 +109,26 @@
                 </div>
             </div>
             
-            <!-- HORIZONTAL KATEGORI (Sejajar dengan Search & Urutkan) -->
-            <div v-if="companyIdValid" class="mb-6 flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x w-full">
-                <button @click="selectCategory('')" :class="selectedCategory === '' ? 'bg-zinc-900 text-white shadow-md border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'" class="whitespace-nowrap px-3.5 py-1.5 rounded-lg border text-[11px] font-bold snap-start transition-all">Semua</button>
-                <button v-for="cat in validCategories" :key="cat.id" @click="selectCategory(cat.id)" :class="selectedCategory === cat.id ? 'bg-zinc-900 text-white shadow-md border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'" class="whitespace-nowrap px-3.5 py-1.5 rounded-lg border text-[11px] font-bold snap-start transition-all">{{ cat.name || cat.nama }}</button>
+            <!-- 🌟 PERBAIKAN: TOMBOL KATEGORI CERDAS 🌟 -->
+            <div v-if="companyIdValid" class="mb-5">
+                <button @click="isCategoryOpen = true" class="w-full flex items-center justify-between bg-zinc-50 border border-zinc-200 px-4 py-3.5 rounded-xl hover:bg-zinc-100 active:scale-[0.98] transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-white border border-zinc-100 rounded-lg shadow-sm flex items-center justify-center text-zinc-700">
+                            <i class="fa-solid fa-layer-group text-sm"></i>
+                        </div>
+                        <div class="flex flex-col items-start leading-tight">
+                            <span class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Filter Kategori</span>
+                            <span class="text-[13px] font-extrabold text-zinc-800 line-clamp-1 text-left">
+                                {{ selectedCategory ? (formattedCategories.find(c => c.id === selectedCategory)?.displayName || 'Kategori Terpilih') : 'Semua Kategori Produk' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 flex items-center justify-center bg-white rounded-full shadow-sm text-zinc-400">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </div>
+                </button>
             </div>
-
+            
             <!-- SKELETON LOADING UI (Animasi Pemuatan Keren) -->
             <div v-if="isLoading && companyIdValid" class="grid w-full gap-3 animate-pulse" :class="{'grid-cols-1': viewMode === 'list', 'grid-cols-2': viewMode === 'grid2', 'grid-cols-3': viewMode === 'grid3'}">
                 <div v-for="n in 6" :key="n" class="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden flex relative" :class="viewMode === 'list' ? 'flex-row h-32' : 'flex-col'">
@@ -398,6 +412,40 @@
             </div>
         </div>
 
+        <!-- 🌟 BOTTOM SHEET: PILIH KATEGORI 🌟 -->
+        <div v-if="isCategoryOpen" class="fixed inset-0 z-[80] flex justify-center">
+            <div class="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity" @click="isCategoryOpen = false"></div>
+            <div class="relative w-full max-w-[480px] bg-zinc-50 mt-auto rounded-t-[32px] max-h-[85vh] flex flex-col shadow-2xl animate-slide-up overflow-hidden">
+                <div class="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-zinc-300 rounded-full z-20"></div>
+                <div class="p-5 pt-8 bg-white border-b border-zinc-100 flex items-center justify-between rounded-t-[32px]">
+                    <h2 class="font-extrabold text-base text-zinc-900 flex items-center gap-2">
+                        <div class="w-8 h-8 bg-zinc-100 text-zinc-700 rounded-full flex items-center justify-center"><i class="fa-solid fa-layer-group text-sm"></i></div>
+                        Pilih Kategori
+                    </h2>
+                    <button @click="isCategoryOpen = false" class="w-8 h-8 bg-zinc-100 rounded-full flex items-center justify-center hover:bg-zinc-200 transition-colors"><i class="fa-solid fa-xmark text-sm"></i></button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 space-y-2.5">
+                    <!-- Tombol Semua Kategori -->
+                    <button @click="selectCategory(''); isCategoryOpen = false" 
+                            :class="selectedCategory === '' ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'" 
+                            class="w-full flex items-center justify-between p-4 rounded-2xl transition-all">
+                        <span class="font-bold text-sm">Semua Kategori Produk</span>
+                        <i v-if="selectedCategory === ''" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+                    </button>
+                    
+                    <!-- Tombol List Kategori -->
+                    <button v-for="cat in formattedCategories" :key="cat.id" 
+                            @click="selectCategory(cat.id); isCategoryOpen = false" 
+                            :class="selectedCategory === cat.id ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-50'" 
+                            class="w-full flex items-center justify-between p-4 rounded-2xl transition-all text-left">
+                        <span class="font-bold text-sm line-clamp-2 pr-4">{{ cat.displayName }}</span>
+                        <i v-if="selectedCategory === cat.id" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- SCRIPT VUE & FIREBASE -->
@@ -433,6 +481,7 @@
                     
                     isLoading: true,
                     isCartOpen: false,
+                    isCategoryOpen: false,
                     selectedProduct: null,
                     activeVariant: null,
                     
@@ -444,6 +493,33 @@
                 }
             },
             computed: {
+
+                // --- 🌟 HELPER KATEGORI CERDAS 🌟 ---
+                formattedCategories() {
+                    let cats = this.categories.map(cat => {
+                        let name = cat.name || cat.nama || 'Tanpa Nama';
+                        
+                        // Cek apakah ada nama induk (Bisa disesuaikan dengan struktur DB Anda)
+                        let parentName = cat.parentName || cat.kategoriInduk || cat.parent || '';
+                        
+                        // Jika ada induknya, format menjadi "Induk — Subkategori"
+                        let displayName = parentName ? `${parentName} — ${name}` : name;
+                        
+                        return { id: cat.id, displayName: displayName };
+                    });
+
+                    // Hapus duplikat dan urutkan A-Z
+                    let uniqueCats = [];
+                    let seenNames = new Set();
+                    for (let c of cats) {
+                        if (!seenNames.has(c.displayName)) {
+                            seenNames.add(c.displayName);
+                            uniqueCats.push(c);
+                        }
+                    }
+                    return uniqueCats.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                },
+                
                 validCategories() {
                     let uniqueCats = [];
                     let names = [];
