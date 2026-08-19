@@ -109,7 +109,7 @@
                 </div>
             </div>
             
-            <!-- TOMBOL FILTER KATEGORI -->
+            <!-- TOMBOL FILTER KATEGORI (Diperbarui dengan Breadcrumb) -->
             <div v-if="companyIdValid" class="mb-5">
                 <button @click="isCategoryOpen = true" class="w-full flex items-center justify-between bg-white border border-zinc-200 px-4 py-3 rounded-xl hover:bg-zinc-50 active:scale-[0.98] transition-all shadow-sm">
                     <div class="flex items-center gap-3">
@@ -119,7 +119,7 @@
                         <div class="flex flex-col items-start leading-tight">
                             <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-0.5">Filter Kategori</span>
                             <span class="text-sm font-extrabold text-zinc-800 line-clamp-1 text-left">
-                                {{ selectedCategory ? (structuredCatalogCategories.find(c => c.id === selectedCategory)?.name || 'Kategori Terpilih') : 'Semua Produk' }}
+                                {{ selectedCategoryPath }}
                             </span>
                         </div>
                     </div>
@@ -443,16 +443,23 @@
                         <!-- Jarak Padding Kiri Otomatis Sesuai Level -->
                         <div class="flex items-center gap-2" :style="{ paddingLeft: (cat.treeLevel * 24) + 'px' }">
                             
-                            <!-- Icon untuk Level 2, Level 3, dst -->
-                            <i v-if="cat.treeLevel > 0" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-zinc-300 text-xs mr-1"></i>
+                            <!-- 🌟 PERBAIKAN: Icon untuk Level 2, Level 3, dst (Warnanya cerdas) -->
+                            <i v-if="cat.treeLevel > 0" class="fa-solid fa-arrow-turn-up fa-rotate-90 text-xs mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-300'"></i>
                             
-                            <!-- Icon Folder untuk Induk Level 0 yang punya anak -->
-                            <i v-if="cat.treeLevel === 0 && cat.isParent" class="fa-regular fa-folder text-zinc-400 text-sm mr-1"></i>
+                            <!-- 🌟 PERBAIKAN: Icon Folder untuk Induk Level 0 yang punya anak -->
+                            <i v-if="cat.treeLevel === 0 && cat.isParent" class="fa-regular fa-folder text-sm mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
                             
-                            <!-- Icon Tag untuk Level 0 yang tidak punya anak -->
-                            <i v-if="cat.treeLevel === 0 && !cat.isParent" class="fa-solid fa-tag text-zinc-400 text-sm mr-1"></i>
+                            <!-- 🌟 PERBAIKAN: Icon Tag untuk Level 0 yang tidak punya anak -->
+                            <i v-if="cat.treeLevel === 0 && !cat.isParent" class="fa-solid fa-tag text-sm mr-1" 
+                               :class="selectedCategory === cat.id ? 'text-white/70' : 'text-zinc-400'"></i>
                             
-                            <span class="text-sm" :class="cat.treeLevel === 0 ? 'font-extrabold text-zinc-900' : 'font-semibold text-zinc-500'">{{ cat.name }}</span>
+                            <!-- 🌟 PERBAIKAN: Teks tidak hitam jika di-select -->
+                            <span class="text-sm" :class="[
+                                cat.treeLevel === 0 ? 'font-extrabold' : 'font-semibold',
+                                selectedCategory === cat.id ? 'text-white' : (cat.treeLevel === 0 ? 'text-zinc-900' : 'text-zinc-500')
+                            ]">{{ cat.name }}</span>
                         </div>
 
                         <i v-if="selectedCategory === cat.id" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
@@ -509,6 +516,28 @@
             },
             
             computed: {
+                // 🌟 PERBAIKAN: BREADCRUMB NAMA KATEGORI (Misal: Pria / Atasan / Kaos)
+                selectedCategoryPath() {
+                    if (!this.selectedCategory) return 'Semua Produk';
+                    
+                    let path = [];
+                    let currentId = this.selectedCategory;
+                    
+                    let depth = 0; // Cegah infinite loop
+                    while (currentId && depth < 10) {
+                        let cat = this.categories.find(c => c.id === currentId);
+                        if (cat) {
+                            path.unshift(cat.name || cat.nama || 'Tanpa Nama');
+                            currentId = cat.parentId; // Lompat ke atasnya (Parent)
+                        } else {
+                            break;
+                        }
+                        depth++;
+                    }
+                    
+                    return path.length > 0 ? path.join(' / ') : 'Kategori Terpilih';
+                },
+
                 structuredCatalogCategories() {
                     let result = [];
                     let categories = this.categories;
@@ -580,15 +609,34 @@
                                               (p.sku && p.sku.toLowerCase().includes(this.searchQuery.toLowerCase()));
                         
                         let matchesCategory = true;
+                        
+                        // 🌟 PERBAIKAN FILTER KATEGORI: Induk membaca semua data Anaknya 🌟
                         if (this.selectedCategory) {
-                            let catObj = this.categories.find(c => c.id === this.selectedCategory);
-                            let selectedCatName = catObj ? (catObj.name || catObj.nama) : '';
+                            let targetCatIds = [this.selectedCategory];
+                            
+                            // Ambil seluruh ID keturunan (Child) dari kategori yang dipilih
+                            const getChildrenIds = (id) => {
+                                let children = this.categories.filter(c => c.parentId === id).map(c => c.id);
+                                children.forEach(childId => {
+                                    if (!targetCatIds.includes(childId)) {
+                                        targetCatIds.push(childId);
+                                        getChildrenIds(childId); // Rekursif ke bawah lagi
+                                    }
+                                });
+                            };
+                            getChildrenIds(this.selectedCategory);
+                            
+                            // Ekstrak juga nama-nama kategorinya buat jaga-jaga kalau filter pakai nama text
+                            let targetCatNames = targetCatIds.map(id => {
+                                let c = this.categories.find(cat => cat.id === id);
+                                return c ? (c.name || c.nama) : null;
+                            }).filter(n => n);
 
-                            matchesCategory = p.categoryId === this.selectedCategory ||
-                                              p.kategoriId === this.selectedCategory ||
-                                              (selectedCatName && p.category === selectedCatName) ||
-                                              (selectedCatName && p.kategori === selectedCatName) ||
-                                              p.category === this.selectedCategory;
+                            // Cek apakah ID atau Nama Kategori produk cocok dengan ID Induk/Anak
+                            matchesCategory = targetCatIds.includes(p.categoryId) ||
+                                              targetCatIds.includes(p.kategoriId) ||
+                                              targetCatNames.includes(p.category) ||
+                                              targetCatNames.includes(p.kategori);
                         }
                         
                         return matchesSearch && matchesCategory;
