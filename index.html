@@ -6483,71 +6483,84 @@ body.sidebar-open {
             <div class="fw-bold text-dark fs-6">Rp {{ formatNumber(activeInvoiceDetail.total) }}</div>
         </div>
     </div>
-    <!-- 🌟 KODE DIPERBAIKI: Nominal Dibayar Dinamis untuk Split -->
+    
+    <!-- 🌟 PERBAIKAN: Hitung Total Dibayar Murni (Kecuali metode HUTANG) -->
     <div class="col-4">
         <div class="p-2 bg-white border rounded text-center">
             <div class="small text-muted fw-bold">Sudah Dibayar</div>
             <div class="fw-bold text-success fs-6">
-                Rp {{ formatNumber(activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) }}
+                Rp {{ formatNumber(
+                    activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments 
+                    ? activeInvoiceDetail.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)
+                    : (String(activeInvoiceDetail.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : (activeInvoiceDetail.amountReceived || 0))
+                ) }}
             </div>
         </div>
     </div>
-    <!-- 🌟 KODE DIPERBAIKI: Otomatis berubah jadi Kembalian jika total split berlebih -->
+
+    <!-- 🌟 PERBAIKAN: Hitung Sisa Tagihan Akurat Berdasarkan Total dikurangi Pembayaran Riel -->
     <div class="col-4">
         <div class="p-2 border rounded text-center" 
-             :class="( (activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total) ? 'bg-success text-white' : ((activeInvoiceDetail.sisaTagihan || 0) > 0 ? 'bg-danger text-white' : 'bg-success text-white')">
+             :class="((activeInvoiceDetail.total - (activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments ? activeInvoiceDetail.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : (String(activeInvoiceDetail.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : (activeInvoiceDetail.amountReceived || 0)))) > 0) ? 'bg-danger text-white' : 'bg-success text-white'">
             
             <div class="small fw-bold text-white-50">
-                {{ (activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total ? 'Kembalian' : 'Sisa Tagihan' }}
+                {{ (activeInvoiceDetail.total - (activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments ? activeInvoiceDetail.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : (String(activeInvoiceDetail.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : (activeInvoiceDetail.amountReceived || 0)))) > 0 ? 'Sisa Tagihan' : 'Kembalian' }}
             </div>
             
             <div class="fw-bold fs-6">
-                Rp {{ formatNumber((activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) > activeInvoiceDetail.total ? ((activeInvoiceDetail.paymentMethod === 'SPLIT' ? (activeInvoiceDetail.splitPayments || []).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : activeInvoiceDetail.amountReceived) - activeInvoiceDetail.total) : (activeInvoiceDetail.sisaTagihan || 0)) }}
+                Rp {{ formatNumber(
+                    Math.abs(activeInvoiceDetail.total - (activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments ? activeInvoiceDetail.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0) : (String(activeInvoiceDetail.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : (activeInvoiceDetail.amountReceived || 0))))
+                ) }}
             </div>
         </div>
     </div>
 </div>
 
-                <div class="card border-0 shadow-sm mb-3">
-                    <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
-                    <div class="card-body p-0">
-                        <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
-                            <thead class="table-light">
-                                <tr><th>Tanggal</th><th>Metode</th><th class="text-end">Nominal</th><th>Catatan</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ activeInvoiceDetail.dateStr }}</td>
-                                    <td>
-                                        <div class="fw-bold">{{ activeInvoiceDetail.paymentMethod }}</div>
-                                        <div v-if="activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments && activeInvoiceDetail.splitPayments.length > 0" class="mt-1">
-                                            <div v-for="(sp, sIdx) in activeInvoiceDetail.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
-                                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-success text-end fw-bold">
-                                        Rp {{ formatNumber(activeInvoiceDetail.firstPayment !== undefined ? activeInvoiceDetail.firstPayment : (activeInvoiceDetail.amountReceived - (activeInvoiceDetail.paymentHistory ? activeInvoiceDetail.paymentHistory.reduce((sum, p) => sum + Number(p.amount), 0) : 0))) }}
-                                    </td>
-                                    <td class="text-muted">Pembayaran Awal (Kasir)</td>
-                                </tr>
-                                <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
-                                    <td>{{ pay.date || pay.dateStr }}</td>
-                                    <td>
-                                        <div class="fw-bold">{{ pay.method }}</div>
-                                        <div v-if="pay.method === 'SPLIT' && pay.splitPayments && pay.splitPayments.length > 0" class="mt-1">
-                                            <div v-for="(sp, sIdx) in pay.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
-                                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-success text-end fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
-                                    <td class="text-muted">{{ pay.note || '-' }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white fw-bold small"><i class="bi bi-clock-history me-1"></i> Histori Pembayaran</div>
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0" style="font-size: 0.8rem;">
+            <thead class="table-light">
+                <tr><th>Tanggal</th><th>Metode</th><th class="text-end">Nominal</th><th>Catatan</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ activeInvoiceDetail.dateStr }}</td>
+                    <td>
+                        <div class="fw-bold">{{ activeInvoiceDetail.paymentMethod }}</div>
+                        <div v-if="activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments && activeInvoiceDetail.splitPayments.length > 0" class="mt-1">
+                            <div v-for="(sp, sIdx) in activeInvoiceDetail.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
+                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                            </div>
+                        </div>
+                    </td>
+                    <!-- 🌟 PERBAIKAN: Nominal Pembayaran Awal Riel (Mengabaikan komponen hutang di split) -->
+                    <td class="text-success text-end fw-bold">
+                        Rp {{ formatNumber(
+                            activeInvoiceDetail.paymentMethod === 'SPLIT' && activeInvoiceDetail.splitPayments
+                            ? activeInvoiceDetail.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)
+                            : (String(activeInvoiceDetail.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : (activeInvoiceDetail.amountReceived || 0))
+                        ) }}
+                    </td>
+                    <td class="text-muted">Pembayaran Awal (Kasir)</td>
+                </tr>
+                <tr v-for="(pay, idx) in activeInvoiceDetail.paymentHistory || []" :key="idx">
+                    <td>{{ pay.date || pay.dateStr }}</td>
+                    <td>
+                        <div class="fw-bold">{{ pay.method }}</div>
+                        <div v-if="pay.method === 'SPLIT' && pay.splitPayments && pay.splitPayments.length > 0" class="mt-1">
+                            <div v-for="(sp, sIdx) in pay.splitPayments" :key="sIdx" class="text-muted" style="font-size: 0.85em;">
+                                - {{ sp.method }}: Rp {{ formatNumber(sp.amount) }}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-success text-end fw-bold">Rp {{ formatNumber(pay.amount) }}</td>
+                    <td class="text-muted">{{ pay.note || '-' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
                 <div class="card border-primary shadow-sm" v-if="(activeInvoiceDetail.sisaTagihan || 0) > 0">
                     <div class="card-header bg-primary text-white fw-bold small"><i class="bi bi-wallet2 me-1"></i> Input Pelunasan / Cicilan Baru</div>
