@@ -224,18 +224,18 @@
                             <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Zoom
                         </div>
                     </div>
-
-                    <!-- 🌟 GALLERY THUMBNAIL (MENAMPILKAN SEMUA FOTO) -->
-                    <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 px-6 pt-4 pb-2 bg-white scrollbar-hide snap-x relative z-10">
-                        <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
-                             @click="selectedProduct.selectedPhoto = img"
-                             class="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
-                             :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
-                            <img :src="img" class="w-full h-full object-cover">
-                        </div>
-                    </div>
                     
                     <div class="p-6 border-b border-zinc-100 bg-white relative -mt-5 rounded-t-[24px]">
+
+                        <!-- 🌟 PERBAIKAN: GALLERY THUMBNAIL RATA KIRI 🌟 -->
+                                    <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 pb-5 mb-5 border-b border-zinc-100 scrollbar-hide snap-x">
+                                        <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
+                                             @click="selectedProduct.selectedPhoto = img"
+                                             class="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
+                                             :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
+                                            <img :src="img" class="w-full h-full object-cover">
+                                        </div>
+                                    </div>
                         
                         <!-- Menampilkan Tag di Detail Produk -->
                         <div v-if="selectedProduct.tags && selectedProduct.tags.length > 0" class="flex flex-wrap gap-1.5 mb-3">
@@ -281,10 +281,10 @@
                         </div>
                     </div>
 
-                    <!-- 🌟 TAMBAHAN: DESKRIPSI PRODUK 🌟 -->
-                        <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="mt-5 pt-5 border-t border-zinc-100">
-                            <h3 class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Detail Produk</h3>
-                            <div class="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap break-words" 
+                    <!-- 🌟 PERBAIKAN: DESKRIPSI PRODUK RATA KIRI 🌟 -->
+                        <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="p-6 border-b border-zinc-100 bg-white">
+                            <h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-3">Detail Produk</h3>
+                            <div class="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap break-words" 
                                  v-html="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail">
                             </div>
                         </div>
