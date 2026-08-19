@@ -210,12 +210,28 @@
                 </button>
 
                 <div class="flex-1 overflow-y-auto pb-28">
-                    <!-- Klik gambar untuk ZOOM -->
-                    <div class="w-full bg-zinc-50 relative h-[350px] flex items-center justify-center cursor-zoom-in" @click="selectedProduct.displayImage ? zoomedImage = selectedProduct.displayImage : null">
-                        <img v-if="selectedProduct.displayImage" :src="selectedProduct.displayImage" class="img-contain p-4">
-                        <i v-else class="fa-solid fa-image text-6xl text-zinc-300"></i>
-                        <div v-if="selectedProduct.displayImage" class="absolute bottom-6 right-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-zinc-600 shadow-sm pointer-events-none">
+                    <!-- 🌟 TAMPILAN FOTO UTAMA & ZOOM -->
+                    <div class="w-full bg-zinc-50 relative h-[350px] flex flex-col justify-center cursor-zoom-in" 
+                         @click="(selectedProduct.selectedPhoto || selectedProduct.displayImage) ? zoomedImage = (selectedProduct.selectedPhoto || selectedProduct.displayImage) : null">
+                        
+                        <div class="flex-1 flex items-center justify-center p-4">
+                            <img v-if="selectedProduct.selectedPhoto" :src="selectedProduct.selectedPhoto" class="img-contain max-h-[300px]">
+                            <img v-else-if="selectedProduct.displayImage" :src="selectedProduct.displayImage" class="img-contain max-h-[300px]">
+                            <i v-else class="fa-solid fa-image text-6xl text-zinc-300"></i>
+                        </div>
+                        
+                        <div v-if="selectedProduct.displayImage || selectedProduct.selectedPhoto" class="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-zinc-600 shadow-sm pointer-events-none z-10">
                             <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Zoom
+                        </div>
+                    </div>
+
+                    <!-- 🌟 GALLERY THUMBNAIL (MENAMPILKAN SEMUA FOTO) -->
+                    <div v-if="selectedProduct.allPhotos && selectedProduct.allPhotos.length > 1" class="flex overflow-x-auto gap-2 px-6 pt-4 pb-2 bg-white scrollbar-hide snap-x relative z-10">
+                        <div v-for="(img, idx) in selectedProduct.allPhotos" :key="idx" 
+                             @click="selectedProduct.selectedPhoto = img"
+                             class="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer snap-start transition-all"
+                             :class="(selectedProduct.selectedPhoto === img || (!selectedProduct.selectedPhoto && selectedProduct.displayImage === img)) ? 'border-zinc-900 shadow-md' : 'border-zinc-200 opacity-60 hover:opacity-100'">
+                            <img :src="img" class="w-full h-full object-cover">
                         </div>
                     </div>
                     
@@ -256,7 +272,10 @@
                     <div v-if="selectedProduct.variants && selectedProduct.variants.length > 0" class="p-6 border-b border-zinc-100 bg-white">
                         <h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-4">Pilih Varian</h3>
                         <div class="flex flex-wrap gap-2.5">
-                            <button v-for="(v, index) in selectedProduct.variants" :key="index" @click="activeVariant = v" :class="activeVariant === v ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200'" class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200">
+                            <button v-for="(v, index) in selectedProduct.variants" :key="index" 
+                                    @click="activeVariant = v; if(v.displayImage) selectedProduct.selectedPhoto = v.displayImage" 
+                                    :class="activeVariant === v ? 'bg-zinc-900 text-white shadow-md' : 'bg-white text-zinc-600 border border-zinc-200'" 
+                                    class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200">
                                 {{ v.name }}
                             </button>
                         </div>
@@ -586,17 +605,40 @@
                             
                             if (isNaN(finalStock)) finalStock = 0;
 
+                            // --- 🌟 KUMPULKAN SEMUA FOTO & FOTO VARIAN 🌟 ---
+                            let allPhotos = [];
+                            if (finalImage) allPhotos.push(finalImage);
+                            
+                            // Tambahkan semua foto dari galeri (array images)
+                            if (data.images && Array.isArray(data.images)) {
+                                data.images.forEach(img => {
+                                    let url = img.url || img;
+                                    if (url && !allPhotos.includes(url)) allPhotos.push(url);
+                                });
+                            }
+
                             let productVariants = [];
                             if (data.variants && Array.isArray(data.variants)) {
                                 productVariants = data.variants.map(v => {
                                     if (typeof v === 'object') {
+                                        // Cek apakah varian punya foto sendiri
+                                        let vImg = '';
+                                        if (v.imageUrl && typeof v.imageUrl === 'string' && v.imageUrl.trim() !== '') vImg = v.imageUrl;
+                                        else if (v.images && Array.isArray(v.images) && v.images.length > 0 && v.images[0].url) vImg = v.images[0].url;
+                                        else if (v.imageBase64 && typeof v.imageBase64 === 'string' && v.imageBase64.trim() !== '') vImg = v.imageBase64;
+                                        else vImg = v.foto || v.image || v.gambar || '';
+                                        
+                                        // Masukkan foto varian ke galeri utama jika belum ada
+                                        if (vImg && !allPhotos.includes(vImg)) allPhotos.push(vImg);
+
                                         return {
                                             name: v.name || v.nama || 'Unnamed',
                                             sku: v.variantSku || v.sku || v.kode || v.code || '',
-                                            price: v.price || finalPrice
+                                            price: v.price || finalPrice,
+                                            displayImage: vImg // Simpan foto khusus varian
                                         };
                                     }
-                                    return { name: v, sku: '', price: finalPrice };
+                                    return { name: v, sku: '', price: finalPrice, displayImage: '' };
                                 }).filter(v => v.name);
                             }
 
@@ -610,6 +652,8 @@
                                 tags: tagList,
                                 stock: finalStock,
                                 displayImage: finalImage,
+                                allPhotos: allPhotos, // Simpan semua foto untuk galeri
+                                selectedPhoto: null,  // State untuk foto yang sedang diklik
                                 variants: productVariants,
                                 category: data.category || data.kategori || data.categoryId || ''
                             };
@@ -636,7 +680,13 @@
                 
                 openProductDetail(product) {
                     this.selectedProduct = product;
+                    this.selectedProduct.selectedPhoto = null; // Reset foto saat pop-up dibuka
                     this.activeVariant = product.variants && product.variants.length > 0 ? product.variants[0] : null;
+                    
+                    // Jika varian default punya foto, langsung tampilkan saat pop-up terbuka
+                    if (this.activeVariant && this.activeVariant.displayImage) {
+                        this.selectedProduct.selectedPhoto = this.activeVariant.displayImage;
+                    }
                 },
                 
                 closeProductDetail() {
