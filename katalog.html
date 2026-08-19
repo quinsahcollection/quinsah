@@ -269,6 +269,14 @@
                         </div>
                     </div>
 
+                    <!-- 🌟 TAMBAHAN: DESKRIPSI PRODUK 🌟 -->
+                        <div v-if="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail" class="mt-5 pt-5 border-t border-zinc-100">
+                            <h3 class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Detail Produk</h3>
+                            <div class="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap break-words" 
+                                 v-html="selectedProduct.description || selectedProduct.deskripsi || selectedProduct.detail">
+                            </div>
+                        </div>
+                    
                     <div v-if="selectedProduct.variants && selectedProduct.variants.length > 0" class="p-6 border-b border-zinc-100 bg-white">
                         <h3 class="text-xs font-bold text-zinc-800 uppercase tracking-widest mb-4">Pilih Varian</h3>
                         <div class="flex flex-wrap gap-2.5">
@@ -646,6 +654,7 @@
                                 id: doc.id,
                                 ...data,
                                 name: data.name || data.nama || 'Tanpa Nama',
+                                description: data.description || data.deskripsi || data.detail || '',
                                 sku: data.sku || data.kode || data.code || '', 
                                 price: finalPrice,
                                 originalPrice: originalPrice,
