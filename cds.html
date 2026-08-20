@@ -346,7 +346,10 @@
         </div>
 
         <template v-else>
+            <!-- Wrapper Flex Utama untuk Area Kiri -->
             <div class="w-100 flex-grow-1 position-relative d-flex overflow-hidden">
+                
+                <!-- OPSI 1: AREA KATALOG -->
                 <div v-if="cdsSettings.mediaType === 'catalog'" class="w-100 h-100 d-flex flex-column text-start bg-light fade-in position-relative">
                     
                     <div class="d-flex flex-grow-1 overflow-hidden w-100 h-100">
@@ -557,14 +560,14 @@
                                                         
                                                         <div class="d-flex p-2 gap-2 align-items-center">
                                                             <div style="width: 45px; height: 45px; border-radius: 6px; overflow: hidden; background: #fff;" class="flex-shrink-0 border shadow-sm">
-                                                            <!-- 🌟 PERBAIKAN: Gunakan Helper untuk Foto Varian di CDS -->
-                                                            <template v-if="getCdsImage(v, selectedProduct)">
-                                                                <img :src="getCdsImage(v, selectedProduct)" style="width:100%; height:100%; object-fit:cover;" @error="v.imageUrl = ''; v.imageBase64 = ''">
-                                                            </template>
-                                                            <template v-else>
-                                                                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted"><i class="fas fa-box-open" style="font-size: 1rem;"></i></div>
-                                                            </template>
-                                                        </div>
+                                                                <!-- 🌟 PERBAIKAN: Gunakan Helper untuk Foto Varian di CDS -->
+                                                                <template v-if="getCdsImage(v, selectedProduct)">
+                                                                    <img :src="getCdsImage(v, selectedProduct)" style="width:100%; height:100%; object-fit:cover;" @error="v.imageUrl = ''; v.imageBase64 = ''">
+                                                                </template>
+                                                                <template v-else>
+                                                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted"><i class="fas fa-box-open" style="font-size: 1rem;"></i></div>
+                                                                </template>
+                                                            </div>
                                                             <div class="d-flex flex-column justify-content-center">
                                                                 
                                                                 <div class="fw-bold text-dark mb-1 lh-sm" style="font-size: 0.85rem; padding-right: 25px;">
@@ -621,102 +624,104 @@
                             </div>
                         </div>
                     </div>
+                </div> <!-- PENUTUP v-if catalog YANG SEBELUMNYA HILANG -->
 
-            <!-- MODAL PENGATURAN (Tampil menimpa layar jika isSettingsOpen = true) -->
-        <div v-if="isSettingsOpen" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 100; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
-            <div class="card border-0 shadow-lg slide-up" style="width: 500px; max-width: 90%; border-radius: 20px; overflow: hidden;">
-                <div class="card-header bg-dark text-white p-3 px-4 d-flex justify-content-between align-items-center border-0">
-                    <h5 class="mb-0 fw-bold"><i class="fas fa-desktop me-2"></i> Pengaturan Layar CDS</h5>
-                    <button type="button" class="btn-close btn-close-white" @click="isSettingsOpen = false"></button>
+                <!-- OPSI 2: AREA MEDIA PROMOSI (Mengisi sisa ruang, muncul jika BUKAN catalog) -->
+                <div v-else class="promo-media-container flex-grow-1 position-relative overflow-hidden bg-dark w-100">
+                    <template v-if="cdsSettings.mediaType === 'youtube' && cdsSettings.youtubeUrl">
+                        <iframe :src="getYouTubeEmbedUrl(cdsSettings.youtubeUrl)" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="w-100 h-100 position-absolute top-0 start-0" style="pointer-events: none;"></iframe>
+                    </template>
+                    <template v-else-if="cdsSettings.mediaType === 'video' && cdsSettings.videoUrl">
+                        <video :src="cdsSettings.videoUrl" autoplay loop muted class="w-100 h-100 position-absolute top-0 start-0" style="object-fit: cover;"></video>
+                    </template>
+                    <template v-else-if="currentImage">
+                        <img :src="currentImage" alt="Promo" class="w-100 h-100 position-absolute top-0 start-0" style="object-fit: cover;">
+                    </template>
                 </div>
-                <div class="card-body p-4 bg-light" style="max-height: 70vh; overflow-y: auto;">
-                    <div class="alert alert-info border-0 shadow-sm py-2 px-3 mb-4 fs-6 rounded-3">
-                        <i class="fas fa-info-circle me-2"></i> Pengaturan ini hanya tersimpan di perangkat ini (Local Kiosk).
-                    </div>
 
-                    <h6 class="fw-bold text-dark mb-3">Kategori Ditampilkan (Pilih/Centang):</h6>
-                    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm" style="max-height: 250px; overflow-y: auto;">
-                        <div class="form-check mb-3 border-bottom pb-3">
-                            <input class="form-check-input" type="checkbox" id="catAll" :checked="tempSettings.selectedCategories.length === 0" @change="toggleAllCategories($event)">
-                            <label class="form-check-label fw-bold text-primary" for="catAll">Tampilkan Semua Kategori</label>
+            </div> <!-- PENUTUP W-100 FLEX-GROW-1 -->
+
+            <!-- MODAL PENGATURAN (Di-overlay secara aman di luar logic konten) -->
+            <div v-if="isSettingsOpen" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 100; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+                <div class="card border-0 shadow-lg slide-up" style="width: 500px; max-width: 90%; border-radius: 20px; overflow: hidden;">
+                    <div class="card-header bg-dark text-white p-3 px-4 d-flex justify-content-between align-items-center border-0">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-desktop me-2"></i> Pengaturan Layar CDS</h5>
+                        <button type="button" class="btn-close btn-close-white" @click="isSettingsOpen = false"></button>
+                    </div>
+                    <div class="card-body p-4 bg-light" style="max-height: 70vh; overflow-y: auto;">
+                        <div class="alert alert-info border-0 shadow-sm py-2 px-3 mb-4 fs-6 rounded-3">
+                            <i class="fas fa-info-circle me-2"></i> Pengaturan ini hanya tersimpan di perangkat ini (Local Kiosk).
                         </div>
-                        
-                        <div v-for="main in categoryTree" :key="main.id" class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" :id="'set-'+main.id" :value="main.id" v-model="tempSettings.selectedCategories">
-                                <label class="form-check-label text-dark fw-bold" :for="'set-'+main.id"><i :class="main.icon || getCategoryIcon(main.name)" class="text-warning me-1"></i> {{ main.name }}</label>
+
+                        <h6 class="fw-bold text-dark mb-3">Kategori Ditampilkan (Pilih/Centang):</h6>
+                        <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+                            <div class="form-check mb-3 border-bottom pb-3">
+                                <input class="form-check-input" type="checkbox" id="catAll" :checked="tempSettings.selectedCategories.length === 0" @change="toggleAllCategories($event)">
+                                <label class="form-check-label fw-bold text-primary" for="catAll">Tampilkan Semua Kategori</label>
                             </div>
-                            <div v-if="main.children && main.children.length > 0" class="ms-4 mt-2 border-start border-2 ps-3 border-light">
-                                <div v-for="sub in main.children" :key="sub.id" class="mb-2">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" :id="'set-'+sub.id" :value="sub.id" v-model="tempSettings.selectedCategories">
-                                        <label class="form-check-label text-secondary fw-semibold" :for="'set-'+sub.id"><i class="fas fa-level-up-alt fa-rotate-90 text-muted me-1" style="font-size: 0.8rem;"></i> {{ sub.name }}</label>
-                                    </div>
-                                    <div v-if="sub.children && sub.children.length > 0" class="ms-4 mt-1 border-start border-2 ps-3 border-light">
-                                        <div class="form-check mb-1" v-for="grand in sub.children" :key="grand.id">
-                                            <input class="form-check-input" type="checkbox" :id="'set-'+grand.id" :value="grand.id" v-model="tempSettings.selectedCategories">
-                                            <label class="form-check-label text-muted" :for="'set-'+grand.id"><i class="fas fa-minus text-muted me-1" style="font-size: 0.7rem;"></i> {{ grand.name }}</label>
+                            
+                            <div v-for="main in categoryTree" :key="main.id" class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" :id="'set-'+main.id" :value="main.id" v-model="tempSettings.selectedCategories">
+                                    <label class="form-check-label text-dark fw-bold" :for="'set-'+main.id"><i :class="main.icon || getCategoryIcon(main.name)" class="text-warning me-1"></i> {{ main.name }}</label>
+                                </div>
+                                <div v-if="main.children && main.children.length > 0" class="ms-4 mt-2 border-start border-2 ps-3 border-light">
+                                    <div v-for="sub in main.children" :key="sub.id" class="mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" :id="'set-'+sub.id" :value="sub.id" v-model="tempSettings.selectedCategories">
+                                            <label class="form-check-label text-secondary fw-semibold" :for="'set-'+sub.id"><i class="fas fa-level-up-alt fa-rotate-90 text-muted me-1" style="font-size: 0.8rem;"></i> {{ sub.name }}</label>
+                                        </div>
+                                        <div v-if="sub.children && sub.children.length > 0" class="ms-4 mt-1 border-start border-2 ps-3 border-light">
+                                            <div class="form-check mb-1" v-for="grand in sub.children" :key="grand.id">
+                                                <input class="form-check-input" type="checkbox" :id="'set-'+grand.id" :value="grand.id" v-model="tempSettings.selectedCategories">
+                                                <label class="form-check-label text-muted" :for="'set-'+grand.id"><i class="fas fa-minus text-muted me-1" style="font-size: 0.7rem;"></i> {{ grand.name }}</label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <h6 class="fw-bold text-dark mb-3 mt-4">Pengaturan Tampilan Produk:</h6>
-                    <div class="bg-white border rounded-3 p-3 shadow-sm mb-4">
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="showProdSKU" v-model="tempSettings.showProductSKU">
-                            <label class="form-check-label fw-medium text-dark" for="showProdSKU">Tampilkan SKU Produk Utama</label>
+                        <h6 class="fw-bold text-dark mb-3 mt-4">Pengaturan Tampilan Produk:</h6>
+                        <div class="bg-white border rounded-3 p-3 shadow-sm mb-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="showProdSKU" v-model="tempSettings.showProductSKU">
+                                <label class="form-check-label fw-medium text-dark" for="showProdSKU">Tampilkan SKU Produk Utama</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showVarSKU" v-model="tempSettings.showVariantSKU">
+                                <label class="form-check-label fw-medium text-dark" for="showVarSKU">Tampilkan SKU Varian di Detail</label>
+                            </div>
                         </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="showVarSKU" v-model="tempSettings.showVariantSKU">
-                            <label class="form-check-label fw-medium text-dark" for="showVarSKU">Tampilkan SKU Varian di Detail</label>
-                        </div>
-                    </div>
 
-                    <h6 class="fw-bold text-dark mb-3">Pengaturan Stok & Inventori:</h6>
-                    <div class="bg-white border rounded-3 p-3 shadow-sm">
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="hideOOS" v-model="tempSettings.hideOutOfStock">
-                            <label class="form-check-label fw-medium text-dark" for="hideOOS">Sembunyikan produk yang stoknya habis</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="allowNegative" v-model="tempSettings.allowNegativeInventory">
-                            <label class="form-check-label fw-medium text-dark" for="allowNegative">Izinkan Negative Inventory / Abaikan Stok</label>
+                        <h6 class="fw-bold text-dark mb-3">Pengaturan Stok & Inventori:</h6>
+                        <div class="bg-white border rounded-3 p-3 shadow-sm">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="hideOOS" v-model="tempSettings.hideOutOfStock">
+                                <label class="form-check-label fw-medium text-dark" for="hideOOS">Sembunyikan produk yang stoknya habis</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="allowNegative" v-model="tempSettings.allowNegativeInventory">
+                                <label class="form-check-label fw-medium text-dark" for="allowNegative">Izinkan Negative Inventory / Abaikan Stok</label>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-footer p-3 bg-white border-top d-flex justify-content-end gap-2">
-                    <button class="btn btn-light fw-bold px-4 rounded-pill" @click="isSettingsOpen = false">Batal</button>
-                    <button class="btn btn-danger fw-bold px-4 rounded-pill shadow-sm" @click="saveSettingsLocal"><i class="fas fa-save me-2"></i> Simpan Pengaturan</button>
+                    <div class="card-footer p-3 bg-white border-top d-flex justify-content-end gap-2">
+                        <button class="btn btn-light fw-bold px-4 rounded-pill" @click="isSettingsOpen = false">Batal</button>
+                        <button class="btn btn-danger fw-bold px-4 rounded-pill shadow-sm" @click="saveSettingsLocal"><i class="fas fa-save me-2"></i> Simpan Pengaturan</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- AREA MEDIA PROMOSI (Mengisi sisa ruang secara responsif) -->
-        <div class="promo-media-container flex-grow-1 position-relative overflow-hidden bg-dark">
-            <template v-if="cdsSettings.mediaType === 'youtube' && cdsSettings.youtubeUrl">
-                <iframe :src="getYouTubeEmbedUrl(cdsSettings.youtubeUrl)" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="w-100 h-100 position-absolute top-0 start-0" style="pointer-events: none;"></iframe>
-            </template>
-            <template v-else-if="cdsSettings.mediaType === 'video' && cdsSettings.videoUrl">
-                <video :src="cdsSettings.videoUrl" autoplay loop muted class="w-100 h-100 position-absolute top-0 start-0" style="object-fit: cover;"></video>
-            </template>
-            <template v-else-if="currentImage">
-                <img :src="currentImage" alt="Promo" class="w-100 h-100 position-absolute top-0 start-0" style="object-fit: cover;">
-            </template>
-        </div>
-        
-        <!-- TEKS BERJALAN (Tetap di bawah media promosi) -->
-        <div class="bg-danger text-white py-2 px-3 fw-bold d-flex align-items-center shadow-lg w-100" style="font-size: 0.9rem; letter-spacing: 0.5px; z-index: 10; flex-shrink: 0;">
-            <i class="fas fa-bullhorn me-3 fs-5"></i>
-            <marquee behavior="scroll" direction="left" scrollamount="6" class="flex-grow-1 m-0">
-                {{ cdsSettings.welcomeText || ('🌟 Selamat datang di ' + storeName + '! 🌟 Kepuasan Anda adalah prioritas kami. Pastikan Anda memeriksa kembali rincian pesanan di layar sebelah kanan sebelum melakukan pembayaran. Terima kasih telah berbelanja! 🌟') }}
-            </marquee>
-        </div>
-        
-    </div>
-</template>
+            <!-- TEKS BERJALAN (MARQUEE) -->
+            <div class="bg-danger text-white py-2 px-3 fw-bold d-flex align-items-center shadow-lg w-100" style="font-size: 0.9rem; letter-spacing: 0.5px; z-index: 10; flex-shrink: 0;">
+                <i class="fas fa-bullhorn me-3 fs-5"></i>
+                <marquee behavior="scroll" direction="left" scrollamount="6" class="flex-grow-1 m-0">
+                    {{ cdsSettings.welcomeText || ('🌟 Selamat datang di ' + storeName + '! 🌟 Kepuasan Anda adalah prioritas kami. Pastikan Anda memeriksa kembali rincian pesanan di layar sebelah kanan sebelum melakukan pembayaran. Terima kasih telah berbelanja! 🌟') }}
+                </marquee>
+            </div>
+            
+        </template>
     </div>
 
     <!-- AREA KERANJANG KANAN -->
@@ -935,7 +940,6 @@
             mainCategories() {
                 let cats = this.categoryTree;
                 if (this.localSettings.selectedCategories && this.localSettings.selectedCategories.length > 0) {
-                    // Tampilkan kategori utama jika ia terpilih, ATAU ada anak (sub-kategorinya) yang terpilih
                     cats = cats.filter(c => {
                         let isMainSelected = this.localSettings.selectedCategories.includes(c.id);
                         let isAnyChildSelected = c.children && c.children.some(child => this.localSettings.selectedCategories.includes(child.id));
@@ -952,7 +956,6 @@
                 
                 let subs = mainNode.children;
                 if (this.localSettings.selectedCategories && this.localSettings.selectedCategories.length > 0) {
-                    // Jika Kategori Utama tidak dicentang (hanya sub-nya), maka tampilkan hanya sub yg dicentang
                     let isMainSelected = this.localSettings.selectedCategories.includes(mainNode.id);
                     if (!isMainSelected) {
                         subs = subs.filter(sub => this.localSettings.selectedCategories.includes(sub.id));
@@ -1023,18 +1026,13 @@
         },
         
         methods: {
-
-            // --- 🌟 HELPER FOTO PINTAR UNTUK CDS 🌟 ---
             getCdsImage(item, parentProduct = null) {
                 if (!item) return '';
+                if (item.imageUrl && item.imageUrl.trim() !== '') return item.imageUrl; 
+                if (item.images && Array.isArray(item.images) && item.images.length > 0 && item.images[0].url) return item.images[0].url; 
+                if (item.imageBase64 && item.imageBase64.trim() !== '') return item.imageBase64; 
+                if (item.image || item.gambar) return item.image || item.gambar; 
 
-                // Cek langsung pada item (bisa produk utama atau varian)
-                if (item.imageUrl && item.imageUrl.trim() !== '') return item.imageUrl; // Cloudflare URL
-                if (item.images && Array.isArray(item.images) && item.images.length > 0 && item.images[0].url) return item.images[0].url; // Array Images
-                if (item.imageBase64 && item.imageBase64.trim() !== '') return item.imageBase64; // Base64 Lama
-                if (item.image || item.gambar) return item.image || item.gambar; // Format Lainnya
-
-                // Jika varian tidak punya foto, coba pinjam dari produk induknya
                 if (parentProduct) {
                     if (parentProduct.imageUrl && parentProduct.imageUrl.trim() !== '') return parentProduct.imageUrl;
                     if (parentProduct.images && Array.isArray(parentProduct.images) && parentProduct.images.length > 0 && parentProduct.images[0].url) return parentProduct.images[0].url;
