@@ -1461,31 +1461,46 @@ body.sidebar-open {
                     </div>
 
                     <!-- 2. JIKA PILIH GAMBAR -->
-                    <div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-                        <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
-                        <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://i.postimg.cc/gambar-promo.jpg&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
-                        <div class="small text-muted mt-2">
-                            <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Upload foto Anda ke <a href="https://postimages.org/" target="_blank" class="text-decoration-none">Postimages.org</a> atau <a href="https://imgur.com/" target="_blank" class="text-decoration-none">Imgur.com</a> secara gratis, lalu salin <i>Direct Link</i>-nya ke sini.
-                        </div>
-                    </div>
+<div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+    <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
+    
+    <!-- TAMPILAN BARU: Input Text + Tombol Upload -->
+    <div class="input-group mb-2">
+        <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
+    </div>
+    
+    <!-- TOMBOL UPLOAD GAMBAR -->
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-primary fw-bold" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
+            <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            <i v-else class="bi bi-cloud-arrow-up me-1"></i> 
+            {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Gambar dari Galeri' }}
+        </button>
+        <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileUploadCDS($event, 'imageUrls')" multiple>
+    </div>
 
-                    <!-- 3. JIKA PILIH VIDEO MP4 -->
-                    <div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-                        <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
-                        <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://domain-anda.com/promo.mp4">
-                        <div class="small text-muted mt-1">Hanya gunakan ini jika Anda memiliki server/hosting sendiri untuk menyimpan file MP4.</div>
-                    </div>
-                    
-                    <div class="mb-3 pt-3 border-top">
-                        <label class="form-label small fw-bold">
-                        <i class="bi bi-chat-text me-1"></i> Teks Berjalan (Running Text)
-                        </label>
-                        <input type="text" class="form-control border-primary border-opacity-25" 
-                         v-model="cdsSettings.welcomeText" 
-                         placeholder="Contoh: Selamat datang di Quinsah Collection! Nikmati promo menarik...">
-                        <div class="small text-muted mt-2">
-                        <i class="bi bi-info-circle-fill text-primary me-1"></i>Teks ini akan tampil berjalan (marquee) di bagian bawah layar pelanggan.
-                    </div>
+    <div class="small text-muted mt-2">
+        <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa langsung <b>Upload</b> gambar dari perangkat Anda, atau paste link secara manual. (Jika mode slide, URL upload baru akan otomatis ditambahkan ke baris baru).
+    </div>
+</div>
+
+<!-- 3. JIKA PILIH VIDEO MP4 -->
+<div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+    <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
+    
+    <!-- TAMPILAN BARU: Input Text + Tombol Upload -->
+    <div class="input-group mb-2">
+        <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
+        <button class="btn btn-outline-primary fw-bold" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
+             <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+             <i v-else class="bi bi-cloud-arrow-up"></i> Upload MP4
+        </button>
+    </div>
+    <!-- Input File Tersembunyi -->
+    <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileUploadCDS($event, 'videoUrl')">
+
+    <div class="small text-muted mt-1">Anda sekarang dapat mengunggah video pendek (MP4) langsung ke penyimpanan Cloudflare R2 Anda.</div>
+</div>
                     </div>
                 </div>
             </div>
@@ -10401,7 +10416,7 @@ body.sidebar-open {
             previewData: []     // Kosongkan
         },
 
-        // Di bagian data() { return { ... } }
+        isUploadingCDS: false,
         cdsSettings: { 
             mediaType: 'video', 
             videoUrl: '', 
@@ -12736,6 +12751,80 @@ financeAPList() {
     
     event.target.value = '';
 },
+
+    // 1. Fungsi untuk Memicu Klik pada Input File Tersembunyi
+    triggerUpload(targetModel) {
+        if (targetModel === 'imageUrls') {
+            this.$refs.fileInputCDSImage.click();
+        } else if (targetModel === 'videoUrl') {
+            this.$refs.fileInputCDSVideo.click();
+        }
+    },
+
+    // 2. Fungsi Utama untuk Menangani File yang Dipilih
+    async handleFileUploadCDS(event, targetModel) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        this.isUploadingCDS = true;
+
+        try {
+            // Karena input gambar bisa multiple (untuk slider), kita loop file-nya
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Validasi Ukuran File (Opsional, sangat disarankan untuk video)
+                const maxSizeMB = targetModel === 'videoUrl' ? 25 : 5; // Video max 25MB, Gambar 5MB
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    alert(`Maaf, ukuran file ${file.name} terlalu besar. Maksimal ${maxSizeMB}MB.`);
+                    continue; // Skip file ini jika kebesaran
+                }
+
+                // Siapkan FormData untuk dikirim ke Worker Cloudflare
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // --- GANTI URL INI DENGAN URL WORKER CLOUDFLARE R2 ANDA ---
+                const uploadUrl = 'https://pub-b949a72aedd84251a746ad6faa1b2db6.r2.dev'; 
+
+                // Lakukan Request Upload
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Gagal mengunggah file ke server.');
+
+                const result = await response.json();
+                
+                // Jika upload berhasil dan mengembalikan URL
+                if (result && result.url) {
+                    if (targetModel === 'imageUrls') {
+                        // Jika gambar, tambahkan ke textarea (baris baru jika sudah ada isinya)
+                        let currentUrls = this.cdsSettings.imageUrls || '';
+                        if (currentUrls.trim() !== '') {
+                            currentUrls += '\n'; // Tambah enter
+                        }
+                        currentUrls += result.url;
+                        this.cdsSettings.imageUrls = currentUrls;
+                    } else if (targetModel === 'videoUrl') {
+                        // Jika video, langsung timpa URL-nya
+                        this.cdsSettings.videoUrl = result.url;
+                    }
+                }
+            }
+            
+            alert("File berhasil diunggah dan tautan telah ditambahkan!");
+
+        } catch (error) {
+            console.error("Error uploading CDS media:", error);
+            alert("Terjadi kesalahan saat mengunggah file: " + error.message);
+        } finally {
+            this.isUploadingCDS = false;
+            // Reset input file agar bisa pilih file yang sama lagi jika perlu
+            event.target.value = ''; 
+        }
+    },
    
     async lupaPassword() {
     // 1. Munculkan popup untuk meminta alamat email
