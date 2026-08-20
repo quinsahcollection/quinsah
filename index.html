@@ -12721,6 +12721,31 @@ financeAPList() {
         }
     },
 
+    // 1. Mengambil Data Galeri (Tanpa perlu toggle manual lagi)
+    async fetchServerGallery() {
+        this.isLoadingGallery = true;
+        try {
+            const hostname = window.location.hostname;
+            const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
+            
+            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?action=list&companyId=${tenantId}`;
+            
+            const response = await fetch(workerUrl, {
+                method: "GET",
+                headers: { "Authorization": "Bearer YarchQueenPOS12" }
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                this.serverMediaList = result.files;
+            }
+        } catch (error) {
+            console.error("Gagal memuat galeri:", error);
+        } finally {
+            this.isLoadingGallery = false;
+        }
+    },
+    
     // 2. Fitur Zoom Foto / Putar Video
     openMediaPreview(url, type) {
         this.previewMediaUrl = url;
