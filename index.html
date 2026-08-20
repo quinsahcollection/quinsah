@@ -1422,7 +1422,6 @@ body.sidebar-open {
             <p class="text-muted small mb-0">Atur tampilan layar tablet yang menghadap ke pelanggan saat di meja kasir.</p>
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-            <!-- Tombol untuk membuka link CDS di tablet -->
             <a :href="'/cds.html?company=' + (getMyCompanyId ? getMyCompanyId() : '') + '&outlet=' + (appSettings.selectedReceiptOutletId || 'global')" target="_blank" class="btn btn-outline-danger fw-bold rounded-pill text-nowrap">
                 <i class="bi bi-box-arrow-up-right me-1"></i> Buka Layar CDS
             </a>
@@ -1444,7 +1443,7 @@ body.sidebar-open {
                         <label class="form-label small fw-bold">Pilih Tipe Tampilan</label>
                         <select class="form-select border-primary border-opacity-25 shadow-sm" v-model="cdsSettings.mediaType">
                             <option value="youtube">Video YouTube (Paling Mudah & Gratis)</option>
-                            <option value="catalog">Katalog Menu / Produk Interaktif</option> <!-- 🌟 OPSI BARU DITAMBAHKAN -->
+                            <option value="catalog">Katalog Menu / Produk Interaktif</option>
                             <option value="image_single">1 Gambar Statis (Promo Tetap)</option>
                             <option value="image_slider">Gambar Berjalan (Slide Promo)</option>
                             <option value="video">Link Video MP4 (Lanjutan / Hosting Sendiri)</option>
@@ -1461,47 +1460,49 @@ body.sidebar-open {
                     </div>
 
                     <!-- 2. JIKA PILIH GAMBAR -->
-<div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-    <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
-    
-    <!-- TAMPILAN BARU: Input Text + Tombol Upload -->
-    <div class="input-group mb-2">
-        <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
-    </div>
-    
-    <!-- TOMBOL UPLOAD GAMBAR -->
-    <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-sm btn-outline-primary fw-bold" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
-            <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-            <i v-else class="bi bi-cloud-arrow-up me-1"></i> 
-            {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Gambar dari Galeri' }}
-        </button>
-        <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileUploadCDS($event, 'imageUrls')" multiple>
-    </div>
-
-    <div class="small text-muted mt-2">
-        <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa langsung <b>Upload</b> gambar dari perangkat Anda, atau paste link secara manual. (Jika mode slide, URL upload baru akan otomatis ditambahkan ke baris baru).
-    </div>
-</div>
-
-<!-- 3. JIKA PILIH VIDEO MP4 -->
-<div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-    <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
-    
-    <!-- TAMPILAN BARU: Input Text + Tombol Upload -->
-    <div class="input-group mb-2">
-        <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
-        <button class="btn btn-outline-primary fw-bold" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
-             <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-             <i v-else class="bi bi-cloud-arrow-up"></i> Upload MP4
-        </button>
-    </div>
-    <!-- Input File Tersembunyi -->
-    <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileUploadCDS($event, 'videoUrl')">
-
-    <div class="small text-muted mt-1">Anda sekarang dapat mengunggah video pendek (MP4) langsung ke penyimpanan Cloudflare R2 Anda.</div>
-</div>
+                    <div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+                        <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
+                        <div class="input-group mb-2">
+                            <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-primary fw-bold" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
+                                <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                <i v-else class="bi bi-cloud-arrow-up me-1"></i> 
+                                {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Gambar dari Galeri' }}
+                            </button>
+                            <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileUploadCDS($event, 'imageUrls')" multiple>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa langsung <b>Upload</b> gambar dari perangkat Anda, atau paste link secara manual.
+                        </div>
                     </div>
+
+                    <!-- 3. JIKA PILIH VIDEO MP4 -->
+                    <div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+                        <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
+                            <button class="btn btn-outline-primary fw-bold" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
+                                 <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                 <i v-else class="bi bi-cloud-arrow-up"></i> Upload MP4
+                            </button>
+                        </div>
+                        <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileUploadCDS($event, 'videoUrl')">
+                        <div class="small text-muted mt-1">Anda sekarang dapat mengunggah video pendek (MP4) langsung ke R2.</div>
+                    </div>
+
+                    <!-- 4. TEKS BERJALAN (Dikembalikan karena sempat terhapus) -->
+                    <div class="mb-3 pt-3 border-top">
+                        <label class="form-label small fw-bold">
+                            <i class="bi bi-chat-text me-1"></i> Teks Berjalan (Running Text)
+                        </label>
+                        <input type="text" class="form-control border-primary border-opacity-25" v-model="cdsSettings.welcomeText" placeholder="Contoh: Selamat datang di Toko Kami! Terima kasih telah berbelanja.">
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-info-circle-fill text-primary me-1"></i>Teks ini akan tampil berjalan (marquee) di bagian bawah layar pelanggan.
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -1515,7 +1516,6 @@ body.sidebar-open {
                         <li>Siapkan Tablet/iPad. Hubungkan ke WiFi toko Anda.</li>
                         <li>Buka Google Chrome/Safari di Tablet tersebut.</li>
                         <li>Ketik/Salin URL komplit ini di browser Tablet Anda: <br>
-                            <!-- PERBAIKAN URL: Sekarang menyertakan Company & Outlet dan text-break agar tidak meluber -->
                             <code class="bg-white px-2 py-2 rounded fw-bold text-danger border mt-2 mb-2 d-block text-break user-select-all" style="font-size: 0.85rem;">
                                 {{ getSubdomainName() }}.queenpos.id/cds.html?company={{ getMyCompanyId ? getMyCompanyId() : '' }}&outlet={{ appSettings.selectedReceiptOutletId || 'global' }}
                             </code>
