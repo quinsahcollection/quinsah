@@ -1460,86 +1460,91 @@ body.sidebar-open {
                     </div>
 
                     <!-- 2. JIKA PILIH GAMBAR -->
-                    <div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-                        <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
-                        <div class="input-group mb-2">
-                            <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
-                        </div>
-                        
-                        <!-- Input File Tersembunyi -->
-                        <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileSelectCDS($event, 'imageUrls')">
+<div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+    <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
+    <div class="input-group mb-2">
+        <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
+    </div>
+    
+    <!-- Input File Tersembunyi (Tetap pertahankan attribute 'multiple') -->
+    <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileSelectCDS($event, 'imageUrls')" multiple>
 
-                        <!-- Tombol Pilih Gambar (Sembunyi jika sedang ada preview) -->
-                        <div class="d-flex align-items-center gap-2 mt-2" v-if="!(cdsPreviewUrl && cdsTargetModel === 'imageUrls')">
-                            <button class="btn btn-sm btn-outline-primary fw-bold" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
-                                <i class="bi bi-folder2-open me-1"></i> Pilih Gambar dari Galeri
-                            </button>
-                        </div>
+    <!-- Tombol Pilih Gambar (Sembunyi jika sedang ada preview) -->
+    <div class="d-flex align-items-center gap-2 mt-2" v-if="!(cdsPreviewUrls.length > 0 && cdsTargetModel === 'imageUrls')">
+        <button class="btn btn-sm btn-outline-primary fw-bold" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
+            <i class="bi bi-images me-1"></i> Pilih Gambar dari Galeri
+        </button>
+    </div>
 
-                        <!-- KOTAK PREVIEW GAMBAR -->
-                        <div v-if="cdsPreviewUrl && cdsTargetModel === 'imageUrls'" class="border rounded-3 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-dark fs-6"><i class="bi bi-eye me-1 text-primary"></i> Pratinjau Gambar</span>
-                                <small class="text-muted text-truncate" style="max-width: 150px;">{{ pendingCdsFile ? pendingCdsFile.name : '' }}</small>
-                            </div>
-                            <div class="text-center bg-dark rounded p-2 mb-3">
-                                <img :src="cdsPreviewUrl" class="img-fluid rounded" style="max-height: 200px; object-fit: contain;">
-                            </div>
-                            <div class="d-flex gap-2 justify-content-end">
-                                <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
-                                    <i class="bi bi-x-lg me-1"></i> Batal
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
-                                    <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                    <i v-else class="bi bi-cloud-arrow-up me-1"></i>
-                                    {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Sekarang' }}
-                                </button>
-                            </div>
-                        </div>
+    <!-- KOTAK PREVIEW GAMBAR (Multi-image) -->
+    <div v-if="cdsPreviewUrls.length > 0 && cdsTargetModel === 'imageUrls'" class="border rounded-3 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold text-dark fs-6"><i class="bi bi-images me-1 text-primary"></i> Pratinjau {{ pendingCdsFiles.length }} Gambar Terpilih</span>
+        </div>
+        
+        <!-- Grid Preview Foto Berjejer -->
+        <div class="d-flex flex-wrap gap-2 bg-dark rounded p-3 mb-3 justify-content-center" style="max-height: 250px; overflow-y: auto;">
+            <div v-for="(url, index) in cdsPreviewUrls" :key="index" class="position-relative">
+                <img :src="url" class="rounded border border-secondary shadow-sm" style="height: 100px; object-fit: contain; background: #000;">
+                <span class="position-absolute top-0 start-0 badge bg-primary m-1">{{ index + 1 }}</span>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
+                <i class="bi bi-x-lg me-1"></i> Batal
+            </button>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
+                <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                <i v-else class="bi bi-cloud-arrow-up me-1"></i>
+                {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Semua' }}
+            </button>
+        </div>
+    </div>
 
-                        <div class="small text-muted mt-3">
-                            <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa langsung <b>Pilih</b> gambar dari perangkat Anda, atau paste link secara manual.
-                        </div>
-                    </div>
+    <div class="small text-muted mt-3">
+        <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa langsung <b>Pilih beberapa gambar sekaligus</b> dari perangkat Anda, atau paste link secara manual.
+    </div>
+</div>
 
-                    <!-- 3. JIKA PILIH VIDEO MP4 -->
-                    <div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
-                        <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
-                            
-                            <!-- Tombol Pilih Video -->
-                            <button v-if="!(cdsPreviewUrl && cdsTargetModel === 'videoUrl')" class="btn btn-outline-primary fw-bold" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
-                                <i class="bi bi-folder2-open"></i> Pilih MP4
-                            </button>
-                        </div>
-                        
-                        <!-- Input File Tersembunyi -->
-                        <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileSelectCDS($event, 'videoUrl')">
+<!-- 3. JIKA PILIH VIDEO MP4 -->
+<div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-3 border fade-in">
+    <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
+    <div class="input-group mb-2">
+        <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
+        
+        <!-- Tombol Pilih Video -->
+        <button v-if="!(cdsPreviewUrls.length > 0 && cdsTargetModel === 'videoUrl')" class="btn btn-outline-primary fw-bold" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
+            <i class="bi bi-folder2-open"></i> Pilih MP4
+        </button>
+    </div>
+    
+    <!-- Input File Tersembunyi -->
+    <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileSelectCDS($event, 'videoUrl')">
 
-                        <!-- KOTAK PREVIEW VIDEO -->
-                        <div v-if="cdsPreviewUrl && cdsTargetModel === 'videoUrl'" class="border rounded-3 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-dark fs-6"><i class="bi bi-eye me-1 text-primary"></i> Pratinjau Video</span>
-                                <small class="text-muted text-truncate" style="max-width: 150px;">{{ pendingCdsFile ? pendingCdsFile.name : '' }}</small>
-                            </div>
-                            <div class="text-center bg-dark rounded p-2 mb-3">
-                                <video :src="cdsPreviewUrl" controls class="w-100 rounded" style="max-height: 200px;"></video>
-                            </div>
-                            <div class="d-flex gap-2 justify-content-end">
-                                <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
-                                    <i class="bi bi-x-lg me-1"></i> Batal
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
-                                    <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                    <i v-else class="bi bi-cloud-arrow-up me-1"></i>
-                                    {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Sekarang' }}
-                                </button>
-                            </div>
-                        </div>
+    <!-- KOTAK PREVIEW VIDEO -->
+    <div v-if="cdsPreviewUrls.length > 0 && cdsTargetModel === 'videoUrl'" class="border rounded-3 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold text-dark fs-6"><i class="bi bi-eye me-1 text-primary"></i> Pratinjau Video</span>
+            <small class="text-muted text-truncate" style="max-width: 150px;">{{ pendingCdsFiles[0] ? pendingCdsFiles[0].name : '' }}</small>
+        </div>
+        <div class="text-center bg-dark rounded p-2 mb-3">
+            <video :src="cdsPreviewUrls[0]" controls class="w-100 rounded" style="max-height: 200px;"></video>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
+                <i class="bi bi-x-lg me-1"></i> Batal
+            </button>
+            <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
+                <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                <i v-else class="bi bi-cloud-arrow-up me-1"></i>
+                {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Sekarang' }}
+            </button>
+        </div>
+    </div>
 
-                        <div class="small text-muted mt-2">Anda sekarang dapat mengunggah video pendek (MP4) maksimal 25MB langsung ke R2.</div>
-                    </div>
+    <div class="small text-muted mt-2">Anda sekarang dapat mengunggah video pendek (MP4) maksimal 25MB langsung ke R2.</div>
+</div>
 
                     <!-- 4. TEKS BERJALAN (Running Text) -->
                     <div class="mb-3 pt-3 border-top">
@@ -10465,9 +10470,9 @@ body.sidebar-open {
             previewData: []     // Kosongkan
         },
 
-        pendingCdsFile: null,      // Menyimpan file mentah sebelum diupload
-        cdsPreviewUrl: null,       // URL preview sementara (blob)
-        cdsPreviewType: 'image',   // Jenis file ('image' / 'video')
+        pendingCdsFiles: [],      // UBAH JADI ARRAY (tambah 's' di belakang)
+        cdsPreviewUrls: [],       // UBAH JADI ARRAY
+        cdsPreviewType: 'image',  
         cdsTargetModel: 'imageUrls',        
         isUploadingCDS: false,
         cdsSettings: { 
@@ -12878,61 +12883,70 @@ async handleFileUploadCDS(event, targetModel) {
     }
 },
 
-    // 1. Pilih File & Tampilkan Preview Lokal (Tanpa Langsung Upload)
+    // 1. Pilih File & Tampilkan Preview Lokal (Support Multiple)
     handleFileSelectCDS(event, targetModel) {
-        const file = event.target.files[0];
-        if (!file) return;
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
 
-        const maxSizeMB = targetModel === 'videoUrl' ? 25 : 5;
-        if (file.size > maxSizeMB * 1024 * 1024) {
-            alert(`Maaf, ukuran file ${file.name} terlalu besar. Maksimal ${maxSizeMB}MB.`);
-            event.target.value = '';
-            return;
-        }
+        // Bersihkan preview lama jika ada
+        this.cancelCdsPreview();
 
-        // Hapus URL blob lama jika ada
-        if (this.cdsPreviewUrl) {
-            URL.revokeObjectURL(this.cdsPreviewUrl);
-        }
-
-        // Buat URL Preview lokal dari perangkat
-        this.pendingCdsFile = file;
         this.cdsTargetModel = targetModel;
-        this.cdsPreviewType = file.type.startsWith('video/') ? 'video' : 'image';
-        this.cdsPreviewUrl = URL.createObjectURL(file);
+        const isVideo = targetModel === 'videoUrl';
+        this.cdsPreviewType = isVideo ? 'video' : 'image';
+
+        // Jika video, batasi hanya 1 file. Jika gambar, biarkan semuanya.
+        const filesToProcess = isVideo ? [files[0]] : files;
+
+        for (let file of filesToProcess) {
+            const maxSizeMB = isVideo ? 25 : 5;
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                alert(`Maaf, ukuran file ${file.name} terlalu besar. Maksimal ${maxSizeMB}MB.`);
+                continue; // Skip file yang kebesaran
+            }
+
+            // Simpan ke array
+            this.pendingCdsFiles.push(file);
+            this.cdsPreviewUrls.push(URL.createObjectURL(file));
+        }
 
         event.target.value = '';
     },
 
     // 2. Batalkan Preview / Batal Upload
     cancelCdsPreview() {
-        if (this.cdsPreviewUrl) {
-            URL.revokeObjectURL(this.cdsPreviewUrl);
+        if (this.cdsPreviewUrls.length > 0) {
+            this.cdsPreviewUrls.forEach(url => URL.revokeObjectURL(url));
         }
-        this.pendingCdsFile = null;
-        this.cdsPreviewUrl = null;
+        this.pendingCdsFiles = [];
+        this.cdsPreviewUrls = [];
     },
 
-    // 3. Eksekusi Upload ke Cloudflare R2 setelah Dikonfirmasi
+    // 3. Eksekusi Upload ke Cloudflare R2
     async confirmUploadCDS() {
-        if (!this.pendingCdsFile) return;
+        if (!this.pendingCdsFiles.length) return;
 
         this.isUploadingCDS = true;
+        let uploadedUrls = [];
 
         try {
-            // Panggil helper uploadFileToR2
-            const fileUrl = await this.uploadFileToR2(this.pendingCdsFile);
+            // Loop dan upload semua file yang ada di antrean
+            for (let file of this.pendingCdsFiles) {
+                const fileUrl = await this.uploadFileToR2(file);
+                if (fileUrl) uploadedUrls.push(fileUrl);
+            }
 
-            if (fileUrl) {
+            if (uploadedUrls.length > 0) {
                 if (this.cdsTargetModel === 'imageUrls') {
+                    // Gabungkan URL baru dengan URL yang mungkin sudah ada di textarea
                     let currentUrls = this.cdsSettings.imageUrls || '';
                     if (currentUrls.trim() !== '') {
                         currentUrls += '\n';
                     }
-                    currentUrls += fileUrl;
+                    currentUrls += uploadedUrls.join('\n'); // Gabungkan array dengan enter
                     this.cdsSettings.imageUrls = currentUrls;
                 } else if (this.cdsTargetModel === 'videoUrl') {
-                    this.cdsSettings.videoUrl = fileUrl;
+                    this.cdsSettings.videoUrl = uploadedUrls[0];
                 }
 
                 // Bersihkan preview setelah sukses
