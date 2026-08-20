@@ -1611,57 +1611,6 @@ body.sidebar-open {
         </div>
     </div>
 </div>
-
-    <!-- ========================================== -->
-    <!-- MODAL 1: TUTORIAL CARA PASANG (POP-UP)     -->
-    <!-- ========================================== -->
-    <div v-if="showTutorialModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1050;">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-header bg-primary text-white border-0 py-3">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-tablet-landscape me-2"></i>Cara Pasang di Tablet</h5>
-                    <button type="button" class="btn-close btn-close-white" @click="showTutorialModal = false"></button>
-                </div>
-                <div class="modal-body p-4 bg-light">
-                    <ol class="text-dark mb-0 ps-3 fw-medium" style="line-height: 2;">
-                        <li>Siapkan Tablet/iPad & hubungkan ke WiFi.</li>
-                        <li>Buka Google Chrome/Safari di Tablet tersebut.</li>
-                        <li>Ketik/Salin URL khusus ini di browser Tablet Anda: <br>
-                            <div class="bg-white px-3 py-2 rounded-3 shadow-sm border border-danger border-opacity-50 mt-2 mb-2 user-select-all text-danger fw-bold font-monospace" style="font-size: 0.9rem; word-break: break-all;">
-                                {{ getSubdomainName() }}.queenpos.id/cds.html?company={{ getMyCompanyId ? getMyCompanyId() : '' }}&outlet={{ appSettings.selectedReceiptOutletId || 'global' }}
-                            </div>
-                        </li>
-                        <li>Setelah halaman terbuka, jadikan <b>Full Screen</b> agar terlihat rapi.</li>
-                        <li>Selesai! Tablet otomatis akan terhubung dengan Kasir Anda secara nirkabel (Real-time).</li>
-                    </ol>
-                </div>
-                <div class="modal-footer bg-white border-0">
-                    <button type="button" class="btn btn-secondary fw-bold rounded-pill px-4" @click="showTutorialModal = false">Tutup Panduan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!-- MODAL 2: ZOOM FOTO / PLAY VIDEO (POP-UP)   -->
-    <!-- ========================================== -->
-    <div v-if="previewMediaUrl" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.85); z-index: 1060;" @click.self="closeMediaPreview">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content bg-transparent border-0 shadow-none">
-                <div class="modal-header border-0 d-flex justify-content-end p-2 position-absolute w-100" style="z-index: 2;">
-                    <button type="button" class="btn btn-dark rounded-circle shadow border border-secondary" @click="closeMediaPreview"><i class="bi bi-x-lg"></i></button>
-                </div>
-                <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center" style="min-height: 300px;">
-                    <!-- Zoom Gambar -->
-                    <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; object-fit: contain; background-color: #fff;">
-                    <!-- Play Video -->
-                    <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="w-100 rounded shadow-lg" style="max-height: 85vh; background-color: #000;"></video>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
             
             <div v-if="currentView === 'purchase'" class="dashboard-card">
     
@@ -12750,31 +12699,6 @@ financeAPList() {
         this.showServerGallery = true; // Munculkan panel kanan
         this.isLoadingGallery = true;
         
-        try {
-            const hostname = window.location.hostname;
-            const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
-            
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?action=list&companyId=${tenantId}`;
-            
-            const response = await fetch(workerUrl, {
-                method: "GET",
-                headers: { "Authorization": "Bearer YarchQueenPOS12" }
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                this.serverMediaList = result.files;
-            }
-        } catch (error) {
-            console.error("Gagal memuat galeri:", error);
-        } finally {
-            this.isLoadingGallery = false;
-        }
-    },
-            
-    // 1. Mengambil Data Galeri (Tanpa perlu toggle manual lagi)
-    async fetchServerGallery() {
-        this.isLoadingGallery = true;
         try {
             const hostname = window.location.hostname;
             const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
