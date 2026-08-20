@@ -252,7 +252,11 @@
             <span class="text-muted fst-italic" style="font-size: 0.85em;">{{ ereceiptData.dateStr ? ereceiptData.dateStr.split(' ')[0] : ereceiptData.date }}</span>
         </div>
         <div class="text-end text-success fw-bold" style="width: 40%; font-size: 0.95em;">
-            Rp {{ formatNumber(ereceiptData.firstPayment !== undefined ? ereceiptData.firstPayment : (ereceiptData.amountReceived - ereceiptData.paymentHistory.reduce((a, b) => a + Number(b.amount), 0))) }}
+            Rp {{ formatNumber(
+                ereceiptData.paymentMethod === 'SPLIT' && ereceiptData.splitPayments
+                ? ereceiptData.splitPayments.filter(p => !String(p.method).toUpperCase().includes('HUTANG')).reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0)
+                : (String(ereceiptData.paymentMethod).toUpperCase().includes('HUTANG') ? 0 : Number(ereceiptData.amountReceived || 0))
+            ) }}
         </div>
     </div>
 
@@ -469,19 +473,28 @@
                 return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.round(Number(num) || 0));
             },
             
-            // 🌟 FUNGSI BARU UNTUK MENGHITUNG TOTAL DIBAYAR (KECUALI HUTANG)
+            // 🌟 FUNGSI BARU UNTUK MENGHITUNG TOTAL DIBAYAR (AWAL + SEMUA CICILAN)
             totalDibayarReal() {
                 if (!this.ereceiptData) return 0;
                 
+                let totalAwal = 0;
                 // Jika pembayaran SPLIT, filter metode yang mengandung kata "HUTANG"
                 if (this.ereceiptData.splitPayments && this.ereceiptData.splitPayments.length > 0) {
-                    return this.ereceiptData.splitPayments
+                    totalAwal = this.ereceiptData.splitPayments
                         .filter(p => !String(p.method).toUpperCase().includes('HUTANG'))
                         .reduce((sum, p) => sum + Number(p.cashReceived || p.amount), 0);
+                } else {
+                    // Jika BUKAN SPLIT, pastikan bukan HUTANG
+                    totalAwal = String(this.ereceiptData.paymentMethod || '').toUpperCase().includes('HUTANG') ? 0 : Number(this.ereceiptData.amountReceived || 0);
                 }
-                
-                // Jika BUKAN SPLIT, pastikan bukan HUTANG
-                return String(this.ereceiptData.paymentMethod || '').toUpperCase().includes('HUTANG') ? 0 : Number(this.ereceiptData.amountReceived || 0);
+
+                // Tambahkan semua uang dari riwayat cicilan / pelunasan
+                let totalCicilan = 0;
+                if (this.ereceiptData.paymentHistory && this.ereceiptData.paymentHistory.length > 0) {
+                    totalCicilan = this.ereceiptData.paymentHistory.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+                }
+
+                return totalAwal + totalCicilan;
             },
 
             async fetchReceipt(invId) {
