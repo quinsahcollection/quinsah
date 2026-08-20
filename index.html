@@ -1411,23 +1411,19 @@ body.sidebar-open {
     </div>
     </div>
 
-<!-- ========================================== -->
+     <!-- ========================================== -->
 <!-- MENU: CUSTOMER DISPLAY SYSTEM (CDS)        -->
 <!-- ========================================== -->
-<div v-if="currentView === 'cds'" class="dashboard-card fade-in position-relative">
-    
-    <!-- Header Section -->
+<div v-if="currentView === 'cds'" class="dashboard-card fade-in">
+    <!-- Header Section (Responsif Mobile & PC) -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-end mb-4 border-bottom pb-3 gap-3">
         <div>
             <h4 class="fw-bold mb-1"><i class="bi bi-display text-primary me-2"></i>Pengaturan Layar Pelanggan</h4>
             <p class="text-muted small mb-0">Atur tampilan layar tablet yang menghadap ke pelanggan saat di meja kasir.</p>
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-            <button class="btn btn-outline-secondary fw-bold rounded-pill text-nowrap" @click="showTutorialModal = true">
-                <i class="bi bi-info-circle me-1"></i> Cara Pasang
-            </button>
             <a :href="'/cds.html?company=' + (getMyCompanyId ? getMyCompanyId() : '') + '&outlet=' + (appSettings.selectedReceiptOutletId || 'global')" target="_blank" class="btn btn-outline-danger fw-bold rounded-pill text-nowrap">
-                <i class="bi bi-box-arrow-up-right me-1"></i> Layar CDS
+                <i class="bi bi-box-arrow-up-right me-1"></i> Buka Layar CDS
             </a>
             <button class="btn btn-primary-custom fw-bold rounded-pill text-nowrap" @click="saveCDSSettings">
                 <i class="bi bi-save me-1"></i> Simpan Setelan
@@ -1435,12 +1431,9 @@ body.sidebar-open {
         </div>
     </div>
 
-    <div class="row transition-all justify-content-center">
-        <!-- ========================================== -->
-        <!-- KOLOM KIRI: PENGATURAN MEDIA PROMOSI       -->
-        <!-- ========================================== -->
-        <!-- Lebar kolom otomatis menyesuaikan apakah galeri terbuka atau tertutup -->
-        <div class="mb-4 transition-all" :class="showServerGallery ? 'col-md-6 col-lg-7' : 'col-md-10 col-lg-9'">
+    <div class="row">
+        <!-- Pengaturan Media Promosi -->
+        <div class="col-md-7 mb-4">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-bottom p-3">
                     <h6 class="fw-bold mb-0">Media Promosi (Layar Kiri)</h6>
@@ -1457,155 +1450,202 @@ body.sidebar-open {
                         </select>
                     </div>
 
-                    <!-- Input YouTube -->
+                    <!-- 1. JIKA PILIH YOUTUBE -->
                     <div v-if="cdsSettings.mediaType === 'youtube'" class="mb-3 p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25 fade-in">
                         <label class="form-label small fw-bold text-danger"><i class="bi bi-youtube me-1"></i>Link Video YouTube</label>
                         <input type="text" class="form-control" v-model="cdsSettings.youtubeUrl" placeholder="Contoh: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
                         <div class="small text-muted mt-2">
-                            <i class="bi bi-info-circle me-1"></i>Tinggal copy-paste link YouTube promosi Anda di sini. Video akan otomatis diputar berulang tanpa suara.
+                            <i class="bi bi-info-circle me-1"></i>Tinggal copy-paste link YouTube promosi Anda di sini. Video akan otomatis diputar berulang tanpa suara (mute).
                         </div>
                     </div>
 
-                    <!-- Input Gambar -->
+                    <!-- 2. JIKA PILIH GAMBAR -->
                     <div v-if="cdsSettings.mediaType === 'image_single' || cdsSettings.mediaType === 'image_slider'" class="mb-3 p-3 bg-light rounded-4 border fade-in">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-image me-1"></i>URL Link Gambar (JPG/PNG)</label>
-                        <textarea class="form-control mb-2" v-model="cdsSettings.imageUrls" rows="3" placeholder="Gunakan enter untuk baris baru jika mode Slide."></textarea>
+                        <div class="input-group mb-2">
+                            <textarea class="form-control" v-model="cdsSettings.imageUrls" rows="3" placeholder="Contoh: https://...&#10;Gunakan enter untuk baris baru jika mode Slide."></textarea>
+                        </div>
                         
+                        <!-- Input File Tersembunyi -->
                         <input type="file" ref="fileInputCDSImage" class="d-none" accept="image/jpeg, image/png, image/webp" @change="handleFileSelectCDS($event, 'imageUrls')" multiple>
-                        
-                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                            <button class="btn btn-sm btn-primary fw-bold px-3 rounded-pill shadow-sm" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
-                                <i class="bi bi-cloud-upload me-1"></i> Upload dari Perangkat
+
+                        <!-- Tombol Pilih Gambar & Buka Galeri -->
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2" v-if="!(cdsPreviewUrls.length > 0 && cdsTargetModel === 'imageUrls')">
+                            <button class="btn btn-sm btn-primary fw-bold px-3 rounded-pill" @click="triggerUpload('imageUrls')" :disabled="isUploadingCDS">
+                                <i class="bi bi-images me-1"></i> Upload Baru
                             </button>
-                            <!-- Tombol Pemanggil Galeri -->
-                            <button class="btn btn-sm btn-outline-info fw-bold px-3 rounded-pill" type="button" @click="openServerGallery" v-if="!showServerGallery" :disabled="isUploadingCDS">
-                                <i class="bi bi-cloud-check-fill me-1"></i> Pilih dari Galeri Cloud
+                            <button class="btn btn-sm btn-outline-info fw-bold px-3 rounded-pill" @click="toggleServerGallery" type="button" :disabled="isUploadingCDS">
+                                <i class="bi bi-cloud-check-fill me-1"></i> Pilih dari Galeri
                             </button>
+                        </div>
+
+                        <!-- KOTAK PREVIEW GAMBAR (Multi-image) -->
+                        <div v-if="cdsPreviewUrls.length > 0 && cdsTargetModel === 'imageUrls'" class="border rounded-4 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="fw-bold text-dark fs-6"><i class="bi bi-images me-1 text-primary"></i> Pratinjau {{ pendingCdsFiles.length }} Gambar Terpilih</span>
+                            </div>
+                            
+                            <!-- Grid Preview Foto Berjejer -->
+                            <div class="d-flex flex-wrap gap-2 bg-dark rounded p-3 mb-3 justify-content-center" style="max-height: 250px; overflow-y: auto;">
+                                <div v-for="(url, index) in cdsPreviewUrls" :key="index" class="position-relative">
+                                    <img :src="url" class="rounded border border-secondary shadow-sm" style="height: 100px; object-fit: contain; background: #000;">
+                                    <span class="position-absolute top-0 start-0 badge bg-primary m-1">{{ index + 1 }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
+                                    <i class="bi bi-x-lg me-1"></i> Batal
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
+                                    <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    <i v-else class="bi bi-cloud-arrow-up me-1"></i>
+                                    {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Semua' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="small text-muted mt-3">
+                            <i class="bi bi-lightbulb text-warning me-1"></i><b>Tips:</b> Anda bisa mengunggah banyak gambar sekaligus atau mengambil file lama dari <b>Galeri</b>.
                         </div>
                     </div>
 
-                    <!-- Input Video MP4 -->
+                    <!-- 3. JIKA PILIH VIDEO MP4 -->
                     <div v-if="cdsSettings.mediaType === 'video'" class="mb-3 p-3 bg-light rounded-4 border fade-in">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-film me-1"></i>URL Link Video Promosi (MP4)</label>
-                        <input type="text" class="form-control mb-2" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
                         
-                        <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileSelectCDS($event, 'videoUrl')">
-                        
-                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                            <button class="btn btn-sm btn-primary fw-bold px-3 rounded-pill shadow-sm" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS">
-                                <i class="bi bi-cloud-upload me-1"></i> Upload Video Baru
-                            </button>
-                            <!-- Tombol Pemanggil Galeri -->
-                            <button class="btn btn-sm btn-outline-info fw-bold px-3 rounded-pill" type="button" @click="openServerGallery" v-if="!showServerGallery" :disabled="isUploadingCDS">
-                                <i class="bi bi-cloud-check-fill me-1"></i> Pilih dari Galeri Cloud
-                            </button>
+                        <!-- Input Group Responsif -->
+                        <div class="d-flex flex-column flex-sm-row gap-2 mb-2">
+                            <input type="text" class="form-control" v-model="cdsSettings.videoUrl" placeholder="Contoh: https://...">
+                            
+                            <div class="d-flex gap-1" v-if="!(cdsPreviewUrls.length > 0 && cdsTargetModel === 'videoUrl')">
+                                <button class="btn btn-primary fw-bold text-nowrap" type="button" @click="triggerUpload('videoUrl')" :disabled="isUploadingCDS" title="Upload Video Baru">
+                                    <i class="bi bi-cloud-upload"></i>
+                                </button>
+                                <button class="btn btn-outline-info fw-bold text-nowrap" type="button" @click="toggleServerGallery" :disabled="isUploadingCDS" title="Pilih dari Galeri">
+                                    <i class="bi bi-collection-play-fill"></i> Galeri
+                                </button>
+                            </div>
                         </div>
-                        <div class="small text-muted mt-2 fst-italic">Maksimal file 25MB untuk MP4.</div>
+                        
+                        <!-- Input File Tersembunyi -->
+                        <input type="file" ref="fileInputCDSVideo" class="d-none" accept="video/mp4" @change="handleFileSelectCDS($event, 'videoUrl')">
+
+                        <!-- KOTAK PREVIEW VIDEO -->
+                        <div v-if="cdsPreviewUrls.length > 0 && cdsTargetModel === 'videoUrl'" class="border rounded-4 p-3 bg-white mt-3 shadow-sm border-primary fade-in">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark fs-6"><i class="bi bi-eye me-1 text-primary"></i> Pratinjau Video</span>
+                                <small class="text-muted text-truncate" style="max-width: 120px;">{{ pendingCdsFiles[0] ? pendingCdsFiles[0].name : '' }}</small>
+                            </div>
+                            <div class="text-center bg-dark rounded p-2 mb-3">
+                                <video :src="cdsPreviewUrls[0]" controls class="w-100 rounded" style="max-height: 200px;"></video>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold border" @click="cancelCdsPreview" :disabled="isUploadingCDS">
+                                    <i class="bi bi-x-lg me-1"></i> Batal
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" @click="confirmUploadCDS" :disabled="isUploadingCDS">
+                                    <span v-if="isUploadingCDS" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    <i v-else class="bi bi-cloud-arrow-up me-1"></i>
+                                    {{ isUploadingCDS ? 'Mengunggah...' : 'Upload Sekarang' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="small text-muted mt-2">Maksimal 25MB untuk MP4.</div>
                     </div>
 
-                    <!-- Teks Berjalan -->
-                    <div class="mb-3 pt-3 border-top">
-                        <label class="form-label small fw-bold"><i class="bi bi-chat-text me-1"></i> Teks Berjalan (Running Text)</label>
-                        <input type="text" class="form-control border-primary border-opacity-25" v-model="cdsSettings.welcomeText" placeholder="Contoh: Selamat datang di Toko Kami!">
+                    <!-- ========================================== -->
+                    <!-- KOTAK GALERI SERVER CLOUD -->
+                    <!-- ========================================== -->
+                    <div v-if="showServerGallery" class="mb-4 p-3 bg-info bg-opacity-10 rounded-4 border border-info border-opacity-50 shadow-sm fade-in">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-info border-opacity-25 pb-2">
+                            <span class="fw-bold text-info-emphasis fs-6">
+                                <i class="bi bi-cloud-check-fill me-2"></i>Galeri Media Cloud
+                            </span>
+                            <button type="button" class="btn-close" @click="showServerGallery = false" aria-label="Close"></button>
+                        </div>
+
+                        <!-- Tampilan Loading -->
+                        <div v-if="isLoadingGallery" class="text-center py-4 text-muted">
+                            <div class="spinner-border text-info mb-2" role="status"></div>
+                            <p class="small mb-0">Memuat data dari server...</p>
+                        </div>
+
+                        <!-- Pesan Kosong -->
+                        <div v-else-if="serverMediaList.length === 0" class="text-center py-4 text-muted">
+                            <i class="bi bi-folder-x fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                            <p class="small mb-0">Belum ada media yang tersimpan di server.</p>
+                        </div>
+
+                        <!-- Grid Gallery -->
+                        <div v-else class="row g-2" style="max-height: 320px; overflow-y: auto; overflow-x: hidden;">
+                            <div v-for="file in serverMediaList" :key="file.key" class="col-6 col-sm-4 col-lg-3">
+                                <div class="card h-100 border-0 shadow-sm overflow-hidden">
+                                    <!-- Thumbnail -->
+                                    <div class="bg-dark text-center position-relative" style="height: 90px;">
+                                        <video v-if="file.url.endsWith('.mp4')" :src="file.url" class="h-100 w-100 opacity-75" style="object-fit: cover;"></video>
+                                        <img v-else :src="file.url" class="h-100 w-100" style="object-fit: cover;">
+                                        
+                                        <!-- Penanda Video -->
+                                        <span v-if="file.url.endsWith('.mp4')" class="position-absolute top-50 start-50 translate-middle text-white fs-4 opacity-75">
+                                            <i class="bi bi-play-circle-fill"></i>
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="card-body p-2 d-flex flex-column bg-white">
+                                        <!-- Ukuran -->
+                                        <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">
+                                            {{ (file.size / 1024).toFixed(1) }} KB
+                                        </div>
+                                        
+                                        <!-- Aksi -->
+                                        <div class="d-flex justify-content-between gap-1 mt-auto">
+                                            <button type="button" class="btn btn-sm btn-primary flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">
+                                                Pilih
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                    <!-- ========================================== -->
+
+                    <!-- 4. TEKS BERJALAN (Running Text) -->
+                    <div class="mb-3 pt-3 border-top">
+                        <label class="form-label small fw-bold">
+                            <i class="bi bi-chat-text me-1"></i> Teks Berjalan (Running Text)
+                        </label>
+                        <input type="text" class="form-control border-primary border-opacity-25" v-model="cdsSettings.welcomeText" placeholder="Contoh: Selamat datang di Toko Kami! Terima kasih telah berbelanja.">
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-info-circle-fill text-primary me-1"></i>Teks ini akan tampil berjalan (marquee) di bagian bawah layar pelanggan.
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- ========================================== -->
-        <!-- KOLOM KANAN: GALERI MEDIA CLOUD            -->
-        <!-- ========================================== -->
-        <!-- Dibungkus dengan v-if="showServerGallery" agar tersembunyi default -->
-        <div v-if="showServerGallery" class="col-md-6 col-lg-5 mb-4 fade-in">
-            <div class="card border-0 shadow-lg rounded-4 h-100 border-info border-opacity-50" style="background-color: #f8fbff;">
-                <div class="card-header bg-transparent border-bottom border-info border-opacity-25 p-3 d-flex justify-content-between align-items-center">
-                    <h6 class="fw-bold mb-0 text-info-emphasis"><i class="bi bi-clouds-fill me-2"></i>Galeri Cloud</h6>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-light border rounded-pill shadow-sm text-info-emphasis fw-bold" @click="openServerGallery" :disabled="isLoadingGallery">
-                            <i class="bi bi-arrow-clockwise" :class="{'spinner-border spinner-border-sm': isLoadingGallery}"></i>
-                        </button>
-                        <!-- Tombol Tutup (X) -->
-                        <button class="btn btn-sm btn-danger border-0 rounded-pill shadow-sm fw-bold px-3" @click="showServerGallery = false" title="Tutup Galeri">
-                            Tutup <i class="bi bi-x-lg ms-1"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="card-body p-3 d-flex flex-column">
-                    <!-- TAB FOTO & VIDEO -->
-                    <ul class="nav nav-pills nav-fill mb-3 gap-2 bg-white p-1 rounded-pill shadow-sm border">
-                        <li class="nav-item">
-                            <button class="nav-link rounded-pill py-1 fw-bold" :class="activeGalleryTab === 'image' ? 'active bg-info text-white' : 'text-muted'" @click="activeGalleryTab = 'image'">
-                                <i class="bi bi-images me-1"></i> Foto
-                            </button>
+        <!-- Panduan Penggunaan Tablet -->
+        <div class="col-md-5 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-opacity-10 border border-primary border-opacity-25">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-tablet-landscape me-2"></i>Cara Pasang di Tablet</h6>
+                    <ol class="small text-dark mb-0 ps-3" style="line-height: 1.8;">
+                        <li>Siapkan Tablet/iPad. Hubungkan ke WiFi toko Anda.</li>
+                        <li>Buka Google Chrome/Safari di Tablet tersebut.</li>
+                        <li>Ketik/Salin URL komplit ini di browser Tablet Anda: <br>
+                            <code class="bg-white px-2 py-2 rounded fw-bold text-danger border mt-2 mb-2 d-block text-break user-select-all" style="font-size: 0.85rem;">
+                                {{ getSubdomainName() }}.queenpos.id/cds.html?company={{ getMyCompanyId ? getMyCompanyId() : '' }}&outlet={{ appSettings.selectedReceiptOutletId || 'global' }}
+                            </code>
                         </li>
-                        <li class="nav-item">
-                            <button class="nav-link rounded-pill py-1 fw-bold" :class="activeGalleryTab === 'video' ? 'active bg-danger text-white' : 'text-muted'" @click="activeGalleryTab = 'video'">
-                                <i class="bi bi-film me-1"></i> Video
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Loading State -->
-                    <div v-if="isLoadingGallery" class="flex-grow-1 d-flex flex-column justify-content-center align-items-center text-muted py-5">
-                        <div class="spinner-border text-info mb-3" role="status"></div>
-                        <p class="small fw-semibold">Memuat aset media...</p>
-                    </div>
-
-                    <!-- TAMPILAN FOTO -->
-                    <div v-else-if="activeGalleryTab === 'image'" class="flex-grow-1 overflow-y-auto pe-1" style="max-height: 500px;">
-                        <div v-if="galleryImages.length === 0" class="text-center py-5 text-muted">
-                            <i class="bi bi-image text-secondary opacity-25 d-block mb-2" style="font-size: 3rem;"></i>
-                            <span class="small">Belum ada foto tersimpan.</span>
-                        </div>
-                        <div v-else class="row g-2">
-                            <div v-for="file in galleryImages" :key="file.key" class="col-6 col-sm-6 col-md-4">
-                                <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-                                    <div class="position-relative bg-light w-100" style="aspect-ratio: 1/1;">
-                                        <img :src="file.url" class="w-100 h-100" style="object-fit: contain; padding: 4px;">
-                                        <button class="btn btn-sm btn-dark bg-opacity-50 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" @click="openMediaPreview(file.url, 'image')" title="Perbesar">
-                                            <i class="bi bi-zoom-in"></i>
-                                        </button>
-                                    </div>
-                                    <div class="p-2 bg-white d-flex flex-column gap-1">
-                                        <div class="text-center text-muted fw-bold" style="font-size: 0.65rem;">{{ (file.size / 1024).toFixed(1) }} KB</div>
-                                        <div class="d-flex gap-1">
-                                            <button class="btn btn-sm btn-primary flex-grow-1 py-1" style="font-size: 0.7rem; font-weight: bold;" @click="selectFromServerGallery(file.url)">Pilih</button>
-                                            <button class="btn btn-sm btn-outline-danger py-1 px-2" @click="deleteFromServerGallery(file.key)"><i class="bi bi-trash3" style="font-size: 0.7rem;"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAMPILAN VIDEO -->
-                    <div v-else-if="activeGalleryTab === 'video'" class="flex-grow-1 overflow-y-auto pe-1" style="max-height: 500px;">
-                        <div v-if="galleryVideos.length === 0" class="text-center py-5 text-muted">
-                            <i class="bi bi-film text-secondary opacity-25 d-block mb-2" style="font-size: 3rem;"></i>
-                            <span class="small">Belum ada video tersimpan.</span>
-                        </div>
-                        <div v-else class="row g-2">
-                            <div v-for="file in galleryVideos" :key="file.key" class="col-12 col-sm-6">
-                                <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden bg-dark">
-                                    <div class="position-relative w-100" style="aspect-ratio: 16/9;">
-                                        <video :src="file.url" class="w-100 h-100 opacity-50" style="object-fit: cover;"></video>
-                                        <button class="btn btn-lg btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2" @click="openMediaPreview(file.url, 'video')">
-                                            <i class="bi bi-play-fill fs-4 lh-1"></i>
-                                        </button>
-                                    </div>
-                                    <div class="p-2 bg-white d-flex flex-column gap-1">
-                                        <div class="text-center text-muted fw-bold" style="font-size: 0.65rem;">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</div>
-                                        <div class="d-flex gap-1">
-                                            <button class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.7rem; font-weight: bold;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
-                                            <button class="btn btn-sm btn-outline-danger py-1 px-2" @click="deleteFromServerGallery(file.key)"><i class="bi bi-trash3" style="font-size: 0.7rem;"></i></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                        <li>Setelah halaman terbuka, jadikan <b>Full Screen</b>.</li>
+                        <li>Tablet otomatis akan terhubung dengan Kasir Anda secara nirkabel (Real-time).</li>
+                    </ol>
                 </div>
             </div>
         </div>
@@ -10499,11 +10539,6 @@ body.sidebar-open {
             previewData: []     // Kosongkan
         },
 
-        activeGalleryTab: 'image', // 'image' atau 'video'
-        showTutorialModal: false,
-        previewMediaUrl: null,
-        previewMediaType: '', // 'image' atau 'video'
-                
         showServerGallery: false,  // Buka/tutup jendela galeri
         serverMediaList: [],       // Menyimpan daftar file dari server
         isLoadingGallery: false,   // Status loading saat mengambil galeri
@@ -10811,8 +10846,6 @@ body.sidebar-open {
 
         async mounted() {
 
-    this.fetchServerGallery();
-            
        // Jalankan pengecekan ini HANYA jika user berada di subdomain
     if (this.isSubdomainLokal) {
         this.isCheckingSubdomain = true;
@@ -10943,14 +10976,6 @@ beforeDestroy() {
         
             const parts = hostname.split('.');
             return parts.length >= 3 && parts[0] !== 'www';
-            },
-
-            // Memisahkan Foto dan Video secara otomatis
-            galleryImages() {
-            return this.serverMediaList.filter(file => !file.url.toLowerCase().endsWith('.mp4'));
-            },
-            galleryVideos() {
-            return this.serverMediaList.filter(file => file.url.toLowerCase().endsWith('.mp4'));
             },
             
             structuredCategories() {
@@ -12695,34 +12720,11 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
-    async openServerGallery() {
-        this.showServerGallery = true; // Munculkan panel kanan
-        this.isLoadingGallery = true;
-        
-        try {
-            const hostname = window.location.hostname;
-            const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
-            
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?action=list&companyId=${tenantId}`;
-            
-            const response = await fetch(workerUrl, {
-                method: "GET",
-                headers: { "Authorization": "Bearer YarchQueenPOS12" }
-            });
-            
-            const result = await response.json();
-            if (result.success) {
-                this.serverMediaList = result.files;
-            }
-        } catch (error) {
-            console.error("Gagal memuat galeri:", error);
-        } finally {
-            this.isLoadingGallery = false;
-        }
-    },
+    // 1. Membuka Galeri dan Mengambil Data dari Worker
+    async toggleServerGallery() {
+        this.showServerGallery = !this.showServerGallery;
+        if (!this.showServerGallery) return; // Jika ditutup, abaikan
 
-    // 1. Mengambil Data Galeri (Tanpa perlu toggle manual lagi)
-    async fetchServerGallery() {
         this.isLoadingGallery = true;
         try {
             const hostname = window.location.hostname;
@@ -12741,40 +12743,31 @@ financeAPList() {
             }
         } catch (error) {
             console.error("Gagal memuat galeri:", error);
+            alert("Gagal memuat Galeri Server.");
         } finally {
             this.isLoadingGallery = false;
         }
     },
-    
-    // 2. Fitur Zoom Foto / Putar Video
-    openMediaPreview(url, type) {
-        this.previewMediaUrl = url;
-        this.previewMediaType = type;
-    },
-    closeMediaPreview() {
-        this.previewMediaUrl = null;
-        this.previewMediaType = '';
-    },
 
-    // 3. Memilih Media ke Input Form
+    // 2. Memilih Media dari Galeri untuk Dimasukkan ke Form
     selectFromServerGallery(fileUrl) {
-        if (this.activeGalleryTab === 'video') {
+        if (this.cdsSettings.mediaType === 'video') {
             this.cdsSettings.videoUrl = fileUrl;
-            this.cdsSettings.mediaType = 'video';
         } else {
             let currentUrls = this.cdsSettings.imageUrls || '';
             if (currentUrls.trim() !== '') {
-                currentUrls += '\n'; 
+                currentUrls += '\n'; // Pindah baris
             }
             currentUrls += fileUrl;
             this.cdsSettings.imageUrls = currentUrls;
         }
-        alert("Media dari Cloud berhasil ditambahkan ke pengaturan!");
+        alert("Media dari server berhasil ditambahkan!");
+        this.showServerGallery = false; // Otomatis tutup galeri
     },
 
-    // 4. Menghapus Media Permanen
+    // 3. Menghapus Media dari Server R2
     async deleteFromServerGallery(fileKey) {
-        if (!confirm("Peringatan: Yakin ingin menghapus media ini secara permanen dari Cloud?")) return;
+        if (!confirm("Peringatan: Yakin ingin menghapus media ini secara permanen dari server?")) return;
         
         try {
             const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/${fileKey}`;
@@ -12784,15 +12777,18 @@ financeAPList() {
             });
 
             if (response.ok) {
+                // Hapus item dari tampilan array lokal agar layar ter-update langsung
                 this.serverMediaList = this.serverMediaList.filter(file => file.key !== fileKey);
+                alert("File berhasil dihapus dari server!");
             } else {
                 alert("Gagal menghapus file.");
             }
         } catch (error) {
+            console.error("Gagal menghapus:", error);
             alert("Kesalahan jaringan saat menghapus file.");
         }
     },
-    
+
     // 1. HELPER FOTO TABEL PRODUK INDUK
     getProductDbImage(p) {
         if (!p) return '';
