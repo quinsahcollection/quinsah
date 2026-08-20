@@ -17968,72 +17968,81 @@ copyEReceiptLinkOnly(trx) {
     return (trx.total || 0) - this.getActualPaid(trx);
 },
 
-getPaymentBreakdown(trx) {
-            let breakdown = [];
-            let totalFromHistory = 0;
+        getPaymentBreakdown(trx) {
+    if (!trx) return [];
 
-            // 1. Ambil dari histori pembayaran / cicilan (jika ada)
-            if (trx.paymentHistory && trx.paymentHistory.length > 0) {
-                trx.paymentHistory.forEach(ph => {
-                    let amt = Number(ph.amount || 0);
-                    // Abaikan nilai minus (seperti retur) agar tidak merusak tampilan breakdown
-                    if (amt > 0) {
-                        breakdown.push({ method: ph.method, amount: amt });
-                        totalFromHistory += amt;
-                    }
-                });
+    let tempMap = {}; // Menggunakan object agar lebih mudah menggabungkan metode yang sama
+
+    // 1. Ambil data dari histori pembayaran / cicilan (Pelunasan Piutang)
+    if (trx.paymentHistory && Array.isArray(trx.paymentHistory)) {
+        trx.paymentHistory.forEach(ph => {
+            let amt = Number(ph.amount || 0);
+            if (amt > 0) { // Abaikan nilai minus (seperti retur)
+                let method = String(ph.method || 'CASH').toUpperCase();
+                if (!tempMap[method]) tempMap[method] = 0;
+                tempMap[method] += amt;
+            }
+        });
+    }
+
+    // 2. Cek apakah ada pembayaran awal (saat kasir checkout)
+    let details = trx.splitPayments || (trx.paymentData ? trx.paymentData.splitPayments : null) || trx.splitDetails || trx.splits || trx.paymentDetails;
+    
+    // Jika berbentuk string JSON, parse dulu
+    if (typeof details === 'string' && (details.startsWith('{') || details.startsWith('['))) {
+        try { details = JSON.parse(details); } catch(e) {}
+    }
+
+    if (Array.isArray(details) && details.length > 0) {
+        // JIKA MENGGUNAKAN SPLIT PAYMENT
+        details.forEach(d => {
+            let m = String(d.method || d.paymentMethod || 'CASH').toUpperCase();
+            // Ambil nominal asli mentah-mentah, prioritaskan cashReceived jika ada
+            let amt = Number(d.cashReceived || d.amount || d.nominal || 0);
+            
+            // PENTING: Abaikan "HUTANG" karena fungsi ini hanya untuk menghitung "Sudah Dibayar"
+            if (amt > 0 && !m.includes('HUTANG')) {
+                if (!tempMap[m]) tempMap[m] = 0;
+                tempMap[m] += amt;
+            }
+        });
+    } else {
+        // JIKA BUKAN SPLIT PAYMENT (Pembayaran Tunggal Biasa)
+        let rawMethod = String(trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : '') || 'CASH').toUpperCase();
+        
+        if (!rawMethod.includes('HUTANG')) {
+            // Ambil uang yang benar-benar dibayar
+            let actualPaid = 0;
+            if (typeof this.getActualPaid === 'function') {
+                actualPaid = Number(this.getActualPaid(trx));
+            } else {
+                actualPaid = Number(trx.amountReceived || trx.total || 0);
             }
 
-            // 2. Cek apakah ada pembayaran awal (saat kasir checkout)
-            let actualPaid = Number(this.getActualPaid(trx)) || 0;
-            let unaccounted = actualPaid - totalFromHistory;
+            // Cegah nilai bayar melebihi total tagihan (misal ada uang kembalian)
+            if (actualPaid > trx.total) actualPaid = trx.total;
 
-            if (unaccounted > 0) {
-                // Cari data SPLIT dari berbagai kemungkinan nama variabel
-                let details = trx.splitPayments || (trx.paymentData ? trx.paymentData.splitPayments : null) || trx.splitDetails || trx.splits || trx.paymentDetails;
-                
-                // Jika berbentuk string JSON, parse dulu
-                if (typeof details === 'string' && (details.startsWith('{') || details.startsWith('['))) {
-                    try { details = JSON.parse(details); } catch(e) {}
-                }
+            // Kurangi dengan total cicilan yang sudah masuk di Step 1 agar tidak double hitung
+            let totalDariCicilan = Object.values(tempMap).reduce((sum, val) => sum + val, 0);
+            let sisaAwal = actualPaid - totalDariCicilan;
 
-                // Jika benar-benar pakai SPLIT, bongkar datanya!
-                if (Array.isArray(details) && details.length > 0) {
-                    let totalSplitAmt = details.reduce((sum, d) => sum + Number(d.amount || d.nominal || 0), 0);
-                    
-                    details.forEach(d => {
-                        let m = d.method || d.paymentMethod || 'CASH';
-                        let amt = Number(d.amount || d.nominal || 0);
-                        
-                        // Hitung proporsi jika nilainya sedikit berbeda dari uang bersih
-                        if (totalSplitAmt > 0 && unaccounted !== totalSplitAmt) {
-                            amt = (amt / totalSplitAmt) * unaccounted;
-                        }
-                        
-                        if (amt > 0) {
-                            breakdown.push({ method: m, amount: amt });
-                        }
-                    });
-                } else {
-                    // Jika bukan SPLIT, tampilkan nama metode biasa (QRIS, CASH, dll)
-                    let rawMethod = String(trx.paymentMethod || (trx.paymentData ? trx.paymentData.method : '') || 'CASH').toUpperCase();
-                    breakdown.push({ method: rawMethod, amount: unaccounted });
-                }
+            if (sisaAwal > 0) {
+                if (!tempMap[rawMethod]) tempMap[rawMethod] = 0;
+                tempMap[rawMethod] += sisaAwal;
             }
+        }
+    }
 
-            // 3. Gabungkan jika ada metode yang sama (Misal: Bayar awal CASH, cicilan juga CASH)
-            let finalBreakdown = [];
-            breakdown.forEach(b => {
-                let existing = finalBreakdown.find(f => f.method === b.method);
-                if (existing) {
-                    existing.amount += b.amount;
-                } else {
-                    finalBreakdown.push({ method: b.method, amount: b.amount });
-                }
-            });
+    // 3. Gabungkan dan format ke array final untuk dirender ke HTML
+    let finalBreakdown = [];
+    for (let m in tempMap) {
+        if (tempMap[m] > 0) {
+            finalBreakdown.push({ method: m, amount: tempMap[m] });
+        }
+    }
 
-            return finalBreakdown;
-        },
+    return finalBreakdown;
+},
         
         addModifierGroupToProduct() {
     if (!this.formProduct) this.formProduct = {}; // Proteksi tambahan
