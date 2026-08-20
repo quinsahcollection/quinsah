@@ -1875,10 +1875,23 @@ body.sidebar-open {
         ) }}
     </div>
 </td>
-            </tr>
-            <!-- 🌟 UBAH COLSPAN DARI 7 JADI 8 -->
-            <tr v-if="financeARList.length === 0"><td colspan="8" class="text-center py-4 text-muted">Hore! Tidak ada pelanggan yang berhutang (Piutang Bersih).</td></tr>
-        </tbody>
+            <!-- 🌟 TAMBAHKAN INI: SISA PIUTANG (AR) -->
+        <td class="text-end text-danger fw-bold">
+            Rp {{ formatNumber(getSisaTagihan(ar)) }}
+        </td>
+
+        <!-- 🌟 TAMBAHKAN INI: AKSI -->
+        <td class="text-center">
+            <!-- Sesuaikan nama fungsi @click dengan yang ada di Vue Anda, misal: bayarPiutang(ar) -->
+            <button class="btn btn-sm btn-primary shadow-sm" @click="openInvoiceDetail(ar)">
+                <i class="bi bi-wallet2"></i> Bayar
+            </button>
+        </td>
+
+    </tr>
+    <!-- 🌟 COLSPAN SUDAH BENAR -->
+    <tr v-if="financeARList.length === 0"><td colspan="8" class="text-center py-4 text-muted">Hore! Tidak ada pelanggan yang berhutang (Piutang Bersih).</td></tr>
+</tbody>
     </table>
 </div>
                 </div>
