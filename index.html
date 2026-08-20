@@ -12713,67 +12713,6 @@ financeAPList() {
 },
 
     // 2. Fungsi utama yang dipicu saat user memilih file foto (bisa banyak sekaligus)
-    async handleMultiImageUpload(event, formObj) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-
-    if (!formObj.images) formObj.images = [];
-
-    const remainingSlots = 8 - formObj.images.length;
-    if (remainingSlots <= 0) {
-        alert('Maksimal foto yang diizinkan adalah 8 foto.');
-        event.target.value = '';
-        return;
-    }
-
-    const filesToProcess = files.slice(0, remainingSlots);
-
-    for (let file of filesToProcess) {
-        try {
-            // Otomatis deteksi tenant dari subdomain (contoh: yarch.queenpos.id -> 'yarch')
-            const hostname = window.location.hostname;
-            const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
-            
-            const filename = encodeURIComponent(file.name);
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?companyId=${tenantId}&filename=${filename}`;
-
-            const response = await fetch(workerUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": file.type || "image/jpeg"
-                },
-                body: file
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                formObj.images.push({
-                    url: result.url
-                });
-            } else {
-                console.error("Gagal mengupload ke R2:", result.error);
-                alert("Gagal mengupload gambar: " + result.error);
-            }
-        } catch (error) {
-            console.error("Error jaringan saat upload file:", error);
-            alert("Terjadi kesalahan jaringan saat mengupload foto ke Cloudflare.");
-        }
-    }
-    
-    event.target.value = '';
-},
-
-    // 1. Fungsi untuk Memicu Klik pada Input File Tersembunyi
-    triggerUpload(targetModel) {
-        if (targetModel === 'imageUrls') {
-            this.$refs.fileInputCDSImage.click();
-        } else if (targetModel === 'videoUrl') {
-            this.$refs.fileInputCDSVideo.click();
-        }
-    },
-
-    // 2. Fungsi Utama untuk Menangani File yang Dipilih
-// 2. Fungsi utama yang dipicu saat user memilih file foto (bisa banyak sekaligus)
 async handleMultiImageUpload(event, formObj) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
@@ -12824,6 +12763,66 @@ async handleMultiImageUpload(event, formObj) {
     }
     
     event.target.value = '';
+},
+            
+    // 1. Fungsi untuk Memicu Klik pada Input File Tersembunyi
+    triggerUpload(targetModel) {
+        if (targetModel === 'imageUrls') {
+            this.$refs.fileInputCDSImage.click();
+        } else if (targetModel === 'videoUrl') {
+            this.$refs.fileInputCDSVideo.click();
+        }
+    },
+
+    // 2. Fungsi Utama untuk Menangani File yang Dipilih
+async handleFileUploadCDS(event, targetModel) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    this.isUploadingCDS = true;
+
+    try {
+        // Karena input gambar bisa multiple (untuk slider), kita loop file-nya
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            // Validasi Ukuran File (Opsional, sangat disarankan untuk video)
+            const maxSizeMB = targetModel === 'videoUrl' ? 25 : 5; // Video max 25MB, Gambar 5MB
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                alert(`Maaf, ukuran file ${file.name} terlalu besar. Maksimal ${maxSizeMB}MB.`);
+                continue; // Skip file ini jika kebesaran, lanjut ke file berikutnya
+            }
+
+            // PANGGIL FUNGSI HELPER UNIVERSAL KITA DI SINI
+            const fileUrl = await this.uploadFileToR2(file);
+            
+            // Jika upload berhasil dan mengembalikan URL
+            if (fileUrl) {
+                if (targetModel === 'imageUrls') {
+                    // Jika gambar, tambahkan ke textarea (baris baru jika sudah ada isinya)
+                    let currentUrls = this.cdsSettings.imageUrls || '';
+                    if (currentUrls.trim() !== '') {
+                        currentUrls += '\n'; // Tambah enter
+                    }
+                    currentUrls += fileUrl;
+                    this.cdsSettings.imageUrls = currentUrls;
+                } else if (targetModel === 'videoUrl') {
+                    // Jika video, langsung timpa URL-nya
+                    this.cdsSettings.videoUrl = fileUrl;
+                }
+            }
+        }
+        
+        alert("File berhasil diunggah dan tautan telah ditambahkan!");
+
+    } catch (error) {
+        console.error("Error uploading CDS media:", error);
+        alert("Terjadi kesalahan saat mengunggah file: " + error.message);
+    } finally {
+        this.isUploadingCDS = false;
+        // Reset input file agar bisa pilih file yang sama lagi jika perlu
+        event.target.value = ''; 
+    }
 },
    
     async lupaPassword() {
