@@ -1153,7 +1153,18 @@ body.sidebar-open {
                                     <td>
                                         <div class="fw-bold" style="font-size: 0.9rem;">{{ trx.customerName || 'Walk-in Customer' }}</div>
                                     </td>
-                                    <td><span class="badge bg-light text-dark border">{{ trx.paymentMethod || 'Tunai' }}</span></td>
+                                    <!-- 🌟 PERBAIKAN: Tambah Status Pembayaran (Lunas/Sebagian/Hutang) -->
+<td>
+    <span class="badge bg-light text-dark border me-1">{{ trx.paymentMethod || 'Tunai' }}</span>
+    <span class="badge" 
+          :class="{
+              'bg-success': trx.paymentStatus === 'LUNAS' || (!trx.paymentStatus && !trx.sisaTagihan),
+              'bg-warning text-dark': trx.paymentStatus === 'SEBAGIAN',
+              'bg-danger': trx.paymentStatus === 'BELUM BAYAR' || trx.paymentStatus === 'HUTANG' || (trx.sisaTagihan > 0 && trx.paymentStatus !== 'SEBAGIAN')
+          }">
+        {{ trx.paymentStatus || (trx.sisaTagihan > 0 ? 'BELUM LUNAS' : 'LUNAS') }}
+    </span>
+</td>
                                     <td class="text-end pe-4 fw-bold">Rp {{ formatNumber(trx.total) }}</td>
                                 </tr>
                                 <tr v-if="dashData.recentTransactions.length === 0">
