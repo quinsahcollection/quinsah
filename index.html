@@ -1411,12 +1411,12 @@ body.sidebar-open {
     </div>
     </div>
 
-<!-- ========================================== -->
+    <!-- ========================================== -->
 <!-- MENU: CUSTOMER DISPLAY SYSTEM (CDS)        -->
 <!-- ========================================== -->
 <div v-if="currentView === 'cds'" class="dashboard-card fade-in position-relative">
     
-    <!-- Header Section (Responsif Mobile & PC) -->
+    <!-- Header Section -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-end mb-4 border-bottom pb-3 gap-3">
         <div>
             <h4 class="fw-bold mb-1"><i class="bi bi-display text-primary me-2"></i>Pengaturan Layar Pelanggan</h4>
@@ -1569,16 +1569,18 @@ body.sidebar-open {
                             <button type="button" class="btn-close" @click="showServerGallery = false" aria-label="Close"></button>
                         </div>
 
-                        <!-- TAB NAVIGASI -->
+                        <!-- TAB NAVIGASI (Dengan Indikator Jumlah & Total Ukuran) -->
                         <ul class="nav nav-pills nav-fill mb-3 gap-2 bg-white p-1 rounded-pill shadow-sm border">
                             <li class="nav-item">
-                                <button class="nav-link rounded-pill py-1 fw-bold" :class="activeGalleryTab === 'image' ? 'active bg-info text-white' : 'text-muted'" @click="activeGalleryTab = 'image'">
-                                    <i class="bi bi-images me-1"></i> Foto
+                                <button class="nav-link rounded-pill py-1 fw-bold d-flex flex-column lh-sm" :class="activeGalleryTab === 'image' ? 'active bg-info text-white' : 'text-muted'" @click="activeGalleryTab = 'image'">
+                                    <span><i class="bi bi-images me-1"></i> Foto ({{ galleryImages.length }})</span>
+                                    <small style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">Total: {{ formatBytes(totalImageSize) }}</small>
                                 </button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link rounded-pill py-1 fw-bold" :class="activeGalleryTab === 'video' ? 'active bg-danger text-white' : 'text-muted'" @click="activeGalleryTab = 'video'">
-                                    <i class="bi bi-film me-1"></i> Video
+                                <button class="nav-link rounded-pill py-1 fw-bold d-flex flex-column lh-sm" :class="activeGalleryTab === 'video' ? 'active bg-danger text-white' : 'text-muted'" @click="activeGalleryTab = 'video'">
+                                    <span><i class="bi bi-film me-1"></i> Video ({{ galleryVideos.length }})</span>
+                                    <small style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">Total: {{ formatBytes(totalVideoSize) }}</small>
                                 </button>
                             </li>
                         </ul>
@@ -1590,26 +1592,31 @@ body.sidebar-open {
                         </div>
 
                         <!-- TAMPILAN TAB FOTO -->
-                        <div v-else-if="activeGalleryTab === 'image'" style="max-height: 350px; overflow-y: auto; overflow-x: hidden;" class="pe-1">
+                        <div v-else-if="activeGalleryTab === 'image'" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
                             <div v-if="galleryImages.length === 0" class="text-center py-4 text-muted">
                                 <i class="bi bi-image fs-1 text-secondary opacity-50 mb-2 d-block"></i>
                                 <p class="small mb-0">Belum ada foto yang tersimpan.</p>
                             </div>
                             <div v-else class="row g-2">
-                                <div v-for="file in galleryImages" :key="file.key" class="col-6 col-sm-4">
-                                    <div class="card h-100 border-0 shadow-sm overflow-hidden">
+                                <div v-for="file in galleryImages" :key="file.key" class="col-6 col-sm-4 col-lg-4">
+                                    <div class="card h-100 border-0 shadow-sm overflow-hidden group-hover">
                                         <!-- Area Foto (Object Fit Contain) -->
                                         <div class="position-relative bg-light w-100" style="aspect-ratio: 1/1;">
                                             <img :src="file.url" class="w-100 h-100" style="object-fit: contain; padding: 4px;">
-                                            <button class="btn btn-sm btn-dark bg-opacity-50 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" @click="openMediaPreview(file.url, 'image')" title="Perbesar Foto">
+                                            <button class="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" @click="openMediaPreview(file.url, 'image')" title="Perbesar Foto">
                                                 <i class="bi bi-zoom-in"></i>
                                             </button>
                                         </div>
                                         <div class="card-body p-2 d-flex flex-column bg-white">
-                                            <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ (file.size / 1024).toFixed(1) }} KB</div>
+                                            <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                             <div class="d-flex justify-content-between gap-1 mt-auto">
                                                 <button type="button" class="btn btn-sm btn-primary flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)">
+                                                <!-- Tombol Download -->
+                                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <!-- Tombol Hapus -->
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
                                                     <i class="bi bi-trash3"></i>
                                                 </button>
                                             </div>
@@ -1620,14 +1627,14 @@ body.sidebar-open {
                         </div>
 
                         <!-- TAMPILAN TAB VIDEO -->
-                        <div v-else-if="activeGalleryTab === 'video'" style="max-height: 350px; overflow-y: auto; overflow-x: hidden;" class="pe-1">
+                        <div v-else-if="activeGalleryTab === 'video'" style="max-height: 600px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
                             <div v-if="galleryVideos.length === 0" class="text-center py-4 text-muted">
                                 <i class="bi bi-film fs-1 text-secondary opacity-50 mb-2 d-block"></i>
                                 <p class="small mb-0">Belum ada video yang tersimpan.</p>
                             </div>
                             <div v-else class="row g-2">
                                 <div v-for="file in galleryVideos" :key="file.key" class="col-12 col-sm-6">
-                                    <div class="card h-100 border-0 shadow-sm overflow-hidden bg-dark">
+                                    <div class="card h-100 border-0 shadow-sm overflow-hidden bg-dark group-hover">
                                         <!-- Area Video (16/9 Ratio) -->
                                         <div class="position-relative w-100" style="aspect-ratio: 16/9;">
                                             <video :src="file.url" class="w-100 h-100 opacity-50" style="object-fit: cover;"></video>
@@ -1636,10 +1643,15 @@ body.sidebar-open {
                                             </button>
                                         </div>
                                         <div class="card-body p-2 d-flex flex-column bg-white">
-                                            <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ (file.size / 1024 / 1024).toFixed(2) }} MB</div>
+                                            <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                             <div class="d-flex justify-content-between gap-1 mt-auto">
                                                 <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)">
+                                                <!-- Tombol Download -->
+                                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                                    <i class="bi bi-download"></i>
+                                                </button>
+                                                <!-- Tombol Hapus -->
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
                                                     <i class="bi bi-trash3"></i>
                                                 </button>
                                             </div>
@@ -11036,12 +11048,21 @@ beforeDestroy() {
             return parts.length >= 3 && parts[0] !== 'www';
             },
 
-            // Memisahkan Foto dan Video untuk Tab Galeri
+            // 1. Filter Khusus Foto
             galleryImages() {
             return this.serverMediaList.filter(file => !file.url.toLowerCase().endsWith('.mp4'));
             },
+            // 2. Filter Khusus Video
             galleryVideos() {
             return this.serverMediaList.filter(file => file.url.toLowerCase().endsWith('.mp4'));
+            },
+            // 3. Menghitung Total Memori Foto
+            totalImageSize() {
+            return this.galleryImages.reduce((sum, file) => sum + (file.size || 0), 0);
+            },
+            // 4. Menghitung Total Memori Video
+            totalVideoSize() {
+            return this.galleryVideos.reduce((sum, file) => sum + (file.size || 0), 0);
             },
             
             structuredCategories() {
@@ -12786,7 +12807,16 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
-    // 1. Membuka Galeri dan Mengambil Data
+        // Fungsi Pengubah Byte ke KB/MB agar rapi
+        formatBytes(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        },
+    
+        // 1. Membuka Galeri
     async toggleServerGallery() {
         this.showServerGallery = !this.showServerGallery;
         if (!this.showServerGallery) return; 
@@ -12808,32 +12838,48 @@ financeAPList() {
                 this.serverMediaList = result.files;
             }
         } catch (error) {
-            console.error("Gagal memuat galeri:", error);
-            alert("Gagal memuat Galeri Server.");
+            Swal.fire('Error', 'Gagal memuat Galeri Server.', 'error');
         } finally {
             this.isLoadingGallery = false;
         }
     },
 
-    // 2. Memilih Media dari Galeri
+    // 2. Memilih Media dari Galeri (Dengan Swal)
     selectFromServerGallery(fileUrl) {
         if (this.activeGalleryTab === 'video') {
             this.cdsSettings.videoUrl = fileUrl;
         } else {
             let currentUrls = this.cdsSettings.imageUrls || '';
-            if (currentUrls.trim() !== '') {
-                currentUrls += '\n'; 
-            }
+            if (currentUrls.trim() !== '') currentUrls += '\n'; 
             currentUrls += fileUrl;
             this.cdsSettings.imageUrls = currentUrls;
         }
-        alert("Media dari server berhasil ditambahkan!");
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Dipilih!',
+            text: 'Media dari Cloud berhasil ditambahkan ke pengaturan.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+        
         this.showServerGallery = false; 
     },
 
-    // 3. Menghapus Media
+    // 3. Menghapus Media (Dengan UI Konfirmasi Swal)
     async deleteFromServerGallery(fileKey) {
-        if (!confirm("Peringatan: Yakin ingin menghapus media ini secara permanen dari server?")) return;
+        const result = await Swal.fire({
+            title: 'Hapus Media?',
+            text: "Media ini akan dihapus secara permanen dari server Cloud!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Hapus Permanen!',
+            cancelButtonText: 'Batal'
+        });
+
+        if (!result.isConfirmed) return;
         
         try {
             const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/${fileKey}`;
@@ -12844,16 +12890,35 @@ financeAPList() {
 
             if (response.ok) {
                 this.serverMediaList = this.serverMediaList.filter(file => file.key !== fileKey);
-                alert("File berhasil dihapus dari server!");
+                Swal.fire('Terhapus!', 'File berhasil dihapus dari Cloud.', 'success');
             } else {
-                alert("Gagal menghapus file.");
+                Swal.fire('Gagal!', 'Gagal menghapus file.', 'error');
             }
         } catch (error) {
-            alert("Kesalahan jaringan saat menghapus file.");
+            Swal.fire('Error!', 'Kesalahan jaringan saat menghapus file.', 'error');
         }
     },
 
-    // 4. Fitur Pop-up Zoom Foto & Putar Video
+    // 4. Fitur Download File ke Perangkat
+    async downloadMedia(url, filename) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename || `media_${Date.now()}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(blobUrl);
+            document.body.removeChild(a);
+        } catch (err) {
+            Swal.fire('Gagal', 'Tidak dapat mendownload file saat ini.', 'error');
+        }
+    },
+
+    // 5. Fitur Pop-up Zoom Foto & Putar Video
     openMediaPreview(url, type) {
         this.previewMediaUrl = url;
         this.previewMediaType = type;
