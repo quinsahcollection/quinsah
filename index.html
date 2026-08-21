@@ -1559,9 +1559,8 @@ body.sidebar-open {
                     </div>
 
                     <!-- ========================================== -->
-                    <!-- KOTAK GALERI SERVER CLOUD (VERSI UPGRADE)  -->
+                    <!-- KOTAK GALERI SERVER CLOUD                  -->
                     <!-- ========================================== -->
-                    <!-- PERBAIKAN: Galeri hanya tampil jika tipe media adalah image_single, image_slider, atau video -->
                     <div v-if="showServerGallery && ['image_single', 'image_slider', 'video'].includes(cdsSettings.mediaType)" class="mb-4 p-3 bg-info bg-opacity-10 rounded-4 border border-info border-opacity-50 shadow-sm fade-in">
                         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-info border-opacity-25 pb-2">
                             <span class="fw-bold text-info-emphasis fs-6">
@@ -1570,7 +1569,7 @@ body.sidebar-open {
                             <button type="button" class="btn-close" @click="showServerGallery = false" aria-label="Close"></button>
                         </div>
 
-                        <!-- TAB NAVIGASI (Dengan Indikator Jumlah & Total Ukuran) -->
+                        <!-- TAB NAVIGASI -->
                         <ul class="nav nav-pills nav-fill mb-3 gap-2 bg-white p-1 rounded-pill shadow-sm border">
                             <li class="nav-item">
                                 <button class="nav-link rounded-pill py-1 fw-bold d-flex flex-column lh-sm" :class="activeGalleryTab === 'image' ? 'active bg-info text-white' : 'text-muted'" @click="activeGalleryTab = 'image'">
@@ -1600,24 +1599,48 @@ body.sidebar-open {
                             </div>
                             <div v-else class="row g-2">
                                 <div v-for="file in galleryImages" :key="file.key" class="col-6 col-sm-4 col-lg-4">
-                                    <div class="card h-100 border-0 shadow-sm overflow-hidden group-hover">
-                                        <!-- Area Foto (Object Fit Contain) -->
-                                        <div class="position-relative bg-light w-100" style="aspect-ratio: 1/1;">
-                                            <img :src="file.url" class="w-100 h-100" style="object-fit: contain; padding: 4px;">
-                                            <button class="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" @click="openMediaPreview(file.url, 'image')" title="Perbesar Foto">
+                                    
+                                    <div class="card h-100 shadow-sm overflow-hidden group-hover transition-all" 
+                                         :class="isImageSelected(file.url) ? 'border border-2 border-success' : 'border-0'">
+                                        
+                                        <div class="position-relative bg-light w-100 cursor-pointer" style="aspect-ratio: 1/1;" @click="selectFromServerGallery(file.url)">
+                                            
+                                            <!-- Gambar Utama -->
+                                            <img :src="file.url" class="w-100 h-100 transition-all" style="object-fit: contain; padding: 4px;" 
+                                                 :class="isImageSelected(file.url) ? 'opacity-75' : ''">
+                                            
+                                            <!-- KOTAK CENTANG (Hanya muncul jika mode slider) -->
+                                            <div v-if="cdsSettings.mediaType === 'image_slider'" class="position-absolute top-0 start-0 m-2 d-flex justify-content-center align-items-center" style="z-index: 2; width: 24px; height: 24px;">
+                                                <i v-if="isImageSelected(file.url)" class="bi bi-check-square-fill text-success fs-4 bg-white border border-success" style="border-radius: 4px; line-height: 1;"></i>
+                                                <i v-else class="bi bi-square text-secondary fs-4 bg-white border border-secondary shadow-sm" style="border-radius: 4px; line-height: 1; opacity: 0.8;"></i>
+                                            </div>
+
+                                            <!-- Tombol Zoom -->
+                                            <button class="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" 
+                                                    @click.stop="openMediaPreview(file.url, 'image')" title="Perbesar Foto" style="z-index: 2;">
                                                 <i class="bi bi-zoom-in"></i>
                                             </button>
                                         </div>
+
                                         <div class="card-body p-2 d-flex flex-column bg-white">
                                             <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                             <div class="d-flex justify-content-between gap-1 mt-auto">
-                                                <button type="button" class="btn btn-sm btn-primary flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
-                                                <!-- Tombol Download -->
-                                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                                
+                                                <!-- Tombol Pilih Berubah Hijau Jika Tercentang -->
+                                                <button type="button" class="btn btn-sm flex-grow-1 py-1" style="font-size: 0.75rem;" 
+                                                        :class="isImageSelected(file.url) ? 'btn-success fw-bold' : 'btn-primary'"
+                                                        @click="selectFromServerGallery(file.url)">
+                                                    <span v-if="isImageSelected(file.url)">
+                                                        <i class="bi bi-check2"></i> Batal
+                                                    </span>
+                                                    <span v-else>Pilih</span>
+                                                </button>
+
+                                                <!-- Tombol Download & Hapus dengan @click.stop agar tidak tercentang saat diklik -->
+                                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
                                                     <i class="bi bi-download"></i>
                                                 </button>
-                                                <!-- Tombol Hapus -->
-                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click.stop="deleteFromServerGallery(file.key)" title="Hapus Permanen">
                                                     <i class="bi bi-trash3"></i>
                                                 </button>
                                             </div>
@@ -1647,11 +1670,10 @@ body.sidebar-open {
                                             <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                             <div class="d-flex justify-content-between gap-1 mt-auto">
                                                 <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
-                                                <!-- Tombol Download -->
+                                                <!-- Tombol Download & Hapus -->
                                                 <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
                                                     <i class="bi bi-download"></i>
                                                 </button>
-                                                <!-- Tombol Hapus -->
                                                 <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
                                                     <i class="bi bi-trash3"></i>
                                                 </button>
@@ -12808,6 +12830,13 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
+        // Mengecek apakah gambar sedang dicentang (Hanya berlaku di mode slider)
+        isImageSelected(url) {
+        if (this.cdsSettings.mediaType !== 'image_slider') return false;
+        if (!this.cdsSettings.imageUrls) return false;
+        return this.cdsSettings.imageUrls.includes(url);
+    },
+    
         // Fungsi Pengubah Byte ke KB/MB agar rapi
         formatBytes(bytes) {
         if (!bytes || bytes === 0) return '0 B';
@@ -12845,26 +12874,29 @@ financeAPList() {
         }
     },
 
-    // 2. Memilih Media dari Galeri (Dengan Swal)
+    // Memilih Media (Logika 1 Foto vs Banyak Foto)
     selectFromServerGallery(fileUrl) {
-        if (this.activeGalleryTab === 'video') {
+        if (this.activeGalleryTab === 'video' || this.cdsSettings.mediaType === 'video') {
             this.cdsSettings.videoUrl = fileUrl;
-        } else {
-            let currentUrls = this.cdsSettings.imageUrls || '';
-            if (currentUrls.trim() !== '') currentUrls += '\n'; 
-            currentUrls += fileUrl;
-            this.cdsSettings.imageUrls = currentUrls;
+            Swal.fire({ icon: 'success', title: 'Video Dipilih!', timer: 1200, showConfirmButton: false });
+            this.showServerGallery = false; 
+        } 
+        else if (this.cdsSettings.mediaType === 'image_single') {
+            this.cdsSettings.imageUrls = fileUrl; 
+            Swal.fire({ icon: 'success', title: 'Foto Dipilih!', timer: 1200, showConfirmButton: false });
+            this.showServerGallery = false;
+        } 
+        else if (this.cdsSettings.mediaType === 'image_slider') {
+            let currentUrls = this.cdsSettings.imageUrls ? this.cdsSettings.imageUrls.split('\n').filter(u => u.trim() !== '') : [];
+            const index = currentUrls.indexOf(fileUrl);
+            
+            if (index > -1) {
+                currentUrls.splice(index, 1); // Hapus jika sudah dicentang
+            } else {
+                currentUrls.push(fileUrl); // Tambah jika belum dicentang
+            }
+            this.cdsSettings.imageUrls = currentUrls.join('\n');
         }
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Dipilih!',
-            text: 'Media dari Cloud berhasil ditambahkan ke pengaturan.',
-            timer: 1500,
-            showConfirmButton: false
-        });
-        
-        this.showServerGallery = false; 
     },
 
     // 3. Menghapus Media (Dengan UI Konfirmasi Swal)
