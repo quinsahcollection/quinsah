@@ -1653,38 +1653,44 @@ body.sidebar-open {
                         </div>
 
                         <!-- TAMPILAN TAB VIDEO -->
-                        <div v-else-if="activeGalleryTab === 'video'" style="max-height: 800px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
-                            <div v-if="galleryVideos.length === 0" class="text-center py-4 text-muted">
-                                <i class="bi bi-film fs-1 text-secondary opacity-50 mb-2 d-block"></i>
-                                <p class="small mb-0">Belum ada video yang tersimpan.</p>
+            <div v-else-if="activeGalleryTab === 'video'" style="max-height: 800px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
+                <div v-if="galleryVideos.length === 0" class="text-center py-4 text-muted">
+                    <i class="bi bi-film fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-0">Belum ada video yang tersimpan.</p>
+                </div>
+                
+                <!-- Menggunakan align-items-start agar tinggi kartu bisa menyesuaikan -->
+                <div v-else class="row g-2 align-items-start">
+                    
+                    <!-- UBAH GRID: col-6 (2 kolom di HP), col-md-4 (3 kolom di Tablet), col-lg-3 (4 kolom di PC) -->
+                    <div v-for="file in galleryVideos" :key="file.key" class="col-6 col-md-4 col-lg-3">
+                        <div class="card border-0 shadow-sm overflow-hidden bg-dark group-hover w-100">
+                            
+                            <!-- UBAH KOTAK VIDEO: Tinggi fix 200px, bg hitam, dengan object-fit contain agar portrait/landscape tetap proporsional dan tidak terpotong -->
+                            <div class="position-relative w-100 d-flex justify-content-center align-items-center bg-black" style="height: 200px;">
+                                <video :src="file.url" class="w-100 h-100 opacity-75" style="object-fit: contain;"></video>
+                                <button class="btn btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2 d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;" @click.stop="openMediaPreview(file.url, 'video')" title="Putar Video">
+                                    <i class="bi bi-play-fill fs-4 lh-1" style="margin-left: 3px;"></i>
+                                </button>
                             </div>
-                            <div v-else class="row g-2">
-                                <div v-for="file in galleryVideos" :key="file.key" class="col-12 col-sm-6">
-                                    <div class="card h-100 border-0 shadow-sm overflow-hidden bg-dark group-hover">
-                                        <!-- Area Video (16/9 Ratio) -->
-                                        <div class="position-relative w-100" style="aspect-ratio: 16/9;">
-                                            <video :src="file.url" class="w-100 h-100 opacity-50" style="object-fit: cover;"></video>
-                                            <button class="btn btn-lg btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2" @click="openMediaPreview(file.url, 'video')" title="Putar Video">
-                                                <i class="bi bi-play-fill fs-4 lh-1"></i>
-                                            </button>
-                                        </div>
-                                        <div class="card-body p-2 d-flex flex-column bg-white">
-                                            <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
-                                            <div class="d-flex justify-content-between gap-1 mt-auto">
-                                                <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
-                                                <!-- Tombol Download & Hapus -->
-                                                <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
-                                                    <i class="bi bi-download"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
-                                                    <i class="bi bi-trash3"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+
+                            <div class="card-body p-2 d-flex flex-column bg-white">
+                                <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
+                                <div class="d-flex justify-content-between gap-1 mt-auto">
+                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click.stop="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                </div>
+            </div>
 
                     </div>
                     <!-- ========================================== -->
@@ -1728,19 +1734,19 @@ body.sidebar-open {
     </div>
 
     <!-- MODAL POP-UP ZOOM FOTO / PLAY VIDEO -->
-    <div v-if="previewMediaUrl" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.85); z-index: 1060;" @click.self="closeMediaPreview">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content bg-transparent border-0 shadow-none">
-                <div class="modal-header border-0 d-flex justify-content-end p-2 position-absolute w-100" style="z-index: 2;">
-                    <button type="button" class="btn btn-dark rounded-circle shadow border border-secondary" @click="closeMediaPreview"><i class="bi bi-x-lg"></i></button>
-                </div>
-                <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center" style="min-height: 300px;">
-                    <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; object-fit: contain; background-color: #fff;">
-                    <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="w-100 rounded shadow-lg" style="max-height: 85vh; background-color: #000;"></video>
-                </div>
+<div v-if="previewMediaUrl" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.85); z-index: 1070;" @click.self="closeMediaPreview">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-transparent border-0 shadow-none">
+            <div class="modal-header border-0 d-flex justify-content-end p-2 position-absolute w-100" style="z-index: 2;">
+                <button type="button" class="btn btn-dark rounded-circle shadow border border-secondary" @click="closeMediaPreview"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center" style="min-height: 300px;">
+                <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; object-fit: contain; background-color: #fff;">
+                <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="w-100 rounded shadow-lg" style="max-height: 85vh; background-color: #000;"></video>
             </div>
         </div>
     </div>
+</div>
 
 </div>
             
@@ -12983,6 +12989,9 @@ financeAPList() {
         this.showServerGallery = false;
         this.targetProductForGallery = null;
         this.targetVariantForGallery = null;
+
+        this.previewMediaUrl = null; 
+        this.previewMediaType = '';
     },
             
         // Membuka Galeri untuk Foto Utama Produk
