@@ -8419,9 +8419,9 @@ body.sidebar-open {
     </div>
 </div>
 
-     <!-- ==========================================
-   MODAL TAMBAH / EDIT PRODUK UTAMA
-   ========================================== -->
+<!-- ==========================================
+     MODAL TAMBAH / EDIT PRODUK UTAMA
+     ========================================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg">
@@ -8614,10 +8614,12 @@ body.sidebar-open {
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- BAGIAN INI DIPERBAIKI (Class bg-white dihapus agar efek hover berjalan normal) -->
                             <div class="col-12 d-flex flex-wrap gap-2">
-                                <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold bg-white" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
+                                <button class="btn btn-sm btn-outline-primary-custom py-2 px-3 fw-bold shadow-sm" @click="addDynamicVariantLevel" v-if="formProduct.dynamicVariantsData.length < 3"><i class="bi bi-plus-lg me-1"></i> Tambah Atribut (Max 3)</button>
                                 <button class="btn btn-sm btn-primary-custom py-2 px-3 shadow-sm fw-bold" @click="generateDynamicMatrix"><i class="bi bi-magic me-1"></i> Generate Daftar Varian ke Tabel</button>
-                                <button class="btn btn-sm btn-outline-secondary py-2 px-3 fw-bold bg-white" @click="addManualVariant"><i class="bi bi-plus-circle me-1"></i> Tambah Varian Manual</button>
+                                <button class="btn btn-sm btn-outline-secondary py-2 px-3 fw-bold shadow-sm" @click="addManualVariant"><i class="bi bi-plus-circle me-1"></i> Tambah Varian Manual</button>
                             </div>
                         </div>
 
@@ -8642,15 +8644,15 @@ body.sidebar-open {
                                 <tr v-for="(v, index) in formProduct.variants" :key="index">
                                     <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
                                     <td>
-                                        <!-- FOTO SPESIFIK PER VARIAN (DENGAN TOMBOL GALERI CLOUD) -->
+                                        <!-- FOTO SPESIFIK PER VARIAN -->
                                         <div class="d-flex align-items-center gap-1" style="min-width: 120px;">
-                                            <label class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor:pointer;" title="Upload Foto Varian">
+                                            <label class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px; cursor:pointer;" title="Upload Foto Varian">
                                                 <i class="bi bi-camera"></i>
                                                 <input type="file" class="d-none" accept="image/*" @change="handleImageUpload($event, v, true)">
                                             </label>
                                             
                                             <!-- Tombol Pilih Dari Galeri Cloud -->
-                                            <button type="button" class="btn btn-sm btn-outline-info p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor:pointer;" title="Pilih dari Galeri Cloud" @click="openGalleryForVariant(v)">
+                                            <button type="button" class="btn btn-sm btn-outline-info p-1 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px; cursor:pointer;" title="Pilih dari Galeri Cloud" @click="openGalleryForVariant(v)">
                                                 <i class="bi bi-cloud-check"></i>
                                             </button>
 
@@ -8676,7 +8678,7 @@ body.sidebar-open {
                                     <td v-for="out in outlets" :key="out.id">
                                         <input type="number" class="form-control form-control-sm text-center px-2 text-primary-custom fw-bold" v-model.number="v.outletStocks[out.id]" placeholder="0" style="min-width: 70px;">
                                     </td>
-                                    <td class="text-center"><button class="btn btn-sm text-danger p-0" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-trash fs-5"></i></button></td>
+                                    <td class="text-center"><button class="btn btn-sm text-danger p-0 shadow-none" @click="formProduct.variants.splice(index, 1)"><i class="bi bi-trash fs-5"></i></button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -8686,7 +8688,7 @@ body.sidebar-open {
                     <div class="col-12 mt-4">
                         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                             <h6 class="fw-bold text-dark mb-0"><i class="bi bi-ui-checks-grid me-2"></i>5. Identifier / Modifier Khusus (Opsional)</h6>
-                            <button class="btn btn-sm btn-outline-primary-custom fw-bold" @click="addModifierGroupToProduct()">
+                            <button class="btn btn-sm btn-outline-primary-custom fw-bold shadow-sm" @click="addModifierGroupToProduct()">
                                 <i class="bi bi-plus-lg me-1"></i> Tambah Modifier
                             </button>
                         </div>
@@ -8719,7 +8721,7 @@ body.sidebar-open {
 
                                     <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-2">
                                         <span class="small fw-bold">Daftar Opsi & Harga Tambahan</span>
-                                        <button class="btn btn-sm btn-primary-custom py-0" style="font-size: 0.7rem;" @click="mod.options.push({name: '', price: 0, linkedProductId: ''})"><i class="bi bi-plus"></i> Opsi Baru</button>
+                                        <button class="btn btn-sm btn-primary-custom py-0 shadow-sm" style="font-size: 0.7rem;" @click="mod.options.push({name: '', price: 0, linkedProductId: ''})"><i class="bi bi-plus"></i> Opsi Baru</button>
                                     </div>
 
                                     <div class="bg-white border rounded p-2 mb-2 position-relative shadow-sm" v-for="(opt, oIdx) in mod.options" :key="oIdx">
@@ -8758,7 +8760,7 @@ body.sidebar-open {
             
         </div>
     </div>
-</div>          
+</div>
 
 <div class="modal fade" id="editCartItemModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 600px; width: 95%;">
@@ -10335,29 +10337,38 @@ body.sidebar-open {
                     <i class="bi bi-film fs-1 text-secondary opacity-50 mb-2 d-block"></i>
                     <p class="small mb-0">Belum ada video yang tersimpan.</p>
                 </div>
-                <div v-else class="row g-2">
-                    <div v-for="file in galleryVideos" :key="file.key" class="col-12 col-sm-6 col-lg-4">
-                        <div class="card h-100 border-0 shadow-sm overflow-hidden bg-dark group-hover">
-                            <div class="position-relative w-100" style="aspect-ratio: 16/9;">
-                                <video :src="file.url" class="w-100 h-100 opacity-50" style="object-fit: cover;"></video>
-                                <button class="btn btn-lg btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2" @click="openMediaPreview(file.url, 'video')" title="Putar Video">
-                                    <i class="bi bi-play-fill fs-4 lh-1"></i>
+                
+                <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 align-items-start">
+                    
+                    <div v-for="file in galleryVideos" :key="file.key" class="col">
+                        <div class="card border-0 shadow-sm overflow-hidden bg-dark group-hover w-100">
+                            
+                            <!-- KOTAK VIDEO DENGAN TOMBOL PLAY MODERN -->
+                            <div class="position-relative w-100 d-flex justify-content-center align-items-center bg-black" style="height: 160px;">
+                                <video :src="file.url" class="w-100 h-100 opacity-75" style="object-fit: contain;"></video>
+                                
+                                <!-- TOMBOL PLAY PREMIUM DESIGN -->
+                                <button type="button" class="btn btn-danger bg-opacity-75 rounded-circle position-absolute top-50 start-50 translate-middle shadow-lg border border-2 border-white d-flex justify-content-center align-items-center transition-all" style="width: 55px; height: 55px; backdrop-filter: blur(4px);" @click.stop="openMediaPreview(file.url, 'video')" title="Putar Video">
+                                    <i class="bi bi-play-fill text-white" style="font-size: 2.2rem; margin-left: 5px;"></i>
                                 </button>
                             </div>
+
+                            <!-- TOMBOL AKSI -->
                             <div class="card-body p-2 d-flex flex-column bg-white">
                                 <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                 <div class="d-flex justify-content-between gap-1 mt-auto">
-                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1 px-1" style="font-size: 0.7rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-1" style="font-size: 0.7rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())">
                                         <i class="bi bi-download"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-1" style="font-size: 0.7rem;" @click.stop="deleteFromServerGallery(file.key)">
                                         <i class="bi bi-trash3"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
