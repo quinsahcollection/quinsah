@@ -8428,7 +8428,7 @@ body.sidebar-open {
     </div>
 </div>
 
-       <!-- ==========================================
+     <!-- ==========================================
    MODAL TAMBAH / EDIT PRODUK UTAMA
    ========================================== -->
 <div class="modal fade" id="addProductModal" tabindex="-1" data-bs-backdrop="static">
@@ -8461,14 +8461,12 @@ body.sidebar-open {
 
                             <!-- Tombol Tambah (Hanya jika < 8) -->
                             <div v-if="!formProduct.images || formProduct.images.length < 8" class="d-flex gap-2">
-                                <!-- 1. Tombol Upload Baru -->
                                 <label class="border rounded d-flex flex-column align-items-center justify-content-center text-primary cursor-pointer bg-light shadow-sm" style="width: 80px; height: 80px; border-style: dashed !important; border-width: 2px !important;">
                                     <i class="bi bi-camera fs-4"></i>
                                     <span class="fw-bold mt-1" style="font-size: 0.6rem;">Upload</span>
                                     <input type="file" class="d-none" multiple accept="image/*" @change="handleMultiImageUpload($event, formProduct)">
                                 </label>
-                    
-                                <!-- 2. TOMBOL PILIH DARI GALERI CLOUD -->
+                                <!-- Tombol Galeri Cloud Produk -->
                                 <button type="button" class="btn btn-outline-info border-2 rounded d-flex flex-column align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px; border-style: dashed !important; cursor: pointer;" @click="openGalleryForProduct(formProduct)">
                                     <i class="bi bi-cloud-check fs-4"></i>
                                     <span class="fw-bold mt-1" style="font-size: 0.6rem;">Galeri</span>
@@ -8507,7 +8505,6 @@ body.sidebar-open {
                         </div>
                     </div>
 
-                    <!-- DESKRIPSI PRODUK (BARU) -->
                     <div class="col-12">
                         <label class="form-label small fw-bold">Deskripsi Lengkap Produk</label>
                         <textarea class="form-control form-control-sm" v-model="formProduct.description" rows="4" placeholder="Tuliskan keunggulan produk, spesifikasi bahan, panduan ukuran, atau catatan pengiriman di sini..."></textarea>
@@ -8654,14 +8651,20 @@ body.sidebar-open {
                                 <tr v-for="(v, index) in formProduct.variants" :key="index">
                                     <td><input type="text" class="form-control form-control-sm px-2 fw-bold text-primary-custom" v-model="v.name" placeholder="Nama Varian" style="min-width: 120px;"></td>
                                     <td>
-                                        <!-- Foto Spesifik per Varian -->
+                                        <!-- FOTO SPESIFIK PER VARIAN (DENGAN TOMBOL GALERI CLOUD) -->
                                         <div class="d-flex align-items-center gap-1" style="min-width: 120px;">
-                                            <label class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; cursor:pointer;" title="Upload Foto Varian">
+                                            <label class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor:pointer;" title="Upload Foto Varian">
                                                 <i class="bi bi-camera"></i>
                                                 <input type="file" class="d-none" accept="image/*" @change="handleImageUpload($event, v, true)">
                                             </label>
+                                            
+                                            <!-- Tombol Pilih Dari Galeri Cloud -->
+                                            <button type="button" class="btn btn-sm btn-outline-info p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor:pointer;" title="Pilih dari Galeri Cloud" @click="openGalleryForVariant(v)">
+                                                <i class="bi bi-cloud-check"></i>
+                                            </button>
+
                                             <div class="position-relative" v-if="v.imageBase64 || v.imageUrl">
-                                                <img :src="v.imageBase64 || v.imageUrl" width="35" height="35" class="rounded border object-fit-cover shadow-sm">
+                                                <img :src="v.imageBase64 || v.imageUrl" width="32" height="32" class="rounded border object-fit-cover shadow-sm">
                                                 <button class="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle p-0 rounded-circle shadow" style="width: 16px; height: 16px; font-size: 10px;" @click="v.imageBase64 = null; v.imageUrl = null"><i class="bi bi-x"></i></button>
                                             </div>
                                         </div>
@@ -8764,7 +8767,7 @@ body.sidebar-open {
             
         </div>
     </div>
-</div>              
+</div>          
 
 <div class="modal fade" id="editCartItemModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 600px; width: 95%;">
@@ -10237,6 +10240,139 @@ body.sidebar-open {
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- POPUP OVERLAY GALERI CLOUD GLOBAL          -->
+<!-- ========================================== -->
+<div v-if="showServerGallery" class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center fade-in" style="background: rgba(0,0,0,0.8); z-index: 9999; backdrop-filter: blur(4px);">
+    <div class="card border-0 shadow-lg overflow-hidden bg-white" style="width: 95%; max-width: 1100px; max-height: 90vh;">
+        
+        <!-- Header Galeri -->
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center p-3">
+            <h5 class="fw-bold mb-0 text-info-emphasis"><i class="bi bi-cloud-check-fill me-2"></i>Galeri Media Cloud</h5>
+            <div class="d-flex align-items-center gap-2">
+                <!-- Tombol Selesai (Hanya muncul jika mode Multi-Select / Produk) -->
+                <button type="button" class="btn btn-success fw-bold px-4 rounded-pill shadow-sm" @click="closeGallery" v-if="targetProductForGallery || (cdsSettings && cdsSettings.mediaType === 'image_slider')">
+                    <i class="bi bi-check-circle me-1"></i> Selesai Pilih
+                </button>
+                <!-- Tombol Close (X) -->
+                <button type="button" class="btn-close" @click="closeGallery" aria-label="Close"></button>
+            </div>
+        </div>
+
+        <!-- Body Galeri -->
+        <div class="card-body bg-light p-3 p-md-4 overflow-auto custom-scrollbar">
+            <!-- TAB NAVIGASI -->
+            <ul class="nav nav-pills nav-fill mb-3 gap-2 bg-white p-1 rounded-pill shadow-sm border">
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill py-1 fw-bold d-flex flex-column lh-sm" :class="activeGalleryTab === 'image' ? 'active bg-info text-white' : 'text-muted'" @click="activeGalleryTab = 'image'">
+                        <span><i class="bi bi-images me-1"></i> Foto ({{ galleryImages.length }})</span>
+                        <small style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">Total: {{ formatBytes(totalImageSize) }}</small>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill py-1 fw-bold d-flex flex-column lh-sm" :class="activeGalleryTab === 'video' ? 'active bg-danger text-white' : 'text-muted'" @click="activeGalleryTab = 'video'">
+                        <span><i class="bi bi-film me-1"></i> Video ({{ galleryVideos.length }})</span>
+                        <small style="font-size: 0.7rem; font-weight: normal; opacity: 0.85;">Total: {{ formatBytes(totalVideoSize) }}</small>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tampilan Loading -->
+            <div v-if="isLoadingGallery" class="text-center py-4 text-muted">
+                <div class="spinner-border text-info mb-2" role="status"></div>
+                <p class="small mb-0">Memuat data dari server...</p>
+            </div>
+
+            <!-- TAMPILAN TAB FOTO -->
+            <div v-else-if="activeGalleryTab === 'image'" style="max-height: 800px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
+                <div v-if="galleryImages.length === 0" class="text-center py-4 text-muted">
+                    <i class="bi bi-image fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-0">Belum ada foto yang tersimpan.</p>
+                </div>
+                <div v-else class="row g-2">
+                    <div v-for="file in galleryImages" :key="file.key" class="col-6 col-sm-4 col-lg-3">
+                        <div class="card h-100 shadow-sm overflow-hidden group-hover transition-all" 
+                                :class="isImageSelected(file.url) ? 'border border-2 border-success' : 'border-0'">
+                            
+                            <div class="position-relative bg-light w-100 cursor-pointer" style="aspect-ratio: 1/1;" @click="selectFromServerGallery(file.url)">
+                                <!-- Gambar Utama -->
+                                <img :src="file.url" class="w-100 h-100 transition-all" style="object-fit: contain; padding: 4px;" 
+                                        :class="isImageSelected(file.url) ? 'opacity-75' : ''">
+                                
+                                <!-- KOTAK CENTANG MODERN -->
+                                <div v-if="targetProductForGallery || (cdsSettings && cdsSettings.mediaType === 'image_slider')" class="position-absolute top-0 start-0 m-2" style="z-index: 2;">
+                                    <div v-if="isImageSelected(file.url)" class="bg-success text-white rounded-circle d-flex justify-content-center align-items-center shadow" style="width: 26px; height: 26px; border: 2px solid white;">
+                                        <i class="bi bi-check-lg" style="font-size: 1.1rem; -webkit-text-stroke: 1px;"></i>
+                                    </div>
+                                    <div v-else class="bg-white rounded-circle shadow-sm border border-2 border-secondary" style="width: 26px; height: 26px; opacity: 0.85;"></div>
+                                </div>
+
+                                <!-- Tombol Zoom -->
+                                <button class="btn btn-sm btn-dark bg-opacity-75 text-white rounded-circle position-absolute top-0 end-0 m-1 border-0 shadow-sm" 
+                                        @click.stop="openMediaPreview(file.url, 'image')" title="Perbesar Foto" style="z-index: 2;">
+                                    <i class="bi bi-zoom-in"></i>
+                                </button>
+                            </div>
+
+                            <div class="card-body p-2 d-flex flex-column bg-white">
+                                <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
+                                <div class="d-flex justify-content-between gap-1 mt-auto">
+                                    <!-- Tombol Pilih -->
+                                    <button type="button" class="btn btn-sm flex-grow-1 py-1" style="font-size: 0.75rem;" 
+                                            :class="isImageSelected(file.url) ? 'btn-success fw-bold' : 'btn-primary'"
+                                            @click="selectFromServerGallery(file.url)">
+                                        <span v-if="isImageSelected(file.url)"><i class="bi bi-check2"></i> Batal</span>
+                                        <span v-else>Pilih</span>
+                                    </button>
+                                    <!-- Tombol Download & Hapus -->
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click.stop="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAMPILAN TAB VIDEO -->
+            <div v-else-if="activeGalleryTab === 'video'" style="max-height: 800px; overflow-y: auto; overflow-x: hidden;" class="pe-1 custom-scrollbar">
+                <div v-if="galleryVideos.length === 0" class="text-center py-4 text-muted">
+                    <i class="bi bi-film fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-0">Belum ada video yang tersimpan.</p>
+                </div>
+                <div v-else class="row g-2">
+                    <div v-for="file in galleryVideos" :key="file.key" class="col-12 col-sm-6 col-lg-4">
+                        <div class="card h-100 border-0 shadow-sm overflow-hidden bg-dark group-hover">
+                            <div class="position-relative w-100" style="aspect-ratio: 16/9;">
+                                <video :src="file.url" class="w-100 h-100 opacity-50" style="object-fit: cover;"></video>
+                                <button class="btn btn-lg btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2" @click="openMediaPreview(file.url, 'video')" title="Putar Video">
+                                    <i class="bi bi-play-fill fs-4 lh-1"></i>
+                                </button>
+                            </div>
+                            <div class="card-body p-2 d-flex flex-column bg-white">
+                                <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
+                                <div class="d-flex justify-content-between gap-1 mt-auto">
+                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih Video</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                        
 <!-- ============================================== -->
 <!-- 1. MODAL EXPORT DENGAN PREVIEW -->
 <!-- ============================================== -->
@@ -10639,6 +10775,9 @@ body.sidebar-open {
             previewData: []     // Kosongkan
         },
 
+        targetProductForGallery: null,
+        targetVariantForGallery: null,
+                
         showServerGallery: false,  // Buka/tutup jendela galeri
         serverMediaList: [],       // Menyimpan daftar file dari server
         isLoadingGallery: false,   // Status loading saat mengambil galeri
@@ -12840,18 +12979,45 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
-        // Membuka Galeri Cloud dan menargetkan form produk yang sedang dibuka
+        closeGallery() {
+        this.showServerGallery = false;
+        this.targetProductForGallery = null;
+        this.targetVariantForGallery = null;
+    },
+            
+        // Membuka Galeri untuk Foto Utama Produk
         openGalleryForProduct(product) {
-        this.targetProductForGallery = product; // Simpan referensi produk mana yang di-edit
-        this.cdsSettings.mediaType = 'image_single'; // Paksa mode image
-        this.toggleServerGallery(); // Buka galeri cloud Anda
+        this.targetProductForGallery = product;
+        this.targetVariantForGallery = null;
+        this.activeGalleryTab = 'image'; // Langsung arahkan ke tab Foto
+        this.toggleServerGallery();
+    },
+
+        // Membuka Galeri untuk Foto Spesifik Varian
+        openGalleryForVariant(variant) {
+        this.targetVariantForGallery = variant;
+        this.targetProductForGallery = null;
+        this.activeGalleryTab = 'image'; // Langsung arahkan ke tab Foto
+        this.toggleServerGallery();
     },
 
         // Mengecek apakah gambar sedang dicentang (Hanya berlaku di mode slider)
         isImageSelected(url) {
-        if (this.cdsSettings.mediaType !== 'image_slider') return false;
-        if (!this.cdsSettings.imageUrls) return false;
-        return this.cdsSettings.imageUrls.includes(url);
+        // Cek jika mode Produk (Banyak Foto)
+        if (this.targetProductForGallery) {
+            if (!this.targetProductForGallery.images) return false;
+            return this.targetProductForGallery.images.some(img => img.url === url);
+        }
+        // Cek jika mode Varian (1 Foto)
+        if (this.targetVariantForGallery) {
+            return this.targetVariantForGallery.imageUrl === url;
+        }
+        // Cek jika mode CDS Slider
+        if (this.cdsSettings && this.cdsSettings.mediaType === 'image_slider') {
+            if (!this.cdsSettings.imageUrls) return false;
+            return this.cdsSettings.imageUrls.includes(url);
+        }
+        return false;
     },
     
         // Fungsi Pengubah Byte ke KB/MB agar rapi
@@ -12891,50 +13057,55 @@ financeAPList() {
         }
     },
 
-    // Memilih Media (Logika 1 Foto vs Banyak Foto, juga untuk Foto Produk)
+    // Memilih Media (Logika Varian, 1 Foto, Banyak Foto, dan CDS)
     selectFromServerGallery(fileUrl) {
-        // 1. LOGIKA UNTUK PRODUK: Jika galeri dibuka dari modal produk
+        // LOGIKA A: UNTUK PRODUK UTAMA (Bisa Centang Lebih dari 1)
         if (this.targetProductForGallery) {
-            // Pastikan array images sudah ada (mencegah error jika produk baru)
             if (!this.targetProductForGallery.images) {
                 this.targetProductForGallery.images = [];
             }
             
-            // Cek batasan maksimal 8 foto
-            if (this.targetProductForGallery.images.length < 8) {
-                // Masukkan format object { url: fileUrl } sesuai dengan struktur foto produk Anda
-                this.targetProductForGallery.images.push({ url: fileUrl });
-                Swal.fire({ icon: 'success', title: 'Foto Ditambahkan ke Produk!', timer: 1200, showConfirmButton: false });
+            const existingIndex = this.targetProductForGallery.images.findIndex(img => img.url === fileUrl);
+            if (existingIndex > -1) {
+                this.targetProductForGallery.images.splice(existingIndex, 1); // Batal Centang
             } else {
-                Swal.fire('Ups!', 'Maksimal 8 foto untuk satu produk.', 'warning');
+                if (this.targetProductForGallery.images.length < 8) {
+                    this.targetProductForGallery.images.push({ url: fileUrl });
+                } else {
+                    Swal.fire('Ups!', 'Maksimal 8 foto untuk produk.', 'warning');
+                }
             }
-            
-            // Tutup galeri dan reset variabel target agar tidak menyangkut
-            this.showServerGallery = false;
-            this.targetProductForGallery = null; 
-            
-            return; // Hentikan eksekusi kode di bawah agar tidak masuk ke setelan CDS
+            return; // Jangan tutup galeri agar bebas milih
         }
 
-        // 2. LOGIKA UNTUK CDS (Layar Pelanggan)
-        if (this.activeGalleryTab === 'video' || this.cdsSettings.mediaType === 'video') {
+        // LOGIKA B: UNTUK VARIAN PRODUK (Pilih 1, Langsung Tutup)
+        if (this.targetVariantForGallery) {
+            this.targetVariantForGallery.imageUrl = fileUrl;
+            this.targetVariantForGallery.imageBase64 = null; // Hapus versi lokal jika ada
+            Swal.fire({ icon: 'success', title: 'Foto Varian Dipilih!', timer: 1000, showConfirmButton: false });
+            this.closeGallery();
+            return;
+        }
+
+        // LOGIKA C: UNTUK CDS LAYAR PELANGGAN
+        if (this.activeGalleryTab === 'video' || (this.cdsSettings && this.cdsSettings.mediaType === 'video')) {
             this.cdsSettings.videoUrl = fileUrl;
             Swal.fire({ icon: 'success', title: 'Video Dipilih!', timer: 1200, showConfirmButton: false });
-            this.showServerGallery = false; 
+            this.closeGallery(); 
         } 
-        else if (this.cdsSettings.mediaType === 'image_single') {
+        else if (this.cdsSettings && this.cdsSettings.mediaType === 'image_single') {
             this.cdsSettings.imageUrls = fileUrl; 
             Swal.fire({ icon: 'success', title: 'Foto Dipilih!', timer: 1200, showConfirmButton: false });
-            this.showServerGallery = false;
+            this.closeGallery();
         } 
-        else if (this.cdsSettings.mediaType === 'image_slider') {
+        else if (this.cdsSettings && this.cdsSettings.mediaType === 'image_slider') {
             let currentUrls = this.cdsSettings.imageUrls ? this.cdsSettings.imageUrls.split('\n').filter(u => u.trim() !== '') : [];
             const index = currentUrls.indexOf(fileUrl);
             
             if (index > -1) {
-                currentUrls.splice(index, 1); // Hapus jika sudah dicentang
+                currentUrls.splice(index, 1); 
             } else {
-                currentUrls.push(fileUrl); // Tambah jika belum dicentang
+                currentUrls.push(fileUrl); 
             }
             this.cdsSettings.imageUrls = currentUrls.join('\n');
         }
