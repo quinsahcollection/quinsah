@@ -1659,29 +1659,29 @@ body.sidebar-open {
                     <p class="small mb-0">Belum ada video yang tersimpan.</p>
                 </div>
                 
-                <!-- Menggunakan align-items-start agar tinggi kartu bisa menyesuaikan -->
-                <div v-else class="row g-2 align-items-start">
+                <!-- DIBUAT FIX 2 GRID UNTUK MOBILE DENGAN row-cols-2 -->
+                <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 align-items-start">
                     
-                    <!-- UBAH GRID: col-6 (2 kolom di HP), col-md-4 (3 kolom di Tablet), col-lg-3 (4 kolom di PC) -->
-                    <div v-for="file in galleryVideos" :key="file.key" class="col-6 col-md-4 col-lg-3">
+                    <div v-for="file in galleryVideos" :key="file.key" class="col">
                         <div class="card border-0 shadow-sm overflow-hidden bg-dark group-hover w-100">
                             
-                            <!-- UBAH KOTAK VIDEO: Tinggi fix 200px, bg hitam, dengan object-fit contain agar portrait/landscape tetap proporsional dan tidak terpotong -->
-                            <div class="position-relative w-100 d-flex justify-content-center align-items-center bg-black" style="height: 200px;">
+                            <!-- KOTAK VIDEO -->
+                            <div class="position-relative w-100 d-flex justify-content-center align-items-center bg-black" style="height: 160px;">
                                 <video :src="file.url" class="w-100 h-100 opacity-75" style="object-fit: contain;"></video>
-                                <button class="btn btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-2 d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;" @click.stop="openMediaPreview(file.url, 'video')" title="Putar Video">
-                                    <i class="bi bi-play-fill fs-4 lh-1" style="margin-left: 3px;"></i>
+                                <button class="btn btn-danger rounded-circle position-absolute top-50 start-50 translate-middle shadow border-2 border-white p-0 d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;" @click.stop="openMediaPreview(file.url, 'video')" title="Putar Video">
+                                    <i class="bi bi-play-fill fs-3 lh-1" style="margin-left: 3px;"></i>
                                 </button>
                             </div>
 
+                            <!-- TOMBOL AKSI DI BAWAH VIDEO -->
                             <div class="card-body p-2 d-flex flex-column bg-white">
                                 <div class="text-muted text-truncate mb-2 text-center" style="font-size: 0.65rem;">{{ formatBytes(file.size) }}</div>
                                 <div class="d-flex justify-content-between gap-1 mt-auto">
-                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1" style="font-size: 0.75rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
-                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 0.75rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())" title="Download">
+                                    <button type="button" class="btn btn-sm btn-danger flex-grow-1 py-1 px-1" style="font-size: 0.7rem;" @click="selectFromServerGallery(file.url)">Pilih</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-1" style="font-size: 0.7rem;" @click.stop="downloadMedia(file.url, file.key.split('/').pop())">
                                         <i class="bi bi-download"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" @click.stop="deleteFromServerGallery(file.key)" title="Hapus Permanen">
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-1" style="font-size: 0.7rem;" @click.stop="deleteFromServerGallery(file.key)">
                                         <i class="bi bi-trash3"></i>
                                     </button>
                                 </div>
@@ -1732,30 +1732,6 @@ body.sidebar-open {
             </div>
         </div>
     </div>
-
-    <!-- ========================================== -->
-<!-- MODAL POP-UP ZOOM FOTO / PLAY VIDEO        -->
-<!-- ========================================== -->
-<div v-if="previewMediaUrl" class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center fade-in" style="background: rgba(0,0,0,0.9); z-index: 99999;" @click.self="closeMediaPreview">
-    <div class="modal-dialog modal-dialog-centered modal-lg" style="width: 100%; max-width: 900px;">
-        <div class="modal-content bg-transparent border-0 shadow-none position-relative">
-            
-            <!-- Tombol Close (X) dibuat lebih menonjol -->
-            <div class="position-absolute" style="top: -15px; right: -15px; z-index: 999999;">
-                <button type="button" class="btn btn-light rounded-circle shadow-lg border border-secondary d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;" @click="closeMediaPreview">
-                    <i class="bi bi-x-lg fw-bold fs-5 text-dark"></i>
-                </button>
-            </div>
-            
-            <!-- Area Gambar / Video -->
-            <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center">
-                <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; object-fit: contain; background-color: #fff;">
-                <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="w-100 rounded shadow-lg" style="max-height: 85vh; background-color: #000;"></video>
-            </div>
-            
-        </div>
-    </div>
-</div>
 
 </div>
             
@@ -10594,6 +10570,27 @@ body.sidebar-open {
                 <button v-if="importConfig.step === 3" type="button" class="btn btn-sm btn-primary" @click="importConfig.showModal = false">
                     Tutup
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL POP-UP ZOOM FOTO / PLAY VIDEO (GLOBAL) -->
+<!-- ========================================== -->
+<div v-if="previewMediaUrl" class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center fade-in" style="background: rgba(0,0,0,0.95); z-index: 999999;" @click.self="closeMediaPreview">
+    
+    <!-- Tombol Close (X) - Posisi Aman untuk Mobile (Pojok Kanan Atas Layar Layaknya Story IG) -->
+    <button type="button" class="btn btn-light rounded-circle shadow-lg position-absolute d-flex justify-content-center align-items-center" style="top: 20px; right: 20px; width: 45px; height: 45px; z-index: 9999999;" @click="closeMediaPreview">
+        <i class="bi bi-x-lg fw-bold fs-4 text-dark"></i>
+    </button>
+
+    <div class="modal-dialog modal-dialog-centered w-100 px-2 px-md-4" style="max-width: 900px;">
+        <div class="modal-content bg-transparent border-0 shadow-none position-relative">
+            <!-- Area Gambar / Video -->
+            <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center">
+                <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; max-width: 100%; object-fit: contain; background-color: #fff;">
+                <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="rounded shadow-lg" style="max-height: 85vh; max-width: 100%; width: 100%; background-color: #000;"></video>
             </div>
         </div>
     </div>
