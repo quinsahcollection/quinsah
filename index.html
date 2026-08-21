@@ -1733,17 +1733,26 @@ body.sidebar-open {
         </div>
     </div>
 
-    <!-- MODAL POP-UP ZOOM FOTO / PLAY VIDEO -->
-<div v-if="previewMediaUrl" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.85); z-index: 1070;" @click.self="closeMediaPreview">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-transparent border-0 shadow-none">
-            <div class="modal-header border-0 d-flex justify-content-end p-2 position-absolute w-100" style="z-index: 2;">
-                <button type="button" class="btn btn-dark rounded-circle shadow border border-secondary" @click="closeMediaPreview"><i class="bi bi-x-lg"></i></button>
+    <!-- ========================================== -->
+<!-- MODAL POP-UP ZOOM FOTO / PLAY VIDEO        -->
+<!-- ========================================== -->
+<div v-if="previewMediaUrl" class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center fade-in" style="background: rgba(0,0,0,0.9); z-index: 99999;" @click.self="closeMediaPreview">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="width: 100%; max-width: 900px;">
+        <div class="modal-content bg-transparent border-0 shadow-none position-relative">
+            
+            <!-- Tombol Close (X) dibuat lebih menonjol -->
+            <div class="position-absolute" style="top: -15px; right: -15px; z-index: 999999;">
+                <button type="button" class="btn btn-light rounded-circle shadow-lg border border-secondary d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;" @click="closeMediaPreview">
+                    <i class="bi bi-x-lg fw-bold fs-5 text-dark"></i>
+                </button>
             </div>
-            <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center" style="min-height: 300px;">
+            
+            <!-- Area Gambar / Video -->
+            <div class="modal-body p-0 text-center d-flex justify-content-center align-items-center">
                 <img v-if="previewMediaType === 'image'" :src="previewMediaUrl" class="img-fluid rounded shadow-lg" style="max-height: 85vh; object-fit: contain; background-color: #fff;">
                 <video v-else-if="previewMediaType === 'video'" :src="previewMediaUrl" controls autoplay class="w-100 rounded shadow-lg" style="max-height: 85vh; background-color: #000;"></video>
             </div>
+            
         </div>
     </div>
 </div>
