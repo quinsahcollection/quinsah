@@ -8459,13 +8459,21 @@ body.sidebar-open {
                                 </button>
                             </div>
 
-                            <!-- Upload Button (Hidden if >= 8 images) -->
-                            <label v-if="!formProduct.images || formProduct.images.length < 8" class="border rounded d-flex flex-column align-items-center justify-content-center text-primary cursor-pointer bg-light shadow-sm" style="width: 80px; height: 80px; border-style: dashed !important; border-width: 2px !important; cursor: pointer;">
-                                <i class="bi bi-camera fs-4"></i>
-                                <span class="fw-bold mt-1" style="font-size: 0.6rem;">Tambah</span>
-                                <!-- Input file multiple -->
-                                <input type="file" class="d-none" multiple accept="image/*" @change="handleMultiImageUpload($event, formProduct)">
-                            </label>
+                            <!-- Tombol Tambah (Hanya jika < 8) -->
+                            <div v-if="!formProduct.images || formProduct.images.length < 8" class="d-flex gap-2">
+                                <!-- 1. Tombol Upload Baru -->
+                                <label class="border rounded d-flex flex-column align-items-center justify-content-center text-primary cursor-pointer bg-light shadow-sm" style="width: 80px; height: 80px; border-style: dashed !important; border-width: 2px !important;">
+                                    <i class="bi bi-camera fs-4"></i>
+                                    <span class="fw-bold mt-1" style="font-size: 0.6rem;">Upload</span>
+                                    <input type="file" class="d-none" multiple accept="image/*" @change="handleMultiImageUpload($event, formProduct)">
+                                </label>
+                    
+                                <!-- 2. TOMBOL PILIH DARI GALERI CLOUD -->
+                                <button type="button" class="btn btn-outline-info border-2 rounded d-flex flex-column align-items-center justify-content-center shadow-sm" style="width: 80px; height: 80px; border-style: dashed !important; cursor: pointer;" @click="openGalleryForProduct(formProduct)">
+                                    <i class="bi bi-cloud-check fs-4"></i>
+                                    <span class="fw-bold mt-1" style="font-size: 0.6rem;">Galeri</span>
+                                </button>
+                            </div>
                         </div>
                         <small class="text-muted mt-1 d-block" style="font-size: 0.7rem;">Format JPG, PNG. Rekomendasi rasio 1:1. Foto pertama akan menjadi foto utama.</small>
                     </div>
@@ -8756,7 +8764,7 @@ body.sidebar-open {
             
         </div>
     </div>
-</div>
+</div>              
 
 <div class="modal fade" id="editCartItemModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 600px; width: 95%;">
@@ -12832,6 +12840,13 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
+        // Membuka Galeri Cloud dan menargetkan form produk yang sedang dibuka
+        openGalleryForProduct(product) {
+        this.targetProductForGallery = product; // Simpan referensi produk mana yang di-edit
+        this.cdsSettings.mediaType = 'image_single'; // Paksa mode image
+        this.toggleServerGallery(); // Buka galeri cloud Anda
+    },
+
         // Mengecek apakah gambar sedang dicentang (Hanya berlaku di mode slider)
         isImageSelected(url) {
         if (this.cdsSettings.mediaType !== 'image_slider') return false;
@@ -12876,8 +12891,32 @@ financeAPList() {
         }
     },
 
-    // Memilih Media (Logika 1 Foto vs Banyak Foto)
+    // Memilih Media (Logika 1 Foto vs Banyak Foto, juga untuk Foto Produk)
     selectFromServerGallery(fileUrl) {
+        // 1. LOGIKA UNTUK PRODUK: Jika galeri dibuka dari modal produk
+        if (this.targetProductForGallery) {
+            // Pastikan array images sudah ada (mencegah error jika produk baru)
+            if (!this.targetProductForGallery.images) {
+                this.targetProductForGallery.images = [];
+            }
+            
+            // Cek batasan maksimal 8 foto
+            if (this.targetProductForGallery.images.length < 8) {
+                // Masukkan format object { url: fileUrl } sesuai dengan struktur foto produk Anda
+                this.targetProductForGallery.images.push({ url: fileUrl });
+                Swal.fire({ icon: 'success', title: 'Foto Ditambahkan ke Produk!', timer: 1200, showConfirmButton: false });
+            } else {
+                Swal.fire('Ups!', 'Maksimal 8 foto untuk satu produk.', 'warning');
+            }
+            
+            // Tutup galeri dan reset variabel target agar tidak menyangkut
+            this.showServerGallery = false;
+            this.targetProductForGallery = null; 
+            
+            return; // Hentikan eksekusi kode di bawah agar tidak masuk ke setelan CDS
+        }
+
+        // 2. LOGIKA UNTUK CDS (Layar Pelanggan)
         if (this.activeGalleryTab === 'video' || this.cdsSettings.mediaType === 'video') {
             this.cdsSettings.videoUrl = fileUrl;
             Swal.fire({ icon: 'success', title: 'Video Dipilih!', timer: 1200, showConfirmButton: false });
