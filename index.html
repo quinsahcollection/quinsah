@@ -13388,58 +13388,36 @@ financeAPList() {
     }
 },
 
-    // 2. Fungsi utama yang dipicu saat user memilih file foto (bisa banyak sekaligus)
-async handleMultiImageUpload(event, formObj) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
+    // 1. FUNGSI UPLOAD BANYAK GAMBAR (PREVIEW LOKAL)
+    handleMultiImageUpload(event, formObj) {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
 
-    if (!formObj.images) formObj.images = [];
+        if (!formObj.images) formObj.images = [];
 
-    const remainingSlots = 8 - formObj.images.length;
-    if (remainingSlots <= 0) {
-        alert('Maksimal foto yang diizinkan adalah 8 foto.');
-        event.target.value = '';
-        return;
-    }
-
-    const filesToProcess = files.slice(0, remainingSlots);
-
-    for (let file of filesToProcess) {
-        try {
-            // Otomatis deteksi tenant dari subdomain (contoh: yarch.queenpos.id -> 'yarch')
-            const hostname = window.location.hostname;
-            const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
-            
-            const filename = encodeURIComponent(file.name);
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?companyId=${tenantId}&filename=${filename}`;
-
-            const response = await fetch(workerUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": file.type || "image/jpeg",
-                    // 🔑 TAMBAHKAN KUNCI INI AGAR TIDAK DITOLAK (ERROR 401)
-                    "Authorization": "Bearer YarchQueenPOS12" 
-                },
-                body: file
-            });
-
-            const result = await response.json();
-            if (result.success) {
-                formObj.images.push({
-                    url: result.url
-                });
-            } else {
-                console.error("Gagal mengupload ke R2:", result.error);
-                alert("Gagal mengupload gambar: " + result.error);
-            }
-        } catch (error) {
-            console.error("Error jaringan saat upload file:", error);
-            alert("Terjadi kesalahan jaringan saat mengupload foto ke Cloudflare.");
+        const remainingSlots = 8 - formObj.images.length;
+        if (remainingSlots <= 0) {
+            Swal.fire('Info', 'Maksimal foto yang diizinkan adalah 8 foto.', 'info');
+            event.target.value = '';
+            return;
         }
-    }
-    
-    event.target.value = '';
-},
+
+        const filesToProcess = files.slice(0, remainingSlots);
+
+        filesToProcess.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                formObj.images.push({
+                    base64: e.target.result, // Untuk ditampilkan di layar (Preview)
+                    url: null,               // Dikosongkan karena belum masuk server
+                    rawFile: file            // File utuh disimpan untuk di-upload di saveData
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        event.target.value = ''; // Reset input
+    },
             
     // 1. Fungsi untuk Memicu Klik pada Input File Tersembunyi
     triggerUpload(targetModel) {
@@ -21286,143 +21264,195 @@ await setDoc(doc(db, "users", res.user.uid), {
     },
     
             async saveData(colName, formObj, modalId) {
-    // 1. PENCEGAH DOUBLE KLIK
-    if (this.isSaving) return;
-
-    // ==========================================
-    // TAMBAHAN: VALIDASI WAJIB ISI (NAMA & NO TELP)
-    // ==========================================
-    if (colName === 'customers' || colName === 'suppliers') {
-        // Cek Nama (Tidak boleh kosong)
-        if (!formObj.name || formObj.name.trim() === '') {
-            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nama Lengkap wajib diisi.' });
-        }
-        // Cek Nomor Telepon (Tidak boleh kosong)
-        if (!formObj.phone || formObj.phone.trim() === '') {
-            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nomor Handphone wajib diisi.' });
-        }
-        // Cek Keamanan Ekstra (Jika user bypass HTML, pastikan JS menolak huruf)
-        if (!/^\d+$/.test(formObj.phone)) {
-            return Swal.fire({ icon: 'warning', title: 'Format Salah!', text: 'Nomor Handphone hanya boleh berisi angka.' });
-        }
-    }
-
-    // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI
-    let duplikat = null;
-    
-    if (colName === 'customers' || colName === 'suppliers') {
-        // Pelanggan & Supplier -> Cek Nomor Telepon
-        let daftarData = colName === 'customers' ? this.customers : this.suppliers;
-        duplikat = daftarData.find(item => 
-            item.phone === formObj.phone && 
-            item.id !== formObj.id
-        );
-        if (duplikat) {
-            return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
-        }
-    } 
-    else if (colName === 'memberships') {
-        // Membership -> Cek Nama Tier
-        duplikat = this.memberships.find(m => 
-            m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
-            m.id !== formObj.id
-        );
-        if (duplikat) {
-            return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
-        }
-    }
-    else if (colName === 'outlets') {
-        // Wajib isi kode dan nama
-        if (!formObj.code || !formObj.name) {
-            return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Kode Cabang dan Nama Toko/Cabang wajib diisi.' });
-        }
-        
-        // Outlet -> Cek Kode Cabang
-        let duplikatKode = this.outlets.find(o => 
-            o.code.toUpperCase() === formObj.code.toUpperCase() && 
-            o.id !== formObj.id
-        );
-        if (duplikatKode) {
-            return Swal.fire({ icon: 'warning', title: 'Kode Terpakai!', text: `Kode cabang "${formObj.code.toUpperCase()}" sudah dipakai oleh ${duplikatKode.name}.` });
-        }
+        // 1. PENCEGAH DOUBLE KLIK
+        if (this.isSaving) return;
 
         // ==========================================
-        // TAMBAHAN BARU: Cek Duplikat Nama Outlet
+        // VALIDASI WAJIB ISI (NAMA & NO TELP)
         // ==========================================
-        let duplikatNama = this.outlets.find(o => 
-            o.name.toLowerCase() === formObj.name.toLowerCase() && 
-            o.id !== formObj.id
-        );
-        if (duplikatNama) {
-            return Swal.fire({ icon: 'warning', title: 'Nama Terpakai!', text: `Nama cabang "${formObj.name}" sudah terdaftar di database. Silakan bedakan namanya (misal: Quinsah Cab. A).` });
-        }
-        
-        // Rapikan kode menjadi huruf besar semua sebelum disimpan
-        formObj.code = formObj.code.toUpperCase();
-    }
-
-    // 3. KUNCI TOMBOL (Mulai Proses)
-    this.isSaving = true;
-   
-try {
-    const dataToSave = { ...formObj };
-    dataToSave.updatedBy = this.userProfile?.name || 'Admin';
-    dataToSave.companyId = this.userProfile?.companyId || ''; 
-    let finalDocId = null;
-    let isNewRecord = false; 
-
-    if (!dataToSave.id) { 
-        delete dataToSave.id; 
-        dataToSave.createdAt = serverTimestamp(); 
-        dataToSave.createdBy = this.userProfile?.name || 'Admin';
-        const addedDoc = await addDoc(collection(db, colName), dataToSave); 
-        finalDocId = addedDoc.id;
-        isNewRecord = true; 
-    } else { 
-        finalDocId = dataToSave.id; 
-        delete dataToSave.id; 
-        await updateDoc(doc(db, colName, finalDocId), dataToSave); 
-    }
-
-    if (colName === 'products') {
-        await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
-    }
-
-    // =========================================================
-    // PERBAIKAN UTAMA: AUTO-SELECT & REAL-TIME SINKRONISASI POS
-    // =========================================================
-    if (colName === 'customers' && isNewRecord) {
-        // PERBAIKAN: Taruh 'id: finalDocId' di akhir agar tidak tertimpa string kosong dari formObj
-        const newCustomerForPOS = {
-            ...formObj,
-            id: finalDocId
-        };
-        
-        // Masukkan langsung ke list data lokal agar bisa langsung dicari tanpa reload halaman
-        if (this.customers && Array.isArray(this.customers)) {
-            const isExist = this.customers.some(c => c.id === finalDocId);
-            if (!isExist) {
-                this.customers.push(newCustomerForPOS);
+        if (colName === 'customers' || colName === 'suppliers') {
+            // Cek Nama (Tidak boleh kosong)
+            if (!formObj.name || formObj.name.trim() === '') {
+                return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nama Lengkap wajib diisi.' });
+            }
+            // Cek Nomor Telepon (Tidak boleh kosong)
+            if (!formObj.phone || formObj.phone.trim() === '') {
+                return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Nomor Handphone wajib diisi.' });
+            }
+            // Cek Keamanan Ekstra (Jika user bypass HTML, pastikan JS menolak huruf)
+            if (!/^\d+$/.test(formObj.phone)) {
+                return Swal.fire({ icon: 'warning', title: 'Format Salah!', text: 'Nomor Handphone hanya boleh berisi angka.' });
             }
         }
-        
-        // Panggil fungsi selectCustomer yang sudah diperbaiki nama variabelnya
-        this.selectCustomer(newCustomerForPOS);
-        
-        // Kosongkan form input modal
-        if (this.formCustomer) {
-            this.formCustomer = { name: '', phone: '', address: '', membershipId: '' };
-        }
-    }
 
-    this.hideModal(modalId);
-} catch(e) { 
-    console.error("Gagal Save Data", e);
-    this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
-} finally {
-    this.isSaving = false;
-}
-    }, 
+        // 2. PENCEGAH DATA GANDA BERDASARKAN KATEGORI
+        let duplikat = null;
+        
+        if (colName === 'customers' || colName === 'suppliers') {
+            // Pelanggan & Supplier -> Cek Nomor Telepon
+            let daftarData = colName === 'customers' ? this.customers : this.suppliers;
+            duplikat = daftarData.find(item => 
+                item.phone === formObj.phone && 
+                item.id !== formObj.id
+            );
+            if (duplikat) {
+                return Swal.fire({ icon: 'warning', title: 'Data Ganda!', text: `Nomor telepon ini sudah terdaftar atas nama: ${duplikat.name}` });
+            }
+        } 
+        else if (colName === 'memberships') {
+            // Membership -> Cek Nama Tier
+            duplikat = this.memberships.find(m => 
+                m.tierName.toLowerCase() === formObj.tierName.toLowerCase() && 
+                m.id !== formObj.id
+            );
+            if (duplikat) {
+                return Swal.fire({ icon: 'warning', title: 'Tier Sudah Ada!', text: `Tier membership dengan nama "${duplikat.tierName}" sudah terdaftar.` });
+            }
+        }
+        else if (colName === 'outlets') {
+            // Wajib isi kode dan nama
+            if (!formObj.code || !formObj.name) {
+                return Swal.fire({ icon: 'warning', title: 'Data Belum Lengkap!', text: 'Kode Cabang dan Nama Toko/Cabang wajib diisi.' });
+            }
+            
+            // Outlet -> Cek Kode Cabang
+            let duplikatKode = this.outlets.find(o => 
+                o.code.toUpperCase() === formObj.code.toUpperCase() && 
+                o.id !== formObj.id
+            );
+            if (duplikatKode) {
+                return Swal.fire({ icon: 'warning', title: 'Kode Terpakai!', text: `Kode cabang "${formObj.code.toUpperCase()}" sudah dipakai oleh ${duplikatKode.name}.` });
+            }
+
+            // Cek Duplikat Nama Outlet
+            let duplikatNama = this.outlets.find(o => 
+                o.name.toLowerCase() === formObj.name.toLowerCase() && 
+                o.id !== formObj.id
+            );
+            if (duplikatNama) {
+                return Swal.fire({ icon: 'warning', title: 'Nama Terpakai!', text: `Nama cabang "${formObj.name}" sudah terdaftar di database. Silakan bedakan namanya (misal: Quinsah Cab. A).` });
+            }
+            
+            // Rapikan kode menjadi huruf besar semua sebelum disimpan
+            formObj.code = formObj.code.toUpperCase();
+        }
+
+        // 3. KUNCI TOMBOL (Mulai Proses Sinkronisasi)
+        this.isSaving = true;
+        
+        try {
+            // 4. DEEP COPY: Pisahkan data UI (layar) dengan data yang akan dikirim ke DB
+            const dataToSave = JSON.parse(JSON.stringify(formObj));
+
+            // =========================================================================
+            // 5. PROSES UPLOAD FOTO PRODUK KE CLOUDFLARE R2 (HANYA UNTUK PRODUK)
+            // =========================================================================
+            if (colName === 'products') {
+                
+                // A. Upload Foto Utama Produk
+                if (dataToSave.images && dataToSave.images.length > 0) {
+                    for (let i = 0; i < dataToSave.images.length; i++) {
+                        // Jika ada data 'rawFile' dari input lokal
+                        if (formObj.images[i] && formObj.images[i].rawFile) {
+                            
+                            // Tembak API Worker R2 Anda
+                            const finalUrl = await this.uploadFileToR2(formObj.images[i].rawFile); 
+                            
+                            dataToSave.images[i].url = finalUrl;
+                            
+                            // Bersihkan payload agar file mentah & base64 tidak dikirim ke Firebase
+                            delete dataToSave.images[i].rawFile;
+                            delete dataToSave.images[i].base64;
+                        } else {
+                            // Hapus base64 dari gambar lama agar tidak memberatkan DB
+                            delete dataToSave.images[i].base64;
+                        }
+                    }
+                }
+
+                // B. Upload Foto Varian Produk (Jika Ada)
+                if (dataToSave.variants && dataToSave.variants.length > 0) {
+                    for (let i = 0; i < dataToSave.variants.length; i++) {
+                        if (formObj.variants[i] && formObj.variants[i].rawFile) {
+                            
+                            // Tembak API Worker R2 Anda
+                            const finalUrl = await this.uploadFileToR2(formObj.variants[i].rawFile);
+                            
+                            dataToSave.variants[i].imageUrl = finalUrl;
+                            
+                            // Bersihkan payload varian
+                            delete dataToSave.variants[i].rawFile;
+                            delete dataToSave.variants[i].imageBase64;
+                        } else {
+                            delete dataToSave.variants[i].imageBase64;
+                        }
+                    }
+                }
+            }
+            // =========================================================================
+
+            // 6. PREPARASI PAYLOAD DATABASE FIREBASE
+            dataToSave.updatedBy = this.userProfile?.name || 'Admin';
+            dataToSave.companyId = this.userProfile?.companyId || ''; 
+            
+            let finalDocId = null;
+            let isNewRecord = false; 
+
+            if (!dataToSave.id) { 
+                delete dataToSave.id; 
+                dataToSave.createdAt = serverTimestamp(); 
+                dataToSave.createdBy = this.userProfile?.name || 'Admin';
+                const addedDoc = await addDoc(collection(db, colName), dataToSave); 
+                finalDocId = addedDoc.id;
+                isNewRecord = true; 
+            } else { 
+                finalDocId = dataToSave.id; 
+                delete dataToSave.id; 
+                await updateDoc(doc(db, colName, finalDocId), dataToSave); 
+            }
+
+            // 7. PENCATATAN LOG STOK PRODUK
+            if (colName === 'products') {
+                await this.logProductStockDifferences(this.formProductOriginalState, dataToSave, finalDocId);
+            }
+
+            // =========================================================
+            // 8. AUTO-SELECT & REAL-TIME SINKRONISASI POS
+            // =========================================================
+            if (colName === 'customers' && isNewRecord) {
+                // Taruh 'id: finalDocId' di akhir agar tidak tertimpa string kosong
+                const newCustomerForPOS = {
+                    ...dataToSave,
+                    id: finalDocId
+                };
+                
+                // Masukkan langsung ke list data lokal agar bisa langsung dicari tanpa reload halaman
+                if (this.customers && Array.isArray(this.customers)) {
+                    const isExist = this.customers.some(c => c.id === finalDocId);
+                    if (!isExist) {
+                        this.customers.push(newCustomerForPOS);
+                    }
+                }
+                
+                // Panggil fungsi selectCustomer
+                this.selectCustomer(newCustomerForPOS);
+                
+                // Kosongkan form input modal
+                if (this.formCustomer) {
+                    this.formCustomer = { name: '', phone: '', address: '', membershipId: '' };
+                }
+            }
+
+            // 9. SELESAI & TUTUP MODAL
+            this.hideModal(modalId);
+
+        } catch(e) { 
+            console.error("Gagal Save Data", e);
+            this.askConfirm("Error", "Gagal melakukan Sinkronisasi ke Cloud Server.", null); 
+        } finally {
+            this.isSaving = false;
+        }
+    },
 
             async logProductStockDifferences(oldP, newP, productId) {
                 const currentUser = this.userProfile.name || 'Admin';
@@ -21619,66 +21649,41 @@ try {
                 });
             },
 
-            // FUNGSI UPLOAD FOTO (VARIAN/LOGO) - KOMPRES DULU BARU KE CLOUDFLARE R2
-            handleImageUpload(e, targetObj, isVariant=false) {
-                const file = e.target.files[0]; 
-                if (!file) return; 
+            // 2. FUNGSI UPLOAD FOTO (VARIAN/LOGO) - KOMPRES LALU PREVIEW LOKAL
+        handleImageUpload(e, targetObj, isVariant=false) {
+        const file = e.target.files[0]; 
+        if (!file) return; 
+        
+        const r = new FileReader();
+        r.onload = (ev) => { 
+            const img = new Image(); 
+            img.onload = () => {
+                // 1. KOMPRES GAMBAR (Script Asli Anda Dipertahankan!)
+                const canvas = document.createElement('canvas'); 
+                const scale = 400 / img.width; 
+                canvas.width = 400; 
+                canvas.height = img.height * scale;
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); 
                 
-                const r = new FileReader();
-                r.onload = (ev) => { 
-                    const img = new Image(); 
-                    img.onload = () => {
-                        // 1. KOMPRES GAMBAR (Script Lama Anda yang Bagus)
-                        const canvas = document.createElement('canvas'); 
-                        const scale = 400 / img.width; 
-                        canvas.width = 400; 
-                        canvas.height = img.height * scale;
-                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); 
-                        
-                        // 2. UBAH GAMBAR KECIL JADI FILE (Blob) UNTUK DIKIRIM KE R2
-                        canvas.toBlob(async (blob) => {
-                            try {
-                                // Tentukan nama toko (tenant)
-                                const hostname = window.location.hostname;
-                                const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
-                                
-                                // Bersihkan nama file
-                                let rawFilename = file.name || `foto_${Date.now()}.jpg`;
-                                let safeFilename = encodeURIComponent(rawFilename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_]/g, ''));
-                                
-                                // URL Cloudflare Worker Anda
-                                const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?companyId=${tenantId}&filename=${safeFilename}`;
+                // 2. JADIKAN PREVIEW LOKAL (Base64 dari Canvas)
+                targetObj.imageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                targetObj.imageUrl = null; 
+                
+                // 3. UBAH GAMBAR KECIL JADI FILE UNTUK DISIMPAN SAAT SINKRONISASI
+                canvas.toBlob((blob) => {
+                    // Agar fungsi uploadFileToR2 Anda tidak error, kita kembalikan blob menjadi bentuk "File" yang punya nama
+                    let safeName = file.name ? file.name.replace(/\s+/g, '-') : `foto_${Date.now()}.jpg`;
+                    let compressedFile = new File([blob], safeName, { type: "image/jpeg" });
+                    
+                    targetObj.rawFile = compressedFile; // Simpan file kompresi siap upload
+                }, 'image/jpeg', 0.6);
+            }; 
+            img.src = ev.target.result; 
+        }; 
+        r.readAsDataURL(file);
 
-                                // Kirim file kecil tersebut ke Cloudflare
-                                const response = await fetch(workerUrl, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "image/jpeg" },
-                                    body: blob
-                                });
-
-                                const result = await response.json();
-                                
-                                if (result.success) {
-                                    // 3. SIMPAN URL CLOUDFLARE KE VARIABEL
-                                    targetObj.imageUrl = result.url;
-                                    
-                                    // Hapus sisa-sisa base64 lama jika sebelumnya ada
-                                    targetObj.imageBase64 = ''; 
-                                } else {
-                                    alert("Gagal mengupload foto ke Cloudflare: " + result.error);
-                                }
-                            } catch (error) {
-                                console.error("Error upload:", error);
-                                alert("Terjadi kesalahan jaringan saat mengupload foto.");
-                            } finally {
-                                e.target.value = ''; // Reset input tombol upload
-                            }
-                        }, 'image/jpeg', 0.6); // Kualitas JPEG 60%
-                    }; 
-                    img.src = ev.target.result; 
-                }; 
-                r.readAsDataURL(file);
-            },
+        e.target.value = ''; // Reset input tombol upload
+    },
 
             getEffectiveBasePrice(p) {
                 let pBase = p.sellPrice || p.basePrice || 0;
