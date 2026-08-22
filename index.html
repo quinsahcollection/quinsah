@@ -17007,39 +17007,8 @@ async printShiftSummary(reg) {
           // =========================================================================
     // 🌟 FUNGSI MANAJEMEN CASH REGISTER (SHIFT KASIR)
     // =========================================================================
-    
-    // 1. Membaca Data Riwayat Shift dari Firebase
-    async fetchRegisters() {
-        const compId = this.getMyCompanyId();
-        if (!compId) return;
-        
-        try {
-            // 🌟 PERBAIKAN: Hapus orderBy dari query Firestore agar tidak memicu error Index
-            const q = query(
-                collection(db, "cash_registers"),
-                where("companyId", "==", compId)
-            );
-            const snap = await getDocs(q);
-            let list = [];
-            snap.forEach(doc => {
-                list.push({ id: doc.id, ...doc.data() });
-            });
-            
-            // 🌟 SOLUSI: Urutkan data berdasarkan waktu buka (terbaru di atas) lewat Javascript
-            list.sort((a, b) => {
-                const timeA = a.openTime?.toDate ? a.openTime.toDate() : new Date(a.openTime);
-                const timeB = b.openTime?.toDate ? b.openTime.toDate() : new Date(b.openTime);
-                return timeB - timeA; 
-            });
-            
-            this.registers = list;
-        } catch (err) {
-            console.error("Gagal load data shift:", err);
-            Swal.fire('Error', 'Gagal memuat riwayat laci kasir.', 'error');
-        }
-    },
 
-    // 2. Membuka Modal Buka Shift
+    // Membuka Modal Buka Shift
     openShiftModal() {
     let userBranch = (this.userProfile && this.userProfile.outletId) ? this.userProfile.outletId : '';
     let targetOutlet = userBranch || (this.outlets && this.outlets.length > 0 ? this.outlets[0].id : '');
@@ -17193,7 +17162,6 @@ if (userActiveShift) {
         // Bersihkan Form & Refresh Data
         this.showPecahan = false; 
         this.pecahanData = { '100000': '', '50000': '', '20000': '', '10000': '', '5000': '', '2000': '', '1000': '', '500': '' };
-        this.fetchRegisters();
 
     } catch (err) {
         console.error("Error Buka Shift:", err); 
