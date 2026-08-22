@@ -2295,6 +2295,19 @@ body.sidebar-open {
                         </tr>
                     </tbody>
                 </table>
+                <!-- TAMBAHAN: Area Pagination / Load More -->
+                <div class="text-center p-3 border-top bg-light" v-if="filteredRegisters.length >= registerLimit">
+                    <button class="btn btn-sm btn-outline-primary fw-bold px-4 rounded-pill shadow-sm" 
+                            @click="loadMoreRegisters" 
+                            :disabled="isLoadingMoreRegisters">
+                        <span v-if="isLoadingMoreRegisters" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <i v-else class="bi bi-chevron-down me-2"></i> 
+                        {{ isLoadingMoreRegisters ? 'Memuat Data...' : 'Tampilkan Lebih Banyak' }}
+                    </button>
+                </div>
+                <div class="text-center p-3 border-top text-muted small" v-else-if="filteredRegisters.length > 0">
+                    Semua riwayat shift telah ditampilkan.
+                </div>
             </div>
         </div>
     </div>
@@ -10753,7 +10766,12 @@ body.sidebar-open {
                 reports: 'Laporan Laba/Rugi & Analitik', 
                 settings: 'Setelan Sistem & Hak Akses'
 },
-                    
+
+                // Tambahan untuk Pagination Register
+                registerLimit: 10, // Jumlah awal data yang dimuat (misal: 10 shift terakhir)
+                isLoadingMoreRegisters: false,
+                unsubscribeRegisters: null, // Untuk mematikan listener lama saat limit bertambah
+                
                 paymentTab: 'sales_payment',
                 paymentSearchQuery: '',
                 paymentStartDate: '', 
@@ -11208,6 +11226,7 @@ body.sidebar-open {
                 this.initAppListeners(); 
                 this.fetchUsersFromDatabase();
                 this.fetchRolesFromDatabase(); 
+                this.fetchRegistersRealtime();
             } else { 
                 this.isLoggedIn = false; 
                 this.userProfile = {}; 
@@ -13002,6 +13021,49 @@ financeAPList() {
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
 
+        loadMoreRegisters() {
+        this.isLoadingMoreRegisters = true;
+        this.registerLimit += 10; // Tambah 10 data lagi setiap kali tombol ditekan
+        
+        // Beri jeda sedikit agar UI tidak kaku, lalu panggil ulang query
+        setTimeout(() => {
+            this.fetchRegistersRealtime();
+        }, 500);
+    },
+
+    fetchRegistersRealtime() {
+        // Hentikan pantauan data yang lama jika ada, agar tidak double-listen
+        if (this.unsubscribeRegisters) {
+            this.unsubscribeRegisters();
+        }
+
+        // Susun query dengan limit yang baru
+        // Pastikan Anda memanggil collection "registers" atau nama koleksi yang Anda gunakan
+        // Wajib menggunakan orderBy agar data yang dipanggil selalu urut (biasanya yang terbaru di atas)
+        const regQuery = query(
+            collection(db, "registers"), // Sesuaikan nama koleksi di Firebase Anda
+            where("companyId", "==", companyId),
+            orderBy("createdAt", "desc"), // Sesuaikan dengan nama field tanggal Anda (misal: openTime, createdAt)
+            limit(this.registerLimit)     // Batasi jumlah yang ditarik
+        );
+
+        this.unsubscribeRegisters = onSnapshot(regQuery, (snapshot) => {
+            let regs = [];
+            snapshot.forEach(doc => {
+                regs.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Simpan ke variabel array utama Anda (biasanya `registers` atau `allRegisters`)
+            // Variabel ini nantinya akan difilter secara otomatis oleh computed property `filteredRegisters` Anda
+            this.registers = regs; 
+            
+            this.isLoadingMoreRegisters = false;
+        }, (error) => {
+            console.error("Error fetching registers:", error);
+            this.isLoadingMoreRegisters = false;
+        });
+    },
+    
         // Fungsi Validasi Sebelum Menyimpan Produk
     validateAndSaveProduct() {
         // Asumsi data semua produk Anda disimpan di dalam variabel "this.products"
