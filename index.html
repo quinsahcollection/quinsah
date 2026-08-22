@@ -8753,7 +8753,7 @@ body.sidebar-open {
             </div>
             
             <div class="modal-footer bg-light border-top p-3">
-                <button class="btn btn-primary-custom w-100 fw-bold py-2 fs-6 shadow" @click="saveData('products', formProduct, 'addProductModal')" :disabled="isSaving">
+                <button class="btn btn-primary-custom w-100 fw-bold py-2 fs-6 shadow" @click="validateAndSaveProduct" :disabled="isSaving">
                     <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>SINKRONISASI DATA KE SERVER
                 </button>
             </div>
@@ -13001,6 +13001,72 @@ financeAPList() {
             // Memaksa input URL menjadi huruf kecil dan tanpa spasi/simbol
             this.authUser.urlToko = this.authUser.urlToko.toLowerCase().replace(/[^a-z0-9]/g, '');
         },
+
+        // Fungsi Validasi Sebelum Menyimpan Produk
+    validateAndSaveProduct() {
+        // Asumsi data semua produk Anda disimpan di dalam variabel "this.products"
+        // (Sesuaikan jika nama variabel daftar produk Anda berbeda)
+        const existingProducts = this.products || []; 
+
+        // 1. CEK DUPLIKAT SKU INDUK
+        if (this.formProduct.sku) {
+            const isDuplicateParentSku = existingProducts.some(p => 
+                p.sku === this.formProduct.sku && p.id !== this.formProduct.id
+            );
+
+            if (isDuplicateParentSku) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'SKU Ganda!',
+                    text: `Kode SKU Induk "${this.formProduct.sku}" sudah digunakan oleh produk lain. Silakan gunakan kode yang berbeda.`
+                });
+                return; // Hentikan eksekusi, jangan simpan
+            }
+        }
+
+        // 2. CEK DUPLIKAT SKU VARIAN (Jika produk memiliki varian)
+        if (this.formProduct.variants && this.formProduct.variants.length > 0) {
+            for (let i = 0; i < this.formProduct.variants.length; i++) {
+                let v = this.formProduct.variants[i];
+                
+                if (v.variantSku) {
+                    // A. Cek apakah ada SKU Varian yang ganda di dalam tabel form ini sendiri
+                    const duplicateInForm = this.formProduct.variants.filter(item => item.variantSku === v.variantSku).length > 1;
+                    if (duplicateInForm) {
+                        Swal.fire('SKU Varian Ganda!', `Ada SKU Varian yang sama persis ("${v.variantSku}") di tabel yang sedang Anda buat. Pastikan setiap baris unik.`, 'error');
+                        return;
+                    }
+
+                    // B. Cek apakah SKU Varian ini sudah dipakai oleh produk/varian lain di Database
+                    const isDuplicateInDb = existingProducts.some(p => {
+                        // Jangan cek produk ini sendiri (berguna jika sedang mode Edit)
+                        if (p.id === this.formProduct.id) return false;
+                        
+                        // Apakah bentrok dengan SKU Induk produk lain?
+                        if (p.sku === v.variantSku) return true;
+
+                        // Apakah bentrok dengan SKU Varian produk lain?
+                        if (p.variants && p.variants.length > 0) {
+                            return p.variants.some(existingVar => existingVar.variantSku === v.variantSku);
+                        }
+                        return false;
+                    });
+
+                    if (isDuplicateInDb) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'SKU Varian Ganda!',
+                            text: `Kode SKU Varian "${v.variantSku}" sudah digunakan oleh produk lain di sistem.`
+                        });
+                        return; // Hentikan eksekusi
+                    }
+                }
+            }
+        }
+
+        // 3. JIKA SEMUA AMAN, JALANKAN FUNGSI SAVE ASLI ANDA
+        this.saveData('products', this.formProduct, 'addProductModal');
+    },
 
         closeGallery() {
         this.showServerGallery = false;
