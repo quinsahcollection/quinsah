@@ -13043,11 +13043,11 @@ financeAPList() {
         // Pastikan Anda memanggil collection "registers" atau nama koleksi yang Anda gunakan
         // Wajib menggunakan orderBy agar data yang dipanggil selalu urut (biasanya yang terbaru di atas)
         const regQuery = query(
-            collection(db, "registers"), // Sesuaikan nama koleksi di Firebase Anda
-            where("companyId", "==", companyId),
-            orderBy("createdAt", "desc"), // Sesuaikan dengan nama field tanggal Anda (misal: openTime, createdAt)
-            limit(this.registerLimit)     // Batasi jumlah yang ditarik
-        );
+        collection(db, "registers"), 
+        where("companyId", "==", this.userProfile.companyId), 
+        orderBy("createdAt", "desc"), 
+        limit(this.registerLimit)     
+   );
 
         this.unsubscribeRegisters = onSnapshot(regQuery, (snapshot) => {
             let regs = [];
