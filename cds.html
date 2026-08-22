@@ -908,7 +908,10 @@
                     imageUrls: '', 
                     welcomeText: '' 
                 },
-                currentImage: '', 
+                
+                // Tambahan variabel untuk mengontrol slide gambar
+                currentImageIndex: 0,
+                sliderInterval: null,
                 
                 categories: [], 
                 products: [], 
@@ -943,6 +946,30 @@
             }
         },
         computed: {
+            // Logika untuk memecah teks URL gambar menjadi Array
+            parsedImageUrls() {
+                if (!this.cdsSettings.imageUrls) return [];
+                return this.cdsSettings.imageUrls
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url !== '');
+            },
+            
+            // Logika otomatis menentukan gambar mana yang tampil
+            currentImage() {
+                if (this.parsedImageUrls.length === 0) return null;
+                
+                if (this.cdsSettings.mediaType === 'image_single') {
+                    return this.parsedImageUrls[0];
+                }
+                
+                if (this.cdsSettings.mediaType === 'image_slider') {
+                    return this.parsedImageUrls[this.currentImageIndex] || this.parsedImageUrls[0];
+                }
+                
+                return null;
+            },
+
             categoryTree() {
                 let map = {};
                 let tree = [];
@@ -962,14 +989,15 @@
             },
 
             activeVariantImage() {
-                // Gunakan getCdsImage yang pengecekannya sudah sangat lengkap
                 if (this.activeVariant) {
-                    return this.getCdsImage(this.activeVariant, this.selectedProduct);
+                    if (this.activeVariant.imageBase64 && this.activeVariant.imageBase64.trim() !== '') return this.activeVariant.imageBase64;
+                    if (this.activeVariant.image || this.activeVariant.gambar) return this.activeVariant.image || this.activeVariant.gambar;
                 }
                 if (this.selectedProduct) {
-                    return this.getCdsImage(this.selectedProduct);
+                    if (this.selectedProduct.imageBase64 && this.selectedProduct.imageBase64.trim() !== '') return this.selectedProduct.imageBase64;
+                    if (this.selectedProduct.image || this.selectedProduct.gambar) return this.selectedProduct.image || this.selectedProduct.gambar;
                 }
-                return '';
+                return null;
             },
 
             mainCategories() {
@@ -1059,8 +1087,34 @@
                 return basePrice + modPrice;
             }
         },
+
+        // Watcher untuk memantau jika kasir mengubah tipe media dari pengaturan
+        watch: {
+            'cdsSettings.mediaType'() {
+                this.setupSlider();
+            },
+            'cdsSettings.imageUrls'() {
+                this.setupSlider();
+            }
+        },
         
         methods: {
+            // Logika mengatur transisi slide gambar otomatis
+            setupSlider() {
+                if (this.sliderInterval) {
+                    clearInterval(this.sliderInterval);
+                    this.sliderInterval = null;
+                }
+                
+                if (this.cdsSettings.mediaType === 'image_slider' && this.parsedImageUrls.length > 1) {
+                    this.sliderInterval = setInterval(() => {
+                        this.currentImageIndex = (this.currentImageIndex + 1) % this.parsedImageUrls.length;
+                    }, 4000); 
+                } else {
+                    this.currentImageIndex = 0;
+                }
+            },
+
             getCdsImage(item, parentProduct = null) {
                 if (!item) return '';
                 if (item.imageUrl && item.imageUrl.trim() !== '') return item.imageUrl; 
@@ -1232,6 +1286,9 @@
         },
         mounted() {
             if (!companyId) return;
+            
+            // Panggil setup slider begitu aplikasi dimulai
+            this.setupSlider();
 
             let savedSettings = localStorage.getItem('cds_local_settings_' + outletId);
             if (savedSettings) {
@@ -1312,9 +1369,19 @@
             onSnapshot(doc(db, "settings", companyId), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.cdsSettings) this.cdsSettings = data.cdsSettings;
+                    if (data.cdsSettings) {
+                        this.cdsSettings = data.cdsSettings;
+                        this.setupSlider(); // Pastikan slider dijalankan ulang jika pengaturan baru ditarik dari database
+                    }
                 }
             });
+        },
+        
+        // Bersihkan interval saat komponen tidak lagi dipakai agar tidak membebani browser
+        beforeUnmount() {
+            if (this.sliderInterval) {
+                clearInterval(this.sliderInterval);
+            }
         }
     });
 
