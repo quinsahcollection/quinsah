@@ -989,15 +989,14 @@
             },
 
             activeVariantImage() {
+                // Gunakan getCdsImage yang pengecekannya sudah sangat lengkap
                 if (this.activeVariant) {
-                    if (this.activeVariant.imageBase64 && this.activeVariant.imageBase64.trim() !== '') return this.activeVariant.imageBase64;
-                    if (this.activeVariant.image || this.activeVariant.gambar) return this.activeVariant.image || this.activeVariant.gambar;
+                    return this.getCdsImage(this.activeVariant, this.selectedProduct);
                 }
                 if (this.selectedProduct) {
-                    if (this.selectedProduct.imageBase64 && this.selectedProduct.imageBase64.trim() !== '') return this.selectedProduct.imageBase64;
-                    if (this.selectedProduct.image || this.selectedProduct.gambar) return this.selectedProduct.image || this.selectedProduct.gambar;
+                    return this.getCdsImage(this.selectedProduct);
                 }
-                return null;
+                return '';
             },
 
             mainCategories() {
