@@ -11247,7 +11247,9 @@ beforeDestroy() {
     if (this.timerInterval) {
         clearInterval(this.timerInterval);
     }
-
+    if (this.unsubscribeRegisters) {
+        this.unsubscribeRegisters();
+    }
     if (this._modalListener) document.removeEventListener('hidden.bs.modal', this._modalListener);
     if (this._printListener) window.removeEventListener('afterprint', this._printListener);
     if (this._authUnsubscribe) this._authUnsubscribe(); 
