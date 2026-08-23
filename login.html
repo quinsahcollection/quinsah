@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueenPOS - Software Kasir (POS) & Manajemen Inventori Multi-Cabang</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #dc3545;
+            --primary-hover: #bb2d3b;
+            --dark-color: #0f172a;
+            --body-color: #334155;
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--body-color);
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* TOPBAR */
+        .topbar {
+            background-color: var(--dark-color);
+            color: #94a3b8;
+            font-size: 0.82rem;
+            padding: 8px 0;
+        }
+        .topbar a {
+            color: #cbd5e1;
+            text-decoration: none;
+        }
+        .topbar a:hover {
+            color: #ffffff;
+        }
+
+        /* NAVBAR RESPONSIF */
+        .enterprise-nav {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .brand-logo {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+        .nav-link-item {
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.92rem;
+            text-decoration: none;
+            padding: 8px 12px;
+            transition: color 0.2s;
+        }
+        .nav-link-item:hover {
+            color: var(--primary-color);
+        }
+
+        /* BUTTONS */
+        .btn-corporate-primary {
+            background-color: var(--primary-color);
+            color: #ffffff !important;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.2s;
+            display: inline-block;
+            border: none;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+            font-size: 0.95rem;
+        }
+        .btn-corporate-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        .btn-corporate-outline {
+            border: 1px solid #cbd5e1;
+            color: #334155 !important;
+            font-weight: 600;
+            padding: 10px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            background: transparent;
+            transition: all 0.2s;
+            display: inline-block;
+            font-size: 0.95rem;
+        }
+        .btn-corporate-outline:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color) !important;
+            background: #fff5f5;
+        }
+
+        /* HERO SECTION */
+        .hero-section {
+            padding: 70px 0 60px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+        .hero-title {
+            font-weight: 800;
+            font-size: clamp(2rem, 3.8vw, 3.2rem);
+            color: var(--dark-color);
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+            margin-bottom: 20px;
+        }
+        .hero-desc {
+            font-size: 1.05rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .hero-mockup {
+            background: var(--dark-color);
+            padding: 8px;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.2);
+            border: 1px solid #334155;
+        }
+        .hero-mockup img {
+            border-radius: 6px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* SECTION HEADER */
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 50px;
+        }
+        .section-tag {
+            color: var(--primary-color);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .section-title {
+            font-weight: 800;
+            font-size: clamp(1.8rem, 3vw, 2.3rem);
+            color: var(--dark-color);
+            letter-spacing: -0.5px;
+        }
+
+        /* FEATURE SHOWCASE ALTERNATING */
+        .feature-showcase {
+            padding: 60px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .feature-showcase:nth-child(even) {
+            background-color: var(--bg-light);
+        }
+        .feature-img-wrapper {
+            background: #ffffff;
+            padding: 8px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            border: 1px solid var(--border-color);
+        }
+        .feature-img-wrapper img {
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+            display: block;
+        }
+        .feature-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .feature-point i {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            margin-top: -2px;
+        }
+        .feature-point h5 {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 3px;
+        }
+        .feature-point p {
+            font-size: 0.88rem;
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* STATS BAR */
+        .stats-bar {
+            background: var(--dark-color);
+            color: #ffffff;
+            padding: 40px 0;
+        }
+        .stat-item h3 {
+            font-weight: 800;
+            font-size: 2rem;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        .stat-item p {
+            color: #94a3b8;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* INDUSTRI SEKTOR */
+        .sector-section {
+            background-color: var(--bg-light);
+            padding: 70px 0;
+        }
+        .sector-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--dark-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            font-size: 0.95rem;
+        }
+
+        /* FOOTER */
+        footer {
+            background-color: #090d16;
+            color: #94a3b8;
+            padding: 60px 0 25px;
+        }
+        .footer-heading {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+        .footer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .footer-list li {
+            margin-bottom: 10px;
+        }
+        .footer-list a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.88rem;
+        }
+        .footer-list a:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <div class="topbar d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div>
+                <span><i class="bi bi-geo-alt-fill me-1"></i> Jakarta Barat, Indonesia</span>
+                <span class="ms-3"><i class="bi bi-envelope-fill me-1"></i> halo@queenpos.id</span>
+            </div>
+            <div>
+                <a href="https://app.queenpos.id" class="me-3">Bantuan & Support</a>
+                <a href="https://app.queenpos.id">Client Portal</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVBAR RESPONSIF DENGAN LOGO ASLI -->
+    <header class="enterprise-nav">
+        <div class="container d-flex justify-content-between align-items-center">
+            <!-- Logo Asli QueenPOS -->
+            <a href="#" class="d-flex align-items-center text-decoration-none">
+                <!-- Ubah src di bawah ini ke file/link logo asli Anda yang di-upload ke R2 -->
+                <img src="https://queenpos.id/logo.png" alt="QueenPOS Logo" class="brand-logo" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop';">
+            </a>
+
+            <!-- Menu Desktop -->
+            <div class="d-none d-lg-flex align-items-center gap-1">
+                <a href="#fitur" class="nav-link-item">Fitur Utama</a>
+                <a href="#solusi" class="nav-link-item">Solusi Industri</a>
+            </div>
+
+            <!-- Tombol Aksi -->
+            <div class="d-flex align-items-center gap-2">
+                <a href="https://app.queenpos.id" class="btn-corporate-outline py-2 px-3">Masuk</a>
+                <a href="https://app.queenpos.id" class="btn-corporate-primary py-2 px-3">Coba Gratis</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-2 fw-bold mb-3">
+                        <i class="bi bi-shield-check me-1"></i> Software Kasir & Mini ERP Terintegrasi
+                    </span>
+                    <h1 class="hero-title">
+                        Sistem Kasir & Inventori untuk Bisnis Skala Enterprise
+                    </h1>
+                    <p class="hero-desc">
+                        Kelola penjualan multi-cabang, lacak stok real-time, hitung HPP aset otomatis, dan pantau laporan keuangan secara akurat dalam satu platform cerdas.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <a href="https://app.queenpos.id" class="btn-corporate-primary py-3 px-4 text-decoration-none">
+                            Mulai Uji Coba Gratis <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a href="https://api.whatsapp.com/send?phone=628123456789" class="btn-corporate-outline py-3 px-4 text-decoration-none">
+                            <i class="bi bi-whatsapp me-2"></i> Hubungi Sales
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-mockup">
+                        <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" alt="QueenPOS Dashboard">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- STATS BAR -->
+    <section class="stats-bar">
+        <div class="container">
+            <div class="row text-center g-4">
+                <div class="col-md-4 stat-item">
+                    <h3>Multi-Cabang</h3>
+                    <p>Sinkronisasi data terpusat real-time</p>
+                </div>
+                <div class="col-md-4 stat-item">
+                    <h3>100% Presisi</h3>
+                    <p>Perhitungan HPP & Valuasi Stok Otomatis</p>
+                </div>
+                <div class="col-md-4 stat-item">
+                    <h3>Anti-Loss System</h3>
+                    <p>Kontrol shift kasir & audit log ketat</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION SHOWCASE FITUR -->
+    <div id="fitur">
+        <!-- FITUR 1 -->
+        <section class="feature-showcase">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="section-tag">Kontrol Terpusat</span>
+                        <h2 class="section-title mb-3">Dashboard Bisnis & Multi-Cabang Real-Time</h2>
+                        <p class="text-muted mb-4">Pantau performa seluruh cabang toko Anda dari satu layar pusat tanpa harus datang langsung ke lokasi.</p>
+                        
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Ringkasan Omzet Global & Per Cabang</h5>
+                                <p>Lihat total transaksi harian hingga bulanan dengan grafik tren penjualan yang bersih.</p>
+                            </div>
+                        </div>
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Produk Terlaris Otomatis</h5>
+                                <p>Identifikasi produk atau menu yang paling mendominasi penjualan secara akurat.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="feature-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop" alt="Dashboard">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FITUR 2 -->
+        <section class="feature-showcase">
+            <div class="container">
+                <div class="row align-items-center g-4 flex-lg-row-reverse">
+                    <div class="col-lg-6">
+                        <span class="section-tag">Kasir Modern & Interaktif</span>
+                        <h2 class="section-title mb-3">Point of Sale (POS) & Layar Pelanggan (CDS)</h2>
+                        <p class="text-muted mb-4">Transaksi kilat didukung sistem kasir responsif dan layar sekunder nirkabel untuk meningkatkan kepercayaan pelanggan.</p>
+                        
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Pencarian & Scan Barcode Instan</h5>
+                                <p>Proses transaksi belanja jadi super cepat dengan dukungan pencarian produk cerdas.</p>
+                            </div>
+                        </div>
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Customer Display Screen (CDS) Nirkabel</h5>
+                                <p>Hubungkan tablet pembeli via URL lokal untuk menampilkan keranjang & QRIS.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="feature-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1556742049-0a67d553c245?q=80&w=1000&auto=format&fit=crop" alt="POS Kasir">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FITUR 3 -->
+        <section class="feature-showcase">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-6">
+                        <span class="section-tag">Kontrol Stok Ketat</span>
+                        <h2 class="section-title mb-3">Manajemen Inventori, Valuasi Aset & PO</h2>
+                        <p class="text-muted mb-4">Jangan biarkan stok hilang atau modal mengendap. Kelola rantai pasok dari gudang hingga rak toko.</p>
+                        
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Valuasi Aset & HPP Otomatis</h5>
+                                <p>Sistem menghitung nilai total inventori (HPP) secara otomatis setiap terjadi mutasi barang.</p>
+                            </div>
+                        </div>
+                        <div class="feature-point">
+                            <div><i class="bi bi-check-circle-fill"></i></div>
+                            <div>
+                                <h5>Purchase Order & Stok Menipis</h5>
+                                <p>Dapatkan peringatan dini saat stok barang menipis serta kelola pesanan ke supplier.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="feature-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1000&auto=format&fit=crop" alt="Inventori">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- SEKTOR INDUSTRI -->
+    <section id="solusi" class="sector-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Solusi Bisnis</span>
+                <h2 class="section-title">Fleksibel untuk Berbagai Sektor Usaha</h2>
+            </div>
+            <div class="row g-3 justify-content-center">
+                <div class="col-md-3 col-6"><div class="sector-box"><i class="bi bi-tag text-danger d-block fs-3 mb-2"></i> Fashion & Apparel</div></div>
+                <div class="col-md-3 col-6"><div class="sector-box"><i class="bi bi-cup-hot text-danger d-block fs-3 mb-2"></i> Cafe & Resto (F&B)</div></div>
+                <div class="col-md-3 col-6"><div class="sector-box"><i class="bi bi-basket text-danger d-block fs-3 mb-2"></i> Minimarket & Grosir</div></div>
+                <div class="col-md-3 col-6"><div class="sector-box"><i class="bi bi-box text-danger d-block fs-3 mb-2"></i> Retail Umum</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <div class="row g-4 mb-4">
+                <div class="col-lg-5">
+                    <h5 class="text-white fw-bold mb-3"><i class="bi bi-shop-window text-danger me-2"></i> QueenPOS</h5>
+                    <p class="text-muted small pe-lg-5">
+                        Platform Point of Sale (POS) & Manajemen Back-Office terintegrasi yang dibangun untuk membantu bisnis bertumbuh secara efisien.
+                    </p>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <h6 class="footer-heading">Navigasi</h6>
+                    <ul class="footer-list">
+                        <li><a href="#fitur">Fitur Sistem</a></li>
+                        <li><a href="#solusi">Solusi Industri</a></li>
+                        <li><a href="https://app.queenpos.id">Login Aplikasi</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-6">
+                    <h6 class="footer-heading">Kontak & Lokasi</h6>
+                    <p class="text-muted small mb-2"><i class="bi bi-geo-alt-fill text-danger me-2"></i> Jakarta Barat, DKI Jakarta, Indonesia</p>
+                    <p class="text-muted small mb-0"><i class="bi bi-envelope-fill text-danger me-2"></i> halo@queenpos.id</p>
+                </div>
+            </div>
+            <div class="text-center pt-4 border-top border-secondary border-opacity-25">
+                <p class="text-muted small mb-0">&copy; 2026 PT QueenPOS Indonesia. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
