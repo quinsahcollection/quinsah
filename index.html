@@ -23378,38 +23378,18 @@ doActualPrint() {
             });
         },
 
-                printPurchase(po) {
-    // 1. Validasi Keamanan Data PO
-    if (!po || typeof po !== 'object') {
-        console.error("Data PO tidak valid:", po);
-        return;
-    }
+                // 3. TIMPA FUNGSI printPurchase LAMA ANDA
+        printPurchase(po) {
+            this.activePrintData = po;
+            this.printMode = 'poA4';
 
-    // 2. NORMALISASI ITEMS (Pencegah Crash pada .reduce())
-    // Memastikan array items selalu terisi meskipun nama field di database berbeda (items / details)
-    this.activePrintData = {
-        ...po,
-        items: Array.isArray(po.items) ? po.items : (po.details || po.purchaseItems || [])
-    };
-
-    this.printMode = 'poA4';
-
-    // 3. LOGIKA OUTLET AMAN (Mencegah error jika appSettings / outletReceipts null)
-    const targetOutletId = po.outletId || po.outlet || po.branchId || '';
-
-    if (this.appSettings && this.appSettings.outletReceipts && targetOutletId && this.appSettings.outletReceipts[targetOutletId]) {
-        this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[targetOutletId] };
-    } else {
-        this.currentPrintSettings = this.appSettings ? { ...this.appSettings } : {};
-    }
-
-    // 4. Jalankan pencetakan setelah Vue selesai merender DOM
-    this.$nextTick(() => {
-        setTimeout(() => {
-            this.doActualPrint();
-        }, 300);
-    });
-},
+            // Biarkan Vue memasukkan data ke HTML, lalu panggil fungsi Iframe
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.doActualPrint();
+                }, 300);
+            });
+        },
 
             getProductDisplayStock(p) {
         let s = 0;
