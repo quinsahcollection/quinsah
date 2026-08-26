@@ -9749,14 +9749,14 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- ========================================== -->
+<!-- ========================================== -->
 <!-- 4. CETAK PURCHASE ORDER (PO)               -->
 <!-- ========================================== -->
 <div v-if="printMode === 'poA4' && activePrintData" class="mode-a4" style="font-family: sans-serif; color: #000; padding: 20px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px;">
         <div style="width: 50%;">
             <h1 style="margin:0; font-size:28px; font-weight:bold; color:var(--primary-dark);">{{ (currentPrintSettings && currentPrintSettings.storeName) ? currentPrintSettings.storeName : 'QUINSAH COLLECTION' }}</h1>
-            <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ (currentPrintSettings && currentPrintSettings.storeAddress) ? currentPrintSettings.storeAddress : (getOutletAddress ? getOutletAddress(activePrintData.outletId) : '-') }}</p>
+            <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ (currentPrintSettings && currentPrintSettings.storeAddress) ? currentPrintSettings.storeAddress : '-' }}</p>
         </div>
         <div style="text-align:right; width: 50%;">
             <div style="font-size:26px; font-weight:bold; color:#ccc; text-transform:uppercase; letter-spacing:2px;">PURCHASE ORDER</div>
@@ -9770,12 +9770,12 @@ body.sidebar-open {
     <div style="display:flex; justify-content:space-between; margin-bottom:30px; padding:15px; background-color:#f9f9f9; border:1px solid #ddd; border-radius:8px;">
         <div style="width:48%;">
             <div style="font-size:11px; color:#777; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Pihak Pemesan:</div>
-            <div style="font-size:14px; font-weight:bold;">Quinsah Cabang {{ getOutletName ? getOutletName(activePrintData.outletId) : (activePrintData.outletId || '-') }}</div>
+            <div style="font-size:14px; font-weight:bold;">Quinsah Cabang {{ activePrintData.outletId || 'Pusat' }}</div>
             <div style="font-size:12px; margin-top:3px;">Harap dikirim ke alamat cabang di atas.</div>
         </div>
         <div style="width:48%;">
             <div style="font-size:11px; color:#777; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Kepada Supplier (Pemasok):</div>
-            <div style="font-size:16px; font-weight:bold;">{{ getSupplierName ? getSupplierName(activePrintData.supplierId) : (activePrintData.supplierId || '-') }}</div>
+            <div style="font-size:16px; font-weight:bold;">{{ activePrintData.supplierId || 'Supplier Umum' }}</div>
         </div>
     </div>
 
@@ -9875,7 +9875,7 @@ body.sidebar-open {
         </div>
         <div style="width:30%;">
             <p style="margin-bottom:60px;">Pihak Supplier,</p>
-            <p style="border-top:1px solid #000; padding-top:5px; margin:0 auto; width:80%;">{{ getSupplierName ? getSupplierName(activePrintData.supplierId) : (activePrintData.supplierId || '-') }}</p>
+            <p style="border-top:1px solid #000; padding-top:5px; margin:0 auto; width:80%;">{{ activePrintData.supplierId || 'Supplier' }}</p>
         </div>
     </div>
     <div style="margin-top:30px; font-size:10px; color:#888; text-align:center; border-top:1px solid #eee; padding-top:10px;">
