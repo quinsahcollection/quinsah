@@ -18286,7 +18286,7 @@ getEreceiptPhone(trx) {
     return 'Tidak ada nomor HP';
 },
           
-// Fungsi Kirim ke WhatsApp (Desain Baru)
+// Fungsi Kirim ke WhatsApp (Desain Baru & Multi-Cabang)
 sendEReceiptWA(trx) {
     let nomorMentah = this.getEreceiptPhone(trx);
     let noHp = '';
@@ -18296,6 +18296,14 @@ sendEReceiptWA(trx) {
     
     const urlStruk = this.getReceiptUrl(trx.id);
     const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num || 0);
+
+    // 🌟 PERBAIKAN: Ambil Nama Toko Berdasarkan Outlet Transaksi
+    let namaToko = 'Quinsah Collection';
+    if (this.appSettings && this.appSettings.outletReceipts && this.appSettings.outletReceipts[trx.outletId] && this.appSettings.outletReceipts[trx.outletId].storeName) {
+        namaToko = this.appSettings.outletReceipts[trx.outletId].storeName;
+    } else if (this.appSettings && this.appSettings.storeName) {
+        namaToko = this.appSettings.storeName;
+    }
 
     let listBarang = '';
     trx.items.forEach(i => {
@@ -18311,7 +18319,7 @@ sendEReceiptWA(trx) {
 
     const teks = 
 `👋 Halo Kak *${trx.customer || 'Pelanggan'}*,
-Terima kasih telah berbelanja di *${this.appSettings?.storeName || 'Quinsah Collection'}*.
+Terima kasih telah berbelanja di *${namaToko}*.
 
 *RINCIAN TRANSAKSI :*
 No. Struk : ${trx.id}
@@ -18333,10 +18341,18 @@ Terima kasih atas kunjungannya! 🙏`;
     window.open(`https://wa.me/${noHp}?text=${encodeURIComponent(teks)}`, '_blank');
 },
 
-// Fungsi Kirim ke Email (Desain Baru)
+// Fungsi Kirim ke Email (Desain Baru & Multi-Cabang)
 sendEReceiptEmail(trx) {
     const urlStruk = this.getReceiptUrl(trx.id);
     const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num || 0);
+
+    // 🌟 PERBAIKAN: Ambil Nama Toko Berdasarkan Outlet Transaksi
+    let namaToko = 'Quinsah Collection';
+    if (this.appSettings && this.appSettings.outletReceipts && this.appSettings.outletReceipts[trx.outletId] && this.appSettings.outletReceipts[trx.outletId].storeName) {
+        namaToko = this.appSettings.outletReceipts[trx.outletId].storeName;
+    } else if (this.appSettings && this.appSettings.storeName) {
+        namaToko = this.appSettings.storeName;
+    }
 
     let listBarang = '';
     trx.items.forEach(i => {
@@ -18353,7 +18369,7 @@ sendEReceiptEmail(trx) {
     const bodyText = 
 `Halo ${trx.customer || 'Pelanggan'},
 
-Terima kasih telah berbelanja di ${this.appSettings?.storeName || 'Quinsah Collection'}. Berikut adalah rincian pesanan Anda:
+Terima kasih telah berbelanja di ${namaToko}. Berikut adalah rincian pesanan Anda:
 
 RINCIAN TRANSAKSI :
 No. Struk : ${trx.id}
@@ -18372,11 +18388,11 @@ Anda dapat melihat struk digital lengkap, histori transaksi, dan men-download PD
 ${urlStruk}
 
 Salam Hangat,
-Manajemen ${this.appSettings?.storeName || 'Quinsah Collection'}`;
+Manajemen ${namaToko}`;
 
     window.location.href = `mailto:?subject=${encodeURIComponent(`E-Receipt: ${trx.id}`)}&body=${encodeURIComponent(bodyText)}`;
-    }, 
-
+}, 
+            
 // Copy URL Struk ke Clipboard
 copyEReceiptLinkOnly(trx) {
     const urlStruk = this.getReceiptUrl(trx.id);
