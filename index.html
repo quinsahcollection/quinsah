@@ -23379,26 +23379,37 @@ doActualPrint() {
         },
 
                 printPurchase(po) {
-            this.activePrintData = po;
-            this.printMode = 'poA4';
+    // 1. Validasi Keamanan Data PO
+    if (!po || typeof po !== 'object') {
+        console.error("Data PO tidak valid:", po);
+        return;
+    }
 
-            // 🌟 DETEKSI CERDAS: Cek semua kemungkinan nama field outlet pada data PO
-            const targetOutletId = po.outletId || po.outlet || po.branchId || '';
+    // 2. NORMALISASI ITEMS (Pencegah Crash pada .reduce())
+    // Memastikan array items selalu terisi meskipun nama field di database berbeda (items / details)
+    this.activePrintData = {
+        ...po,
+        items: Array.isArray(po.items) ? po.items : (po.details || po.purchaseItems || [])
+    };
 
-            if (this.appSettings && this.appSettings.outletReceipts && targetOutletId && this.appSettings.outletReceipts[targetOutletId]) {
-                // Jika ketemu settingan khusus outlet tersebut
-                this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[targetOutletId] };
-            } else {
-                // Fallback aman ke settingan global/pusat
-                this.currentPrintSettings = this.appSettings ? { ...this.appSettings } : {};
-            }
+    this.printMode = 'poA4';
 
-            this.$nextTick(() => {
-                setTimeout(() => {
-                    this.doActualPrint();
-                }, 300);
-            });
-        },
+    // 3. LOGIKA OUTLET AMAN (Mencegah error jika appSettings / outletReceipts null)
+    const targetOutletId = po.outletId || po.outlet || po.branchId || '';
+
+    if (this.appSettings && this.appSettings.outletReceipts && targetOutletId && this.appSettings.outletReceipts[targetOutletId]) {
+        this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[targetOutletId] };
+    } else {
+        this.currentPrintSettings = this.appSettings ? { ...this.appSettings } : {};
+    }
+
+    // 4. Jalankan pencetakan setelah Vue selesai merender DOM
+    this.$nextTick(() => {
+        setTimeout(() => {
+            this.doActualPrint();
+        }, 300);
+    });
+},
 
             getProductDisplayStock(p) {
         let s = 0;
