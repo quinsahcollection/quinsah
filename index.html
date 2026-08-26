@@ -17336,7 +17336,7 @@ if (userActiveShift) {
         }
     },
 
-    // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
+        // 7. Eksekusi Penyelesaian & Penguncian Tutup Shift Kasir
     async saveCloseShift() {
         this.isProcessing = true;
         try {
@@ -17360,13 +17360,14 @@ if (userActiveShift) {
             let expected = this.activeCloseShift.expectedCash;
             let diff = actual - expected;
 
-            // Kloning data pecahan tutup (jika ada)
+            // 🌟 PERBAIKAN: Berikan pengaman (this.pecahanData || {}) agar tidak error jika undefined
             let closeDenominationsPayload = null;
             let hasInputPecahanClose = false;
-            for (let key in this.pecahanData) {
-                if (Number(this.pecahanData[key]) > 0) hasInputPecahanClose = true;
+            const safePecahanData = this.pecahanData || {};
+            for (let key in safePecahanData) {
+                if (Number(safePecahanData[key]) > 0) hasInputPecahanClose = true;
             }
-            if (hasInputPecahanClose) closeDenominationsPayload = { ...this.pecahanData };
+            if (hasInputPecahanClose) closeDenominationsPayload = { ...safePecahanData };
 
             // Semua metode pembayaran pecahan hasil split ikut disimpan ke Firebase
             await updateDoc(shiftRef, {
@@ -17406,8 +17407,9 @@ if (userActiveShift) {
             this.fetchRegisters();
             
         } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'Gagal mengunci laci kasir.', 'error');
+            // 🌟 UBAH INI: Tampilkan pesan error asli di console agar tahu letak masalahnya jika masih ada kendala
+            console.error("Detail Error Tutup Shift:", err);
+            Swal.fire('Error', 'Gagal mengunci laci kasir: ' + (err.message || ''), 'error');
         } finally {
             this.isProcessing = false;
         }
