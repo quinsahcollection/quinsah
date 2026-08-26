@@ -23378,16 +23378,19 @@ doActualPrint() {
             });
         },
 
-        // 3. TIMPA FUNGSI printPurchase
-        printPurchase(po) {
+                printPurchase(po) {
             this.activePrintData = po;
             this.printMode = 'poA4';
 
-            // 🌟 LOGIKA BARU: Ambil setting struk KHUSUS untuk outlet PO ini
-            if (this.appSettings && this.appSettings.outletReceipts && this.appSettings.outletReceipts[po.outletId]) {
-                this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[po.outletId] };
+            // 🌟 DETEKSI CERDAS: Cek semua kemungkinan nama field outlet pada data PO
+            const targetOutletId = po.outletId || po.outlet || po.branchId || '';
+
+            if (this.appSettings && this.appSettings.outletReceipts && targetOutletId && this.appSettings.outletReceipts[targetOutletId]) {
+                // Jika ketemu settingan khusus outlet tersebut
+                this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[targetOutletId] };
             } else {
-                this.currentPrintSettings = this.appSettings || {};
+                // Fallback aman ke settingan global/pusat
+                this.currentPrintSettings = this.appSettings ? { ...this.appSettings } : {};
             }
 
             this.$nextTick(() => {
