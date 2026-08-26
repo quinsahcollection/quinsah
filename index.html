@@ -9756,26 +9756,26 @@ body.sidebar-open {
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px;">
         <div style="width: 50%;">
             <h1 style="margin:0; font-size:28px; font-weight:bold; color:var(--primary-dark);">{{ (currentPrintSettings && currentPrintSettings.storeName) ? currentPrintSettings.storeName : 'QUINSAH COLLECTION' }}</h1>
-            <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ (currentPrintSettings && currentPrintSettings.storeAddress) ? currentPrintSettings.storeAddress : getOutletAddress(activePrintData.outletId) }}</p>
+            <p style="margin:5px 0; font-size:12px; color:#555; max-width:250px;">{{ (currentPrintSettings && currentPrintSettings.storeAddress) ? currentPrintSettings.storeAddress : (getOutletAddress ? getOutletAddress(activePrintData.outletId) : '-') }}</p>
         </div>
         <div style="text-align:right; width: 50%;">
             <div style="font-size:26px; font-weight:bold; color:#ccc; text-transform:uppercase; letter-spacing:2px;">PURCHASE ORDER</div>
-            <div style="font-size:14px; margin-top:5px;"><b># {{ activePrintData.id }}</b></div>
-            <div style="font-size:12px; margin-top:3px;">Tanggal: {{ activePrintData.dateStr }}</div>
+            <div style="font-size:14px; margin-top:5px;"><b># {{ activePrintData.id || '-' }}</b></div>
+            <div style="font-size:12px; margin-top:3px;">Tanggal: {{ activePrintData.dateStr || '-' }}</div>
             <div style="font-size:12px; margin-top:3px;">Metode Bayar: <b>{{ activePrintData.paymentMethod || 'CASH' }}</b></div>
-            <div style="font-size:12px; margin-top:3px; font-weight:bold; color: #d9534f;" v-if="activePrintData.paymentStatus === 'HUTANG'">Jatuh Tempo: {{ activePrintData.dueDate }}</div>
+            <div style="font-size:12px; margin-top:3px; font-weight:bold; color: #d9534f;" v-if="activePrintData.paymentStatus === 'HUTANG'">Jatuh Tempo: {{ activePrintData.dueDate || '-' }}</div>
         </div>
     </div>
 
     <div style="display:flex; justify-content:space-between; margin-bottom:30px; padding:15px; background-color:#f9f9f9; border:1px solid #ddd; border-radius:8px;">
         <div style="width:48%;">
             <div style="font-size:11px; color:#777; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Pihak Pemesan:</div>
-            <div style="font-size:14px; font-weight:bold;">Quinsah Cabang {{ getOutletName(activePrintData.outletId) }}</div>
+            <div style="font-size:14px; font-weight:bold;">Quinsah Cabang {{ getOutletName ? getOutletName(activePrintData.outletId) : (activePrintData.outletId || '-') }}</div>
             <div style="font-size:12px; margin-top:3px;">Harap dikirim ke alamat cabang di atas.</div>
         </div>
         <div style="width:48%;">
             <div style="font-size:11px; color:#777; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Kepada Supplier (Pemasok):</div>
-            <div style="font-size:16px; font-weight:bold;">{{ getSupplierName(activePrintData.supplierId) }}</div>
+            <div style="font-size:16px; font-weight:bold;">{{ getSupplierName ? getSupplierName(activePrintData.supplierId) : (activePrintData.supplierId || '-') }}</div>
         </div>
     </div>
 
@@ -9791,16 +9791,16 @@ body.sidebar-open {
             </tr>
         </thead>
         <tbody>
-            <tr v-for="(item, idx) in activePrintData.items" :key="idx">
+            <tr v-for="(item, idx) in (activePrintData.items || [])" :key="idx">
                 <td style="border: 1px solid #000; padding: 12px; text-align:center;">{{ idx + 1 }}</td>
                 <td style="border: 1px solid #000; padding: 12px;">
-                    <b>{{ item.productName }}</b>
+                    <b>{{ item.productName || item.name || '-' }}</b>
                     <div style="font-size:11px; color:#555; margin-top:2px;" v-if="item.variantName && item.variantName !== '-'">Varian: {{ item.variantName }}</div>
                 </td>
                 <td style="border: 1px solid #000; padding: 12px; text-align:center; font-family:monospace;">{{ item.variantSku || item.sku || '-' }}</td>
-                <td style="border: 1px solid #000; padding: 12px; text-align:center; font-weight:bold;">{{ item.qty }}</td>
-                <td style="border: 1px solid #000; padding: 12px; text-align:right;">Rp {{ formatNumber(item.price) }}</td>
-                <td style="border: 1px solid #000; padding: 12px; text-align:right; font-weight:bold;">Rp {{ formatNumber(item.qty * item.price) }}</td>
+                <td style="border: 1px solid #000; padding: 12px; text-align:center; font-weight:bold;">{{ item.qty || 0 }}</td>
+                <td style="border: 1px solid #000; padding: 12px; text-align:right;">Rp {{ formatNumber(item.price || 0) }}</td>
+                <td style="border: 1px solid #000; padding: 12px; text-align:right; font-weight:bold;">Rp {{ formatNumber((item.qty || 0) * (item.price || 0)) }}</td>
             </tr>
         </tbody>
     </table>
@@ -9809,7 +9809,7 @@ body.sidebar-open {
         <table style="width:50%; font-size:13px; border-collapse:collapse;">
             <tr>
                 <td style="padding:5px 10px; font-weight:bold; text-align:right;">Subtotal:</td>
-                <td style="padding:5px 10px; text-align:right;">Rp {{ formatNumber(activePrintData.items.reduce((s,i) => s + (i.qty * i.price), 0)) }}</td>
+                <td style="padding:5px 10px; text-align:right;">Rp {{ formatNumber((activePrintData.items || []).reduce((s,i) => s + ((i.qty || 0) * (i.price || 0)), 0)) }}</td>
             </tr>
             <tr>
                 <td style="padding:5px 10px; font-weight:bold; text-align:right;">Pajak (PPN) <span v-if="activePrintData.taxPercent">({{activePrintData.taxPercent}}%)</span>:</td>
@@ -9817,22 +9817,22 @@ body.sidebar-open {
             </tr>
             <tr>
                 <td style="padding:10px; font-weight:bold; font-size:16px; border-top: 2px solid #000; text-align:right;">TOTAL PEMBELIAN:</td>
-                <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark); border-top: 2px solid #000;">Rp {{ formatNumber(activePrintData.total) }}</td>
+                <td style="padding:10px; font-weight:bold; font-size:16px; text-align:right; color:var(--primary-dark); border-top: 2px solid #000;">Rp {{ formatNumber(activePrintData.total || 0) }}</td>
             </tr>
             
             <tr v-if="activePrintData.paymentHistory && activePrintData.paymentHistory.length > 0">
                 <td colspan="2" style="padding:10px 0;">
                     <div style="font-weight:bold; border-bottom:1px solid #ccc; margin-bottom:5px;">Riwayat Pembayaran:</div>
                     <div v-for="(hist, hIdx) in activePrintData.paymentHistory" :key="hIdx" style="display:flex; justify-content:space-between; margin-bottom:2px;">
-                        <span>{{ hist.date.split(',')[0] }} - {{ hist.method || 'CASH' }}</span>
-                        <span>Rp {{ formatNumber(hist.amount) }}</span>
+                        <span>{{ hist.date ? hist.date.split(',')[0] : '-' }} - {{ hist.method || 'CASH' }}</span>
+                        <span>Rp {{ formatNumber(hist.amount || 0) }}</span>
                     </div>
                 </td>
             </tr>
 
             <tr v-if="activePrintData.paymentStatus === 'HUTANG'">
                 <td style="padding:10px; font-weight:bold; text-align:right; color:#d9534f; border-top: 1px solid #d9534f;">Sisa Hutang:</td>
-                <td style="padding:10px; font-weight:bold; text-align:right; color:#d9534f; border-top: 1px solid #d9534f;">Rp {{ formatNumber(activePrintData.total - (activePrintData.paidAmount || 0)) }}</td>
+                <td style="padding:10px; font-weight:bold; text-align:right; color:#d9534f; border-top: 1px solid #d9534f;">Rp {{ formatNumber((activePrintData.total || 0) - (activePrintData.paidAmount || 0)) }}</td>
             </tr>
         </table>
     </div>
@@ -9854,12 +9854,12 @@ body.sidebar-open {
                 <td style="padding: 5px;">{{ ret.date ? ret.date.split(',')[0] : '-' }}</td>
                 <td style="padding: 5px; font-weight: bold;">
                     {{ ret.productName || 'Produk' }}<br>
-                    <span style="font-size: 10px; font-weight: normal; color: #777;">Ket: {{ ret.alasan }}</span>
+                    <span style="font-size: 10px; font-weight: normal; color: #777;">Ket: {{ ret.alasan || '-' }}</span>
                 </td>
-                <td style="padding: 5px; text-align: center; font-weight: bold; color: #dc3545;">{{ ret.qtyRetur }}</td>
+                <td style="padding: 5px; text-align: center; font-weight: bold; color: #dc3545;">{{ ret.qtyRetur || 0 }}</td>
                 <td style="padding: 5px;">{{ ret.action || 'Refund' }}</td>
                 <td style="padding: 5px; text-align: right; font-weight: bold; color: #dc3545;">
-                    {{ ret.refundAmount > 0 ? '- Rp ' + formatNumber(ret.refundAmount) : 'Rp 0' }}
+                    {{ (ret.refundAmount || 0) > 0 ? '- Rp ' + formatNumber(ret.refundAmount) : 'Rp 0' }}
                 </td>
             </tr>
         </table>
@@ -9875,7 +9875,7 @@ body.sidebar-open {
         </div>
         <div style="width:30%;">
             <p style="margin-bottom:60px;">Pihak Supplier,</p>
-            <p style="border-top:1px solid #000; padding-top:5px; margin:0 auto; width:80%;">{{ getSupplierName(activePrintData.supplierId) }}</p>
+            <p style="border-top:1px solid #000; padding-top:5px; margin:0 auto; width:80%;">{{ getSupplierName ? getSupplierName(activePrintData.supplierId) : (activePrintData.supplierId || '-') }}</p>
         </div>
     </div>
     <div style="margin-top:30px; font-size:10px; color:#888; text-align:center; border-top:1px solid #eee; padding-top:10px;">
