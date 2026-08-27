@@ -6514,17 +6514,17 @@ body.sidebar-open {
                                         <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
                                     </div>
                                     <div class="d-flex gap-1" style="width: 30%; justify-content: flex-end;">
-                                        <button class="btn btn-sm py-0 px-1 border shadow-sm" 
-                                                :class="item.checkStatus === 'ready' ? 'btn-success text-white' : 'btn-light text-success'" 
-                                                @click="item.checkStatus = 'ready'" title="Barang Tersedia">
-                                            <i class="bi bi-check-lg"></i>
-                                        </button>
-                                        <button class="btn btn-sm py-0 px-1 border shadow-sm" 
-                                                :class="item.checkStatus === 'empty' ? 'btn-danger text-white' : 'btn-light text-danger'" 
-                                                @click="item.checkStatus = 'empty'" title="Barang Habis/Kosong">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </div>
+                                    <button class="btn btn-sm py-0 px-1 border shadow-sm" 
+                                    :class="item.checkStatus === 'ready' ? 'btn-success text-white' : 'btn-light text-success'" 
+                                    @click="item.checkStatus = 'ready'; playBeep('success')" title="Barang Tersedia">
+                                    <i class="bi bi-check-lg"></i>
+                                    </button>
+                                 <button class="btn btn-sm py-0 px-1 border shadow-sm" 
+                                 :class="item.checkStatus === 'empty' ? 'btn-danger text-white' : 'btn-light text-danger'" 
+                                @click="item.checkStatus = 'empty'; playBeep('error')" title="Barang Habis/Kosong">
+                                <i class="bi bi-x-lg"></i>
+                          </button>
+                        </div>
                                 </div>
                                 <div v-if="trx.items.some(i => i.checkStatus === 'empty')" class="text-danger small mt-2 fw-semibold">
                                     <i class="bi bi-exclamation-circle me-1"></i> Ada barang kosong, hubungi pelanggan lalu Tunda (Hold).
@@ -15975,27 +15975,35 @@ async printReceiptBluetooth(trx) {
         this.batchActionTarget = '';
     },
 
-    playBeep() {
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const context = new AudioContext();
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
+    playBeep(type = 'success') {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const context = new AudioContext();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
 
-        oscillator.connect(gain);
-        gain.connect(context.destination);
+            oscillator.connect(gain);
+            gain.connect(context.destination);
 
-        oscillator.type = 'sine'; // Tipe gelombang suara
-        oscillator.frequency.value = 880; // Nada tinggi (seperti scanner kasir)
-        gain.gain.value = 0.1; // Volume (0.1 cukup agar tidak terlalu kencang)
-
-        oscillator.start();
-        oscillator.stop(context.currentTime + 0.1); // Bunyi selama 0.1 detik saja
-    } catch (e) {
-        console.log("Audio tidak didukung di browser ini:", e);
-    }
-},
-            // 🌟 KODE BARU: Update status dan TANGGAL dari Kanban Board
+            if (type === 'success') {
+                oscillator.type = 'sine'; // Tipe gelombang halus
+                oscillator.frequency.value = 880; // Nada tinggi (scanner kasir)
+                gain.gain.value = 0.1; // Volume
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.1); // Bunyi 0.1 detik
+            } else if (type === 'error') {
+                oscillator.type = 'sawtooth'; // Tipe gelombang agak kasar
+                oscillator.frequency.value = 250; // Nada rendah (tanda error/kosong)
+                gain.gain.value = 0.1;
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.2); // Bunyi 0.2 detik
+            }
+        } catch (e) {
+            console.log("Audio tidak didukung di browser ini:", e);
+        }
+    },
+            
+// 🌟 KODE BARU: Update status dan TANGGAL dari Kanban Board
 async updateFulfillmentStatus(trx, newStatus) {
     try {
         // 1. Ambil waktu saat tombol diklik
