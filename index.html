@@ -15835,33 +15835,81 @@ async printReceiptBluetooth(trx) {
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
     // =========================================================
     async promptShipInfo(trx) {
+        // Tampilkan Pop-up menggunakan SweetAlert2 dengan HTML kustom
         const { value: formValues } = await Swal.fire({
-            title: 'Kirim Pesanan & Input Resi',
+            title: '<i class="bi bi-truck text-primary"></i> Input Resi',
             html: `
-                <div class="mb-3 text-start mt-3">
-                    <label class="form-label small fw-bold text-muted">Kurir / Ekspedisi</label>
-                    <input id="swal-kurir" class="form-control form-control-sm" placeholder="Contoh: JNE, J&T, GoSend, dll">
-                </div>
-                <div class="mb-2 text-start">
-                    <label class="form-label small fw-bold text-muted">Nomor Resi (Opsional)</label>
-                    <input id="swal-resi" class="form-control form-control-sm" placeholder="Ketik atau scan barcode resi">
+                <div class="text-start mb-3">
+                    <div class="p-3 bg-light border border-primary border-opacity-25 rounded-3 mb-3 text-center">
+                        <div class="small text-muted fw-bold mb-1">Sedang memproses pesanan:</div>
+                        <h4 class="fw-bold text-primary mb-1">${trx.id}</h4>
+                        <div class="text-dark fw-semibold"><i class="bi bi-person-circle me-1"></i>${trx.customer}</div>
+                    </div>
+                    
+                    <label class="form-label fw-bold small text-secondary mb-1">Pilih / Ketik Nama Kurir</label>
+                    <input id="swal-courier" class="form-control mb-3" placeholder="Contoh: JNE, J&T, Shopee Xpress..." value="${trx.courierName || trx.courier || ''}">
+                    
+                    <label class="form-label fw-bold small text-secondary mb-1">Nomor Resi <span class="text-danger">*</span></label>
+                    <input id="swal-tracking" class="form-control border-primary shadow-sm" placeholder="Ketik atau scan nomor resi..." value="${trx.trackingNumber || ''}" autocomplete="off">
                 </div>
             `,
             focusConfirm: false,
             showCancelButton: true,
-            confirmButtonText: '<i class="bi bi-send me-1"></i> Proses Kirim',
+            confirmButtonText: 'Simpan & Pindah ke SHIP <i class="bi bi-arrow-right"></i>',
             cancelButtonText: 'Batal',
-            confirmButtonColor: '#0d6efd',
+            customClass: {
+                confirmButton: 'btn btn-primary fw-bold px-4',
+                cancelButton: 'btn btn-light text-dark fw-bold border'
+            },
+            buttonsStyling: false,
+            // Validasi agar resi tidak boleh kosong
             preConfirm: () => {
-                return {
-                    kurir: document.getElementById('swal-kurir').value,
-                    resi: document.getElementById('swal-resi').value
+                const tracking = document.getElementById('swal-tracking').value.trim();
+                const courier = document.getElementById('swal-courier').value.trim();
+                
+                if (!tracking) {
+                    Swal.showValidationMessage('<i class="bi bi-exclamation-circle"></i> Nomor resi wajib diisi!');
+                    return false;
                 }
+                return { tracking, courier };
             }
         });
 
+        // Jika user klik Simpan dan data valid
         if (formValues) {
-            this.processShipmentToFirebase(trx, formValues.kurir, formValues.resi);
+            try {
+                // 1. Simpan ke database (Firebase)
+                const docId = trx.docId || trx.id;
+                const docRef = doc(db, "transactions", docId);
+                
+                await updateDoc(docRef, {
+                    trackingNumber: formValues.tracking,
+                    courierName: formValues.courier || 'Kurir',
+                    fulfillmentStatus: 'SHIP' // Langsung update statusnya
+                });
+
+                // 2. Terapkan ke tampilan lokal (UI Vue)
+                trx.trackingNumber = formValues.tracking;
+                trx.courierName = formValues.courier || 'Kurir';
+                
+                // 3. Pindahkan kartunya ke kolom SHIP
+                this.updateFulfillmentStatus(trx, 'SHIP');
+
+                // 4. Notifikasi sukses kecil (Toast)
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `Resi ${trx.id} tersimpan!`,
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                
+            } catch (error) {
+                console.error("Gagal menyimpan resi:", error);
+                Swal.fire('Error', 'Gagal menyimpan resi pengiriman ke database.', 'error');
+            }
         }
     },
 
