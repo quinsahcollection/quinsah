@@ -6376,11 +6376,38 @@ body.sidebar-open {
         <span class="badge bg-danger rounded-circle px-2 py-1">{{ selectedOrders.length }}</span>
         <span class="fw-bold small text-dark me-2">Terpilih</span>
         
-        <select class="form-select form-select-sm border-info" v-model="batchActionTarget" style="width: 140px;">
-            <option value="PICK">Ke PICK</option>
-            <option value="PACK">Ke PACK</option>
-            <option value="SHIP">Ke SHIP</option>
-            <option value="HOLD">TUNDA (Hold)</option>
+        <!-- Dropdown Pintar menyesuaikan status pesanan pertama yang dipilih -->
+        <select class="form-select form-select-sm border-info fw-bold" v-model="batchActionTarget" style="width: 170px;">
+            <option value="" disabled>-- Pilih Tindakan --</option>
+            
+            <!-- Jika dari kolom NEW -->
+            <template v-if="!selectedOrders[0].fulfillmentStatus || selectedOrders[0].fulfillmentStatus === 'NEW'">
+                <option value="PICK">Mulai PICK</option>
+                <option value="HOLD">TUNDA (Hold)</option>
+            </template>
+            
+            <!-- Jika dari kolom PICK -->
+            <template v-else-if="selectedOrders[0].fulfillmentStatus === 'PICK'">
+                <option value="PACK">Selesai Pick -> PACK</option>
+                <option value="HOLD">TUNDA (Hold)</option>
+            </template>
+            
+            <!-- Jika dari kolom PACK -->
+            <template v-else-if="selectedOrders[0].fulfillmentStatus === 'PACK'">
+                <option value="SHIP">Kirim (Input Resi)</option>
+                <option value="HOLD">TUNDA (Hold)</option>
+            </template>
+            
+            <!-- Jika dari kolom SHIP -->
+            <template v-else-if="selectedOrders[0].fulfillmentStatus === 'SHIP'">
+                <option value="COMPLETED">Tandai SELESAI</option>
+            </template>
+            
+            <!-- Jika dari kolom HOLD -->
+            <template v-else-if="selectedOrders[0].fulfillmentStatus === 'HOLD'">
+                <option value="NEW">Kembalikan ke NEW</option>
+                <option value="PICK">Lanjut ke PICK</option>
+            </template>
         </select>
         
         <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" @click="processBatchAction">Proses</button>
@@ -15869,39 +15896,84 @@ async printReceiptBluetooth(trx) {
     // 🌟 FITUR 3: PROSES BANYAK KARTU SEKALIGUS (BATCH ACTION)
     // =========================================================
     async processBatchAction() {
-        if (!this.batchActionTarget || this.selectedOrders.length === 0) return;
-        
-        const targetStatus = this.batchActionTarget;
-        const totalItems = this.selectedOrders.length;
-        
-        // Munculkan loading
-        Swal.fire({ title: 'Memproses...', text: `Memindahkan ${totalItems} pesanan`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        if (!this.batchActionTarget) {
+            Swal.fire('Perhatian', 'Silakan pilih tindakan dari dropdown terlebih dahulu.', 'warning');
+            return;
+        }
 
-        try {
-            const now = new Date();
-            const formattedDate = now.toLocaleString('id-ID');
-            this.currentTimeTick = now;
-
-            // Loop untuk mengupdate semua pesanan yang dicentang secara paralel
-            const batchPromises = this.selectedOrders.map(trx => {
-                trx.fulfillmentStatus = targetStatus;
-                trx.fulfillmentUpdatedAt = formattedDate;
-                
-                return updateDoc(doc(db, "transactions", trx.id), {
-                    fulfillmentStatus: targetStatus,
-                    fulfillmentUpdatedAt: formattedDate
-                });
+        // LOGIKA 1: Validasi Kolom PICK -> PACK (Quality Control)
+        if (this.batchActionTarget === 'PACK') {
+            let adaYangBelumSiap = false;
+            
+            this.selectedOrders.forEach(trx => {
+                // Cek apakah ada barang yang belum dicentang 'ready'
+                if (!trx.items.every(i => i.checkStatus === 'ready')) {
+                    adaYangBelumSiap = true;
+                }
             });
 
-            await Promise.all(batchPromises); // Tunggu semua proses Firebase selesai
-
-            this.selectedOrders = []; // Kosongkan pilihan
-            Swal.fire({ title: 'Selesai!', text: `${totalItems} pesanan berhasil dipindah.`, icon: 'success', toast: true, position: 'top-end', timer: 3000 });
-        } catch (error) {
-            console.error(error);
-            Swal.fire('Gagal', 'Beberapa pesanan mungkin gagal diproses.', 'error');
+            if (adaYangBelumSiap) {
+                Swal.fire('Gagal Pindah ke PACK', 'Ada barang di dalam pesanan terpilih yang belum dicentang hijau (Tersedia). Selesaikan cek fisik terlebih dahulu atau Tunda (Hold) pesanan tersebut.', 'error');
+                return;
+            }
         }
-    },
+
+        // LOGIKA 2: Kolom PACK -> SHIP (Input Resi Berurutan)
+        if (this.batchActionTarget === 'SHIP') {
+            const confirm = await Swal.fire({
+                title: 'Kirim Pesanan Massal?',
+                text: 'Anda akan memproses ' + this.selectedOrders.length + ' pesanan sekaligus. Sistem akan meminta Anda memasukkan nomor resi satu per satu.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Mulai Input Resi'
+            });
+            
+            if (confirm.isConfirmed) {
+                // Looping pop-up resi untuk setiap pesanan yang dicentang
+                for (let trx of this.selectedOrders) {
+                    await this.promptShipInfo(trx); 
+                }
+                this.selectedOrders = [];
+                this.batchActionTarget = '';
+            }
+            return; // Hentikan fungsi agar tidak menabrak eksekusi standar di bawah
+        }
+
+        // LOGIKA 3: Pindah ke HOLD Massal (Input Alasan Tunda)
+        if (this.batchActionTarget === 'HOLD') {
+            const { value: holdReason } = await Swal.fire({
+                title: 'Alasan Tunda Massal',
+                input: 'textarea',
+                inputLabel: 'Masukkan alasan mengapa pesanan-pesanan ini ditunda',
+                inputPlaceholder: 'Misal: Menunggu konfirmasi ganti warna dari pabrik...',
+                showCancelButton: true
+            });
+
+            if (holdReason) {
+                for (let trx of this.selectedOrders) {
+                    trx.holdNote = holdReason; // Simpan alasan
+                    await this.updateFulfillmentStatus(trx, 'HOLD');
+                }
+                Swal.fire('Berhasil', 'Pesanan terpilih berhasil dipindah ke Hold.', 'success');
+                this.selectedOrders = [];
+                this.batchActionTarget = '';
+            }
+            return; // Hentikan fungsi
+        }
+
+        // LOGIKA 4: Eksekusi Standar (NEW, COMPLETED, atau kembali dari HOLD)
+        for (let trx of this.selectedOrders) {
+            // Hapus catatan hold jika pesanan dikembalikan ke NEW atau PICK
+            if (this.batchActionTarget === 'NEW' || this.batchActionTarget === 'PICK') {
+                trx.holdNote = ''; 
+            }
+            await this.updateFulfillmentStatus(trx, this.batchActionTarget);
+        }
+        
+        Swal.fire('Berhasil', 'Status ' + this.selectedOrders.length + ' pesanan berhasil diperbarui.', 'success');
+        this.selectedOrders = [];
+        this.batchActionTarget = '';
+    }
 
     playBeep() {
     try {
