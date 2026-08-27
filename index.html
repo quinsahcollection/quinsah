@@ -6352,7 +6352,7 @@ body.sidebar-open {
     </div>
 </div>
 
-            <div v-if="currentView === 'fulfillment'" class="dashboard-card mb-4 fade-in h-100 d-flex flex-column" style="background-color: #f8f9fa;">
+           <div v-if="currentView === 'fulfillment'" class="dashboard-card mb-4 fade-in h-100 d-flex flex-column" style="background-color: #f8f9fa;">
                 
     <!-- Header Fulfillment -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom bg-white p-3 rounded shadow-sm">
@@ -6417,7 +6417,6 @@ body.sidebar-open {
                                 <div class="d-flex flex-column align-items-end gap-1">
                                     <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
                                     <div class="d-flex gap-1">
-                                        <!-- Perubahan: Panggil openHoldModal -->
                                         <button class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="openHoldModal(trx)" title="Tunda (Stok Bermasalah)"><i class="bi bi-pause-circle"></i></button>
                                         <button class="btn btn-sm btn-danger py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'PICK')">PICK <i class="bi bi-arrow-right"></i></button>
                                     </div>
@@ -6438,7 +6437,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- 🛒 KOLOM 2: PICK (Dengan Fitur Checklist) -->
+        <!-- 🛒 KOLOM 2: PICK (Cek Fisik Barang) -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -6465,9 +6464,9 @@ body.sidebar-open {
                                 <div class="d-flex flex-column align-items-end gap-1">
                                     <span class="badge rounded-1 shadow-sm" :class="getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).class" style="font-size: 0.65rem;">{{ getServiceTime(trx.fulfillmentUpdatedAt || trx.dateStr).label }}</span>
                                     <div class="d-flex gap-1">
-                                        <!-- Perubahan: Panggil openHoldModal -->
                                         <button class="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="openHoldModal(trx)" title="Tunda (Stok Bermasalah)"><i class="bi bi-pause-circle"></i></button>
-                                        <!-- Perubahan: Tombol PACK dikunci jika ada item yang belum di-check ready -->
+                                        
+                                        <!-- Tombol PACK dikunci jika ada item yang belum di-check ready -->
                                         <button class="btn btn-sm text-white py-0 px-2 fw-bold" 
                                                 style="font-size: 0.7rem; background-color: #fd7e14;" 
                                                 :disabled="!trx.items.every(i => i.checkStatus === 'ready')"
@@ -6477,9 +6476,10 @@ body.sidebar-open {
                                     </div>
                                 </div>
                             </div>
-                            <!-- Perubahan: Daftar Item Interaktif untuk Checking -->
+                            
+                            <!-- Daftar Item Interaktif untuk Checking -->
                             <div class="bg-white p-2 rounded small border" style="font-size: 0.75rem;">
-                                <div class="fw-bold text-muted mb-1 pb-1 border-bottom" style="font-size: 0.65rem;">CEK BARANG :</div>
+                                <div class="fw-bold text-muted mb-1 pb-1 border-bottom" style="font-size: 0.65rem;">CEK BARANG (Belum Selesai):</div>
                                 <div v-for="item in trx.items" :key="item.productId" class="d-flex align-items-center justify-content-between border-bottom border-light pb-1 mb-1">
                                     <div style="width: 70%;">
                                         <span class="fw-bold me-1" :class="item.checkStatus === 'empty' ? 'text-decoration-line-through text-muted' : 'text-danger'">{{ item.qty }}x</span> 
@@ -6500,7 +6500,7 @@ body.sidebar-open {
                                     </div>
                                 </div>
                                 <div v-if="trx.items.some(i => i.checkStatus === 'empty')" class="text-danger small mt-2 fw-semibold">
-                                    <i class="bi bi-exclamation-circle me-1"></i> Ada barang kosong, hubungi CS/Customer lalu Tunda (Hold).
+                                    <i class="bi bi-exclamation-circle me-1"></i> Ada barang kosong, hubungi pelanggan lalu Tunda (Hold).
                                 </div>
                             </div>
                         </div>
@@ -6509,7 +6509,7 @@ body.sidebar-open {
             </div>
         </div>
 
-        <!-- 📦 KOLOM 3: PACK -->
+        <!-- 📦 KOLOM 3: PACK (Barang Sudah Dicek) -->
         <div class="col-12 col-md-6 col-lg-3 px-2 flex-shrink-0" style="scroll-snap-align: center;">
             <div class="card border-0 shadow-sm h-100 bg-light rounded-4">
                 <div class="card-header bg-transparent border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -6539,13 +6539,19 @@ body.sidebar-open {
                                     <button class="btn btn-sm btn-info text-dark py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="promptShipInfo(trx)">SHIP <i class="bi bi-arrow-right"></i></button>
                                 </div>
                             </div>
-                            <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
-                                <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
+                            
+                            <!-- 🌟 PERBAIKAN: List Barang di Pack menampilkan status sudah dicentang (Checked) -->
+                            <div class="bg-white p-2 rounded small border border-info border-opacity-25" style="font-size: 0.75rem;">
+                                <div class="fw-bold text-info mb-1 pb-1 border-bottom" style="font-size: 0.65rem;">
+                                    <i class="bi bi-check2-square me-1"></i>BARANG SIAP BUNGKUS:
+                                </div>
+                                <div v-for="item in trx.items" :key="item.productId" class="d-flex justify-content-between align-items-center border-bottom border-light pb-1 mb-1">
                                     <div>
                                         <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
                                         <span class="fw-semibold">{{ item.name }}</span>
                                         <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
                                     </div>
+                                    <i class="bi bi-check-circle-fill text-success" title="Telah dicek"></i>
                                 </div>
                             </div>
                         </div>
@@ -6588,13 +6594,16 @@ body.sidebar-open {
                                     <button class="btn btn-sm btn-success py-0 px-2 fw-bold" style="font-size: 0.7rem;" @click="updateFulfillmentStatus(trx, 'COMPLETED')"><i class="bi bi-check2-all me-1"></i>SELESAI</button>
                                 </div>
                             </div>
-                            <div class="bg-light p-2 rounded small" style="font-size: 0.75rem;">
-                                <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-white pb-1 mb-1">
+                            
+                            <!-- 🌟 PERBAIKAN: Centang Hijau Lanjut ke Tahap Ship -->
+                            <div class="bg-white p-2 rounded small border" style="font-size: 0.75rem;">
+                                <div v-for="item in trx.items" :key="item.productId" class="d-flex justify-content-between align-items-center border-bottom border-light pb-1 mb-1">
                                     <div>
                                         <span class="fw-bold me-1 text-danger">{{ item.qty }}x</span> 
                                         <span class="fw-semibold">{{ item.name }}</span>
                                         <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
                                     </div>
+                                    <i class="bi bi-check-circle-fill text-success"></i>
                                 </div>
                             </div>
                         </div>
@@ -6631,9 +6640,20 @@ body.sidebar-open {
                                     <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-bold" style="font-size: 0.65rem;" @click="updateFulfillmentStatus(trx, 'PICK')"><i class="bi bi-arrow-counterclockwise me-1"></i>Lanjut Pick</button>
                                 </div>
                             </div>
+
+                            <!-- 🌟 PERBAIKAN: Menampilkan List Daftar Barang -->
+                            <div class="bg-white p-2 rounded small border border-secondary border-opacity-25 mb-2" style="font-size: 0.75rem;">
+                                <div v-for="item in trx.items" :key="item.productId" class="d-flex flex-column border-bottom border-light pb-1 mb-1">
+                                    <div>
+                                        <span class="fw-bold me-1 text-secondary">{{ item.qty }}x</span> 
+                                        <span class="fw-semibold text-muted">{{ item.name }}</span>
+                                        <span v-if="item.variantName" class="text-muted small ms-1">({{ item.variantName }})</span>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <!-- Perubahan: Menampilkan Catatan/Alasan Hold -->
-                            <div v-if="trx.holdNote" class="mt-2 p-2 bg-warning bg-opacity-10 border border-warning rounded small text-dark" style="font-size: 0.75rem;">
+                            <!-- Menampilkan Catatan/Alasan Hold -->
+                            <div v-if="trx.holdNote" class="mt-2 p-2 bg-warning bg-opacity-25 border border-warning rounded small text-dark" style="font-size: 0.75rem;">
                                 <i class="bi bi-info-circle text-warning me-1"></i> <span class="fw-bold">Alasan:</span> {{ trx.holdNote }}
                             </div>
                         </div>
@@ -6678,7 +6698,7 @@ body.sidebar-open {
 
     </div>
 
-    <!-- 🌟 MODAL KHUSUS UNTUK ALASAN HOLD 🌟 (Tambahkan ini di bagian paling bawah dalam div currentView === 'fulfillment') -->
+    <!-- 🌟 MODAL KHUSUS UNTUK ALASAN HOLD 🌟 -->
     <div class="modal fade" id="holdReasonModal" tabindex="-1" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -12882,24 +12902,36 @@ financeAPList() {
     modal.show();
 },
 
-confirmHoldOrder() {
-    if (!this.activeHoldTrx || !this.holdNoteInput) return;
+async confirmHoldOrder() {
+        if (!this.activeHoldTrx || !this.holdNoteInput) return;
+        
+        try {
+            // 1. Simpan catatan "holdNote" langsung ke database Firebase
+            const docRef = doc(db, "transactions", this.activeHoldTrx.docId || this.activeHoldTrx.id);
+            await updateDoc(docRef, {
+                holdNote: this.holdNoteInput
+            });
 
-    // Simpan catatan ke dalam transaksi
-    this.activeHoldTrx.holdNote = this.holdNoteInput;
+            // 2. Terapkan juga ke tampilan lokal
+            this.activeHoldTrx.holdNote = this.holdNoteInput;
+            
+            // 3. Baru jalankan update status untuk pindah kolom
+            this.updateFulfillmentStatus(this.activeHoldTrx, 'HOLD');
+            
+            // 4. Tutup Modal
+            const modalEl = document.getElementById('holdReasonModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            
+            // 5. Bersihkan form
+            this.activeHoldTrx = null;
+            this.holdNoteInput = '';
 
-    // Jalankan fungsi update status bawaan Anda
-    this.updateFulfillmentStatus(this.activeHoldTrx, 'HOLD');
-
-    // Tutup modal
-    const modalEl = document.getElementById('holdReasonModal');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
-
-    // Reset
-    this.activeHoldTrx = null;
-    this.holdNoteInput = '';
-},
+        } catch (error) {
+            console.error("Gagal menyimpan alasan hold ke database:", error);
+            Swal.fire('Error', 'Gagal menyimpan catatan tunda ke database.', 'error');
+        }
+    }
     
         // Fungsi Validasi Sebelum Menyimpan Produk
     validateAndSaveProduct() {
