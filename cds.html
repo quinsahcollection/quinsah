@@ -134,18 +134,18 @@
         .sidebar-footer { padding: 15px 0; border-top: 1px solid #f1f3f5; width: 100%; display: flex; justify-content: center; }
         
         .catalog-grid { 
-    flex-grow: 1; 
-    overflow-y: auto; 
-    background: #f8f9fa; 
-    padding: 20px; 
-    position: relative; 
-    -webkit-overflow-scrolling: touch; 
-    touch-action: pan-y;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
+            flex-grow: 1; 
+            overflow-y: auto; 
+            background: #f8f9fa; 
+            padding: 20px; 
+            position: relative; 
+            -webkit-overflow-scrolling: touch; 
+            touch-action: pan-y;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
         
         .cat-item { 
             width: 76px; min-height: 76px; display: flex; flex-direction: column; 
@@ -163,28 +163,28 @@
         .btn-white:hover { background-color: #f8f9fa; }
         
         .product-card-cds { 
-    transition: transform 0.2s, box-shadow 0.2s; 
-    cursor: pointer; 
-    border-radius: 12px; 
-    border: 1px solid #e9ecef; 
-    background: #fff; 
-    height: 100%; 
-    display: flex; 
-    overflow: hidden; 
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
+            transition: transform 0.2s, box-shadow 0.2s; 
+            cursor: pointer; 
+            border-radius: 12px; 
+            border: 1px solid #e9ecef; 
+            background: #fff; 
+            height: 100%; 
+            display: flex; 
+            overflow: hidden; 
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
 
         /* Efek hover hanya aktif pada perangkat yang menggunakan mouse */
         @media (hover: hover) and (pointer: fine) {
-        .product-card-cds:hover { 
-        transform: translateY(-3px); 
-        box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important; 
-        border-color: #dee2e6; 
-    }
-}
+            .product-card-cds:hover { 
+                transform: translateY(-3px); 
+                box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important; 
+                border-color: #dee2e6; 
+            }
+        }
         
         .product-card-cds.view-grid, .product-card-cds.view-grid6 { flex-direction: column; }
         .product-card-cds.view-grid .product-img-wrapper, .product-card-cds.view-grid6 .product-img-wrapper { 
@@ -200,12 +200,12 @@
         }
         
         .product-img-wrapper img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
-    -webkit-user-drag: none;
-    pointer-events: none;
-}
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
         .product-img-placeholder-cds { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #adb5bd; width: 100%; height: 100%; }
         
         .chips-container::-webkit-scrollbar { display: none; }
@@ -1100,24 +1100,36 @@
         methods: {
 
             getCartItemImage(item) {
-                // 1. Coba ambil dari data item itu sendiri (jika ada)
-                let img = this.getCdsImage(item);
-                if (img) return img;
+                // 1. Cek langsung di item keranjang (berbagai variasi nama properti)
+                if (item.image) return item.image;
+                if (item.imageUrl) return item.imageUrl;
+                if (item.imageBase64) return item.imageBase64;
+                if (item.photo) return item.photo;
 
-                // 2. Jika kosong, cocokkan dengan data master katalog produk (kiri)
+                // 2. Jika tidak ada, cari pencocokan dengan master produk di sebelah kiri (this.products)
                 if (this.products && this.products.length > 0) {
-                    const parentProduct = this.products.find(p => p.id === (item.productId || item.id));
+                    // Cari berdasarkan ID produk induk
+                    const parentProduct = this.products.find(p => 
+                        p.id === item.productId || p.id === item.id || p.sku === item.sku || p.code === item.code
+                    );
+
                     if (parentProduct) {
-                        // Jika item adalah varian (deteksi dari nama varian)
-                        if (item.variantName || item.isVariant || (item.name && item.name !== parentProduct.name)) {
-                            const variant = parentProduct.variants?.find(v => v.name === (item.variantName || item.name) || item.name.includes(v.name));
-                            if (variant) {
-                                let vImg = this.getCdsImage(variant, parentProduct);
-                                if (vImg) return vImg;
+                        // Jika item tersebut adalah varian, coba cari gambar spesifik variannya
+                        if (item.variantId && parentProduct.variants) {
+                            const variant = parentProduct.variants.find(v => v.id === item.variantId);
+                            if (variant && (variant.image || variant.imageUrl || variant.photo)) {
+                                return variant.image || variant.imageUrl || variant.photo;
                             }
                         }
-                        // Fallback ke gambar utama produk
-                        return this.getCdsImage(parentProduct);
+                        if (item.variantName && parentProduct.variants) {
+                            const variant = parentProduct.variants.find(v => v.name === item.variantName);
+                            if (variant && (variant.image || variant.imageUrl || variant.photo)) {
+                                return variant.image || variant.imageUrl || variant.photo;
+                            }
+                        }
+
+                        // Fallback ke gambar produk induknya
+                        return parentProduct.image || parentProduct.imageUrl || parentProduct.imageBase64 || parentProduct.photo || '';
                     }
                 }
                 return '';
@@ -1222,6 +1234,7 @@
                 this.selectedModifiers = {};
                 if (prod.modifiers && prod.modifiers.length > 0) {
                     prod.modifiers.forEach((mod, idx) => {
+                        // Menambahkan null check jika mod.options kosong
                         if (mod.isRequired && mod.options && mod.options.length > 0) {
                             this.selectedModifiers[idx] = [mod.options[0]];
                         } else {
