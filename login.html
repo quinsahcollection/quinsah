@@ -288,6 +288,11 @@
         .custom-modal label {
             color: var(--dark-color);
         }
+        
+        .is-invalid {
+            border-color: var(--primary-color) !important;
+            background-image: none !important;
+        }
 
         /* FOOTER */
         footer {
@@ -647,7 +652,6 @@
     <!-- MODAL 1: REGISTER (DAFTAR AKUN BARU) -->
     <!-- ============================================== -->
     <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
-        <!-- Diubah agar ukurannya proporsional, tidak menggunakan ukuran standar lg -->
         <div class="modal-dialog modal-dialog-centered" style="max-width: 650px;">
             <div class="modal-content custom-modal">
                 <div class="modal-body p-4 p-md-5">
@@ -658,7 +662,7 @@
                         <p class="text-muted mt-2 small fw-medium">Buat akun baru</p>
                     </div>
                     
-                    <form>
+                    <form id="registerForm">
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Nama Lengkap</label>
@@ -681,13 +685,12 @@
                         <div class="mb-4">
                             <label class="form-label small fw-bold text-danger">Buat Link URL Toko *</label>
                             <div class="input-group">
-                                <!-- text-end dihapus agar rata kiri -->
-                                <input type="text" class="form-control" placeholder="kedaikopisenja" required style="font-weight: 500;">
+                                <input type="text" id="registerStoreUrl" class="form-control" placeholder="kedaikopisenja" required style="font-weight: 500;">
                                 <span class="input-group-text">.queenpos.id</span>
                             </div>
                         </div>
                         
-                        <button type="button" class="btn btn-corporate-primary w-100 py-3 mb-3" style="font-size: 1rem;">Daftar Sekarang</button>
+                        <button type="button" id="btnRegister" class="btn btn-corporate-primary w-100 py-3 mb-3" style="font-size: 1rem;">Daftar Sekarang</button>
                         
                         <div class="text-center small">
                             Sudah punya akun? 
@@ -703,7 +706,6 @@
     <!-- MODAL 2: LOGIN (MASUK KE TOKO) -->
     <!-- ============================================== -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-        <!-- class modal-sm DIHAPUS dan diganti max-width: 450px agar cukup lega dan presisi -->
         <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
             <div class="modal-content custom-modal">
                 <div class="modal-body p-4 p-md-5">
@@ -715,17 +717,16 @@
                         <p class="text-muted small">Akses ke halaman toko Anda</p>
                     </div>
                     
-                    <form>
+                    <form id="loginForm">
                         <div class="mb-4">
                             <label class="form-label small fw-bold">URL Akses Toko</label>
                             <div class="input-group">
-                                <!-- text-end dihapus agar rata kiri (normal) seperti di referensi -->
-                                <input type="text" class="form-control" placeholder="namatoko" required style="font-weight: 500;">
+                                <input type="text" id="loginStoreUrl" class="form-control" placeholder="namatoko" required style="font-weight: 500;">
                                 <span class="input-group-text">.queenpos.id</span>
                             </div>
                         </div>
                         
-                        <button type="button" class="btn btn-corporate-primary w-100 py-3 mb-3" style="font-size: 1rem;">Lanjut ke Toko &rarr;</button>
+                        <button type="button" id="btnLogin" class="btn btn-corporate-primary w-100 py-3 mb-3" style="font-size: 1rem;">Lanjut ke Toko &rarr;</button>
                         
                         <div class="text-center small" style="white-space: nowrap;">
                             Belum punya akun? 
@@ -739,5 +740,97 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom Script for Form Functionality -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- LOGIKA LOGIN (LANJUT KE TOKO) ---
+            const btnLogin = document.getElementById('btnLogin');
+            const loginStoreUrl = document.getElementById('loginStoreUrl');
+
+            if (btnLogin && loginStoreUrl) {
+                btnLogin.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const storeName = loginStoreUrl.value.trim().toLowerCase();
+                    
+                    if (storeName === '') {
+                        alert('Silakan masukkan nama URL toko Anda terlebih dahulu.');
+                        loginStoreUrl.focus();
+                        return;
+                    }
+
+                    // Efek loading
+                    const originalText = btnLogin.innerHTML;
+                    btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Memproses...';
+                    btnLogin.disabled = true;
+
+                    // Mengarahkan ke subdomain toko
+                    setTimeout(() => {
+                        window.location.href = `https://${storeName}.queenpos.id`;
+                    }, 800);
+                });
+
+                // Format input: huruf kecil dan angka saja, tanpa spasi
+                loginStoreUrl.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                });
+            }
+
+            // --- LOGIKA REGISTER (DAFTAR SEKARANG) ---
+            const btnRegister = document.getElementById('btnRegister');
+            const registerForm = document.getElementById('registerForm');
+            const registerStoreUrl = document.getElementById('registerStoreUrl');
+
+            if (btnRegister && registerForm && registerStoreUrl) {
+                btnRegister.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Validasi form (cek apakah ada input yang kosong)
+                    const inputs = registerForm.querySelectorAll('input[required]');
+                    let isValid = true;
+                    
+                    inputs.forEach(input => {
+                        if (!input.value.trim()) {
+                            isValid = false;
+                            input.classList.add('is-invalid');
+                        } else {
+                            input.classList.remove('is-invalid');
+                        }
+                    });
+
+                    if (!isValid) {
+                        alert('Mohon lengkapi semua field pendaftaran yang wajib diisi.');
+                        return;
+                    }
+
+                    const storeName = registerStoreUrl.value.trim().toLowerCase();
+                    
+                    // Efek loading saat proses
+                    const originalText = btnRegister.innerHTML;
+                    btnRegister.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Mendaftarkan Toko...';
+                    btnRegister.disabled = true;
+
+                    // Simulasi redirect setelah pendaftaran dianggap sukses
+                    setTimeout(() => {
+                        alert('Pendaftaran Berhasil! Mengarahkan ke sistem toko Anda...');
+                        window.location.href = `https://${storeName}.queenpos.id`;
+                    }, 1500);
+                });
+
+                // Format URL otomatis (hanya abjad dan angka)
+                registerStoreUrl.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                });
+                
+                // Hilangkan peringatan merah (is-invalid) saat user mulai mengetik lagi
+                registerForm.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', function() {
+                        this.classList.remove('is-invalid');
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
