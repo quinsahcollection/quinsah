@@ -790,9 +790,9 @@
             </div>
             
             <div v-for="(item, index) in cartItems" :key="index" class="d-flex gap-2 mb-3 border-bottom pb-2 fade-in">
-                <!-- 🌟 PERBAIKAN: Gunakan Helper untuk Foto di Keranjang CDS -->
-                <div v-if="getCdsImage(item)" class="product-img-container">
-                    <img :src="getCdsImage(item)" class="product-img" alt="Produk" @error="item.imageUrl = ''; item.imageBase64 = ''">
+                <!-- 🌟 PERBAIKAN: Ambil foto dari master produk jika di keranjang kosong -->
+                <div v-if="getCartItemImage(item)" class="product-img-container">
+                    <img :src="getCartItemImage(item)" class="product-img" alt="Produk">
                 </div>
                 <div v-else class="product-img-placeholder"><i class="fas fa-box-open opacity-50"></i></div>
                 
@@ -863,7 +863,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     let companyId = urlParams.get('company') || localStorage.getItem('companyId') || localStorage.getItem('activeCompanyId');
-    let outletId = urlParams.get('outlet') || 'global'; 
+    let outletId = urlParams.get('outlet') || localStorage.getItem('outletId') || localStorage.getItem('activeOutletId') || 'global';
     let deviceId = urlParams.get('device') || urlParams.get('kasir') || ''; 
 
     const app = Vue.createApp({
@@ -1098,6 +1098,31 @@
         },
         
         methods: {
+
+            getCartItemImage(item) {
+                // 1. Coba ambil dari data item itu sendiri (jika ada)
+                let img = this.getCdsImage(item);
+                if (img) return img;
+
+                // 2. Jika kosong, cocokkan dengan data master katalog produk (kiri)
+                if (this.products && this.products.length > 0) {
+                    const parentProduct = this.products.find(p => p.id === (item.productId || item.id));
+                    if (parentProduct) {
+                        // Jika item adalah varian (deteksi dari nama varian)
+                        if (item.variantName || item.isVariant || (item.name && item.name !== parentProduct.name)) {
+                            const variant = parentProduct.variants?.find(v => v.name === (item.variantName || item.name) || item.name.includes(v.name));
+                            if (variant) {
+                                let vImg = this.getCdsImage(variant, parentProduct);
+                                if (vImg) return vImg;
+                            }
+                        }
+                        // Fallback ke gambar utama produk
+                        return this.getCdsImage(parentProduct);
+                    }
+                }
+                return '';
+            },
+            
             // Logika mengatur transisi slide gambar otomatis
             setupSlider() {
                 if (this.sliderInterval) {
@@ -1288,6 +1313,14 @@
             
             // Panggil setup slider begitu aplikasi dimulai
             this.setupSlider();
+
+            // 🌟 PERBAIKAN: Dengarkan perubahan outlet dari tab POS (Kasir)
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'outletId' || e.key === 'activeOutletId' || e.key === 'companyId') {
+                    console.log("Pindah Outlet Terdeteksi! Me-refresh layar CDS...");
+                    window.location.reload();
+                }
+            });
 
             let savedSettings = localStorage.getItem('cds_local_settings_' + outletId);
             if (savedSettings) {
