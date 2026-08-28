@@ -177,7 +177,6 @@
             user-select: none;
         }
 
-        /* Efek hover hanya aktif pada perangkat yang menggunakan mouse */
         @media (hover: hover) and (pointer: fine) {
             .product-card-cds:hover { 
                 transform: translateY(-3px); 
@@ -382,10 +381,7 @@
         </div>
 
         <template v-else>
-            <!-- Wrapper Flex Utama untuk Area Kiri -->
             <div class="w-100 flex-grow-1 position-relative d-flex overflow-hidden">
-                
-                <!-- OPSI 1: AREA KATALOG -->
                 <div v-if="cdsSettings.mediaType === 'catalog'" class="w-100 h-100 d-flex flex-column text-start bg-light fade-in position-relative">
                     
                     <div class="d-flex flex-grow-1 overflow-hidden w-100 h-100">
@@ -478,7 +474,6 @@
                                         </div>
 
                                         <div class="product-img-wrapper">
-                                            <!-- 🌟 PERBAIKAN: Gunakan Helper untuk Katalog CDS -->
                                             <template v-if="getCdsImage(prod)">
                                                 <img :src="getCdsImage(prod)" @error="prod.imageUrl = ''; prod.imageBase64 = ''; if(prod.images) prod.images = []" alt="Product">
                                             </template>
@@ -596,7 +591,6 @@
                                                         
                                                         <div class="d-flex p-2 gap-2 align-items-center">
                                                             <div style="width: 45px; height: 45px; border-radius: 6px; overflow: hidden; background: #fff;" class="flex-shrink-0 border shadow-sm">
-                                                                <!-- 🌟 PERBAIKAN: Gunakan Helper untuk Foto Varian di CDS -->
                                                                 <template v-if="getCdsImage(v, selectedProduct)">
                                                                     <img :src="getCdsImage(v, selectedProduct)" style="width:100%; height:100%; object-fit:cover;" @error="v.imageUrl = ''; v.imageBase64 = ''">
                                                                 </template>
@@ -660,9 +654,8 @@
                             </div>
                         </div>
                     </div>
-                </div> <!-- PENUTUP v-if catalog YANG SEBELUMNYA HILANG -->
+                </div>
 
-                <!-- OPSI 2: AREA MEDIA PROMOSI (Mengisi sisa ruang, muncul jika BUKAN catalog) -->
                 <div v-else class="promo-media-container flex-grow-1 position-relative overflow-hidden bg-dark w-100">
                     <template v-if="cdsSettings.mediaType === 'youtube' && cdsSettings.youtubeUrl">
                         <iframe :src="getYouTubeEmbedUrl(cdsSettings.youtubeUrl)" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen class="w-100 h-100 position-absolute top-0 start-0" style="pointer-events: none;"></iframe>
@@ -675,9 +668,8 @@
                     </template>
                 </div>
 
-            </div> <!-- PENUTUP W-100 FLEX-GROW-1 -->
+            </div>
 
-            <!-- MODAL PENGATURAN (Di-overlay secara aman di luar logic konten) -->
             <div v-if="isSettingsOpen" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 100; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
                 <div class="card border-0 shadow-lg slide-up" style="width: 500px; max-width: 90%; border-radius: 20px; overflow: hidden;">
                     <div class="card-header bg-dark text-white p-3 px-4 d-flex justify-content-between align-items-center border-0">
@@ -749,7 +741,6 @@
                 </div>
             </div>
 
-            <!-- TEKS BERJALAN (MARQUEE) -->
             <div class="bg-danger text-white py-2 px-3 fw-bold d-flex align-items-center shadow-lg w-100" style="font-size: 0.9rem; letter-spacing: 0.5px; z-index: 10; flex-shrink: 0;">
                 <i class="fas fa-bullhorn me-3 fs-5"></i>
                 <marquee behavior="scroll" direction="left" scrollamount="6" class="flex-grow-1 m-0">
@@ -864,7 +855,9 @@
     const urlParams = new URLSearchParams(window.location.search);
     let companyId = urlParams.get('company') || localStorage.getItem('companyId') || localStorage.getItem('activeCompanyId');
     let outletId = urlParams.get('outlet') || localStorage.getItem('outletId') || localStorage.getItem('activeOutletId') || 'global';
-    let deviceId = urlParams.get('device') || urlParams.get('kasir') || ''; 
+    
+    // Perbaikan sinkronisasi perangkat dan kasir dengan membaca beberapa key yang sering dipakai di POS
+    let deviceId = urlParams.get('device') || urlParams.get('register') || urlParams.get('kasir') || localStorage.getItem('deviceId') || localStorage.getItem('registerId') || localStorage.getItem('activeRegisterId') || localStorage.getItem('kasirId') || ''; 
 
     const app = Vue.createApp({
         data() {
@@ -873,7 +866,7 @@
                 outletName: '', 
                 invoiceNumber: '', 
                 currentTime: '',
-                cashierName: deviceId || 'Menunggu...',
+                cashierName: 'Menunggu...',
                 
                 isPaymentOpen: false, 
                 paymentMethod: null, 
@@ -909,7 +902,6 @@
                     welcomeText: '' 
                 },
                 
-                // Tambahan variabel untuk mengontrol slide gambar
                 currentImageIndex: 0,
                 sliderInterval: null,
                 
@@ -946,7 +938,6 @@
             }
         },
         computed: {
-            // Logika untuk memecah teks URL gambar menjadi Array
             parsedImageUrls() {
                 if (!this.cdsSettings.imageUrls) return [];
                 return this.cdsSettings.imageUrls
@@ -955,7 +946,6 @@
                     .filter(url => url !== '');
             },
             
-            // Logika otomatis menentukan gambar mana yang tampil
             currentImage() {
                 if (this.parsedImageUrls.length === 0) return null;
                 
@@ -989,7 +979,6 @@
             },
 
             activeVariantImage() {
-                // Gunakan getCdsImage yang pengecekannya sudah sangat lengkap
                 if (this.activeVariant) {
                     return this.getCdsImage(this.activeVariant, this.selectedProduct);
                 }
@@ -1087,7 +1076,6 @@
             }
         },
 
-        // Watcher untuk memantau jika kasir mengubah tipe media dari pengaturan
         watch: {
             'cdsSettings.mediaType'() {
                 this.setupSlider();
@@ -1098,44 +1086,33 @@
         },
         
         methods: {
-
             getCartItemImage(item) {
-                // 1. Cek langsung di item keranjang (berbagai variasi nama properti)
-                if (item.image) return item.image;
-                if (item.imageUrl) return item.imageUrl;
-                if (item.imageBase64) return item.imageBase64;
-                if (item.photo) return item.photo;
+                // Perbaikan Fallback Image yang lebih kuat
+                let img = this.getCdsImage(item);
+                if (img) return img;
 
-                // 2. Jika tidak ada, cari pencocokan dengan master produk di sebelah kiri (this.products)
                 if (this.products && this.products.length > 0) {
-                    // Cari berdasarkan ID produk induk
                     const parentProduct = this.products.find(p => 
-                        p.id === item.productId || p.id === item.id || p.sku === item.sku || p.code === item.code
+                        (item.productId && p.id === item.productId) || 
+                        (item.id && p.id === item.id) || 
+                        (item.sku && p.sku === item.sku) || 
+                        (item.code && p.code === item.code)
                     );
 
                     if (parentProduct) {
-                        // Jika item tersebut adalah varian, coba cari gambar spesifik variannya
-                        if (item.variantId && parentProduct.variants) {
-                            const variant = parentProduct.variants.find(v => v.id === item.variantId);
-                            if (variant && (variant.image || variant.imageUrl || variant.photo)) {
-                                return variant.image || variant.imageUrl || variant.photo;
+                        if ((item.variantId || item.variantName) && parentProduct.variants) {
+                            const variant = parentProduct.variants.find(v => v.id === item.variantId || v.name === item.variantName);
+                            if (variant) {
+                                let vImg = this.getCdsImage(variant, parentProduct);
+                                if (vImg) return vImg;
                             }
                         }
-                        if (item.variantName && parentProduct.variants) {
-                            const variant = parentProduct.variants.find(v => v.name === item.variantName);
-                            if (variant && (variant.image || variant.imageUrl || variant.photo)) {
-                                return variant.image || variant.imageUrl || variant.photo;
-                            }
-                        }
-
-                        // Fallback ke gambar produk induknya
-                        return parentProduct.image || parentProduct.imageUrl || parentProduct.imageBase64 || parentProduct.photo || '';
+                        return this.getCdsImage(parentProduct);
                     }
                 }
                 return '';
             },
             
-            // Logika mengatur transisi slide gambar otomatis
             setupSlider() {
                 if (this.sliderInterval) {
                     clearInterval(this.sliderInterval);
@@ -1156,13 +1133,13 @@
                 if (item.imageUrl && item.imageUrl.trim() !== '') return item.imageUrl; 
                 if (item.images && Array.isArray(item.images) && item.images.length > 0 && item.images[0].url) return item.images[0].url; 
                 if (item.imageBase64 && item.imageBase64.trim() !== '') return item.imageBase64; 
-                if (item.image || item.gambar) return item.image || item.gambar; 
+                if (item.image || item.gambar || item.photo) return item.image || item.gambar || item.photo; 
 
                 if (parentProduct) {
                     if (parentProduct.imageUrl && parentProduct.imageUrl.trim() !== '') return parentProduct.imageUrl;
                     if (parentProduct.images && Array.isArray(parentProduct.images) && parentProduct.images.length > 0 && parentProduct.images[0].url) return parentProduct.images[0].url;
                     if (parentProduct.imageBase64 && parentProduct.imageBase64.trim() !== '') return parentProduct.imageBase64;
-                    if (parentProduct.image || parentProduct.gambar) return parentProduct.image || parentProduct.gambar;
+                    if (parentProduct.image || parentProduct.gambar || parentProduct.photo) return parentProduct.image || parentProduct.gambar || parentProduct.photo;
                 }
 
                 return '';
@@ -1234,7 +1211,6 @@
                 this.selectedModifiers = {};
                 if (prod.modifiers && prod.modifiers.length > 0) {
                     prod.modifiers.forEach((mod, idx) => {
-                        // Menambahkan null check jika mod.options kosong
                         if (mod.isRequired && mod.options && mod.options.length > 0) {
                             this.selectedModifiers[idx] = [mod.options[0]];
                         } else {
@@ -1324,13 +1300,13 @@
         mounted() {
             if (!companyId) return;
             
-            // Panggil setup slider begitu aplikasi dimulai
             this.setupSlider();
 
-            // 🌟 PERBAIKAN: Dengarkan perubahan outlet dari tab POS (Kasir)
+            // Perbaikan Sinkronisasi Antar Tab / LocalStorage saat Buka Shift
             window.addEventListener('storage', (e) => {
-                if (e.key === 'outletId' || e.key === 'activeOutletId' || e.key === 'companyId') {
-                    console.log("Pindah Outlet Terdeteksi! Me-refresh layar CDS...");
+                const triggerKeys = ['outletId', 'activeOutletId', 'companyId', 'activeCompanyId', 'deviceId', 'registerId', 'activeRegisterId', 'kasirId'];
+                if (triggerKeys.includes(e.key)) {
+                    console.log("Perubahan Sesi Kasir Terdeteksi! Me-refresh layar CDS...");
                     window.location.reload();
                 }
             });
@@ -1416,13 +1392,12 @@
                     const data = docSnap.data();
                     if (data.cdsSettings) {
                         this.cdsSettings = data.cdsSettings;
-                        this.setupSlider(); // Pastikan slider dijalankan ulang jika pengaturan baru ditarik dari database
+                        this.setupSlider();
                     }
                 }
             });
         },
         
-        // Bersihkan interval saat komponen tidak lagi dipakai agar tidak membebani browser
         beforeUnmount() {
             if (this.sliderInterval) {
                 clearInterval(this.sliderInterval);
