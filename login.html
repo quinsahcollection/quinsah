@@ -25,7 +25,7 @@
         /* Smooth scroll dan penyesuaian jarak dari navbar agar judul tidak tertutup */
         html {
             scroll-behavior: smooth;
-            scroll-padding-top: 85px; 
+            scroll-padding-top: 100px; /* Diperbarui agar scroll tepat sasaran */
         }
 
         body {
@@ -181,7 +181,8 @@
 
         /* HERO SECTION */
         .hero-section {
-            padding: 70px 0 60px;
+            /* Diperbarui: padding top diubah dari 70px ke 110px agar jarak elemen lebih turun */
+            padding: 110px 0 60px;
             background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
         }
         .hero-title {
@@ -459,6 +460,12 @@
                     <p class="hero-desc">
                         Kelola penjualan multi-cabang, lacak stok real-time, hitung HPP aset otomatis, dan pantau laporan keuangan secara akurat dalam satu platform cerdas.
                     </p>
+
+                    <!-- PERBAIKAN: Gambar khusus Mobile tampil di sini (di atas tombol uji coba gratis) -->
+                    <div class="d-block d-lg-none mb-4">
+                        <img src="./banner-queenpos.jpg" class="img-fluid rounded shadow-sm" alt="QueenPOS Dashboard">
+                    </div>
+
                     <div class="d-flex flex-wrap gap-3 mb-4">
                         <button class="btn-corporate-primary py-3 px-4" data-bs-toggle="modal" data-bs-target="#registerModal">
                             Mulai Uji Coba Gratis <i class="bi bi-arrow-right ms-2"></i>
@@ -468,10 +475,12 @@
                         </a>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                        <div class="browser-body">
-                            <img src="./banner-queenpos.jpg" alt="QueenPOS Dashboard">
-                        </div>
+
+                <!-- PERBAIKAN: Container gambar Desktop -->
+                <div class="col-lg-6 d-none d-lg-block">
+                    <div class="browser-body">
+                        <img src="./banner-queenpos.jpg" class="img-fluid rounded" alt="QueenPOS Dashboard">
+                    </div>
                 </div>
             </div>
         </div>
@@ -1240,22 +1249,26 @@
             const offcanvasElement = document.getElementById('mobileMenu');
             
             if (mobileLinks.length > 0 && offcanvasElement) {
+                let pendingScrollTarget = null;
+                
+                // PERBAIKAN: Listener yang menunggu menu offcanvas benar-benar selesai menutup
+                // Ini mencegah bug layar bergeser naik (creeping up) akibat konflik scroll dan animasi menu
+                offcanvasElement.addEventListener('hidden.bs.offcanvas', function () {
+                    if (pendingScrollTarget) {
+                        pendingScrollTarget.scrollIntoView({ behavior: 'smooth' });
+                        pendingScrollTarget = null;
+                    }
+                });
+
                 mobileLinks.forEach(link => {
                     link.addEventListener('click', function(e) {
                         e.preventDefault(); 
                         const targetId = this.getAttribute('href');
-                        const targetSection = document.querySelector(targetId);
+                        pendingScrollTarget = document.querySelector(targetId);
                         
                         // Menutup menu menyamping secara manual
                         const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement) || new bootstrap.Offcanvas(offcanvasElement);
                         bsOffcanvas.hide();
-                        
-                        // Gulir ke area yang dituju setelah animasi penutupan menu selesai (300ms)
-                        if (targetSection) {
-                            setTimeout(() => {
-                                targetSection.scrollIntoView({ behavior: 'smooth' });
-                            }, 300);
-                        }
                     });
                 });
             }
