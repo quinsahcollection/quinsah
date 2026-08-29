@@ -181,18 +181,14 @@
 
         /* HERO SECTION */
         .hero-section {
-            /* PERBAIKAN: Spasi padding-top dikurangi agar judul lebih naik pada mobile */
             padding: 35px 0 60px;
             background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
         }
-        
-        /* Jarak kembali lega hanya untuk desktop */
         @media (min-width: 992px) {
             .hero-section {
                 padding: 70px 0 60px;
             }
         }
-
         .hero-title {
             font-weight: 800;
             font-size: clamp(2rem, 3.8vw, 3.2rem);
@@ -284,6 +280,7 @@
         .sector-section {
             background-color: var(--bg-light);
             padding: 70px 0;
+            border-bottom: 1px solid var(--border-color);
         }
         .sector-box {
             background: #ffffff;
@@ -295,6 +292,114 @@
             color: var(--dark-color);
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             font-size: 0.95rem;
+        }
+
+        /* ==================================================== */
+        /* PRICING SECTION STYLES (NEW) */
+        /* ==================================================== */
+        .pricing-section {
+            padding: 80px 0;
+            background: #ffffff;
+        }
+        .pricing-card {
+            background: #ffffff;
+            border: 2px solid var(--primary-color);
+            border-radius: 16px;
+            padding: 40px 30px;
+            box-shadow: 0 15px 35px rgba(220, 53, 69, 0.1);
+            position: relative;
+            height: 100%;
+        }
+        .pricing-badge {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            padding: 6px 20px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .price-display {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--dark-color);
+            line-height: 1;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+        .price-currency {
+            font-size: 1.5rem;
+            vertical-align: top;
+            margin-right: 5px;
+        }
+        .price-period {
+            font-size: 1rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .feature-list-pricing {
+            list-style: none;
+            padding: 0;
+            margin: 30px 0;
+        }
+        .feature-list-pricing li {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            color: #334155;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .feature-list-pricing li i {
+            color: #10b981; /* Green Check */
+            font-size: 1.25rem;
+            margin-right: 12px;
+        }
+        .addon-card {
+            background: var(--bg-light);
+            border: 1px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .addon-icon {
+            width: 50px;
+            height: 50px;
+            background: #e2e8f0;
+            color: var(--dark-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        
+        /* Custom Switch Pricing */
+        .pricing-switch .form-check-input {
+            width: 3.5rem;
+            height: 1.75rem;
+            cursor: pointer;
+            border-color: var(--primary-color);
+            background-color: #cbd5e1;
+        }
+        .pricing-switch .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        .pricing-switch .form-check-input:focus {
+            box-shadow: none;
+        }
+        .cursor-pointer {
+            cursor: pointer;
         }
 
         /* MODAL CUSTOM STYLING */
@@ -439,6 +544,7 @@
                 <a href="#home" class="nav-link-item">Home</a>
                 <a href="#fitur" class="nav-link-item">Fitur Utama</a>
                 <a href="#solusi" class="nav-link-item">Solusi Industri</a>
+                <a href="#harga" class="nav-link-item">Biaya Langganan</a>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <!-- Tombol Desktop -->
@@ -478,8 +584,8 @@
                         <button class="btn-corporate-primary py-3 px-4" data-bs-toggle="modal" data-bs-target="#registerModal">
                             Mulai Uji Coba Gratis <i class="bi bi-arrow-right ms-2"></i>
                         </button>
-                        <a href="https://api.whatsapp.com/send?phone=628987786789" class="btn-corporate-outline py-3 px-4 text-decoration-none" target="_blank">
-                            <i class="bi bi-whatsapp me-2"></i> Hubungi Sales
+                        <a href="#harga" class="btn-corporate-outline py-3 px-4 text-decoration-none">
+                            Lihat Harga
                         </a>
                     </div>
                 </div>
@@ -852,6 +958,83 @@
         </div>
     </section>
 
+    <!-- ============================================== -->
+    <!-- NEW SECTION: BIAYA LANGGANAN (PRICING) -->
+    <!-- ============================================== -->
+    <section id="harga" class="pricing-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Biaya Langganan</span>
+                <h2 class="section-title">Pilih Paket Sesuai Kebutuhan Bisnis Anda</h2>
+                <p class="text-muted mt-3">Sistem transparan tanpa biaya tersembunyi. Semua fitur terbuka penuh untuk Anda sejak hari pertama.</p>
+            </div>
+
+            <!-- Toggle Switch Bulanan vs Tahunan -->
+            <div class="d-flex justify-content-center align-items-center mb-5 pricing-switch">
+                <span class="fw-bold text-dark fs-5 cursor-pointer" id="labelBulanan" onclick="document.getElementById('pricingToggle').checked = false; document.getElementById('pricingToggle').dispatchEvent(new Event('change'));">Bulanan</span>
+                
+                <div class="form-check form-switch mx-3" style="transform: scale(1.4); margin-top: -5px;">
+                    <input class="form-check-input shadow-none" type="checkbox" id="pricingToggle" aria-label="Toggle Pricing">
+                </div>
+                
+                <span class="fw-bold text-muted fs-5 cursor-pointer" id="labelTahunan" onclick="document.getElementById('pricingToggle').checked = true; document.getElementById('pricingToggle').dispatchEvent(new Event('change'));">
+                    Tahunan <span class="badge bg-success ms-1 align-middle" style="font-size: 0.65rem; padding: 4px 8px;">Hemat 2 Bulan</span>
+                </span>
+            </div>
+
+            <div class="row g-4 justify-content-center align-items-stretch">
+                <!-- Paket Utama -->
+                <div class="col-lg-6 col-md-8">
+                    <div class="pricing-card text-center">
+                        <div class="pricing-badge">PAKET DASAR</div>
+                        <h4 class="fw-bold mt-2">Lisensi Toko</h4>
+                        
+                        <div class="price-display">
+                            <span class="price-currency">Rp</span><span id="priceValue">100.000</span><span class="price-period" id="pricePeriod">/bulan</span>
+                        </div>
+                        
+                        <p class="text-muted small">Dibayar per outlet secara <span id="textPeriodeDeskripsi">bulanan</span>.</p>
+                        
+                        <hr class="text-secondary opacity-25 my-4">
+                        
+                        <ul class="feature-list-pricing text-start">
+                            <li><i class="bi bi-check-circle-fill"></i> Termasuk 1 Outlet / Cabang</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Termasuk 1 User / Kasir</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Akses 100% Fitur Terbuka (Full Features)</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Sistem Manajemen Stok & HPP Otomatis</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Laporan Keuangan & Analisa Real-Time</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Customer Display Screen (CDS)</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Support & Pembaruan Sistem Gratis</li>
+                        </ul>
+                        
+                        <button class="btn-corporate-primary w-100 py-3 mt-2 fs-6" data-bs-toggle="modal" data-bs-target="#registerModal">Mulai Berlangganan</button>
+                    </div>
+                </div>
+
+                <!-- Paket Tambahan (Add-ons) -->
+                <div class="col-lg-4 col-md-8">
+                    <div class="addon-card">
+                        <div class="addon-icon">
+                            <i class="bi bi-person-plus-fill"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Butuh Kasir Tambahan?</h4>
+                        <p class="text-muted mb-4">Jika toko Anda memiliki lebih dari satu staf kasir dalam satu shift atau cabang, Anda bisa menambah kuota akses akun dengan harga yang sangat terjangkau.</p>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <h3 class="fw-bold text-dark mb-0 me-2">Rp 25.000</h3>
+                            <span class="text-muted small fw-medium">/kasir/bulan</span>
+                        </div>
+                        
+                        <ul class="feature-list-pricing text-start mt-0 mb-0">
+                            <li><i class="bi bi-plus-lg text-primary"></i> Login simultan (bersamaan)</li>
+                            <li><i class="bi bi-plus-lg text-primary"></i> Kontrol & pelacakan shift terpisah</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- FOOTER -->
     <footer>
         <div class="container">
@@ -867,6 +1050,7 @@
                     <ul class="footer-list">
                         <li><a href="#fitur">Fitur Sistem</a></li>
                         <li><a href="#solusi">Solusi Industri</a></li>
+                        <li><a href="#harga">Biaya Langganan</a></li> <!-- PERBAIKAN: Tambahan link harga di Desktop -->
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#tosModal">Syarat dan Ketentuan</a></li>
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Kebijakan Privasi</a></li>
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#refundModal">Kebijakan Pengembalian Dana</a></li>
@@ -903,7 +1087,7 @@
             <div class="mb-4">
                 <p class="text-muted small fw-bold text-uppercase mb-3 px-2" style="letter-spacing: 1px;">Menu Utama</p>
                 <div class="d-flex flex-column gap-2">
-                    <!-- Navigasi Internal - PERBAIKAN LOGIKA SCROLL DI BAWAH -->
+                    <!-- Navigasi Internal - PERBAIKAN LOGIKA SCROLL -->
                     <a href="#home" class="mobile-nav-link nav-scroll-link">
                         <div class="icon-box"><i class="bi bi-house-door-fill"></i></div>
                         <span>Home</span>
@@ -916,10 +1100,15 @@
                         <div class="icon-box"><i class="bi bi-building-fill"></i></div>
                         <span>Solusi Industri</span>
                     </a>
+                    <!-- PERBAIKAN: Tambahan link harga di menu Mobile -->
+                    <a href="#harga" class="mobile-nav-link nav-scroll-link">
+                        <div class="icon-box"><i class="bi bi-tags-fill"></i></div>
+                        <span>Biaya Langganan</span>
+                    </a>
                     
                     <hr class="text-secondary opacity-25 my-2">
                     
-                    <!-- Menu Legalitas (Modal tidak butuh smooth scroll) -->
+                    <!-- Menu Legalitas -->
                     <a href="#" class="mobile-nav-link" data-bs-toggle="modal" data-bs-target="#tosModal" data-bs-dismiss="offcanvas">
                         <div class="icon-box"><i class="bi bi-file-earmark-text-fill"></i></div>
                         <span>Syarat & Ketentuan</span>
@@ -1250,8 +1439,45 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
+            // --- SCRIPT PERUBAHAN HARGA (TOGGLE) ---
+            const pricingToggle = document.getElementById('pricingToggle');
+            const priceValue = document.getElementById('priceValue');
+            const pricePeriod = document.getElementById('pricePeriod');
+            const labelBulanan = document.getElementById('labelBulanan');
+            const labelTahunan = document.getElementById('labelTahunan');
+            const textPeriodeDeskripsi = document.getElementById('textPeriodeDeskripsi');
+
+            if (pricingToggle) {
+                pricingToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        // Jika mode Tahunan diaktifkan
+                        priceValue.textContent = '1.000.000';
+                        pricePeriod.textContent = '/tahun';
+                        textPeriodeDeskripsi.textContent = 'tahunan';
+                        
+                        // Manipulasi warna label
+                        labelBulanan.classList.remove('text-dark');
+                        labelBulanan.classList.add('text-muted');
+                        
+                        labelTahunan.classList.remove('text-muted');
+                        labelTahunan.classList.add('text-dark');
+                    } else {
+                        // Jika mode Bulanan diaktifkan
+                        priceValue.textContent = '100.000';
+                        pricePeriod.textContent = '/bulan';
+                        textPeriodeDeskripsi.textContent = 'bulanan';
+                        
+                        // Manipulasi warna label
+                        labelTahunan.classList.remove('text-dark');
+                        labelTahunan.classList.add('text-muted');
+                        
+                        labelBulanan.classList.remove('text-muted');
+                        labelBulanan.classList.add('text-dark');
+                    }
+                });
+            }
+
             // --- FIX MENU NAVIGASI MOBILE AGAR BISA SCROLL DAN TERTUTUP ---
-            // PERBAIKAN: Sistem tidak lagi merayap naik saat menu diklik berkali-kali
             const mobileLinks = document.querySelectorAll('.nav-scroll-link');
             const offcanvasElement = document.getElementById('mobileMenu');
             
@@ -1268,8 +1494,6 @@
                         bsOffcanvas.hide();
                         
                         if (targetSection) {
-                            // Hitung koordinat mutlak elemen tujuan.
-                            // Waktu tunggu diset untuk memastikan overflow dari offcanvas sudah normal.
                             setTimeout(() => {
                                 const headerOffset = 85;
                                 const elementPosition = targetSection.getBoundingClientRect().top;
