@@ -288,7 +288,7 @@
             font-size: 0.95rem;
         }
 
-        /* MODAL & OFFCANVAS CUSTOM STYLING */
+        /* MODAL CUSTOM STYLING */
         .custom-modal {
             border: none;
             border-radius: 16px;
@@ -315,6 +315,45 @@
         .is-invalid {
             border-color: var(--primary-color) !important;
             background-image: none !important;
+        }
+
+        /* NEW MOBILE MENU (OFFCANVAS) STYLING */
+        .custom-offcanvas {
+            border-left: none;
+            border-radius: 24px 0 0 24px;
+        }
+        .mobile-nav-link {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            color: var(--dark-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.05rem;
+            border-radius: 14px;
+            transition: all 0.2s;
+            background-color: transparent;
+        }
+        .mobile-nav-link:hover, .mobile-nav-link:active {
+            background-color: #fff1f2;
+            color: var(--primary-color);
+        }
+        .mobile-nav-link .icon-box {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f5f9;
+            color: var(--primary-color);
+            border-radius: 10px;
+            margin-right: 16px;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+        .mobile-nav-link:hover .icon-box, .mobile-nav-link:active .icon-box {
+            background-color: var(--primary-color);
+            color: white;
         }
 
         /* FOOTER */
@@ -370,7 +409,6 @@
                 <img src="./logo.png" alt="QueenPOS Logo" class="brand-logo" style="width: 100px; height: auto;" onerror="this.onerror=null; this.src='https://placehold.co/200x80?text=QueenPOS';">
             </a>
             <div class="d-none d-lg-flex align-items-center gap-1">
-                <!-- Tambahan Menu Home -->
                 <a href="#home" class="nav-link-item">Home</a>
                 <a href="#fitur" class="nav-link-item">Fitur Utama</a>
                 <a href="#solusi" class="nav-link-item">Solusi Industri</a>
@@ -786,7 +824,7 @@
         </div>
     </section>
 
-    <!-- FOOTER (Bagian Navigasi Disembunyikan di Mobile) -->
+    <!-- FOOTER -->
     <footer>
         <div class="container">
             <div class="row g-4 mb-4">
@@ -796,7 +834,6 @@
                         Platform Point of Sale (POS) & Manajemen Back-Office terintegrasi yang dibangun untuk membantu bisnis bertumbuh secara efisien.
                     </p>
                 </div>
-                <!-- Div ini akan otomatis hilang di tampilan layar kecil karena kelas d-none d-lg-block -->
                 <div class="col-lg-3 d-none d-lg-block">
                     <h6 class="footer-heading">Navigasi</h6>
                     <ul class="footer-list">
@@ -809,7 +846,6 @@
                     <h6 class="footer-heading">Kontak & Lokasi</h6>
                     <p class="small mb-2"><i class="bi bi-geo-alt-fill text-danger me-2"></i> Pasar Teluk Gong 2 Ruko Uniko 10, Penjaringan, Jakarta Utara</p>
                     <p class="small mb-2"><i class="bi bi-envelope-fill text-danger me-2"></i> admin@queenpos.id</p>
-                    <!-- Tambahan Akun Instagram -->
                     <p class="small mb-0">
                         <a href="https://instagram.com/queenpos.id" target="_blank" class="text-decoration-none" style="color: inherit;">
                             <i class="bi bi-instagram text-danger me-2"></i> queenpos.id
@@ -824,32 +860,37 @@
     </footer>
 
     <!-- ============================================== -->
-    <!-- MENU OFFCANVAS (UNTUK MOBILE SAJA) DIPERBAIKI -->
+    <!-- NEW: MENU OFFCANVAS PREMIUM (UNTUK MOBILE) -->
     <!-- ============================================== -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
-        <div class="offcanvas-header border-bottom py-3">
-            <img src="./logo.png" alt="QueenPOS Logo" style="height: 35px;" onerror="this.onerror=null; this.src='https://placehold.co/150x50?text=QueenPOS';">
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-end custom-offcanvas" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+        <div class="offcanvas-header border-bottom py-3 px-4">
+            <img src="./logo.png" alt="QueenPOS Logo" style="height: 38px;" onerror="this.onerror=null; this.src='https://placehold.co/150x50?text=QueenPOS';">
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body px-0">
-            <!-- Tombol Masuk -->
-            <div class="px-3 mb-4">
-                <button class="btn btn-corporate-outline w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="offcanvas">Masuk Aplikasi</button>
+        <div class="offcanvas-body d-flex flex-column px-4 py-4">
+            
+            <div class="mb-4">
+                <p class="text-muted small fw-bold text-uppercase mb-3 px-2" style="letter-spacing: 1px;">Menu Utama</p>
+                <div class="d-flex flex-column gap-2">
+                    <!-- Navigasi ini diatur dengan JS agar scroll lebih smooth saat diklik -->
+                    <a href="#home" class="mobile-nav-link action-nav-link">
+                        <div class="icon-box"><i class="bi bi-house-door-fill"></i></div>
+                        <span>Home</span>
+                    </a>
+                    <a href="#fitur" class="mobile-nav-link action-nav-link">
+                        <div class="icon-box"><i class="bi bi-star-fill"></i></div>
+                        <span>Fitur Sistem</span>
+                    </a>
+                    <a href="#solusi" class="mobile-nav-link action-nav-link">
+                        <div class="icon-box"><i class="bi bi-building-fill"></i></div>
+                        <span>Solusi Industri</span>
+                    </a>
+                </div>
             </div>
             
-            <p class="text-muted small fw-bold text-uppercase mb-2 px-3">Menu Navigasi</p>
-            
-            <!-- List Group Navigasi dengan Ikon & Desain Rapi -->
-            <div class="list-group list-group-flush border-top border-bottom">
-                <a href="#home" class="list-group-item list-group-item-action py-3 px-3 border-0 fw-medium d-flex align-items-center" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-house-door-fill text-danger me-3 fs-5"></i> Home
-                </a>
-                <a href="#fitur" class="list-group-item list-group-item-action py-3 px-3 border-0 border-top fw-medium d-flex align-items-center" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-star-fill text-danger me-3 fs-5"></i> Fitur Sistem
-                </a>
-                <a href="#solusi" class="list-group-item list-group-item-action py-3 px-3 border-0 border-top fw-medium d-flex align-items-center" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-building-fill text-danger me-3 fs-5"></i> Solusi Industri
-                </a>
+            <div class="mt-auto border-top pt-4">
+                <button class="btn btn-corporate-outline w-100 py-3 mb-3 fw-bold rounded-3" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="offcanvas">Masuk Aplikasi</button>
+                <button class="btn btn-corporate-primary w-100 py-3 fw-bold rounded-3" data-bs-toggle="modal" data-bs-target="#registerModal" data-bs-dismiss="offcanvas">Coba Gratis</button>
             </div>
         </div>
     </div>
@@ -861,7 +902,7 @@
         <div class="modal-dialog modal-dialog-centered" style="max-width: 650px;">
             <div class="modal-content custom-modal">
                 <div class="modal-body p-4 p-md-5">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-4 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                     
                     <div class="text-center mb-4">
                         <img src="./logo.png" alt="QueenPOS Logo" style="height: 55px;" onerror="this.onerror=null; this.src='https://placehold.co/200x80?text=QueenPOS';">
@@ -915,7 +956,7 @@
         <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
             <div class="modal-content custom-modal">
                 <div class="modal-body p-4 p-md-5">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                     
                     <div class="text-center mb-4">
                         <img src="./logo.png" alt="QueenPOS Logo" style="height: 55px;" onerror="this.onerror=null; this.src='https://placehold.co/200x80?text=QueenPOS';">
@@ -947,10 +988,37 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Custom Script for Form Functionality -->
+    <!-- Custom Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             
+            // --- FIX UX: SCROLL & OFFCANVAS MENU MOBILE ---
+            const mobileActionLinks = document.querySelectorAll('.action-nav-link');
+            const offcanvasElement = document.getElementById('mobileMenu');
+            
+            if(offcanvasElement) {
+                // Instansiasi Offcanvas Bootstrap secara manual
+                const bsOffcanvas = new bootstrap.Offcanvas(offcanvasElement);
+                
+                mobileActionLinks.forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault(); 
+                        const targetId = this.getAttribute('href');
+                        const targetSection = document.querySelector(targetId);
+                        
+                        // Tutup menu offcanvas terlebih dahulu untuk mencegah bug UI
+                        bsOffcanvas.hide();
+                        
+                        // Tunggu animasi menutup sedikit, baru jalankan auto-scroll ke bawah
+                        setTimeout(() => {
+                            if(targetSection) {
+                                targetSection.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }, 250);
+                    });
+                });
+            }
+
             // --- LOGIKA LOGIN (LANJUT KE TOKO) ---
             const btnLogin = document.getElementById('btnLogin');
             const loginStoreUrl = document.getElementById('loginStoreUrl');
@@ -966,18 +1034,15 @@
                         return;
                     }
 
-                    // Efek loading
                     const originalText = btnLogin.innerHTML;
                     btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Memproses...';
                     btnLogin.disabled = true;
 
-                    // Mengarahkan ke subdomain toko
                     setTimeout(() => {
                         window.location.href = `https://${storeName}.queenpos.id`;
                     }, 800);
                 });
 
-                // Format input: huruf kecil dan angka saja, tanpa spasi
                 loginStoreUrl.addEventListener('input', function() {
                     this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
                 });
@@ -992,7 +1057,6 @@
                 btnRegister.addEventListener('click', function(e) {
                     e.preventDefault();
                     
-                    // Validasi form (cek apakah ada input yang kosong)
                     const inputs = registerForm.querySelectorAll('input[required]');
                     let isValid = true;
                     
@@ -1012,24 +1076,20 @@
 
                     const storeName = registerStoreUrl.value.trim().toLowerCase();
                     
-                    // Efek loading saat proses
                     const originalText = btnRegister.innerHTML;
                     btnRegister.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Mendaftarkan Toko...';
                     btnRegister.disabled = true;
 
-                    // Simulasi redirect setelah pendaftaran dianggap sukses
                     setTimeout(() => {
                         alert('Pendaftaran Berhasil! Mengarahkan ke sistem toko Anda...');
                         window.location.href = `https://${storeName}.queenpos.id`;
                     }, 1500);
                 });
 
-                // Format URL otomatis (hanya abjad dan angka)
                 registerStoreUrl.addEventListener('input', function() {
                     this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
                 });
                 
-                // Hilangkan peringatan merah (is-invalid) saat user mulai mengetik lagi
                 registerForm.querySelectorAll('input').forEach(input => {
                     input.addEventListener('input', function() {
                         this.classList.remove('is-invalid');
