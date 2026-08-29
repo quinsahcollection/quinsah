@@ -25,7 +25,7 @@
         /* Smooth scroll dan penyesuaian jarak dari navbar agar judul tidak tertutup */
         html {
             scroll-behavior: smooth;
-            scroll-padding-top: 100px; /* Diperbarui agar scroll tepat sasaran */
+            scroll-padding-top: 85px; 
         }
 
         body {
@@ -181,10 +181,18 @@
 
         /* HERO SECTION */
         .hero-section {
-            /* Diperbarui: padding top diubah dari 70px ke 110px agar jarak elemen lebih turun */
-            padding: 110px 0 60px;
+            /* PERBAIKAN: Spasi padding-top dikurangi agar judul lebih naik pada mobile */
+            padding: 35px 0 60px;
             background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
         }
+        
+        /* Jarak kembali lega hanya untuk desktop */
+        @media (min-width: 992px) {
+            .hero-section {
+                padding: 70px 0 60px;
+            }
+        }
+
         .hero-title {
             font-weight: 800;
             font-size: clamp(2rem, 3.8vw, 3.2rem);
@@ -461,7 +469,7 @@
                         Kelola penjualan multi-cabang, lacak stok real-time, hitung HPP aset otomatis, dan pantau laporan keuangan secara akurat dalam satu platform cerdas.
                     </p>
 
-                    <!-- PERBAIKAN: Gambar khusus Mobile tampil di sini (di atas tombol uji coba gratis) -->
+                    <!-- Gambar khusus Mobile tampil di sini (di atas tombol uji coba gratis) -->
                     <div class="d-block d-lg-none mb-4">
                         <img src="./banner-queenpos.jpg" class="img-fluid rounded shadow-sm" alt="QueenPOS Dashboard">
                     </div>
@@ -476,7 +484,7 @@
                     </div>
                 </div>
 
-                <!-- PERBAIKAN: Container gambar Desktop -->
+                <!-- Container gambar Desktop -->
                 <div class="col-lg-6 d-none d-lg-block">
                     <div class="browser-body">
                         <img src="./banner-queenpos.jpg" class="img-fluid rounded" alt="QueenPOS Dashboard">
@@ -861,7 +869,6 @@
                         <li><a href="#solusi">Solusi Industri</a></li>
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#tosModal">Syarat dan Ketentuan</a></li>
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Kebijakan Privasi</a></li>
-                        <!-- Tambahan Menu Refund di Desktop Footer -->
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#refundModal">Kebijakan Pengembalian Dana</a></li>
                         <li class="mt-2"><a href="#" data-bs-toggle="modal" data-bs-target="#loginModal" class="text-white">Login Aplikasi</a></li>
                     </ul>
@@ -884,7 +891,7 @@
     </footer>
 
     <!-- ============================================== -->
-    <!-- MENU OFFCANVAS PREMIUM (UNTUK MOBILE) DIPERBAIKI -->
+    <!-- MENU OFFCANVAS PREMIUM (UNTUK MOBILE) -->
     <!-- ============================================== -->
     <div class="offcanvas offcanvas-end custom-offcanvas" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
         <div class="offcanvas-header border-bottom py-3 px-4">
@@ -896,7 +903,7 @@
             <div class="mb-4">
                 <p class="text-muted small fw-bold text-uppercase mb-3 px-2" style="letter-spacing: 1px;">Menu Utama</p>
                 <div class="d-flex flex-column gap-2">
-                    <!-- Navigasi Internal dengan script intersep untuk fix bug scroll mobile -->
+                    <!-- Navigasi Internal - PERBAIKAN LOGIKA SCROLL DI BAWAH -->
                     <a href="#home" class="mobile-nav-link nav-scroll-link">
                         <div class="icon-box"><i class="bi bi-house-door-fill"></i></div>
                         <span>Home</span>
@@ -912,7 +919,7 @@
                     
                     <hr class="text-secondary opacity-25 my-2">
                     
-                    <!-- Menu Legalitas -->
+                    <!-- Menu Legalitas (Modal tidak butuh smooth scroll) -->
                     <a href="#" class="mobile-nav-link" data-bs-toggle="modal" data-bs-target="#tosModal" data-bs-dismiss="offcanvas">
                         <div class="icon-box"><i class="bi bi-file-earmark-text-fill"></i></div>
                         <span>Syarat & Ketentuan</span>
@@ -921,7 +928,6 @@
                         <div class="icon-box"><i class="bi bi-shield-lock-fill"></i></div>
                         <span>Kebijakan Privasi</span>
                     </a>
-                    <!-- Tambahan Menu Refund Modal di Mobile -->
                     <a href="#" class="mobile-nav-link" data-bs-toggle="modal" data-bs-target="#refundModal" data-bs-dismiss="offcanvas">
                         <div class="icon-box"><i class="bi bi-arrow-counterclockwise"></i></div>
                         <span>Pengembalian Dana</span>
@@ -1245,30 +1251,36 @@
         document.addEventListener('DOMContentLoaded', function() {
             
             // --- FIX MENU NAVIGASI MOBILE AGAR BISA SCROLL DAN TERTUTUP ---
+            // PERBAIKAN: Sistem tidak lagi merayap naik saat menu diklik berkali-kali
             const mobileLinks = document.querySelectorAll('.nav-scroll-link');
             const offcanvasElement = document.getElementById('mobileMenu');
             
             if (mobileLinks.length > 0 && offcanvasElement) {
-                let pendingScrollTarget = null;
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement) || new bootstrap.Offcanvas(offcanvasElement);
                 
-                // PERBAIKAN: Listener yang menunggu menu offcanvas benar-benar selesai menutup
-                // Ini mencegah bug layar bergeser naik (creeping up) akibat konflik scroll dan animasi menu
-                offcanvasElement.addEventListener('hidden.bs.offcanvas', function () {
-                    if (pendingScrollTarget) {
-                        pendingScrollTarget.scrollIntoView({ behavior: 'smooth' });
-                        pendingScrollTarget = null;
-                    }
-                });
-
                 mobileLinks.forEach(link => {
                     link.addEventListener('click', function(e) {
                         e.preventDefault(); 
                         const targetId = this.getAttribute('href');
-                        pendingScrollTarget = document.querySelector(targetId);
+                        const targetSection = document.querySelector(targetId);
                         
                         // Menutup menu menyamping secara manual
-                        const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement) || new bootstrap.Offcanvas(offcanvasElement);
                         bsOffcanvas.hide();
+                        
+                        if (targetSection) {
+                            // Hitung koordinat mutlak elemen tujuan.
+                            // Waktu tunggu diset untuk memastikan overflow dari offcanvas sudah normal.
+                            setTimeout(() => {
+                                const headerOffset = 85;
+                                const elementPosition = targetSection.getBoundingClientRect().top;
+                                const offsetPosition = elementPosition + window.scrollY - headerOffset;
+                  
+                                window.scrollTo({
+                                     top: offsetPosition,
+                                     behavior: "smooth"
+                                });
+                            }, 350); 
+                        }
                     });
                 });
             }
