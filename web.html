@@ -93,7 +93,6 @@
             background-color: var(--primary-hover);
             transform: translateY(-1px);
         }
-        /* Mencegah tombol jadi putih saat proses loading (disabled) */
         .btn-corporate-primary:disabled,
         .btn-corporate-primary[disabled] {
             background-color: var(--primary-color) !important;
@@ -283,7 +282,7 @@
             font-size: 0.95rem;
         }
 
-        /* MODAL CUSTOM STYLING */
+        /* MODAL & OFFCANVAS CUSTOM STYLING */
         .custom-modal {
             border: none;
             border-radius: 16px;
@@ -307,7 +306,6 @@
         .custom-modal label {
             color: var(--dark-color);
         }
-        
         .is-invalid {
             border-color: var(--primary-color) !important;
             background-image: none !important;
@@ -370,10 +368,15 @@
                 <a href="#solusi" class="nav-link-item">Solusi Industri</a>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <!-- Tombol Masuk Memanggil Modal Login -->
-                <button class="btn-corporate-outline py-2 px-3" data-bs-toggle="modal" data-bs-target="#loginModal">Masuk</button>
-                <!-- Tombol Coba Gratis Memanggil Modal Daftar -->
-                <button class="btn-corporate-primary py-2 px-3" data-bs-toggle="modal" data-bs-target="#registerModal">Coba Gratis</button>
+                <!-- Tombol Desktop -->
+                <div class="d-none d-lg-flex gap-2">
+                    <button class="btn-corporate-outline py-2 px-3" data-bs-toggle="modal" data-bs-target="#loginModal">Masuk</button>
+                    <button class="btn-corporate-primary py-2 px-3" data-bs-toggle="modal" data-bs-target="#registerModal">Coba Gratis</button>
+                </div>
+                <!-- Tombol Mobile (Hamburger) -->
+                <button class="navbar-toggler d-lg-none border-0 bg-transparent p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+                    <i class="bi bi-list fs-1 text-dark"></i>
+                </button>
             </div>
         </div>
     </header>
@@ -393,7 +396,6 @@
                         Kelola penjualan multi-cabang, lacak stok real-time, hitung HPP aset otomatis, dan pantau laporan keuangan secara akurat dalam satu platform cerdas.
                     </p>
                     <div class="d-flex flex-wrap gap-3 mb-4">
-                        <!-- Tombol Mulai Uji Coba Gratis Memanggil Modal Daftar -->
                         <button class="btn-corporate-primary py-3 px-4" data-bs-toggle="modal" data-bs-target="#registerModal">
                             Mulai Uji Coba Gratis <i class="bi bi-arrow-right ms-2"></i>
                         </button>
@@ -585,27 +587,27 @@
             </div>
         </section>
 
-        <!-- FITUR 4: INVENTORI (DIPERBARUI) -->
+        <!-- FITUR 4: INVENTORI (DIPERBARUI DENGAN SLIDER 5 FOTO) -->
         <section class="feature-showcase">
             <div class="container">
                 <div class="row align-items-center g-4 flex-lg-row-reverse">
                     <div class="col-lg-5">
                         <span class="section-tag">Kontrol Stok Ketat</span>
-                        <h2 class="section-title mb-3">Manajemen Inventori, Valuasi Aset & PO</h2>
-                        <p class="text-muted mb-4">Jangan biarkan stok hilang atau modal mengendap. Kelola rantai pasok dari gudang hingga rak toko.</p>
+                        <h2 class="section-title mb-3">Manajemen Inventori & Kartu Stok (Ledger)</h2>
+                        <p class="text-muted mb-4">Pantau ketersediaan stok, nilai aset (HPP), hingga potensi omset secara real-time. Lacak pergerakan mutasi barang dengan akurat dari pusat.</p>
                         
                         <div class="feature-point">
                             <div><i class="bi bi-check-circle-fill"></i></div>
                             <div>
-                                <h5>Valuasi Aset & HPP Otomatis</h5>
-                                <p>Sistem menghitung nilai total inventori (HPP) secara otomatis setiap terjadi mutasi barang.</p>
+                                <h5>Informasi Aset & Stock Alert</h5>
+                                <p>Ketahui total HPP secara instan dan dapatkan peringatan (alert) otomatis setiap kali produk cabang Anda perlu di-restock.</p>
                             </div>
                         </div>
                         <div class="feature-point">
                             <div><i class="bi bi-check-circle-fill"></i></div>
                             <div>
-                                <h5>Purchase Order & Stok Menipis</h5>
-                                <p>Dapatkan peringatan dini saat stok barang menipis serta kelola pesanan ke supplier.</p>
+                                <h5>Alokasi & Log Mutasi Rinci</h5>
+                                <p>Pantau alokasi stok fisik yang bisa dijual atau sedang ditahan, serta lacak setiap keluar-masuknya barang via Kartu Stok (Ledger).</p>
                             </div>
                         </div>
                     </div>
@@ -617,8 +619,40 @@
                                 <div class="dot dot-green"></div>
                             </div>
                             <div class="browser-body">
-                                <!-- SUMBER GAMBAR DIPERBARUI DI SINI -->
-                                <img src="./inventori.jpg" alt="Inventori & Warehouse" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Inventory+Screen';">
+                                <div id="inventoriSlider" class="carousel slide" data-bs-ride="carousel">
+                                    <div class="carousel-indicators mb-1">
+                                        <button type="button" data-bs-target="#inventoriSlider" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                                        <button type="button" data-bs-target="#inventoriSlider" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                                        <button type="button" data-bs-target="#inventoriSlider" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                                        <button type="button" data-bs-target="#inventoriSlider" data-bs-slide-to="3" aria-label="Slide 4"></button>
+                                        <button type="button" data-bs-target="#inventoriSlider" data-bs-slide-to="4" aria-label="Slide 5"></button>
+                                    </div>
+                                    <div class="carousel-inner">
+                                        <div class="carousel-item active" data-bs-interval="4000">
+                                            <img src="./Screenshot 2026-08-29 093429.png" alt="Informasi Stok & Total Aset HPP" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Upload+093429.png';">
+                                        </div>
+                                        <div class="carousel-item" data-bs-interval="4000">
+                                            <img src="./Screenshot 2026-08-29 093502.png" alt="Stock Alert & Restock" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Upload+093502.png';">
+                                        </div>
+                                        <div class="carousel-item" data-bs-interval="4000">
+                                            <img src="./Screenshot 2026-08-29 093518.png" alt="Analisa Alokasi Stok" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Upload+093518.png';">
+                                        </div>
+                                        <div class="carousel-item" data-bs-interval="4000">
+                                            <img src="./Screenshot 2026-08-29 093533.png" alt="Log Mutasi Stok" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Upload+093533.png';">
+                                        </div>
+                                        <div class="carousel-item" data-bs-interval="4000">
+                                            <img src="./Screenshot 2026-08-29 093602.png" alt="Kartu Stok Ledger" onerror="this.onerror=null; this.src='https://placehold.co/800x450?text=Upload+093602.png';">
+                                        </div>
+                                    </div>
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#inventoriSlider" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Previous</span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#inventoriSlider" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Next</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -744,7 +778,7 @@
         </div>
     </section>
 
-    <!-- FOOTER -->
+    <!-- FOOTER (Bagian Navigasi Disembunyikan di Mobile) -->
     <footer>
         <div class="container">
             <div class="row g-4 mb-4">
@@ -754,7 +788,8 @@
                         Platform Point of Sale (POS) & Manajemen Back-Office terintegrasi yang dibangun untuk membantu bisnis bertumbuh secara efisien.
                     </p>
                 </div>
-                <div class="col-lg-3 col-6">
+                <!-- Div ini akan otomatis hilang di tampilan layar kecil karena kelas d-none d-lg-block -->
+                <div class="col-lg-3 d-none d-lg-block">
                     <h6 class="footer-heading">Navigasi</h6>
                     <ul class="footer-list">
                         <li><a href="#fitur">Fitur Sistem</a></li>
@@ -762,7 +797,7 @@
                         <li><a href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Login Aplikasi</a></li>
                     </ul>
                 </div>
-                <div class="col-lg-4 col-6">
+                <div class="col-lg-4 col-md-6">
                     <h6 class="footer-heading">Kontak & Lokasi</h6>
                     <p class="small mb-2"><i class="bi bi-geo-alt-fill text-danger me-2"></i> Jakarta Barat, DKI Jakarta, Indonesia</p>
                     <p class="small mb-0"><i class="bi bi-envelope-fill text-danger me-2"></i> halo@queenpos.id</p>
@@ -773,6 +808,35 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================== -->
+    <!-- MENU OFFCANVAS (UNTUK MOBILE SAJA) -->
+    <!-- ============================================== -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+        <div class="offcanvas-header border-bottom">
+            <img src="./logo.png" alt="QueenPOS Logo" style="height: 35px;" onerror="this.onerror=null; this.src='https://placehold.co/150x50?text=QueenPOS';">
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- Tombol Masuk Paling Atas -->
+            <div class="d-grid mb-3">
+                <button class="btn btn-corporate-outline py-2 text-center" style="justify-content: center;" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="offcanvas">Masuk</button>
+            </div>
+            
+            <hr class="text-secondary opacity-25 my-3">
+            
+            <!-- Navigasi pindahan dari footer -->
+            <p class="text-muted small fw-bold text-uppercase mb-2">Menu Navigasi</p>
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item">
+                    <a class="nav-link text-dark fw-medium px-0 py-2" href="#fitur" data-bs-dismiss="offcanvas">Fitur Sistem</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-dark fw-medium px-0 py-2" href="#solusi" data-bs-dismiss="offcanvas">Solusi Industri</a>
+                </li>
+            </ul>
+        </div>
+    </div>
 
     <!-- ============================================== -->
     <!-- MODAL 1: REGISTER (DAFTAR AKUN BARU) -->
