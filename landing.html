@@ -1647,99 +1647,112 @@
         });
 
         // Fungsi Ambil Data Real-Time untuk Client Portal
-        async function loadClientPortalData() {
-            const loginSection = document.getElementById('portalLoginSection');
-            const dataSection = document.getElementById('portalDataSection');
+async function loadClientPortalData() {
+    const loginSection = document.getElementById('portalLoginSection');
+    const dataSection = document.getElementById('portalDataSection');
 
-            // LOGIKA BARU: Cek Sesi Autentikasi
-            if (!currentUserId) {
-                loginSection.classList.remove('d-none');
-                dataSection.classList.add('d-none');
-                return;
-            }
+    if (!currentUserId) {
+        loginSection.classList.remove('d-none');
+        dataSection.classList.add('d-none');
+        return;
+    }
 
-            loginSection.classList.add('d-none');
-            dataSection.classList.remove('d-none');
+    loginSection.classList.add('d-none');
+    dataSection.classList.remove('d-none');
 
-            try {
-                const companyRef = doc(db, "companies", currentUserId);
-                const companySnap = await getDoc(companyRef);
-                
-                if (companySnap.exists()) {
-                    const data = companySnap.data();
+    try {
+        // 1. Ambil data user yang sedang login dari koleksi 'users' terlebih dahulu
+        const userRef = doc(db, "users", currentUserId);
+        const userSnap = await getDoc(userRef);
+        
+        let targetCompanyId = currentUserId; // Default asumsi awal
 
-                    document.getElementById('clientName').innerText = data.namaUsaha || 'Toko Tanpa Nama';
-                    document.getElementById('clientEmail').innerText = data.email || 'Belum ada email';
-                    document.getElementById('clientStoreName').innerText = data.namaUsaha || '-';
-                    document.getElementById('clientDomain').innerText = data.urlToko ? (data.urlToko + '.queenpos.id') : '-';
-                    document.getElementById('clientPhone').innerText = data.phone || '-';
-                    document.getElementById('clientCategory').innerText = data.kategori || 'Sektor Usaha Umum';
-
-                    document.getElementById('clientPlan').innerText = data.paketLangganan || 'Basic';
-                    document.getElementById('clientActiveUntil').innerText = data.expiredDate ? 
-                        new Date(data.expiredDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
-                    
-                    const outletQ = query(collection(db, "outlets"), where("companyId", "==", currentUserId));
-                    const outletSnap = await getDocs(outletQ);
-                    
-                    let totalOutlets = outletSnap.size;
-                    let totalKasir = 0;
-                    
-                    outletSnap.forEach((outDoc) => {
-                        const outData = outDoc.data();
-                        if(outData.registers && Array.isArray(outData.registers)) {
-                            totalKasir += outData.registers.length;
-                        }
-                    });
-
-                    document.getElementById('clientActiveBranches').innerText = totalOutlets;
-                    document.getElementById('clientActiveCashiers').innerText = totalKasir;
-                } else {
-                    document.getElementById('clientName').innerText = "Data Perusahaan Tidak Ditemukan";
-                }
-
-                // Ambil Data Tagihan dari Koleksi 'billings'
-                const billingQ = query(
-                    collection(db, "billings"), 
-                    where("companyId", "==", currentUserId), 
-                    orderBy("createdAt", "desc"), 
-                    limit(3)
-                );
-                const billingSnap = await getDocs(billingQ);
-                
-                const tableBody = document.getElementById('clientInvoiceTableBody');
-                tableBody.innerHTML = ""; 
-                
-                if (billingSnap.empty) {
-                    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Belum ada riwayat tagihan.</td></tr>';
-                    return;
-                }
-
-                billingSnap.forEach((invoiceDoc) => {
-                    const bill = invoiceDoc.data();
-                    const dateStr = bill.createdAt && bill.createdAt.toDate ? 
-                                    bill.createdAt.toDate().toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
-                    
-                    let statusBadge = bill.status === 'PAID' ? 
-                        '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">LUNAS</span>' : 
-                        '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">BELUM DIBAYAR</span>';
-
-                    const row = `
-                        <tr>
-                            <td class="fw-medium text-primary">${bill.description || 'Tagihan Sistem'}</td>
-                            <td>${dateStr}</td>
-                            <td class="fw-medium">Rp ${(bill.amount || 0).toLocaleString('id-ID')}</td>
-                            <td>${statusBadge}</td>
-                        </tr>
-                    `;
-                    tableBody.innerHTML += row;
-                });
-
-            } catch (error) {
-                console.error("Error mengambil data Client Portal:", error);
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            if (userData.companyId) {
+                targetCompanyId = userData.companyId; // Ambil companyId yang merujuk ke tabel companies
             }
         }
 
+        // 2. Ambil data perusahaan berdasarkan companyId yang valid
+        const companyRef = doc(db, "companies", targetCompanyId);
+        const companySnap = await getDoc(companyRef);
+        
+        if (companySnap.exists()) {
+            const data = companySnap.data();
+
+            document.getElementById('clientName').innerText = data.namaUsaha || 'Toko Tanpa Nama';
+            document.getElementById('clientEmail').innerText = data.email || 'Belum ada email';
+            document.getElementById('clientStoreName').innerText = data.namaUsaha || '-';
+            document.getElementById('clientDomain').innerText = data.urlToko ? (data.urlToko + '.queenpos.id') : '-';
+            document.getElementById('clientPhone').innerText = data.phone || '-';
+            document.getElementById('clientCategory').innerText = data.kategori || 'Sektor Usaha Umum';
+
+            document.getElementById('clientPlan').innerText = data.paketLangganan || 'Basic';
+            document.getElementById('clientActiveUntil').innerText = data.expiredDate ? 
+                new Date(data.expiredDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+            
+            // Hitung jumlah outlet berdasarkan targetCompanyId
+            const outletQ = query(collection(db, "outlets"), where("companyId", "==", targetCompanyId));
+            const outletSnap = await getDocs(outletQ);
+            
+            let totalOutlets = outletSnap.size;
+            let totalKasir = 0;
+            
+            outletSnap.forEach((outDoc) => {
+                const outData = outDoc.data();
+                if(outData.registers && Array.isArray(outData.registers)) {
+                    totalKasir += outData.registers.length;
+                }
+            });
+
+            document.getElementById('clientActiveBranches').innerText = totalOutlets;
+            document.getElementById('clientActiveCashiers').innerText = totalKasir;
+        } else {
+            document.getElementById('clientName').innerText = "Data Perusahaan Tidak Ditemukan";
+        }
+
+        // 3. Ambil Data Tagihan dari Koleksi 'billings' menggunakan targetCompanyId
+        const billingQ = query(
+            collection(db, "billings"), 
+            where("companyId", "==", targetCompanyId), 
+            orderBy("createdAt", "desc"), 
+            limit(3)
+        );
+        const billingSnap = await getDocs(billingQ);
+        
+        const tableBody = document.getElementById('clientInvoiceTableBody');
+        tableBody.innerHTML = ""; 
+        
+        if (billingSnap.empty) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Belum ada riwayat tagihan.</td></tr>';
+            return;
+        }
+
+        billingSnap.forEach((invoiceDoc) => {
+            const bill = invoiceDoc.data();
+            const dateStr = bill.createdAt && bill.createdAt.toDate ? 
+                            bill.createdAt.toDate().toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : '-';
+            
+            let statusBadge = bill.status === 'PAID' ? 
+                '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">LUNAS</span>' : 
+                '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">BELUM DIBAYAR</span>';
+
+            const row = `
+                <tr>
+                    <td class="fw-medium text-primary">${bill.description || 'Tagihan Sistem'}</td>
+                    <td>${dateStr}</td>
+                    <td class="fw-medium">Rp ${(bill.amount || 0).toLocaleString('id-ID')}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+
+    } catch (error) {
+        console.error("Error mengambil data Client Portal:", error);
+    }
+}
         const clientPortalModalEl = document.getElementById('clientPortalModal');
         if (clientPortalModalEl) {
             clientPortalModalEl.addEventListener('show.bs.modal', function () {
