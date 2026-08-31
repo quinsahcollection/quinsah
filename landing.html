@@ -1189,120 +1189,139 @@
                 </div>
                 
                 <div class="modal-body p-0">
-                    <div class="row g-0">
-                        <!-- Sidebar Menu Portal -->
-                        <div class="col-md-4 bg-light border-end p-4">
-                            <div class="text-center mb-4">
-                                <div class="bg-white border rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm mb-3" style="width: 80px; height: 80px;">
-                                    <i class="bi bi-shop fs-1 text-danger"></i>
-                                </div>
-                                <h6 class="fw-bold mb-1 text-dark" id="clientName">Memuat...</h6>
-                                <p class="small text-muted mb-0" id="clientEmail">Memuat...</p>
-                                <span class="badge bg-success mt-2"><i class="bi bi-check-circle me-1"></i> Terverifikasi</span>
-                            </div>
-                            
-                            <div class="nav flex-column nav-pills client-nav-pills" id="portalTabs" role="tablist" aria-orientation="vertical">
-                                <button class="nav-link text-start active mb-2" data-bs-toggle="pill" data-bs-target="#tabProfil" type="button" role="tab">
-                                    <i class="bi bi-person-lines-fill me-2"></i> Profil Usaha
-                                </button>
-                                <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tabLangganan" type="button" role="tab">
-                                    <i class="bi bi-box-seam me-2"></i> Paket & Lisensi
-                                </button>
-                                <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabTagihan" type="button" role="tab">
-                                    <i class="bi bi-receipt me-2"></i> Riwayat Tagihan
-                                </button>
-                            </div>
+                    <!-- Form Login Portal (Ditampilkan jika belum login) -->
+                    <div id="portalLoginSection" class="p-5 text-center d-none">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center border shadow-sm mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi bi-shield-lock fs-1 text-danger"></i>
                         </div>
+                        <h5 class="fw-bold mb-2">Akses Client Portal</h5>
+                        <p class="text-muted small mb-4">Silakan login menggunakan email terdaftar Anda untuk melihat status langganan dan tagihan.</p>
+                        
+                        <div class="mx-auto" style="max-width: 350px;">
+                            <input type="email" id="portalEmail" class="form-control mb-3" placeholder="Email Terdaftar">
+                            <input type="password" id="portalPassword" class="form-control mb-3" placeholder="Password">
+                            <button type="button" id="btnPortalAuth" class="btn btn-corporate-primary w-100 py-2">Masuk ke Portal</button>
+                            <p id="portalLoginError" class="text-danger small mt-2 d-none"></p>
+                        </div>
+                    </div>
 
-                        <!-- Konten Data Panel Kanan -->
-                        <div class="col-md-8 p-4 p-md-5">
-                            <div class="tab-content" id="portalTabsContent">
+                    <!-- Data Portal (Ditampilkan jika sudah login) -->
+                    <div id="portalDataSection" class="d-none">
+                        <div class="row g-0">
+                            <!-- Sidebar Menu Portal -->
+                            <div class="col-md-4 bg-light border-end p-4">
+                                <div class="text-center mb-4">
+                                    <div class="bg-white border rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm mb-3" style="width: 80px; height: 80px;">
+                                        <i class="bi bi-shop fs-1 text-danger"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-1 text-dark" id="clientName">Memuat...</h6>
+                                    <p class="small text-muted mb-0" id="clientEmail">Memuat...</p>
+                                    <span class="badge bg-success mt-2"><i class="bi bi-check-circle me-1"></i> Terverifikasi</span>
+                                </div>
                                 
-                                <!-- PANEL 1: PROFIL USAHA -->
-                                <div class="tab-pane fade show active" id="tabProfil" role="tabpanel">
-                                    <h5 class="fw-bold text-dark mb-4">Informasi Bisnis Anda</h5>
-                                    
-                                    <div class="row g-3 mb-4">
-                                        <div class="col-sm-6">
-                                            <label class="small text-muted fw-bold mb-1">Nama Toko</label>
-                                            <div class="fw-medium text-dark" id="clientStoreName">-</div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="small text-muted fw-bold mb-1">Domain Akses</label>
-                                            <div class="fw-medium text-primary" id="clientDomain">-</div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="small text-muted fw-bold mb-1">No. WhatsApp / Telepon</label>
-                                            <div class="fw-medium text-dark" id="clientPhone">-</div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="small text-muted fw-bold mb-1">Kategori Usaha</label>
-                                            <div class="fw-medium text-dark" id="clientCategory">-</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <hr class="text-secondary opacity-25">
-                                    <button class="btn btn-corporate-outline btn-sm mt-2"><i class="bi bi-pencil-square me-1"></i> Edit Profil</button>
+                                <div class="nav flex-column nav-pills client-nav-pills" id="portalTabs" role="tablist" aria-orientation="vertical">
+                                    <button class="nav-link text-start active mb-2" data-bs-toggle="pill" data-bs-target="#tabProfil" type="button" role="tab">
+                                        <i class="bi bi-person-lines-fill me-2"></i> Profil Usaha
+                                    </button>
+                                    <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tabLangganan" type="button" role="tab">
+                                        <i class="bi bi-box-seam me-2"></i> Paket & Lisensi
+                                    </button>
+                                    <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#tabTagihan" type="button" role="tab">
+                                        <i class="bi bi-receipt me-2"></i> Riwayat Tagihan
+                                    </button>
                                 </div>
+                            </div>
 
-                                <!-- PANEL 2: PAKET & LISENSI -->
-                                <div class="tab-pane fade" id="tabLangganan" role="tabpanel">
-                                    <h5 class="fw-bold text-dark mb-4">Status Layanan</h5>
+                            <!-- Konten Data Panel Kanan -->
+                            <div class="col-md-8 p-4 p-md-5">
+                                <div class="tab-content" id="portalTabsContent">
                                     
-                                    <div class="card border-danger border-opacity-25 shadow-sm mb-4">
-                                        <div class="card-body p-4">
-                                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                                <div>
-                                                    <span class="badge bg-danger bg-opacity-10 text-danger mb-2">Paket Aktif</span>
-                                                    <h5 class="fw-bold mb-0" id="clientPlan">Memuat...</h5>
+                                    <!-- PANEL 1: PROFIL USAHA -->
+                                    <div class="tab-pane fade show active" id="tabProfil" role="tabpanel">
+                                        <h5 class="fw-bold text-dark mb-4">Informasi Bisnis Anda</h5>
+                                        
+                                        <div class="row g-3 mb-4">
+                                            <div class="col-sm-6">
+                                                <label class="small text-muted fw-bold mb-1">Nama Toko</label>
+                                                <div class="fw-medium text-dark" id="clientStoreName">-</div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <label class="small text-muted fw-bold mb-1">Domain Akses</label>
+                                                <div class="fw-medium text-primary" id="clientDomain">-</div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <label class="small text-muted fw-bold mb-1">No. WhatsApp / Telepon</label>
+                                                <div class="fw-medium text-dark" id="clientPhone">-</div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <label class="small text-muted fw-bold mb-1">Kategori Usaha</label>
+                                                <div class="fw-medium text-dark" id="clientCategory">-</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <hr class="text-secondary opacity-25">
+                                        <button class="btn btn-corporate-outline btn-sm mt-2"><i class="bi bi-pencil-square me-1"></i> Edit Profil</button>
+                                    </div>
+
+                                    <!-- PANEL 2: PAKET & LISENSI -->
+                                    <div class="tab-pane fade" id="tabLangganan" role="tabpanel">
+                                        <h5 class="fw-bold text-dark mb-4">Status Layanan</h5>
+                                        
+                                        <div class="card border-danger border-opacity-25 shadow-sm mb-4">
+                                            <div class="card-body p-4">
+                                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                                    <div>
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger mb-2">Paket Aktif</span>
+                                                        <h5 class="fw-bold mb-0" id="clientPlan">Memuat...</h5>
+                                                    </div>
+                                                    <h4 class="fw-bold text-dark mb-0" id="clientPlanPrice">Rp 0</h4>
                                                 </div>
-                                                <h4 class="fw-bold text-dark mb-0" id="clientPlanPrice">Rp 0</h4>
+                                                <p class="small text-muted mb-0">Berlaku sampai: <strong id="clientActiveUntil">-</strong></p>
                                             </div>
-                                            <p class="small text-muted mb-0">Berlaku sampai: <strong id="clientActiveUntil">-</strong></p>
+                                            <div class="card-footer bg-light border-top-0 p-3 d-flex justify-content-between align-items-center">
+                                                <span class="small fw-medium text-success"><i class="bi bi-shield-check me-1"></i> Auto-Renewal Aktif</span>
+                                                <button class="btn btn-sm btn-corporate-primary py-1 px-3">Upgrade Paket</button>
+                                            </div>
                                         </div>
-                                        <div class="card-footer bg-light border-top-0 p-3 d-flex justify-content-between align-items-center">
-                                            <span class="small fw-medium text-success"><i class="bi bi-shield-check me-1"></i> Auto-Renewal Aktif</span>
-                                            <button class="btn btn-sm btn-corporate-primary py-1 px-3">Upgrade Paket</button>
+
+                                        <div class="row g-3">
+                                            <div class="col-6">
+                                                <div class="portal-stat-box">
+                                                    <h4 id="clientActiveBranches">0</h4>
+                                                    <span class="small text-muted">Cabang Aktif</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="portal-stat-box">
+                                                    <h4 id="clientActiveCashiers">0</h4>
+                                                    <span class="small text-muted">Akun Kasir</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="row g-3">
-                                        <div class="col-6">
-                                            <div class="portal-stat-box">
-                                                <h4 id="clientActiveBranches">0</h4>
-                                                <span class="small text-muted">Cabang Aktif</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="portal-stat-box">
-                                                <h4 id="clientActiveCashiers">0</h4>
-                                                <span class="small text-muted">Akun Kasir</span>
-                                            </div>
+                                    <!-- PANEL 3: RIWAYAT TAGIHAN -->
+                                    <div class="tab-pane fade" id="tabTagihan" role="tabpanel">
+                                        <h5 class="fw-bold text-dark mb-4">Riwayat Pembayaran</h5>
+                                        
+                                        <div class="table-responsive">
+                                            <table class="table table-hover border align-middle text-sm" style="font-size: 0.9rem;">
+                                                <thead class="table-light text-muted">
+                                                    <tr>
+                                                        <th>Deskripsi</th>
+                                                        <th>Tanggal</th>
+                                                        <th>Nominal</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="clientInvoiceTableBody">
+                                                    <tr><td colspan="4" class="text-center text-muted py-3">Memuat data tagihan...</td></tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
+
                                 </div>
-
-                                <!-- PANEL 3: RIWAYAT TAGIHAN -->
-                                <div class="tab-pane fade" id="tabTagihan" role="tabpanel">
-                                    <h5 class="fw-bold text-dark mb-4">Riwayat Pembayaran</h5>
-                                    
-                                    <div class="table-responsive">
-                                        <table class="table table-hover border align-middle text-sm" style="font-size: 0.9rem;">
-                                            <thead class="table-light text-muted">
-                                                <tr>
-                                                    <th>Deskripsi</th>
-                                                    <th>Tanggal</th>
-                                                    <th>Nominal</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="clientInvoiceTableBody">
-                                                <tr><td colspan="4" class="text-center text-muted py-3">Memuat data tagihan...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
                             </div>
                         </div>
                     </div>
@@ -1603,7 +1622,8 @@
     <!-- Custom Script & Firebase Client Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // DITAMBAHKAN signInWithEmailAndPassword DISINI
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = { 
@@ -1628,11 +1648,18 @@
 
         // Fungsi Ambil Data Real-Time untuk Client Portal
         async function loadClientPortalData() {
+            const loginSection = document.getElementById('portalLoginSection');
+            const dataSection = document.getElementById('portalDataSection');
+
+            // LOGIKA BARU: Cek Sesi Autentikasi
             if (!currentUserId) {
-                document.getElementById('clientName').innerText = "Belum Login / Sesi Berakhir";
-                document.getElementById('clientEmail').innerText = "Silakan login terlebih dahulu melalui aplikasi kasir.";
+                loginSection.classList.remove('d-none');
+                dataSection.classList.add('d-none');
                 return;
             }
+
+            loginSection.classList.add('d-none');
+            dataSection.classList.remove('d-none');
 
             try {
                 const companyRef = doc(db, "companies", currentUserId);
@@ -1716,7 +1743,6 @@
         const clientPortalModalEl = document.getElementById('clientPortalModal');
         if (clientPortalModalEl) {
             clientPortalModalEl.addEventListener('show.bs.modal', function () {
-                document.getElementById('clientName').innerText = "Menyinkronkan Data...";
                 loadClientPortalData();
             });
         }
@@ -1745,6 +1771,39 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+
+            // TAMBAHAN EVENT LISTENER UNTUK LOGIN PORTAL
+            const btnPortalAuth = document.getElementById('btnPortalAuth');
+            if (btnPortalAuth) {
+                btnPortalAuth.addEventListener('click', async function() {
+                    const email = document.getElementById('portalEmail').value.trim();
+                    const password = document.getElementById('portalPassword').value;
+                    const errorMsg = document.getElementById('portalLoginError');
+                    
+                    if (!email || !password) {
+                        errorMsg.innerText = "Email dan password wajib diisi.";
+                        errorMsg.classList.remove('d-none');
+                        return;
+                    }
+
+                    btnPortalAuth.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+                    btnPortalAuth.disabled = true;
+                    errorMsg.classList.add('d-none');
+
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                        // Jika sukses, reload data portal 
+                        loadClientPortalData();
+                    } catch (error) {
+                        btnPortalAuth.innerHTML = 'Masuk ke Portal';
+                        btnPortalAuth.disabled = false;
+                        errorMsg.innerText = "Gagal masuk. Periksa kembali email dan password Anda.";
+                        errorMsg.classList.remove('d-none');
+                    }
+                });
+            }
+
+
             // Menu Navigasi Mobile Smooth Scroll
             const mobileLinks = document.querySelectorAll('.nav-scroll-link');
             const offcanvasElement = document.getElementById('mobileMenu');
