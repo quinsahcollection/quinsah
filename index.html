@@ -13101,7 +13101,7 @@ async confirmHoldOrder() {
             const hostname = window.location.hostname;
             const tenantId = hostname.includes('queenpos.id') ? hostname.split('.')[0] : (this.companyId || 'umum');
             
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?action=list&companyId=${tenantId}`;
+            const workerUrl = `https://cdn.queenpos.id?action=list&companyId=${tenantId}`;
             
             const response = await fetch(workerUrl, {
                 method: "GET",
@@ -13189,7 +13189,7 @@ async confirmHoldOrder() {
         if (!result.isConfirmed) return;
         
         try {
-            const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/${fileKey}`;
+            const workerUrl = `https://cdn.queenpos.id/${fileKey}`;
             const response = await fetch(workerUrl, {
                 method: "DELETE",
                 headers: { "Authorization": "Bearer YarchQueenPOS12" }
@@ -13336,8 +13336,7 @@ async confirmHoldOrder() {
     let safeFilename = encodeURIComponent(rawFilename.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_]/g, ''));
     
     // 3. Susun URL Worker
-    const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev?companyId=${tenantId}&filename=${safeFilename}`;
-
+    const workerUrl = `https://cdn.queenpos.id?companyId=${tenantId}&filename=${safeFilename}`;
     // 4. Lakukan Request Upload ke Worker (dengan Kunci Rahasia)
     const response = await fetch(workerUrl, {
         method: "POST",
