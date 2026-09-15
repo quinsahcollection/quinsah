@@ -13200,10 +13200,20 @@ const response = await fetch(workerUrl, {
         
         try {
             const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/${fileKey}`;
-            const response = await fetch(workerUrl, {
-                method: "DELETE",
-                headers: { "Authorization": "Bearer YarchQueenPOS12" }
-            });
+            const firebaseUser = auth.currentUser;
+
+if (!firebaseUser) {
+    throw new Error("User belum login");
+}
+
+const idToken = await firebaseUser.getIdToken();
+
+const response = await fetch(workerUrl, {
+    method: "DELETE",
+    headers: {
+        "Authorization": `Bearer ${idToken}`
+    }
+});
 
             if (response.ok) {
                 this.serverMediaList = this.serverMediaList.filter(file => file.key !== fileKey);
