@@ -18543,25 +18543,121 @@ async deletePaymentMethod(id) {
         },
 
         // Buka modal E-Receipt
-// Buka modal E-Receipt
-openEReceipt(trx) {
-    this.activeEReceipt = trx;
-    const modal = new bootstrap.Modal(document.getElementById('eReceiptModal'));
-    modal.show();
+// ============================================================
+// E-RECEIPT SECURITY V2.1
+// Receipt publik memakai token acak + snapshot data minimum.
+// ============================================================
+createReceiptToken() {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 },
 
-// Mengambil URL absolut ke halaman receipt.html secara dinamis dan akurat
-getReceiptUrl(trxId) {
+getSafeReceiptDesign(trx) {
+    const s = this.appSettings || {};
+    const outletReceipts = s.outletReceipts || {};
+    const outletConfig = outletReceipts[trx?.outletId] || outletReceipts['global'] || {};
+    const merged = { ...s, ...outletConfig };
+    const allowed = [
+        'receiptLogo','storeName','storeAddress','storePhone','storePaymentInfo',
+        'socialWa','socialIg','socialFb','socialTiktok','socialShopee','socialTokped',
+        'socialLazada','socialBlibli','termsAndConditions','receiptFooter',
+        'promoImage','promoText','voucherCode'
+    ];
+    const safe = {};
+    allowed.forEach(k => { if (merged[k] !== undefined) safe[k] = merged[k]; });
+    return safe;
+},
+
+buildPublicReceiptPayload(trx, token) {
+    const safeItems = Array.isArray(trx?.items) ? trx.items.map(i => ({
+        productId: i.productId || '',
+        name: i.name || '',
+        variantName: i.variantName || '',
+        note: i.note || '',
+        qty: Number(i.qty || 0),
+        uom: i.uom || 'pcs',
+        finalPrice: Number(i.finalPrice || i.sellPrice || 0),
+        sellPrice: Number(i.sellPrice || i.finalPrice || 0)
+    })) : [];
+
+    return {
+        invoiceId: trx.id,
+        companyId: trx.companyId || this.userProfile?.companyId || '',
+        receiptToken: token,
+        dateStr: trx.dateStr || trx.date || '',
+        customer: trx.customer || 'Umum',
+        outletId: trx.outletId || '',
+        outletName: trx.outletName || trx.outlet || '',
+        cashierName: trx.cashierName || trx.userName || trx.pic || 'Admin / Sistem',
+        orderType: trx.orderType || 'direct',
+        courier: trx.courier || '',
+        shippingCost: Number(trx.shippingCost || 0),
+        isCOD: trx.isCOD === true || String(trx.isCOD) === 'true',
+        paymentMethod: trx.paymentMethod || 'CASH',
+        paymentNote: trx.paymentNote || '',
+        splitPayments: Array.isArray(trx.splitPayments) ? trx.splitPayments : [],
+        paymentHistory: Array.isArray(trx.paymentHistory) ? trx.paymentHistory : [],
+        returHistory: Array.isArray(trx.returHistory) ? trx.returHistory : [],
+        amountReceived: Number(trx.amountReceived || 0),
+        firstPayment: trx.firstPayment !== undefined ? Number(trx.firstPayment || 0) : null,
+        subtotal: Number(trx.subtotal || 0),
+        discountAmt: Number(trx.discountAmt || 0),
+        globalDiscountAmt: Number(trx.globalDiscountAmt || 0),
+        taxAmt: Number(trx.taxAmt || trx.taxAmount || 0),
+        surchargeFee: Number(trx.surchargeFee || 0),
+        total: Number(trx.total || 0),
+        items: safeItems,
+        hasRated: trx.hasRated === true,
+        ratingValue: Number(trx.ratingValue || 0),
+        receiptDesign: this.getSafeReceiptDesign(trx),
+        updatedAt: serverTimestamp()
+    };
+},
+
+async ensurePublicReceipt(trx) {
+    if (!trx?.id) throw new Error('ID transaksi tidak valid');
+    let token = String(trx.receiptToken || '').trim();
+    if (!token) {
+        token = this.createReceiptToken();
+        await updateDoc(doc(db, 'transactions', trx.id), { receiptToken: token });
+        trx.receiptToken = token;
+    }
+    await setDoc(
+        doc(db, 'publicReceipts', token),
+        this.buildPublicReceiptPayload(trx, token),
+        { merge: true }
+    );
+    return token;
+},
+
+async openEReceipt(trx) {
     try {
-        // Ini akan otomatis membaca domain Anda (misal: quinsahcollection.github.io)
-        const currentUrl = window.location.href;
-        const targetUrl = new URL('receipt.html?inv=' + trxId, currentUrl);
+        await this.ensurePublicReceipt(trx);
+        this.activeEReceipt = trx;
+        const modal = new bootstrap.Modal(document.getElementById('eReceiptModal'));
+        modal.show();
+    } catch (err) {
+        console.error('Gagal menyiapkan E-Receipt aman:', err);
+        Swal.fire('E-Receipt gagal dibuka', err.message || 'Gagal membuat link struk aman.', 'error');
+    }
+},
+
+// URL baru: receipt.html?inv=...&token=...
+getReceiptUrl(trxId) {
+    const trx = (this.activeEReceipt && String(this.activeEReceipt.id) === String(trxId))
+        ? this.activeEReceipt
+        : (this.transactions || []).find(t => String(t.id) === String(trxId));
+    const token = trx?.receiptToken || '';
+    try {
+        const targetUrl = new URL('receipt.html', window.location.href);
+        targetUrl.searchParams.set('inv', trxId);
+        if (token) targetUrl.searchParams.set('token', token);
         return targetUrl.href;
     } catch (e) {
-        // Fallback jika browser lawas
-        let baseUrl = window.location.href.split('?')[0]; 
+        let baseUrl = window.location.href.split('?')[0];
         baseUrl = baseUrl.substring(0, baseUrl.lastIndexOf('/'));
-        return `${baseUrl}/receipt.html?inv=${trxId}`;
+        return `${baseUrl}/receipt.html?inv=${encodeURIComponent(trxId)}${token ? '&token=' + encodeURIComponent(token) : ''}`;
     }
 },
 
@@ -18584,7 +18680,8 @@ getEreceiptPhone(trx) {
 },
           
 // Fungsi Kirim ke WhatsApp (Desain Baru & Multi-Cabang)
-sendEReceiptWA(trx) {
+async sendEReceiptWA(trx) {
+    await this.ensurePublicReceipt(trx);
     let nomorMentah = this.getEreceiptPhone(trx);
     let noHp = '';
     if (nomorMentah && nomorMentah !== '-' && nomorMentah !== 'Tidak ada nomor HP') {
@@ -18639,7 +18736,8 @@ Terima kasih atas kunjungannya! 🙏`;
 },
 
 // Fungsi Kirim ke Email (Desain Baru & Multi-Cabang)
-sendEReceiptEmail(trx) {
+async sendEReceiptEmail(trx) {
+    await this.ensurePublicReceipt(trx);
     const urlStruk = this.getReceiptUrl(trx.id);
     const formatRp = (num) => new Intl.NumberFormat('id-ID').format(num || 0);
 
@@ -18691,7 +18789,8 @@ Manajemen ${namaToko}`;
 }, 
             
 // Copy URL Struk ke Clipboard
-copyEReceiptLinkOnly(trx) {
+async copyEReceiptLinkOnly(trx) {
+    await this.ensurePublicReceipt(trx);
     const urlStruk = this.getReceiptUrl(trx.id);
     navigator.clipboard.writeText(urlStruk).then(() => {
         Swal.fire({
@@ -22515,6 +22614,7 @@ let item = {
             cashierId: finalCashierId,
             cashierName: finalCashierName,
             customerPhone: finalCustomerPhone,
+            receiptToken: this.createReceiptToken(),
             shiftId: finalShiftId,
             registerName: finalRegisterName,
 
@@ -22901,6 +23001,12 @@ let item = {
         // 8. UPDATE FINAL & EKSEKUSI KERANJANG FIREBASE
         // =================================================================
         batch.set(doc(db, "transactions", trxData.id), trxData);
+
+        // Snapshot publik minimum untuk E-Receipt. Token menjadi document ID.
+        batch.set(
+            doc(db, "publicReceipts", trxData.receiptToken),
+            this.buildPublicReceiptPayload(trxData, trxData.receiptToken)
+        );
 
         batch.commit().then(() => {
             console.log(`Invoice ${trxData.id} berhasil disinkronkan.`);
