@@ -14078,11 +14078,22 @@ async openRatingModal(customer) {
 
     try {
         // 3. Tarik data dari collection 'ratings'
+        const companyId = this.userProfile?.companyId;
+        if (!companyId) return;
+
         let q;
         if (customer.id) {
-            q = query(collection(db, "ratings"), where("customerId", "==", customer.id));
+            q = query(
+                collection(db, "ratings"),
+                where("companyId", "==", companyId),
+                where("customerId", "==", customer.id)
+            );
         } else {
-            q = query(collection(db, "ratings"), where("customerName", "==", this.selectedCustomerName));
+            q = query(
+                collection(db, "ratings"),
+                where("companyId", "==", companyId),
+                where("customerName", "==", this.selectedCustomerName)
+            );
         }
 
         const querySnapshot = await getDocs(q);
@@ -14142,7 +14153,13 @@ getRatingPercentage(star) {
 // Fungsi untuk menarik semua rating dari koleksi 'ratings' di Firebase
 async fetchAllRatings() {
     try {
-        const q = collection(db, "ratings");
+        const companyId = this.userProfile?.companyId;
+        if (!companyId) return;
+
+        const q = query(
+            collection(db, "ratings"),
+            where("companyId", "==", companyId)
+        );
         const querySnapshot = await getDocs(q);
         
         let fetchedData = [];
