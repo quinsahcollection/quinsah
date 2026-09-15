@@ -13103,10 +13103,20 @@ async confirmHoldOrder() {
             
             const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/?action=list&companyId=${encodeURIComponent(tenantId)}`;
             
-            const response = await fetch(workerUrl, {
-                method: "GET",
-                headers: { "Authorization": "Bearer YarchQueenPOS12" }
-            });
+            const firebaseUser = auth.currentUser;
+
+if (!firebaseUser) {
+    throw new Error("User belum login");
+}
+
+const idToken = await firebaseUser.getIdToken();
+
+const response = await fetch(workerUrl, {
+    method: "GET",
+    headers: {
+        "Authorization": `Bearer ${idToken}`
+    }
+});
             
             const result = await response.json();
             if (result.success) {
