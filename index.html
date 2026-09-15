@@ -13348,15 +13348,22 @@ const response = await fetch(workerUrl, {
     // 3. Susun URL Worker
     const workerUrl = `https://queenpos-upload-worker.hrmnkosasi.workers.dev/?companyId=${encodeURIComponent(tenantId)}&filename=${encodeURIComponent(safeFilename)}`;
     // 4. Lakukan Request Upload ke Worker (dengan Kunci Rahasia)
-    const response = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": file.type || "application/octet-stream",
-            // 👇 GANTI DENGAN KUNCI RAHASIA YANG ANDA PASANG DI WORKER 👇
-            "Authorization": "Bearer YarchQueenPOS12" 
-        },
-        body: file // Langsung kirim file mentah, JANGAN pakai FormData
-    });
+    const firebaseUser = auth.currentUser;
+
+if (!firebaseUser) {
+    throw new Error("User belum login");
+}
+
+const idToken = await firebaseUser.getIdToken();
+
+const response = await fetch(workerUrl, {
+    method: "POST",
+    headers: {
+        "Content-Type": file.type || "application/octet-stream",
+        "Authorization": `Bearer ${idToken}`
+    },
+    body: file
+});
 
     const result = await response.json();
     
