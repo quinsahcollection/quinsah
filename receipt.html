@@ -391,7 +391,7 @@
             </div>
         </div>
         
-        <div class="card shadow-sm border-0 rounded-4" v-if="!ereceiptData.hasRated">
+        <div class="card shadow-sm border-0 rounded-4" v-if="receiptToken && !ereceiptData.hasRated">
             <div class="card-body p-4 text-center">
                 <h6 class="fw-bold text-dark mb-1">Bagaimana Pengalaman Belanja Anda?</h6>
                 <p class="text-muted small mb-3">Berikan rating bintang 5 untuk kami</p>
@@ -407,7 +407,7 @@
             </div>
         </div>
 
-        <div class="alert alert-success text-center rounded-4 border-0 shadow-sm p-4" v-else>
+        <div class="alert alert-success text-center rounded-4 border-0 shadow-sm p-4" v-else-if="receiptToken && ereceiptData.hasRated">
             <i class="bi bi-check-circle-fill fs-1 text-success d-block mb-2"></i>
             <h6 class="fw-bold mb-1">Terima Kasih!</h6>
             <p class="mb-0 small">Anda telah memberikan penilaian. Kepedulian Anda sangat berarti bagi kami.</p>
@@ -417,7 +417,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, addDoc, getDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, addDoc, getDoc, updateDoc, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = { apiKey: "AIzaSyBvwkhhUoFOMoKTPL4TWTCJxlx0AXoA3t4", authDomain: "quinsahcollection-36926.firebaseapp.com", projectId: "quinsahcollection-36926" };
 
@@ -438,13 +438,15 @@
                 showQr: false, 
                 customerHistory: [],
                 showHistory: false,
-                isLoadingHistory: false
+                isLoadingHistory: false,
+                receiptToken: ''
             }
         },
         
         computed: {
             // 🌟 PENCARI DESAIN STRUK YANG LEBIH CERDAS & KEBAL SALAH FORMAT ID
             receiptDesign() {
+                if (this.ereceiptData?.receiptDesign) return this.ereceiptData.receiptDesign;
                 if (!this.appSettings) return {};
                 if (!this.ereceiptData) return this.appSettings;
 
@@ -469,21 +471,18 @@
             },
 
             hasValidCustomerData() {
-                if (!this.ereceiptData) return false;
-                const custName = (this.ereceiptData.customer || '').toLowerCase();
-                if (custName === 'umum' || custName === '') {
-                    return !!(this.ereceiptData.customerId || this.ereceiptData.customerPhone || this.ereceiptData.phone);
-                }
-                return true;
+                // Security V2.1: riwayat transaksi tidak pernah dibuka dari halaman publik.
+                return false;
             }
         },
 
         async mounted() {
             const urlParams = new URLSearchParams(window.location.search);
             const invId = urlParams.get('inv');
+            this.receiptToken = (urlParams.get('token') || '').trim();
 
             if (invId) {
-                await this.fetchReceipt(invId);
+                await this.fetchReceipt(invId, this.receiptToken);
             } else {
                 this.isLoading = false;
             }
@@ -514,24 +513,46 @@
                 return totalAwal + totalCicilan;
             },
 
-            async fetchReceipt(invId) {
+            async fetchReceipt(invId, token = '') {
                 try {
+                    // Jalur aman V2.1: token acak menunjuk snapshot publik minimum.
+                    if (token) {
+                        const publicRef = doc(db, "publicReceipts", token);
+                        const publicSnap = await getDoc(publicRef);
+
+                        if (!publicSnap.exists()) {
+                            this.ereceiptData = null;
+                            return;
+                        }
+
+                        const data = publicSnap.data();
+                        if (String(data.invoiceId || '') !== String(invId)) {
+                            console.warn('Token E-Receipt tidak cocok dengan invoice.');
+                            this.ereceiptData = null;
+                            return;
+                        }
+
+                        this.ereceiptData = {
+                            ...data,
+                            id: data.invoiceId,
+                            docId: null
+                        };
+                        this.appSettings = data.receiptDesign || {};
+                        return;
+                    }
+
+                    // MODE TRANSISI untuk link lama tanpa token.
+                    // Hanya membaca SATU transaksi. Tidak membaca settings/outlets dan tidak query riwayat.
                     const docRef = doc(db, "transactions", invId);
                     const docSnap = await getDoc(docRef);
 
                     if (docSnap.exists()) {
                         this.ereceiptData = {
                             ...docSnap.data(),
+                            id: docSnap.data().id || docSnap.id,
                             docId: docSnap.id
                         };
-                        
-                        await this.fetchStoreSettings(this.ereceiptData.companyId);
-
-                        const savedOutletId = this.ereceiptData.outlet || this.ereceiptData.outletId;
-                        if (savedOutletId && typeof savedOutletId === 'string' && savedOutletId.length > 10) {
-                            await this.fetchOutletData(savedOutletId);
-                        }
-                        
+                        this.appSettings = {};
                     } else {
                         this.ereceiptData = null;
                     }
@@ -599,77 +620,10 @@
             },
 
             async fetchCustomerHistory() {
-                this.showHistory = !this.showHistory;
-                if (!this.showHistory || this.customerHistory.length > 0) return; 
-                
-                this.isLoadingHistory = true;
-                try {
-                    let searchField = null;
-                    let searchValue = null;
-
-                    if (this.ereceiptData.customerId) {
-                        searchField = "customerId";
-                        searchValue = this.ereceiptData.customerId;
-                    } else if (this.ereceiptData.customerPhone) {
-                        searchField = "customerPhone";
-                        searchValue = this.ereceiptData.customerPhone;
-                    } else if (this.ereceiptData.phone) {
-                        searchField = "phone";
-                        searchValue = this.ereceiptData.phone;
-                    } else if (this.ereceiptData.customer && this.ereceiptData.customer.toLowerCase() !== 'umum') {
-                        searchField = "customer";
-                        searchValue = this.ereceiptData.customer;
-                    }
-
-                    if (!searchField || !searchValue) {
-                        this.customerHistory = [];
-                        this.isLoadingHistory = false;
-                        return;
-                    }
-
-                    const q = query(
-                        collection(db, "transactions"), 
-                        where(searchField, "==", searchValue)
-                    );
-                    
-                    const querySnapshot = await getDocs(q);
-                    const history = [];
-                    
-                    const detailName = (this.ereceiptData.customer || '').toLowerCase().trim();
-                    const detailPhone = (this.ereceiptData.customerPhone || this.ereceiptData.phone || '').trim();
-                    
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        
-                        if (data.companyId === this.ereceiptData.companyId && data.id !== this.ereceiptData.id) {
-                            
-                            const trxCustomerName = (data.customer || '').toLowerCase().trim();
-                            const trxCustomerPhone = (data.customerPhone || data.phone || '').trim();
-                            
-                            const matchId = data.customerId === searchValue;
-                            const matchPhone = detailPhone && trxCustomerPhone === detailPhone;
-                            const matchName = detailName && trxCustomerName === detailName && detailName !== 'umum';
-                            
-                            if (matchId || matchPhone || matchName) {
-                                history.push(data);
-                            }
-                        }
-                    });
-                    
-                    history.sort((a, b) => {
-                        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-                        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-                        return timeB - timeA; 
-                    });
-
-                    this.customerHistory = history; 
-
-                } catch (error) {
-                    console.error("Gagal menarik riwayat belanja:", error);
-                    Swal.fire('Error', 'Gagal memuat riwayat. Silakan coba lagi nanti.', 'error');
-                } finally {
-                    this.isLoadingHistory = false;
-                }
+                // Dinonaktifkan pada halaman publik untuk mencegah enumerasi riwayat pelanggan.
+                this.showHistory = false;
+                this.customerHistory = [];
+                Swal.fire('Privasi Pelanggan', 'Riwayat transaksi hanya dapat dilihat setelah login ke QueenPOS.', 'info');
             },
 
             shareToWA(invId) {
@@ -734,26 +688,32 @@
             
             async submitRating() {
                 if (this.ereceiptRating === 0) return Swal.fire('Perhatian', 'Silakan pilih minimal 1 bintang terlebih dahulu.', 'warning');
-                
+
                 this.isProcessing = true;
                 try {
-                    await addDoc(collection(db, "ratings"), {
+                    const payload = {
                         invoiceId: this.ereceiptData.id,
-                        companyId: this.ereceiptData.companyId || '', 
+                        companyId: this.ereceiptData.companyId || '',
+                        receiptToken: this.receiptToken || '',
                         customerName: this.ereceiptData.customer || 'Umum',
-                        customerId: this.ereceiptData.customerId || null, 
-                        totalBelanja: this.ereceiptData.total,
-                        rating: this.ereceiptRating,
-                        review: this.ereceiptReview,
+                        totalBelanja: Number(this.ereceiptData.total || 0),
+                        rating: Number(this.ereceiptRating),
+                        review: String(this.ereceiptReview || '').slice(0, 1000),
                         date: new Date().toLocaleString('id-ID'),
-                        timestamp: new Date() 
-                    });
+                        timestamp: new Date()
+                    };
 
-                    if(this.ereceiptData.docId) {
-                        await updateDoc(doc(db, "transactions", this.ereceiptData.docId), {
+                    if (this.receiptToken) {
+                        // ID rating = token, sehingga satu receipt hanya punya satu rating.
+                        await setDoc(doc(db, "ratings", this.receiptToken), payload);
+                        await updateDoc(doc(db, "publicReceipts", this.receiptToken), {
                             hasRated: true,
-                            ratingValue: this.ereceiptRating
+                            ratingValue: Number(this.ereceiptRating)
                         });
+                    } else {
+                        // Link lama: rating tetap dapat dikirim selama masa transisi,
+                        // tetapi transaksi asli tidak lagi boleh di-update oleh publik.
+                        await addDoc(collection(db, "ratings"), payload);
                     }
 
                     this.ereceiptData.hasRated = true;
