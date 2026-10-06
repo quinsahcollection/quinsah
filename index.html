@@ -1435,7 +1435,7 @@ body.sidebar-open {
             <p class="text-muted small mb-0">Atur tampilan layar tablet yang menghadap ke pelanggan saat di meja kasir.</p>
         </div>
         <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-            <a :href="'/cds.html?company=' + (getMyCompanyId ? getMyCompanyId() : '') + '&outlet=' + (appSettings.selectedReceiptOutletId || 'global')" target="_blank" class="btn btn-outline-danger fw-bold rounded-pill text-nowrap">
+            <a :href="'/cds.html?company=' + (getMyCompanyId ? getMyCompanyId() : '') + '&outlet=' + (getCDSOutletId ? getCDSOutletId() : (posActiveOutletId || 'global'))" target="_blank" class="btn btn-outline-danger fw-bold rounded-pill text-nowrap">
                 <i class="bi bi-box-arrow-up-right me-1"></i> Buka Layar CDS
             </a>
             <button class="btn btn-primary-custom fw-bold rounded-pill text-nowrap" @click="saveCDSSettings">
@@ -1734,7 +1734,7 @@ body.sidebar-open {
                         <li>Buka Google Chrome/Safari di Tablet tersebut.</li>
                         <li>Ketik/Salin URL komplit ini di browser Tablet Anda: <br>
                             <code class="bg-white px-2 py-2 rounded fw-bold text-danger border mt-2 mb-2 d-block text-break user-select-all" style="font-size: 0.85rem;">
-                                {{ getSubdomainName() }}.queenpos.id/cds.html?company={{ getMyCompanyId ? getMyCompanyId() : '' }}&outlet={{ appSettings.selectedReceiptOutletId || 'global' }}
+                                {{ getSubdomainName() }}.queenpos.id/cds.html?company={{ getMyCompanyId ? getMyCompanyId() : '' }}&outlet={{ getCDSOutletId ? getCDSOutletId() : (posActiveOutletId || 'global') }}
                             </code>
                         </li>
                         <li>Setelah halaman terbuka, jadikan <b>Full Screen</b>.</li>
@@ -13884,18 +13884,43 @@ parseDateStr(dateStr) {
     }
 },
 
+    getCDSOutletId() {
+        return this.posActiveOutletId
+            || this.userProfile?.outletId
+            || this.loggedInUser?.outletId
+            || this.appSettings?.selectedReceiptOutletId
+            || 'global';
+    },
+
     async saveCDSSettings() {
         const compId = this.getMyCompanyId();
         if (!compId) return;
         
         try {
+            // Tetap simpan versi private di settings untuk dashboard admin.
             await updateDoc(doc(db, "settings", compId), {
                 cdsSettings: this.cdsSettings
             });
+
+            // Salinan publik MINIMUM untuk cds.html. Ini mencegah cds.html
+            // membaca seluruh dokumen settings yang sekarang dilindungi Rules.
+            await setDoc(doc(db, "cds", `${compId}_config`), {
+                companyId: compId,
+                type: 'CONFIG',
+                cdsSettings: {
+                    mediaType: this.cdsSettings?.mediaType || 'video',
+                    videoUrl: this.cdsSettings?.videoUrl || '',
+                    youtubeUrl: this.cdsSettings?.youtubeUrl || '',
+                    imageUrls: this.cdsSettings?.imageUrls || '',
+                    welcomeText: this.cdsSettings?.welcomeText || ''
+                },
+                updatedAt: new Date().getTime()
+            }, { merge: true });
+
             Swal.fire('Tersimpan!', 'Setelan Layar Pelanggan berhasil diperbarui.', 'success');
         } catch (error) {
             console.error("Gagal simpan CDS:", error);
-            Swal.fire('Error', 'Gagal menyimpan pengaturan.', 'error');
+            Swal.fire('Error', 'Gagal menyimpan pengaturan CDS: ' + (error.message || error), 'error');
         }
     },
 
@@ -13903,7 +13928,7 @@ parseDateStr(dateStr) {
         const compId = this.getMyCompanyId ? this.getMyCompanyId() : (this.companyId || localStorage.getItem('companyId'));
         if (!compId) return;
         
-        const outletId = this.posActiveOutletId || this.appSettings?.selectedReceiptOutletId || 'global';
+        const outletId = this.getCDSOutletId ? this.getCDSOutletId() : (this.posActiveOutletId || 'global');
         const namaToko = this.appSettings?.storeName || 'QUINSAH COLLECTION';
         const namaCabang = (typeof this.getOutletName === 'function' ? this.getOutletName(outletId) : '') || 'Pusat';
 
@@ -13928,7 +13953,7 @@ parseDateStr(dateStr) {
         });
 
         try {
-            const docId = `${compId}_${outletId}`;
+            const docId = `${compId}_${outletId}_v2`;
             
             const subtotalBase = Math.round(Number(this.subtotalBase || this.subTotal || this.subtotal || 0));
             const extraDiskon = Math.round(Number(this.discountAmount || 0) + Number(this.posDiscountAmount || 0));
@@ -13994,8 +14019,16 @@ parseDateStr(dateStr) {
             const detailMetode = this.selectedPaymentMethodData || this.paymentData || {};
 
             const cdsPayload = {
+                companyId: compId,
                 storeName: namaToko,
                 outletName: namaCabang,
+                cdsSettings: {
+                    mediaType: this.cdsSettings?.mediaType || 'video',
+                    videoUrl: this.cdsSettings?.videoUrl || '',
+                    youtubeUrl: this.cdsSettings?.youtubeUrl || '',
+                    imageUrls: this.cdsSettings?.imageUrls || '',
+                    welcomeText: this.cdsSettings?.welcomeText || ''
+                },
                 cartItems: formattedCart,
                 
                 subtotal: subtotalBase,
@@ -18570,6 +18603,11 @@ getSafeReceiptDesign(trx) {
 },
 
 buildPublicReceiptPayload(trx, token) {
+    const rawOutletName = String(trx?.outletName || trx?.outlet || '').trim();
+    const resolvedOutletName = rawOutletName && !this.isLikelyFirestoreId(rawOutletName)
+        ? rawOutletName
+        : (typeof this.getOutletName === 'function' ? this.getOutletName(trx?.outletId) : 'Pusat');
+
     const safeItems = Array.isArray(trx?.items) ? trx.items.map(i => ({
         productId: i.productId || '',
         name: i.name || '',
@@ -18588,7 +18626,7 @@ buildPublicReceiptPayload(trx, token) {
         dateStr: trx.dateStr || trx.date || '',
         customer: trx.customer || 'Umum',
         outletId: trx.outletId || '',
-        outletName: trx.outletName || trx.outlet || '',
+        outletName: resolvedOutletName || 'Pusat',
         cashierName: trx.cashierName || trx.userName || trx.pic || 'Admin / Sistem',
         orderType: trx.orderType || 'direct',
         courier: trx.courier || '',
@@ -18617,6 +18655,19 @@ buildPublicReceiptPayload(trx, token) {
 
 async ensurePublicReceipt(trx) {
     if (!trx?.id) throw new Error('ID transaksi tidak valid');
+
+    const resolvedOutletName = (typeof this.getOutletName === 'function')
+        ? this.getOutletName(trx.outletId)
+        : 'Pusat';
+    if (resolvedOutletName && resolvedOutletName !== trx.outletName) {
+        trx.outletName = resolvedOutletName;
+        try {
+            await updateDoc(doc(db, 'transactions', trx.id), { outletName: resolvedOutletName });
+        } catch (e) {
+            console.warn('Tidak dapat memperbarui outletName transaksi lama:', e.message || e);
+        }
+    }
+
     let token = String(trx.receiptToken || '').trim();
     if (!token) {
         token = this.createReceiptToken();
@@ -21060,11 +21111,18 @@ await setDoc(doc(db, "users", res.user.uid), {
             return o ? o.location : '-'; 
 },
 
-// 🌟 FUNGSI GABUNGAN YANG 100% AMAN UNTUK SEMUA FITUR
+// 🌟 FUNGSI GABUNGAN YANG AMAN UNTUK SEMUA FITUR
+            isLikelyFirestoreId(value) {
+                const v = String(value || '').trim();
+                return /^[A-Za-z0-9_-]{18,30}$/.test(v);
+            },
             getOutletName(id) { 
-            if (!id) return 'Pusat'; // Jika data kosong, otomatis anggap cabang 'Pusat'
-            const outlet = this.outlets.find(o => o.id === id); 
-            return outlet ? outlet.name : id; // Jika ketemu tampilkan namanya, jika tidak ketemu (mungkin ID lama), tampilkan teks aslinya
+                const raw = String(id || '').trim();
+                if (!raw || raw === 'global') return 'Pusat';
+                const outlet = (this.outlets || []).find(o => String(o.id) === raw);
+                if (outlet) return outlet.name || outlet.nama || outlet.namaOutlet || outlet.outletName || 'Pusat';
+                // Jangan pernah menampilkan ID Firestore mentah ke pelanggan.
+                return this.isLikelyFirestoreId(raw) ? 'Pusat' : raw;
 },
             getSupplierName(id) { if (!id) return '-'; const s = this.suppliers.find(x => x.id === id); return s ? s.name : '-'; },
             
@@ -22611,6 +22669,7 @@ let item = {
             customerId: finalCustomerId,
             customer: finalCustomerName,
             outletId: this.posActiveOutletId || '',
+            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(this.posActiveOutletId) : 'Pusat') || 'Pusat',
             cashierId: finalCashierId,
             cashierName: finalCashierName,
             customerPhone: finalCustomerPhone,

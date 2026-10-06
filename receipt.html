@@ -66,7 +66,7 @@
                         {{ receiptDesign.storeName || 'QUINSAH COLLECTION' }}
                     </div>
                     <div class="text-muted small mt-1" style="white-space: pre-wrap; line-height: 1.3; font-size: 0.85em;">
-                        {{ receiptDesign.storeAddress || (ereceiptData.outletName || ereceiptData.outlet || 'Pusat') }}
+                        {{ receiptDesign.storeAddress || displayOutletName }}
                     </div>
                     <div v-if="receiptDesign.storePhone" class="text-muted small mt-1" style="font-size: 0.85em;">Telp: {{ receiptDesign.storePhone }}</div>
                 </div>
@@ -76,7 +76,7 @@
                 </div>
                 <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Outlet :</span>
-                    <span class="fw-bold text-dark">{{ ereceiptData.outletName || ereceiptData.outlet || ereceiptData.outletId || 'Pusat' }}</span>
+                    <span class="fw-bold text-dark">{{ displayOutletName }}</span>
                 </div>               
                 <div class="d-flex justify-content-between mb-1 small">
                     <span class="text-muted">Kasir :</span>
@@ -468,6 +468,14 @@
 
                 // 3. Fallback ke settingan global/pusat
                 return this.appSettings;
+            },
+
+            displayOutletName() {
+                if (!this.ereceiptData) return 'Pusat';
+                const raw = String(this.ereceiptData.outletName || this.ereceiptData.outlet || '').trim();
+                if (!raw) return 'Pusat';
+                // Firestore auto-ID tidak boleh tampil ke pelanggan.
+                return /^[A-Za-z0-9_-]{18,30}$/.test(raw) ? 'Pusat' : raw;
             },
 
             hasValidCustomerData() {

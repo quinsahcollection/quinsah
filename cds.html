@@ -856,8 +856,11 @@
     let companyId = urlParams.get('company') || localStorage.getItem('companyId') || localStorage.getItem('activeCompanyId');
     let outletId = urlParams.get('outlet') || localStorage.getItem('outletId') || localStorage.getItem('activeOutletId') || 'global';
     
-    // Perbaikan sinkronisasi perangkat dan kasir dengan membaca beberapa key yang sering dipakai di POS
-    let deviceId = urlParams.get('device') || urlParams.get('register') || urlParams.get('kasir') || localStorage.getItem('deviceId') || localStorage.getItem('registerId') || localStorage.getItem('activeRegisterId') || localStorage.getItem('kasirId') || ''; 
+    // ID perangkat hanya dipakai sebagai document key bila memang dikirim eksplisit di URL.
+    // Nilai deviceId dari localStorage tetap boleh dipakai sebagai label kasir, tetapi tidak
+    // boleh mengubah document key karena POS utama menulis ke company_outlet.
+    const explicitDeviceId = urlParams.get('device') || urlParams.get('register') || urlParams.get('kasir') || '';
+    let deviceId = explicitDeviceId || localStorage.getItem('deviceId') || localStorage.getItem('registerId') || localStorage.getItem('activeRegisterId') || localStorage.getItem('kasirId') || ''; 
 
     const app = Vue.createApp({
         data() {
@@ -1343,9 +1346,9 @@
                 this.currentTime = now.toLocaleDateString('id-ID', options).replace(',', ' -');
             }, 1000);
 
-            let docId = `${companyId}_${outletId}`;
-            if (deviceId) {
-                docId = `${companyId}_${outletId}_${deviceId}`;
+            let docId = `${companyId}_${outletId}_v2`;
+            if (explicitDeviceId) {
+                docId = `${companyId}_${outletId}_v2_${explicitDeviceId}`;
             }
 
             onSnapshot(doc(db, "cds", docId), (docSnap) => {
@@ -1354,6 +1357,12 @@
                     this.storeName = data.storeName || 'QUINSAH COLLECTION';
                     this.outletName = data.outletName || ''; 
                     this.invoiceNumber = data.invoiceNumber || '';
+
+                    // Fallback cepat: live document juga membawa setting CDS minimum.
+                    if (data.cdsSettings) {
+                        this.cdsSettings = { ...this.cdsSettings, ...data.cdsSettings };
+                        this.setupSlider();
+                    }
                     
                     this.cashierName = data.cashierName || data.cashier || data.namaKasir || data.kasir || data.operatorName || data.activeUserName || deviceId || 'Admin/Kasir';
                     
@@ -1387,14 +1396,18 @@
                 }
             });
 
-            onSnapshot(doc(db, "settings", companyId), (docSnap) => {
+            // Halaman CDS tidak login, jadi jangan baca settings/{companyId} yang private.
+            // Gunakan snapshot konfigurasi minimum yang disimpan ke koleksi cds.
+            onSnapshot(doc(db, "cds", `${companyId}_config`), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     if (data.cdsSettings) {
-                        this.cdsSettings = data.cdsSettings;
+                        this.cdsSettings = { ...this.cdsSettings, ...data.cdsSettings };
                         this.setupSlider();
                     }
                 }
+            }, (err) => {
+                console.warn('Konfigurasi CDS belum tersedia:', err.message || err);
             });
         },
         
