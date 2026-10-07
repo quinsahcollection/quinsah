@@ -3321,7 +3321,7 @@ body.sidebar-open {
                             <button class="btn btn-primary-custom fw-bold rounded-pill shadow py-3" @click="connectBluetoothPrinter">
                                 <i class="bi bi-bluetooth me-1 fs-5 align-middle"></i> Cari Printer Bluetooth BLE
                             </button>
-                            <button v-if="'serial' in navigator" class="btn btn-outline-primary fw-bold rounded-pill shadow-sm py-2" @click="connectSerialPrinter">
+                            <button v-if="serialSupported" class="btn btn-outline-primary fw-bold rounded-pill shadow-sm py-2" @click="connectSerialPrinter">
                                 <i class="bi bi-usb-symbol me-1"></i> Bluetooth Classic / USB Serial
                             </button>
                             <div class="small text-muted text-center mt-1" style="font-size: 0.75rem;">
@@ -10745,6 +10745,7 @@ body.sidebar-open {
         printerConnectionLabel: '',
         printerProtocol: 'escpos', // escpos | cpcl | tspl | zpl
         printerPaperSize: 48, // 48 karakter untuk 80mm, 32 karakter untuk 58mm
+        serialSupported: (typeof navigator !== 'undefined' && 'serial' in navigator), // jangan akses navigator langsung dari template Vue
 
         currentPrintSettings: {}, // TAMBAHKAN BARIS INI
                 
