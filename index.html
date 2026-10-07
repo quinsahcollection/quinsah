@@ -18602,11 +18602,44 @@ getSafeReceiptDesign(trx) {
     return safe;
 },
 
+resolveReceiptOutletName(trx) {
+    const outletId = String(trx?.outletId || '').trim();
+
+    // Prioritas utama: master outlet yang sedang aktif di tenant.
+    // Ini penting untuk transaksi lama yang outletName-nya pernah tersimpan sebagai 'Pusat'.
+    if (outletId) {
+        const outlet = (this.outlets || []).find(o => {
+            const candidates = [o?.id, o?.firestoreId, o?.docId, o?.outletId]
+                .filter(v => v !== undefined && v !== null)
+                .map(v => String(v));
+            return candidates.includes(outletId);
+        });
+        if (outlet) {
+            const mappedName = String(outlet.name || outlet.nama || outlet.namaOutlet || outlet.outletName || '').trim();
+            if (mappedName) return mappedName;
+        }
+    }
+
+    // Fallback untuk data import/transaksi lama yang sudah menyimpan nama cabang sebagai teks.
+    const candidates = [trx?.outletName, trx?.outlet, trx?.branchName, trx?.branch];
+    for (const value of candidates) {
+        const name = String(value || '').trim();
+        if (!name || this.isLikelyFirestoreId(name)) continue;
+        // Jangan biarkan nilai fallback lama 'Pusat' menimpa mapping outlet yang sebenarnya.
+        if (name.toLowerCase() === 'pusat' && outletId) continue;
+        return name;
+    }
+
+    // Terakhir coba helper umum, lalu fallback Pusat.
+    if (outletId && typeof this.getOutletName === 'function') {
+        const name = String(this.getOutletName(outletId) || '').trim();
+        if (name && !this.isLikelyFirestoreId(name)) return name;
+    }
+    return 'Pusat';
+},
+
 buildPublicReceiptPayload(trx, token) {
-    const rawOutletName = String(trx?.outletName || trx?.outlet || '').trim();
-    const resolvedOutletName = rawOutletName && !this.isLikelyFirestoreId(rawOutletName)
-        ? rawOutletName
-        : (typeof this.getOutletName === 'function' ? this.getOutletName(trx?.outletId) : 'Pusat');
+    const resolvedOutletName = this.resolveReceiptOutletName(trx);
 
     const safeItems = Array.isArray(trx?.items) ? trx.items.map(i => ({
         productId: i.productId || '',
@@ -18656,9 +18689,7 @@ buildPublicReceiptPayload(trx, token) {
 async ensurePublicReceipt(trx) {
     if (!trx?.id) throw new Error('ID transaksi tidak valid');
 
-    const resolvedOutletName = (typeof this.getOutletName === 'function')
-        ? this.getOutletName(trx.outletId)
-        : 'Pusat';
+    const resolvedOutletName = this.resolveReceiptOutletName(trx);
     if (resolvedOutletName && resolvedOutletName !== trx.outletName) {
         trx.outletName = resolvedOutletName;
         try {
@@ -22669,7 +22700,7 @@ let item = {
             customerId: finalCustomerId,
             customer: finalCustomerName,
             outletId: this.posActiveOutletId || '',
-            outletName: (typeof this.getOutletName === 'function' ? this.getOutletName(this.posActiveOutletId) : 'Pusat') || 'Pusat',
+            outletName: this.resolveReceiptOutletName({ outletId: this.posActiveOutletId }),
             cashierId: finalCashierId,
             cashierName: finalCashierName,
             customerPhone: finalCustomerPhone,
