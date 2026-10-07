@@ -10735,7 +10735,7 @@ body.sidebar-open {
             welcomeText: 'Selamat datang di Toko Kami! Terima kasih telah berbelanja.' // Tambahkan default text
 },
 
-        // Printer Universal: BLE + Bluetooth Classic/Serial (desktop) + beberapa bahasa printer
+        // Printer Universal V3.4 Panda-safe: BLE + Bluetooth Classic/Serial + safe 80mm layout
         printerDevice: null,
         printerServer: null,
         printerCharacteristic: null,
@@ -15888,9 +15888,9 @@ formatPrintLine(leftText, rightText, customWidth = null) {
 },
 
 getPrinterColumns() {
-    // 80mm ESC/POS umumnya 576 dot (48 kolom Font A). Kita pakai 46 kolom
-    // agar ada margin kiri/kanan dan tidak terpotong pada printer portable seperti Panda.
-    return (parseInt(this.printerPaperSize) || 48) <= 32 ? 32 : 46;
+    // Mode aman lintas printer portable. Banyak clone ESC/POS 80mm mengklaim 48 kolom,
+    // tetapi area cetak nyata/firmware-nya lebih sempit. 40 kolom memberi margin yang stabil.
+    return (parseInt(this.printerPaperSize) || 48) <= 32 ? 30 : 40;
 },
 
 getPrinterDots() {
@@ -16064,8 +16064,8 @@ async buildEscPosLogoBytes(src) {
             image.src = src;
         });
 
-        const maxDots = (parseInt(this.printerPaperSize) || 48) <= 32 ? 250 : 360;
-        const maxHeight = (parseInt(this.printerPaperSize) || 48) <= 32 ? 90 : 120;
+        const maxDots = (parseInt(this.printerPaperSize) || 48) <= 32 ? 220 : 300;
+        const maxHeight = (parseInt(this.printerPaperSize) || 48) <= 32 ? 80 : 100;
         const scale = Math.min(1, maxDots / img.naturalWidth, maxHeight / img.naturalHeight);
         const w = Math.max(1, Math.floor(img.naturalWidth * scale));
         const h = Math.max(1, Math.floor(img.naturalHeight * scale));
@@ -16106,12 +16106,11 @@ async buildEscPosBytes(trx) {
     const enc = new TextEncoder();
     const ESC = 0x1B, GS = 0x1D;
     const width = this.getPrinterColumns();
-    const dots = this.getPrinterDots();
-    const leftMargin = (parseInt(this.printerPaperSize) || 48) <= 32 ? 8 : 12;
-    const printWidth = Math.max(0, dots - (leftMargin * 2));
-    const nL = printWidth & 0xff, nH = (printWidth >> 8) & 0xff;
-    const mL = leftMargin & 0xff, mH = (leftMargin >> 8) & 0xff;
     const line = '-'.repeat(width);
+    // Jangan pakai GS L / GS W pada printer portable clone (termasuk beberapa Panda).
+    // Sebagian firmware salah menerjemahkannya sehingga origin bergeser ke kiri dan teks terpotong.
+    const bodyIndent = ' ';
+    const bodyLine = (value = '') => this.sanitizePrinterText(value).split('\n').map(v => bodyIndent + v.slice(0, width)).join('\n');
 
     const outletName = trx.outletName || this.getOutletName(trx.outletId) || 'Pusat';
     const config = this.appSettings?.outletReceipts?.[trx.outletId] || this.appSettings?.outletReceipts?.global || this.appSettings || {};
@@ -16127,111 +16126,114 @@ async buildEscPosBytes(trx) {
     const bold = on => cmd(ESC,0x45,on ? 1 : 0);
     const size = n => cmd(GS,0x21,n);
 
-    // Reset total + set margin eksplisit. Ini memperbaiki kasus isi struk bergeser/terpotong di sisi kiri.
+    // Reset printer dan biarkan firmware memakai area cetak default-nya.
+    // GS L / GS W sengaja tidak dipakai karena pada beberapa Panda/clone membuat sisi kiri terpotong.
     cmd(ESC,0x40);
-    cmd(GS,0x4C,mL,mH);      // left margin
-    cmd(GS,0x57,nL,nH);      // printable width
     cmd(ESC,0x32);           // default line spacing
     cmd(ESC,0x20,0x00);      // character spacing 0
     cmd(ESC,0x4D,0x00);      // Font A
+    align(0);
+    println('');             // ruang aman dari bibir/cutter printer
 
     const logoSrc = config.receiptLogo || this.appSettings?.receiptLogo || '';
     const logo = await this.buildEscPosLogoBytes(logoSrc);
     if (logo.length) parts.push(logo);
 
-    align(1); bold(true); size(0x11); println(storeName.toUpperCase()); size(0x00); bold(false);
-    this.wrapPrinterText(storeAddress, width).forEach(v => println(v));
+    // Header: normal width + double height. Lebih aman daripada double-width pada head 80mm portable.
+    align(1); bold(true); size(0x10); println(storeName.toUpperCase()); size(0x00); bold(false);
+    this.wrapPrinterText(storeAddress, Math.min(width, 36)).forEach(v => println(v));
     if (storePhone) println('Telp: ' + storePhone);
-    println(line);
+    println('');
 
     align(0);
-    println('Inv   : ' + (trx.id || '-'));
-    println('Tgl   : ' + (trx.dateStr || trx.date || '-'));
-    println('Outlet: ' + outletName);
-    println('Kasir : ' + (trx.cashierName || trx.userName || trx.pic || 'Admin'));
-    println('Plg   : ' + (trx.customer || 'Umum'));
-    println(line);
+    println(bodyLine(line));
+    println(bodyLine('Inv   : ' + (trx.id || '-')));
+    println(bodyLine('Tgl   : ' + (trx.dateStr || trx.date || '-')));
+    println(bodyLine('Outlet: ' + outletName));
+    println(bodyLine('Kasir : ' + (trx.cashierName || trx.userName || trx.pic || 'Admin')));
+    println(bodyLine('Plg   : ' + (trx.customer || 'Umum')));
+    println(bodyLine(line));
 
     const normalItems = (trx.items || []).filter(i => i.productId !== 'EXCHANGE');
     normalItems.forEach(item => {
         bold(true);
-        this.wrapPrinterText(item.name || '-', width).forEach(v => println(v));
+        this.wrapPrinterText(item.name || '-', width).forEach(v => println(bodyLine(v)));
         bold(false);
-        if (item.variantName) this.wrapPrinterText('Varian: ' + item.variantName, width).forEach(v => println(v));
-        if (item.note) String(item.note).split(',').forEach(note => this.wrapPrinterText('- ' + note.trim(), width - 2).forEach(v => println('  ' + v)));
+        if (item.variantName) this.wrapPrinterText('Varian: ' + item.variantName, width).forEach(v => println(bodyLine(v)));
+        if (item.note) String(item.note).split(',').forEach(note => this.wrapPrinterText('- ' + note.trim(), width - 2).forEach(v => println(bodyLine('  ' + v))));
         const unitPrice = Number(item.finalPrice ?? item.sellPrice ?? item.price ?? 0);
         const qty = Number(item.qty || 0);
-        println(this.formatPrintLine(`${qty} ${item.uom || 'Pcs'} x ${this.formatNumber(unitPrice)}`, this.formatNumber(qty * unitPrice), width));
+        println(bodyLine(this.formatPrintLine(`${qty} ${item.uom || 'Pcs'} x ${this.formatNumber(unitPrice)}`, this.formatNumber(qty * unitPrice), width)));
     });
 
     const exchangeItems = (trx.items || []).filter(i => i.productId === 'EXCHANGE');
     if (exchangeItems.length) {
-        println(line); align(1); bold(true); println('POTONGAN TUKAR TAMBAH'); bold(false); align(0);
+        println(bodyLine(line)); align(1); bold(true); println('POTONGAN TUKAR TAMBAH'); bold(false); align(0);
         exchangeItems.forEach(item => {
-            this.wrapPrinterText(String(item.name || '').replace('[SALDO TUKAR] ', ''), width).forEach(v => println(v));
+            this.wrapPrinterText(String(item.name || '').replace('[SALDO TUKAR] ', ''), width).forEach(v => println(bodyLine(v)));
             const value = Math.abs(Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0));
-            println(this.formatPrintLine('Nilai Barang Lama', '-' + this.formatNumber(value), width));
-            if (item.note) this.wrapPrinterText('Ket: ' + item.note, width).forEach(v => println(v));
+            println(bodyLine(this.formatPrintLine('Nilai Barang Lama', '-' + this.formatNumber(value), width)));
+            if (item.note) this.wrapPrinterText('Ket: ' + item.note, width).forEach(v => println(bodyLine(v)));
         });
     }
 
-    println(line);
+    println(bodyLine(line));
     const subtotal = normalItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0), 0);
-    println(this.formatPrintLine('Subtotal', this.formatNumber(subtotal), width));
+    println(bodyLine(this.formatPrintLine('Subtotal', this.formatNumber(subtotal), width)));
     if (exchangeItems.length) {
         const exchangeTotal = Math.abs(exchangeItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0), 0));
-        println(this.formatPrintLine('Potongan Tukar', '-' + this.formatNumber(exchangeTotal), width));
+        println(bodyLine(this.formatPrintLine('Potongan Tukar', '-' + this.formatNumber(exchangeTotal), width)));
     }
     const globalDiscount = Number(trx.globalDiscountAmt || 0);
     const itemDiscount = Math.max(0, Number(trx.discountAmt || 0) - globalDiscount);
-    if (itemDiscount > 0) println(this.formatPrintLine('Diskon Item', '-' + this.formatNumber(itemDiscount), width));
-    if (globalDiscount > 0) println(this.formatPrintLine('Diskon Invoice', '-' + this.formatNumber(globalDiscount), width));
-    if (Number(trx.taxAmt || trx.taxAmount || 0) > 0) println(this.formatPrintLine('PPN', this.formatNumber(trx.taxAmt || trx.taxAmount), width));
-    if (Number(trx.surchargeFee || 0) > 0) println(this.formatPrintLine('Biaya Layanan', this.formatNumber(trx.surchargeFee), width));
-    if (Number(trx.shippingCost || 0) > 0) println(this.formatPrintLine(`Ongkir (${trx.courier || '-'})`, this.formatNumber(trx.shippingCost), width));
-    if (trx.orderType === 'delivery') println(this.formatPrintLine('Pengiriman', trx.isCOD ? 'COD' : 'NON-COD', width));
+    if (itemDiscount > 0) println(bodyLine(this.formatPrintLine('Diskon Item', '-' + this.formatNumber(itemDiscount), width)));
+    if (globalDiscount > 0) println(bodyLine(this.formatPrintLine('Diskon Invoice', '-' + this.formatNumber(globalDiscount), width)));
+    if (Number(trx.taxAmt || trx.taxAmount || 0) > 0) println(bodyLine(this.formatPrintLine('PPN', this.formatNumber(trx.taxAmt || trx.taxAmount), width)));
+    if (Number(trx.surchargeFee || 0) > 0) println(bodyLine(this.formatPrintLine('Biaya Layanan', this.formatNumber(trx.surchargeFee), width)));
+    if (Number(trx.shippingCost || 0) > 0) println(bodyLine(this.formatPrintLine(`Ongkir (${trx.courier || '-'})`, this.formatNumber(trx.shippingCost), width)));
+    if (trx.orderType === 'delivery') println(bodyLine(this.formatPrintLine('Pengiriman', trx.isCOD ? 'COD' : 'NON-COD', width)));
 
-    bold(true); size(0x10); println(this.formatPrintLine('TOTAL', 'Rp ' + this.formatNumber(trx.total), width)); size(0x00); bold(false);
-    println(line);
+    bold(true); size(0x00); println(bodyLine(this.formatPrintLine('TOTAL', 'Rp ' + this.formatNumber(trx.total), width))); bold(false);
+    println(bodyLine(line));
 
     if (trx.splitPayments && trx.splitPayments.length > 0) {
-        bold(true); println('PEMBAYARAN (SPLIT)'); bold(false);
-        trx.splitPayments.forEach(sp => println(this.formatPrintLine('- ' + (sp.method || '-'), 'Rp ' + this.formatNumber(sp.cashReceived || sp.amount || 0), width)));
+        bold(true); println(bodyLine('PEMBAYARAN (SPLIT)')); bold(false);
+        trx.splitPayments.forEach(sp => println(bodyLine(this.formatPrintLine('- ' + (sp.method || '-'), 'Rp ' + this.formatNumber(sp.cashReceived || sp.amount || 0), width))));
         const paid = trx.splitPayments.filter(p => !String(p.method || '').toUpperCase().includes('HUTANG')).reduce((sum,p)=>sum+Number(p.cashReceived || p.amount || 0),0)
             + (trx.paymentHistory || []).reduce((sum,p)=>sum+Number(p.amount || 0),0);
-        println(this.formatPrintLine('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), width));
-        if (paid > Number(trx.total || 0)) println(this.formatPrintLine('KEMBALIAN', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), width));
-        else if (paid < Number(trx.total || 0)) println(this.formatPrintLine('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), width));
-        else println(this.formatPrintLine('STATUS', 'LUNAS', width));
+        println(bodyLine(this.formatPrintLine('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), width)));
+        if (paid > Number(trx.total || 0)) println(bodyLine(this.formatPrintLine('KEMBALIAN', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), width)));
+        else if (paid < Number(trx.total || 0)) println(bodyLine(this.formatPrintLine('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), width)));
+        else println(bodyLine(this.formatPrintLine('STATUS', 'LUNAS', width)));
     } else {
         const method = String(trx.paymentMethod || 'CASH').toUpperCase();
         const paid = method.includes('HUTANG') ? 0 : Number(trx.amountReceived ?? trx.total ?? 0);
-        println(this.formatPrintLine('Metode Pembayaran', method, width));
-        if (trx.paymentNote) this.wrapPrinterText('Catatan: ' + trx.paymentNote, width).forEach(v => println(v));
-        println(this.formatPrintLine('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), width));
-        if (paid > Number(trx.total || 0)) println(this.formatPrintLine('Kembalian', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), width));
-        else if (paid < Number(trx.total || 0)) println(this.formatPrintLine('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), width));
-        else println(this.formatPrintLine('STATUS', 'LUNAS', width));
+        println(bodyLine(this.formatPrintLine('Metode Pembayaran', method, width)));
+        if (trx.paymentNote) this.wrapPrinterText('Catatan: ' + trx.paymentNote, width).forEach(v => println(bodyLine(v)));
+        println(bodyLine(this.formatPrintLine('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), width)));
+        if (paid > Number(trx.total || 0)) println(bodyLine(this.formatPrintLine('Kembalian', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), width)));
+        else if (paid < Number(trx.total || 0)) println(bodyLine(this.formatPrintLine('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), width)));
+        else println(bodyLine(this.formatPrintLine('STATUS', 'LUNAS', width)));
     }
 
     if (trx.paymentHistory && trx.paymentHistory.length) {
-        println(line); bold(true); println('HISTORI PEMBAYARAN / CICILAN'); bold(false);
+        println(bodyLine(line)); bold(true); println(bodyLine('HISTORI PEMBAYARAN / CICILAN')); bold(false);
         trx.paymentHistory.forEach((pay, idx) => {
-            println(this.formatPrintLine(`${idx + 1}. ${pay.method || '-'}`, 'Rp ' + this.formatNumber(pay.amount || 0), width));
-            if (pay.dateStr || pay.date) println('   ' + (pay.dateStr || pay.date));
+            println(bodyLine(this.formatPrintLine(`${idx + 1}. ${pay.method || '-'}`, 'Rp ' + this.formatNumber(pay.amount || 0), width)));
+            if (pay.dateStr || pay.date) println(bodyLine('   ' + (pay.dateStr || pay.date)));
         });
     }
 
     if (trx.returHistory && trx.returHistory.length) {
-        println(line); bold(true); println('INFO RETUR / REFUND'); bold(false);
+        println(bodyLine(line)); bold(true); println(bodyLine('INFO RETUR / REFUND')); bold(false);
         trx.returHistory.forEach(retur => {
-            this.wrapPrinterText(`[RETUR] ${retur.productName || '-'}`, width).forEach(v => println(v));
-            println(this.formatPrintLine(`${retur.qtyRetur || 0}x`, '- Rp ' + this.formatNumber(retur.refundAmount || 0), width));
-            if (retur.alasan) this.wrapPrinterText('Ket: ' + retur.alasan, width).forEach(v => println(v));
+            this.wrapPrinterText(`[RETUR] ${retur.productName || '-'}`, width).forEach(v => println(bodyLine(v)));
+            println(bodyLine(this.formatPrintLine(`${retur.qtyRetur || 0}x`, '- Rp ' + this.formatNumber(retur.refundAmount || 0), width)));
+            if (retur.alasan) this.wrapPrinterText('Ket: ' + retur.alasan, width).forEach(v => println(bodyLine(v)));
         });
     }
 
-    println(line);
+    println(bodyLine(line));
     align(1);
     const footer = config.receiptFooter || this.appSettings?.receiptFooter || 'Terima kasih telah berbelanja';
     this.wrapPrinterText(footer, width).forEach(v => println(v));
