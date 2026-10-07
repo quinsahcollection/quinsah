@@ -3257,48 +3257,78 @@ body.sidebar-open {
        </div>
 
     <!-- ========================================== -->
-    <!-- SUB-MENU BARU: HARDWARE PRINTER BLUETOOTH  -->
+    <!-- HARDWARE PRINTER UNIVERSAL                  -->
     <!-- ========================================== -->
     <div v-if="settingTab === 'printer'" class="dashboard-card fade-in">
         <div class="mb-3">
             <h6 class="fw-bold mb-1">Pengaturan Hardware Printer</h6>
-            <p class="text-muted small">Hubungkan aplikasi kasir secara langsung ke mesin printer Bluetooth tanpa aplikasi tambahan.</p>
+            <p class="text-muted small mb-0">Koneksi langsung untuk printer thermal BLE. Di komputer, QueenPOS juga dapat memakai Bluetooth Classic/SPP atau USB Serial melalui Web Serial.</p>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white border-bottom p-3">
-                <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-bluetooth text-primary me-2"></i>Koneksi Printer Bluetooth (Thermal)</h6>
+                <h6 class="fw-bold mb-0 text-primary-custom"><i class="bi bi-printer-fill text-primary me-2"></i>Printer Thermal Universal</h6>
             </div>
             <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-7 mb-3 mb-md-0">
-                        <div class="fw-bold text-dark mb-1">Status Perangkat: 
-                            <span v-if="printerDevice" class="badge bg-success ms-2 px-3 py-2 rounded-pill"><i class="bi bi-check-circle me-1"></i>Terhubung: {{ printerDevice.name }}</span>
+                <div class="row align-items-start g-4">
+                    <div class="col-md-7">
+                        <div class="fw-bold text-dark mb-1">Status Perangkat:
+                            <span v-if="printerDevice || printerSerialPort" class="badge bg-success ms-2 px-3 py-2 rounded-pill">
+                                <i class="bi bi-check-circle me-1"></i>Terhubung: {{ printerConnectionLabel || (printerDevice && printerDevice.name) || 'Printer' }}
+                            </span>
                             <span v-else class="badge bg-danger ms-2 px-3 py-2 rounded-pill"><i class="bi bi-x-circle me-1"></i>Belum Terhubung</span>
                         </div>
-                        <div class="small text-muted mb-2 mt-2">Gunakan browser Chrome di Android/Tablet untuk menghubungkan printer secara langsung. Pastikan Bluetooth & GPS (Lokasi) sudah menyala.</div>
-                        
-                        <div class="d-flex align-items-center mt-4 p-3 bg-light rounded-3 border border-secondary border-opacity-25">
-                            <label class="small fw-bold me-3 text-dark"><i class="bi bi-aspect-ratio me-1"></i>Ukuran Kertas Default:</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" v-model="printerPaperSize" value="48" id="paper80">
-                                <label class="form-check-label small fw-semibold" for="paper80">80mm (Besar)</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" v-model="printerPaperSize" value="32" id="paper58">
-                                <label class="form-check-label small fw-semibold" for="paper58">58mm (Kecil)</label>
+                        <div v-if="printerConnectionType" class="small mt-2">
+                            <span class="badge bg-info text-dark">Mode: {{ printerConnectionType === 'ble' ? 'Bluetooth BLE/GATT' : 'Bluetooth Classic / Serial' }}</span>
+                        </div>
+
+                        <div class="small text-muted mt-3 mb-2">
+                            <strong>Android/Tablet:</strong> Chrome dapat tersambung langsung ke printer <strong>Bluetooth Low Energy (BLE)</strong> yang menyediakan GATT write characteristic.
+                            Printer Bluetooth Classic/SPP tidak dapat diakses langsung oleh Chrome Android.
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 border border-secondary border-opacity-25 mt-3">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-12 col-lg-6">
+                                    <label class="form-label small fw-bold text-dark mb-1"><i class="bi bi-aspect-ratio me-1"></i>Ukuran Kertas</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" v-model="printerPaperSize" value="48" id="paper80">
+                                            <label class="form-check-label small fw-semibold" for="paper80">80mm</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" v-model="printerPaperSize" value="32" id="paper58">
+                                            <label class="form-check-label small fw-semibold" for="paper58">58mm</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-lg-6">
+                                    <label class="form-label small fw-bold text-dark mb-1"><i class="bi bi-code-square me-1"></i>Bahasa Printer</label>
+                                    <select class="form-select form-select-sm" v-model="printerProtocol">
+                                        <option value="escpos">ESC/POS — printer struk (default)</option>
+                                        <option value="cpcl">CPCL — printer label/mobile</option>
+                                        <option value="tspl">TSPL — printer label</option>
+                                        <option value="zpl">ZPL — printer label</option>
+                                    </select>
+                                    <div class="form-text" style="font-size:.72rem;">Panda PRJ-R80B umumnya memakai ESC/POS. PRJ-R80BL dapat memakai CPCL atau firmware bahasa lain.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-5 text-md-end border-start px-md-4">
-                        <div v-if="!printerDevice" class="d-grid gap-2">
+
+                    <div class="col-md-5 border-start px-md-4">
+                        <div v-if="!(printerDevice || printerSerialPort)" class="d-grid gap-2">
                             <button class="btn btn-primary-custom fw-bold rounded-pill shadow py-3" @click="connectBluetoothPrinter">
-                                <i class="bi bi-bluetooth me-1 fs-5 align-middle"></i> Cari & Hubungkan Printer
+                                <i class="bi bi-bluetooth me-1 fs-5 align-middle"></i> Cari Printer Bluetooth BLE
                             </button>
-                            <div class="small text-muted text-center mt-1" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>Mendukung Panda PRJ-R80B dan ESC/POS lainnya</div>
+                            <button v-if="'serial' in navigator" class="btn btn-outline-primary fw-bold rounded-pill shadow-sm py-2" @click="connectSerialPrinter">
+                                <i class="bi bi-usb-symbol me-1"></i> Bluetooth Classic / USB Serial
+                            </button>
+                            <div class="small text-muted text-center mt-1" style="font-size: 0.75rem;">
+                                Mendukung UUID BLE umum 18F0/2AF1, FF00/FF02, FFE0/FFE1, AE30/AE01, ISSC UART dan Nordic UART.
+                            </div>
                         </div>
-                        
+
                         <div v-else class="d-grid gap-2">
                             <button class="btn btn-success fw-bold rounded-pill shadow-sm py-2" @click="testPrint">
                                 <i class="bi bi-printer me-1"></i> Print Struk Uji Coba
@@ -3310,12 +3340,12 @@ body.sidebar-open {
                     </div>
                 </div>
             </div>
-            
-            <div class="card-footer bg-warning bg-opacity-10 border-top p-3 d-flex align-items-center">
+
+            <div class="card-footer bg-warning bg-opacity-10 border-top p-3 d-flex align-items-start">
                 <i class="bi bi-lightbulb-fill text-warning fs-3 me-3"></i>
                 <div>
-                    <strong class="text-dark">Tips Auto-Print:</strong><br>
-                    <span class="small text-muted">Jika status printer <span class="text-success fw-bold">Terhubung</span>, saat kasir menekan tombol "Selesaikan Pembayaran", struk akan otomatis tercetak dari mesin tanpa memunculkan layar PDF.</span>
+                    <strong class="text-dark">Catatan kompatibilitas:</strong><br>
+                    <span class="small text-muted">Tidak semua perangkat yang disebut “Bluetooth printer” memakai teknologi yang sama. Jika Panda/merk lain tidak muncul di daftar BLE Android, kemungkinan unit memakai Bluetooth Classic/SPP. Untuk Classic/SPP, koneksi web tersedia di Chrome desktop; Android membutuhkan aplikasi QueenPOS native/bridge Bluetooth agar benar-benar langsung tanpa aplikasi printer pihak ketiga.</span>
                 </div>
             </div>
         </div>
@@ -10705,11 +10735,16 @@ body.sidebar-open {
             welcomeText: 'Selamat datang di Toko Kami! Terima kasih telah berbelanja.' // Tambahkan default text
 },
 
-        // Variabel Printer Bluetooth
+        // Printer Universal: BLE + Bluetooth Classic/Serial (desktop) + beberapa bahasa printer
         printerDevice: null,
         printerServer: null,
         printerCharacteristic: null,
-        printerPaperSize: 48, // 48 karakter untuk 80mm (Panda PRJ-R80B), 32 karakter untuk 58mm
+        printerSerialPort: null,
+        printerSerialWriter: null,
+        printerConnectionType: '', // 'ble' | 'serial'
+        printerConnectionLabel: '',
+        printerProtocol: 'escpos', // escpos | cpcl | tspl | zpl
+        printerPaperSize: 48, // 48 karakter untuk 80mm, 32 karakter untuk 58mm
 
         currentPrintSettings: {}, // TAMBAHKAN BARIS INI
                 
@@ -15643,282 +15678,417 @@ async processImport() {
 },
 
         // ==========================================
-// 1. FUNGSI MENGHUBUNGKAN PRINTER BLUETOOTH
+// PRINTER UNIVERSAL: BLE + CLASSIC/SERIAL
 // ==========================================
 async connectBluetoothPrinter() {
+    let device = null;
     try {
-        console.log("Meminta akses Bluetooth...");
-        
-        // Membuka pencarian untuk SEMUA perangkat Bluetooth tanpa membatasi nama merk tertentu.
-        // Ini memastikan printer-printer rebranding atau no-brand tetap terdeteksi.
-        const device = await navigator.bluetooth.requestDevice({
+        if (!window.isSecureContext) {
+            throw new Error('Koneksi printer membutuhkan HTTPS (secure context).');
+        }
+        if (!navigator.bluetooth) {
+            throw new Error('Web Bluetooth tidak tersedia di browser ini. Gunakan Chrome/Edge yang mendukung Web Bluetooth.');
+        }
+
+        // Service UUID yang umum pada printer thermal BLE/rebrand.
+        // Web Bluetooth wajib diberi izin service di awal; karena itu kita daftarkan beberapa keluarga populer.
+        const serviceProfiles = [
+            { service: '000018f0-0000-1000-8000-00805f9b34fb', chars: ['00002af1-0000-1000-8000-00805f9b34fb'] },
+            { service: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', chars: ['bef8d6c9-9c21-4c9e-b632-bd58c1009f9f'] },
+            { service: '0000ff00-0000-1000-8000-00805f9b34fb', chars: ['0000ff02-0000-1000-8000-00805f9b34fb', '0000ff01-0000-1000-8000-00805f9b34fb'] },
+            { service: '0000ffe0-0000-1000-8000-00805f9b34fb', chars: ['0000ffe1-0000-1000-8000-00805f9b34fb'] },
+            { service: '0000fff0-0000-1000-8000-00805f9b34fb', chars: ['0000fff2-0000-1000-8000-00805f9b34fb', '0000fff1-0000-1000-8000-00805f9b34fb'] },
+            { service: '0000ae30-0000-1000-8000-00805f9b34fb', chars: ['0000ae01-0000-1000-8000-00805f9b34fb'] },
+            { service: '0000af30-0000-1000-8000-00805f9b34fb', chars: ['0000af01-0000-1000-8000-00805f9b34fb'] },
+            { service: '49535343-fe7d-4ae5-8fa9-9fafd205e455', chars: ['49535343-8841-43f4-a8d4-ecbe34729bb3', '49535343-6daa-4d02-abf6-19569aca69fe'] },
+            { service: '6e400001-b5a3-f393-e0a9-e50e24dcca9e', chars: ['6e400002-b5a3-f393-e0a9-e50e24dcca9e'] }
+        ];
+
+        device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: [
-                '000018f0-0000-1000-8000-00805f9b34fb', // Standar Service UUID Printer Thermal (ESC/POS)
-                'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // Alternatif Service UUID untuk Panda / Xprinter / Iware
-                '00001800-0000-1000-8000-00805f9b34fb', // Generic Access (Beberapa printer lokal)
-                '00001801-0000-1000-8000-00805f9b34fb'  // Generic Attribute
-            ]
+            optionalServices: serviceProfiles.map(p => p.service)
         });
 
-        console.log("Menghubungkan ke GATT Server...");
         const server = await device.gatt.connect();
+        let chosenCharacteristic = null;
+        let chosenServiceUuid = '';
+        let chosenCharUuid = '';
 
-        // Mencari layanan utama (Service) yang tersedia di dalam printer
-        const services = await server.getPrimaryServices();
-        let printerService = null;
-        let pCharacteristic = null;
-
-        // Looping untuk mencari Karakteristik (jalur komunikasi) yang memiliki izin 'Write'
-        for (let service of services) {
-            const characteristics = await service.getCharacteristics();
-            for (let characteristic of characteristics) {
-                // Printer POS yang normal pasti memiliki jalur Write atau WriteWithoutResponse
-                if (characteristic.properties.write || characteristic.properties.writeWithoutResponse) {
-                    printerService = service;
-                    pCharacteristic = characteristic;
-                    break; 
+        // Prioritaskan pasangan service/characteristic yang sudah dikenal.
+        for (const profile of serviceProfiles) {
+            try {
+                const service = await server.getPrimaryService(profile.service);
+                for (const charUuid of profile.chars) {
+                    try {
+                        const ch = await service.getCharacteristic(charUuid);
+                        if (ch.properties.write || ch.properties.writeWithoutResponse) {
+                            chosenCharacteristic = ch;
+                            chosenServiceUuid = profile.service;
+                            chosenCharUuid = charUuid;
+                            break;
+                        }
+                    } catch (_) {}
                 }
-            }
-            if (pCharacteristic) break;
+
+                // Beberapa firmware memakai characteristic UUID berbeda dalam service yang sama.
+                if (!chosenCharacteristic) {
+                    try {
+                        const chars = await service.getCharacteristics();
+                        chosenCharacteristic = chars.find(ch => ch.properties.writeWithoutResponse || ch.properties.write) || null;
+                        if (chosenCharacteristic) {
+                            chosenServiceUuid = profile.service;
+                            chosenCharUuid = chosenCharacteristic.uuid;
+                        }
+                    } catch (_) {}
+                }
+            } catch (_) {}
+            if (chosenCharacteristic) break;
         }
 
-        if (!pCharacteristic) {
-            throw new Error("Gagal mengenali jalur komunikasi. Perangkat ini mungkin bukan printer kasir atau tidak mendukung Web Bluetooth.");
+        if (!chosenCharacteristic) {
+            try { server.disconnect(); } catch (_) {}
+            throw new Error('Printer BLE ditemukan tetapi jalur data GATT tidak cocok dengan profil printer umum QueenPOS.');
         }
 
-        // Simpan koneksi ke state Vue agar bisa dipakai fungsi print
         this.printerDevice = device;
-        this.printerCharacteristic = pCharacteristic; 
-        
-        // Listener otomatis jika printer dimatikan atau terputus koneksinya
-        device.addEventListener('gattserverdisconnected', () => {
-            this.printerDevice = null;
-            this.printerCharacteristic = null;
-            alert('Koneksi Bluetooth ke printer terputus!');
+        this.printerServer = server;
+        this.printerCharacteristic = chosenCharacteristic;
+        this.printerSerialPort = null;
+        this.printerSerialWriter = null;
+        this.printerConnectionType = 'ble';
+        this.printerConnectionLabel = device.name || 'Printer BLE';
+
+        console.log('Printer BLE terhubung:', {
+            name: device.name,
+            service: chosenServiceUuid,
+            characteristic: chosenCharUuid,
+            write: chosenCharacteristic.properties.write,
+            writeWithoutResponse: chosenCharacteristic.properties.writeWithoutResponse
         });
 
-        alert("Berhasil Terhubung dengan: " + (device.name || "Printer Kasir"));
+        device.addEventListener('gattserverdisconnected', this.onPrinterDisconnected);
 
+        await Swal.fire({
+            icon: 'success',
+            title: 'Printer Terhubung',
+            html: `<b>${device.name || 'Printer BLE'}</b><br><small>Mode Bluetooth BLE/GATT</small>`,
+            timer: 1800,
+            showConfirmButton: false
+        });
     } catch (error) {
-        console.error("Gagal konek Bluetooth:", error);
-        // Menangani pesan error jika user membatalkan pencarian Bluetooth
-        if (error.name === 'NotFoundError' || error.message.includes('cancelled')) {
-             console.log("Pencarian Bluetooth dibatalkan oleh pengguna.");
-        } else {
-             alert("Gagal menghubungkan: " + error.message);
+        console.error('Gagal konek printer BLE:', error);
+        if (device && device.gatt && device.gatt.connected) {
+            try { device.gatt.disconnect(); } catch (_) {}
         }
-    }
-},
 
-        disconnectBluetoothPrinter() {
-            if (this.printerDevice && this.printerDevice.gatt.connected) {
-                this.printerDevice.gatt.disconnect();
-            }
-        },
-
-        onPrinterDisconnected() {
-            this.printerDevice = null;
-            this.printerServer = null;
-            this.printerCharacteristic = null;
-            this._isPrinting = false;
-            alert("Koneksi ke Printer terputus!");
-        },
-
-        // ==========================================
-// 2. FUNGSI MERAPIKAN BARIS TEKS (RATA KANAN-KIRI)
-// ==========================================
-formatPrintLine(leftText, rightText) {
-    let left = String(leftText || '');
-    let right = String(rightText || '');
-    
-    // Mengambil batas maksimal huruf dalam 1 baris kertas (32 huruf utk 58mm, 48 huruf utk 80mm)
-    let width = parseInt(this.printerPaperSize) || 48; 
-    
-    // Jika nama produk + harga melebihi batas kertas, harganya akan otomatis diturunkan ke baris baru dengan rata kanan
-    if (left.length + right.length >= width) {
-        return left + '\n' + ' '.repeat(Math.max(0, width - right.length)) + right;
-    }
-    
-    // Menghitung berapa banyak spasi kosong di tengah untuk meratakan harga ke kanan
-    let spaceLength = width - left.length - right.length;
-    
-    return left + ' '.repeat(spaceLength) + right; 
-},
-
-// ==========================================
-// 3. FUNGSI UTAMA CETAK STRUK (STANDAR ESC/POS)
-// ==========================================
-async printReceiptBluetooth(trx) {
-    if (!this.printerCharacteristic) {
-        alert("Printer belum terhubung! Silakan cari & hubungkan printer di menu Setelan.");
-        return;
-    }
-
-    // Mengunci proses print agar sistem tidak hang jika kasir tidak sengaja tap berkali-kali
-    if (this._isPrinting) {
-        console.warn("Sedang memproses antrean cetakan...");
-        return; 
-    }
-    this._isPrinting = true; 
-
-    try {
-        // Kode Perintah Hexadecimal Universal (ESC/POS) untuk printer Thermal
-        const ESC = '\x1B';
-        const GS = '\x1D';
-        const INIT = ESC + '@'; // Reset printer ke mode awal
-        const ALIGN_CENTER = ESC + 'a' + '\x01';
-        const ALIGN_LEFT = ESC + 'a' + '\x00';
-        const BOLD_ON = ESC + 'E' + '\x01';
-        const BOLD_OFF = ESC + 'E' + '\x00';
-        
-        let paperWidth = parseInt(this.printerPaperSize) || 48; 
-        let garis = '-'.repeat(paperWidth) + '\n';
-        let garisGanda = '='.repeat(paperWidth) + '\n';
-
-        // 🌟 MULAI MENYUSUN ISI TEKS STRUK
-        let text = INIT;
-        
-        // Bagian Atas (Kop Toko)
-        text += ALIGN_CENTER + BOLD_ON;
-        text += (this.appSettings?.storeName || 'NAMA TOKO') + '\n';
-        text += BOLD_OFF;
-        text += (this.appSettings?.storeAddress || 'Cabang: ' + this.getOutletName(trx.outletId)) + '\n';
-        text += (this.appSettings?.storePhone ? 'Telp: ' + this.appSettings.storePhone + '\n' : '');
-        text += garis;
-
-        // Bagian Detail Nota
-        text += ALIGN_LEFT;
-        text += `No   : ${trx.id}\n`;
-        text += `Tgl  : ${trx.dateStr}\n`;
-        text += `Kasir: ${trx.cashierName || 'Admin'}\n`;
-        text += `Plg  : ${trx.customer || 'Umum'}\n`;
-        text += garis;
-
-        // Bagian Daftar Barang
-        if (trx.items && trx.items.length > 0) {
-            trx.items.forEach(item => {
-                let itemName = item.productId === 'EXCHANGE' ? '[TUKAR] ' + item.name : item.name;
-                text += `${itemName}\n`;
-                let qtyPrice = `${item.qty} x ${this.formatNumber(item.finalPrice || item.sellPrice)}`;
-                let subTotal = this.formatNumber(item.qty * (item.finalPrice || item.sellPrice));
-                
-                if (item.productId === 'EXCHANGE') subTotal = '-' + subTotal;
-                
-                text += this.formatPrintLine(qtyPrice, subTotal) + '\n';
+        if (error.name === 'NotFoundError') {
+            await Swal.fire({
+                icon: 'info',
+                title: 'Printer tidak dipilih / tidak terlihat',
+                html: 'Jika printer seperti <b>Panda PRJ-R80B / PRJ-R80BL</b> tidak muncul di daftar, unit tersebut kemungkinan sedang memakai <b>Bluetooth Classic/SPP</b>, bukan BLE.<br><br>Chrome Android tidak menyediakan akses langsung ke Bluetooth Classic/SPP. Pada komputer gunakan tombol <b>Bluetooth Classic / USB Serial</b>.',
+                confirmButtonText: 'Mengerti'
+            });
+        } else {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menghubungkan Printer',
+                text: error.message || String(error)
             });
         }
-        text += garis;
+    }
+},
 
-        // Bagian Kalkulasi Harga
-        text += this.formatPrintLine('Subtotal', this.formatNumber(trx.total)) + '\n';
-        if (trx.discountAmt > 0 || trx.globalDiscountAmt > 0) {
-            let totalDiskon = Number(trx.discountAmt || 0) + Number(trx.globalDiscountAmt || 0);
-            text += this.formatPrintLine('Diskon', '-' + this.formatNumber(totalDiskon)) + '\n';
-        }
-        if (trx.taxAmt > 0) {
-            text += this.formatPrintLine('Pajak (PPN)', this.formatNumber(trx.taxAmt)) + '\n';
+async connectSerialPrinter() {
+    try {
+        if (!('serial' in navigator)) {
+            throw new Error('Web Serial tidak tersedia di perangkat ini. Fitur Bluetooth Classic/SPP via web didukung terutama di Chrome/Edge desktop.');
         }
 
-        text += BOLD_ON;
-        text += this.formatPrintLine('TOTAL AKHIR', 'Rp ' + this.formatNumber(trx.total)) + '\n';
-        text += BOLD_OFF;
-        
-        text += garisGanda;
-        
-        // Bagian Pembayaran (Hindari Error Variabel)
-        let methodPay = trx.paymentMethod ? String(trx.paymentMethod).toUpperCase() : 'TUNAI';
-        let valReceived = trx.amountReceived !== undefined ? trx.amountReceived : trx.total;
-        
-        text += this.formatPrintLine('Metode Bayar', methodPay) + '\n';
-        text += this.formatPrintLine('Total Dibayar', 'Rp ' + this.formatNumber(valReceived)) + '\n';
-        
-        let kembalian = Number(valReceived) - Number(trx.total || 0);
-        if (kembalian > 0) {
-            text += this.formatPrintLine('KEMBALIAN', 'Rp ' + this.formatNumber(kembalian)) + '\n';
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600, bufferSize: 4096 });
+        const writer = port.writable.getWriter();
+
+        this.printerSerialPort = port;
+        this.printerSerialWriter = writer;
+        this.printerDevice = null;
+        this.printerServer = null;
+        this.printerCharacteristic = null;
+        this.printerConnectionType = 'serial';
+        this.printerConnectionLabel = 'Printer Bluetooth Classic / Serial';
+
+        await Swal.fire({
+            icon: 'success',
+            title: 'Printer Terhubung',
+            text: 'Mode Bluetooth Classic/SPP atau USB Serial siap digunakan.',
+            timer: 1800,
+            showConfirmButton: false
+        });
+    } catch (error) {
+        console.error('Gagal konek printer Serial:', error);
+        if (error.name !== 'NotFoundError') {
+            Swal.fire('Gagal Menghubungkan', error.message || String(error), 'error');
         }
+    }
+},
 
-        text += '\n' + ALIGN_CENTER;
-        text += 'Terima kasih atas kunjungan Anda\n';
-        text += 'Barang yg sdh dibeli tdk dpt ditukar\n';
-        
-        // Mendorong kertas naik & Memotong kertas (Untuk printer dengan Auto-Cutter)
-        text += '\n\n\n\n\n'; 
-        text += GS + 'V' + '\x41' + '\x00'; 
-
-        // 🌟 PROSES PENGIRIMAN DATA (ANTI-HANG UNTUK SEMUA PRINTER)
-        // Menggunakan TextEncoder agar karakter UTF-8 terkonversi sempurna ke format mesin ASCII
-        const encoder = new TextEncoder();
-        const uint8array = encoder.encode(text);
-        
-        // Membagi data menjadi potongan-potongan kecil (Chunk). 
-        // 40 byte adalah angka ideal. Terlalu besar = Mesin Hang (seperti Panda R80B), Terlalu kecil = Lemot.
-        let CHUNK_SIZE = 40; 
-        let canWriteWithoutResponse = this.printerCharacteristic.properties.writeWithoutResponse;
-        
-        for (let i = 0; i < uint8array.length; i += CHUNK_SIZE) {
-            let chunk = uint8array.slice(i, i + CHUNK_SIZE);
-            let success = false;
-            let retries = 5;
-            
-            while (!success && retries > 0) {
-                try {
-                    // Beberapa mesin POS lebih responsif terhadap Write tanpa verifikasi, 
-                    // namun mesin kelas atas menuntut Write dengan verifikasi.
-                    if (canWriteWithoutResponse) {
-                        await this.printerCharacteristic.writeValueWithoutResponse(chunk);
-                    } else {
-                        await this.printerCharacteristic.writeValue(chunk);
-                    }
-                    success = true; 
-                } catch (err) {
-                    // Jika Bluetooth mesin sedang memproses potongan data sebelumnya (Busy)
-                    if (err.message.toLowerCase().includes('in progress') || err.message.toLowerCase().includes('busy')) {
-                        retries--;
-                        // Memberi waktu mesin bernapas (delay 150ms) lalu coba tembak lagi
-                        await new Promise(resolve => setTimeout(resolve, 150)); 
-                    } else {
-                        throw err; 
-                    }
-                }
-            }
-
-            if (!success) {
-                throw new Error("Pengiriman macet. Memory antrean (buffer) printer kepenuhan atau terputus di tengah jalan.");
-            }
-            
-            // Memberi jeda 30 milidetik antar pengiriman chunk. 
-            // Sangat penting agar mesin yang CPU-nya lambat (seperti XPrinter / Panda R80B) tidak kewalahan.
-            await new Promise(resolve => setTimeout(resolve, 30)); 
+disconnectBluetoothPrinter() {
+    try {
+        if (this.printerDevice && this.printerDevice.gatt && this.printerDevice.gatt.connected) {
+            try { this.printerDevice.removeEventListener('gattserverdisconnected', this.onPrinterDisconnected); } catch (_) {}
+            this.printerDevice.gatt.disconnect();
         }
-        
-    } catch (err) {
-        console.error("Gagal mencetak struk:", err);
-        alert("Proses cetak gagal: " + err.message);
+        if (this.printerSerialWriter) {
+            try { this.printerSerialWriter.releaseLock(); } catch (_) {}
+        }
+        if (this.printerSerialPort) {
+            try { this.printerSerialPort.close(); } catch (_) {}
+        }
     } finally {
-        // Bebaskan kunci, mesin siap mencetak antrean selanjutnya
+        this.printerDevice = null;
+        this.printerServer = null;
+        this.printerCharacteristic = null;
+        this.printerSerialPort = null;
+        this.printerSerialWriter = null;
+        this.printerConnectionType = '';
+        this.printerConnectionLabel = '';
         this._isPrinting = false;
     }
 },
 
-        async testPrint() {
-            let dummyTrx = {
-                id: 'INV-TEST-001',
-                dateStr: new Date().toLocaleString('id-ID'),
-                cashierName: 'System Test',
-                customer: 'Bos Herman',
-                outletId: this.reportOutletFilter || 'Pusat',
-                items: [
-                    { name: 'Kebaya Janggan (Test)', qty: 1, finalPrice: 150000 },
-                    { name: 'Kertas Struk 80mm', qty: 2, finalPrice: 15000 }
-                ],
-                total: 180000,
-                amountReceived: 200000,
-                paymentMethod: 'CASH'
-            };
-            await this.printReceiptBluetooth(dummyTrx);
-        },
-            
+onPrinterDisconnected() {
+    this.printerDevice = null;
+    this.printerServer = null;
+    this.printerCharacteristic = null;
+    this.printerConnectionType = '';
+    this.printerConnectionLabel = '';
+    this._isPrinting = false;
+    Swal.fire({ icon: 'warning', title: 'Printer Terputus', text: 'Koneksi Bluetooth ke printer terputus.', timer: 1800, showConfirmButton: false });
+},
+
+sanitizePrinterText(value) {
+    return String(value ?? '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/[^\x20-\x7E\n\r]/g, ' ');
+},
+
+formatPrintLine(leftText, rightText) {
+    let left = this.sanitizePrinterText(leftText);
+    let right = this.sanitizePrinterText(rightText);
+    let width = parseInt(this.printerPaperSize) || 48;
+
+    if (left.length + right.length >= width) {
+        return left.slice(0, width) + '\n' + ' '.repeat(Math.max(0, width - right.length)) + right.slice(0, width);
+    }
+    return left + ' '.repeat(Math.max(1, width - left.length - right.length)) + right;
+},
+
+buildReceiptPlainLines(trx) {
+    const width = parseInt(this.printerPaperSize) || 48;
+    const line = '-'.repeat(width);
+    const out = [];
+    const outletName = trx.outletName || this.getOutletName(trx.outletId) || 'Pusat';
+    const config = this.appSettings?.outletReceipts?.[trx.outletId] || this.appSettings?.outletReceipts?.global || this.appSettings || {};
+    const storeName = config.storeName || this.appSettings?.storeName || 'NAMA TOKO';
+    const storeAddress = config.storeAddress || this.appSettings?.storeAddress || outletName;
+    const storePhone = config.storePhone || this.appSettings?.storePhone || '';
+
+    out.push(storeName.toUpperCase());
+    if (storeAddress) out.push(storeAddress);
+    if (storePhone) out.push('Telp: ' + storePhone);
+    out.push(line);
+    out.push('No   : ' + (trx.id || '-'));
+    out.push('Tgl  : ' + (trx.dateStr || trx.date || '-'));
+    out.push('Outlet: ' + outletName);
+    out.push('Kasir: ' + (trx.cashierName || trx.userName || 'Admin'));
+    out.push('Plg  : ' + (trx.customer || 'Umum'));
+    out.push(line);
+
+    (trx.items || []).forEach(item => {
+        const itemName = item.productId === 'EXCHANGE' ? '[TUKAR] ' + item.name : item.name;
+        out.push(this.sanitizePrinterText(itemName));
+        const unitPrice = Number(item.finalPrice ?? item.sellPrice ?? item.price ?? 0);
+        const qty = Number(item.qty || 0);
+        const left = `${qty} x ${this.formatNumber(unitPrice)}`;
+        let right = this.formatNumber(qty * unitPrice);
+        if (item.productId === 'EXCHANGE') right = '-' + right;
+        out.push(this.formatPrintLine(left, right));
+    });
+
+    out.push(line);
+    if (Number(trx.discountAmt || 0) > 0 || Number(trx.globalDiscountAmt || 0) > 0) {
+        const totalDiskon = Number(trx.discountAmt || 0) + Number(trx.globalDiscountAmt || 0);
+        out.push(this.formatPrintLine('Diskon', '-' + this.formatNumber(totalDiskon)));
+    }
+    if (Number(trx.taxAmt || trx.taxAmount || 0) > 0) {
+        out.push(this.formatPrintLine('Pajak', this.formatNumber(trx.taxAmt || trx.taxAmount)));
+    }
+    if (Number(trx.shippingCost || 0) > 0) {
+        out.push(this.formatPrintLine('Ongkir', this.formatNumber(trx.shippingCost)));
+    }
+    out.push(this.formatPrintLine('TOTAL', 'Rp ' + this.formatNumber(trx.total)));
+    out.push(line);
+    out.push(this.formatPrintLine('Metode', String(trx.paymentMethod || 'CASH').toUpperCase()));
+    out.push(this.formatPrintLine('Dibayar', 'Rp ' + this.formatNumber(trx.amountReceived ?? trx.total)));
+    const change = Number(trx.amountReceived ?? trx.total) - Number(trx.total || 0);
+    if (change > 0) out.push(this.formatPrintLine('Kembalian', 'Rp ' + this.formatNumber(change)));
+    out.push('');
+    out.push(config.receiptFooter || this.appSettings?.receiptFooter || 'Terima kasih atas kunjungan Anda');
+    return out.map(v => this.sanitizePrinterText(v));
+},
+
+buildEscPosBytes(trx) {
+    const ESC = '\x1B';
+    const GS = '\x1D';
+    const lines = this.buildReceiptPlainLines(trx);
+    let text = ESC + '@' + ESC + 'a' + '\x01' + ESC + 'E' + '\x01';
+    text += lines[0] + '\n';
+    text += ESC + 'E' + '\x00' + ESC + 'a' + '\x00';
+    text += lines.slice(1).join('\n');
+    text += '\n\n\n\n';
+    // Auto cutter diabaikan oleh printer portable yang tidak memilikinya.
+    text += GS + 'V' + '\x41' + '\x00';
+    return new TextEncoder().encode(text);
+},
+
+buildCpclBytes(trx) {
+    const lines = this.buildReceiptPlainLines(trx);
+    const row = 28;
+    const height = Math.max(400, (lines.length + 2) * row);
+    let cmd = `! 0 200 200 ${height} 1\r\n`;
+    let y = 20;
+    for (const line of lines) {
+        const safe = line.replace(/[\r\n]/g, ' ');
+        cmd += `TEXT 0 0 20 ${y} ${safe}\r\n`;
+        y += row;
+    }
+    cmd += 'FORM\r\nPRINT\r\n';
+    return new TextEncoder().encode(cmd);
+},
+
+buildTsplBytes(trx) {
+    const lines = this.buildReceiptPlainLines(trx);
+    const heightMm = Math.max(60, Math.ceil(lines.length * 4.2 + 10));
+    let cmd = `SIZE 80 mm,${heightMm} mm\r\nGAP 0 mm,0 mm\r\nDIRECTION 1\r\nCLS\r\n`;
+    let y = 20;
+    for (const line of lines) {
+        const safe = line.replace(/"/g, "'").replace(/[\r\n]/g, ' ');
+        cmd += `TEXT 20,${y},\"0\",0,1,1,\"${safe}\"\r\n`;
+        y += 30;
+    }
+    cmd += 'PRINT 1\r\n';
+    return new TextEncoder().encode(cmd);
+},
+
+buildZplBytes(trx) {
+    const lines = this.buildReceiptPlainLines(trx);
+    const height = Math.max(700, (lines.length + 2) * 34);
+    let cmd = `^XA^PW576^LL${height}`;
+    let y = 20;
+    for (const line of lines) {
+        const safe = line.replace(/[\^~]/g, ' ').replace(/[\r\n]/g, ' ');
+        cmd += `^FO20,${y}^A0N,24,20^FD${safe}^FS`;
+        y += 32;
+    }
+    cmd += '^XZ';
+    return new TextEncoder().encode(cmd);
+},
+
+buildPrinterBytes(trx) {
+    switch (this.printerProtocol) {
+        case 'cpcl': return this.buildCpclBytes(trx);
+        case 'tspl': return this.buildTsplBytes(trx);
+        case 'zpl': return this.buildZplBytes(trx);
+        case 'escpos':
+        default: return this.buildEscPosBytes(trx);
+    }
+},
+
+async sendPrinterBytes(bytes) {
+    if (this.printerConnectionType === 'serial' && this.printerSerialWriter) {
+        // Serial/RFCOMM punya buffer lebih besar; kirim potongan 512 byte.
+        for (let i = 0; i < bytes.length; i += 512) {
+            await this.printerSerialWriter.write(bytes.slice(i, i + 512));
+        }
+        return;
+    }
+
+    if (this.printerConnectionType === 'ble' && this.printerCharacteristic) {
+        // 20 byte adalah ukuran paling kompatibel lintas BLE printer murah/portable.
+        const CHUNK_SIZE = 20;
+        const ch = this.printerCharacteristic;
+        for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+            const chunk = bytes.slice(i, i + CHUNK_SIZE);
+            let sent = false;
+            let retries = 6;
+            while (!sent && retries > 0) {
+                try {
+                    if (ch.properties.writeWithoutResponse && typeof ch.writeValueWithoutResponse === 'function') {
+                        await ch.writeValueWithoutResponse(chunk);
+                    } else if (typeof ch.writeValueWithResponse === 'function' && ch.properties.write) {
+                        await ch.writeValueWithResponse(chunk);
+                    } else {
+                        await ch.writeValue(chunk);
+                    }
+                    sent = true;
+                } catch (err) {
+                    retries--;
+                    if (retries <= 0) throw err;
+                    await new Promise(resolve => setTimeout(resolve, 120));
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 18));
+        }
+        return;
+    }
+
+    throw new Error('Printer belum terhubung.');
+},
+
+async printReceiptBluetooth(trx) {
+    if (!(this.printerCharacteristic || this.printerSerialWriter)) {
+        Swal.fire('Printer Belum Terhubung', 'Hubungkan printer lebih dahulu melalui menu Setelan > Hardware Printer.', 'warning');
+        return;
+    }
+    if (this._isPrinting) return;
+    this._isPrinting = true;
+
+    try {
+        const bytes = this.buildPrinterBytes(trx);
+        await this.sendPrinterBytes(bytes);
+    } catch (err) {
+        console.error('Gagal mencetak struk:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Cetak Gagal',
+            html: `${this.sanitizePrinterText(err.message || err)}<br><br><small>Jika printer tersambung tetapi tidak mencetak, cek pilihan <b>Bahasa Printer</b> (ESC/POS/CPCL/TSPL/ZPL).</small>`
+        });
+    } finally {
+        this._isPrinting = false;
+    }
+},
+
+async testPrint() {
+    const dummyTrx = {
+        id: 'INV-TEST-001',
+        dateStr: new Date().toLocaleString('id-ID'),
+        cashierName: 'System Test',
+        customer: 'Pelanggan',
+        outletId: this.reportOutletFilter || this.posActiveOutletId || '',
+        outletName: this.getOutletName(this.reportOutletFilter || this.posActiveOutletId) || 'Pusat',
+        items: [
+            { name: 'Test Print QueenPOS', qty: 1, finalPrice: 10000 },
+            { name: 'Printer Thermal', qty: 1, finalPrice: 5000 }
+        ],
+        total: 15000,
+        amountReceived: 20000,
+        paymentMethod: 'CASH'
+    };
+    await this.printReceiptBluetooth(dummyTrx);
+},
+
         // =========================================================
     // 🌟 FITUR 1: POPUP INPUT RESI & KURIR SAAT KLIK SHIP
     // =========================================================
@@ -23108,12 +23278,12 @@ let item = {
         this.printMode = 'receipt';
         this.hideModal('paymentModal');
 
-        if (this.printerCharacteristic) {
+        if (this.printerCharacteristic || this.printerSerialWriter) {
             this.printReceiptBluetooth(trxData); 
         }
 
         setTimeout(() => {
-            if (!this.printerCharacteristic && typeof this.triggerPrint === 'function') {
+            if (!(this.printerCharacteristic || this.printerSerialWriter) && typeof this.triggerPrint === 'function') {
                 this.triggerPrint(trxData, 'receipt');
             }
         }, 500);
