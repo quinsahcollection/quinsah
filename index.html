@@ -3312,6 +3312,14 @@ body.sidebar-open {
                                     </select>
                                     <div class="form-text" style="font-size:.72rem;">Panda PRJ-R80B umumnya memakai ESC/POS. PRJ-R80BL dapat memakai CPCL atau firmware bahasa lain.</div>
                                 </div>
+                                <div class="col-12" v-if="printerProtocol === 'escpos'">
+                                    <label class="form-label small fw-bold text-dark mb-1"><i class="bi bi-receipt me-1"></i>Mode Tampilan Struk</label>
+                                    <select class="form-select form-select-sm" v-model="printerReceiptMode">
+                                        <option value="graphic">Grafis — paling mirip desain struk QueenPOS (disarankan)</option>
+                                        <option value="text">Teks — lebih cepat / kompatibilitas maksimum</option>
+                                    </select>
+                                    <div class="form-text" style="font-size:.72rem;">Mode Grafis merender struk sebagai gambar thermal hitam-putih sehingga logo, jarak, bold, kolom dan header lebih konsisten di Panda 80mm. Cetak BLE sedikit lebih lama.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -10735,7 +10743,7 @@ body.sidebar-open {
             welcomeText: 'Selamat datang di Toko Kami! Terima kasih telah berbelanja.' // Tambahkan default text
 },
 
-        // Printer Universal V3.4 Panda-safe: BLE + Bluetooth Classic/Serial + safe 80mm layout
+        // Printer Universal V3.5 Graphic Receipt: BLE + Serial + raster HTML-like receipt
         printerDevice: null,
         printerServer: null,
         printerCharacteristic: null,
@@ -10744,6 +10752,7 @@ body.sidebar-open {
         printerConnectionType: '', // 'ble' | 'serial'
         printerConnectionLabel: '',
         printerProtocol: 'escpos', // escpos | cpcl | tspl | zpl
+        printerReceiptMode: 'graphic', // graphic = raster desain, text = ESC/POS teks klasik
         printerPaperSize: 48, // 48 karakter untuk 80mm, 32 karakter untuk 58mm
         serialSupported: (typeof navigator !== 'undefined' && 'serial' in navigator), // jangan akses navigator langsung dari template Vue
 
@@ -16102,7 +16111,308 @@ async buildEscPosLogoBytes(src) {
     }
 },
 
+async loadPrinterCanvasImage(src) {
+    if (!src) return null;
+    return await new Promise((resolve) => {
+        try {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const timer = setTimeout(() => resolve(null), 3500);
+            img.onload = () => { clearTimeout(timer); resolve(img); };
+            img.onerror = () => { clearTimeout(timer); resolve(null); };
+            img.src = src;
+        } catch (_) {
+            resolve(null);
+        }
+    });
+},
+
+async buildEscPosGraphicReceiptBytes(trx) {
+    const ESC = 0x1B, GS = 0x1D;
+    const is58 = (parseInt(this.printerPaperSize) || 48) <= 32;
+
+    // Panda portable 80mm pada unit uji memotong ~4 karakter pertama jika teks dimulai
+    // dari origin hardware. Mode grafis memberi blank margin nyata di bitmap, bukan spasi teks.
+    // Lebar dibuat sedikit di bawah 576 dots agar sisi kanan juga aman pada head clone.
+    const canvasWidth = is58 ? 360 : 544;
+    const safeLeft = is58 ? 34 : 58;
+    const safeRight = is58 ? 22 : 26;
+    const contentWidth = canvasWidth - safeLeft - safeRight;
+    const maxHeight = 3600;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasWidth;
+    canvas.height = maxHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.textBaseline = 'top';
+
+    const outletName = trx.outletName || this.getOutletName(trx.outletId) || 'Pusat';
+    const config = this.appSettings?.outletReceipts?.[trx.outletId] || this.appSettings?.outletReceipts?.global || this.appSettings || {};
+    const storeName = config.storeName || this.appSettings?.storeName || 'NAMA TOKO';
+    const storeAddress = config.storeAddress || this.appSettings?.storeAddress || outletName;
+    const storePhone = config.storePhone || this.appSettings?.storePhone || '';
+    const x0 = safeLeft;
+    const x1 = canvasWidth - safeRight;
+    const cx = x0 + contentWidth / 2;
+    let y = is58 ? 34 : 46; // blank area nyata di atas agar header tidak tertahan cutter/bibir printer
+
+    const setFont = (size, weight = 400) => {
+        ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+        ctx.fillStyle = '#000';
+    };
+    const rule = (gapTop = 7, gapBottom = 9) => {
+        y += gapTop;
+        ctx.fillRect(x0, y, contentWidth, 1);
+        y += 1 + gapBottom;
+    };
+    const centerText = (text, size = 18, weight = 400, gap = 4) => {
+        setFont(size, weight);
+        ctx.textAlign = 'center';
+        const t = this.sanitizePrinterText(text || '');
+        ctx.fillText(t, cx, y);
+        y += size + gap;
+    };
+    const wrapCanvas = (text, maxWidth, size = 17, weight = 400) => {
+        setFont(size, weight);
+        const clean = this.sanitizePrinterText(text || '').trim();
+        if (!clean) return [];
+        const words = clean.split(/\s+/);
+        const lines = [];
+        let line = '';
+        for (const word of words) {
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width <= maxWidth || !line) {
+                line = test;
+            } else {
+                lines.push(line);
+                line = word;
+            }
+        }
+        if (line) lines.push(line);
+        return lines;
+    };
+    const centeredWrap = (text, size = 16, weight = 400, gap = 3) => {
+        ctx.textAlign = 'center';
+        const lines = wrapCanvas(text, contentWidth, size, weight);
+        for (const line of lines) {
+            ctx.fillText(line, cx, y);
+            y += size + gap;
+        }
+    };
+    const leftWrap = (text, size = 17, weight = 400, indent = 0, gap = 3) => {
+        ctx.textAlign = 'left';
+        const lines = wrapCanvas(text, contentWidth - indent, size, weight);
+        for (const line of lines) {
+            ctx.fillText(line, x0 + indent, y);
+            y += size + gap;
+        }
+    };
+    const metaRow = (label, value) => {
+        const labelW = is58 ? 68 : 84;
+        setFont(is58 ? 15 : 17, 400);
+        ctx.textAlign = 'left';
+        ctx.fillText(label, x0, y);
+        setFont(is58 ? 15 : 17, 600);
+        const valueX = x0 + labelW;
+        const lines = wrapCanvas(value || '-', x1 - valueX, is58 ? 15 : 17, 600);
+        lines.forEach((line, i) => ctx.fillText(line, valueX, y + i * (is58 ? 18 : 20)));
+        y += Math.max(1, lines.length) * (is58 ? 18 : 20) + 2;
+    };
+    const moneyRow = (label, value, opts = {}) => {
+        const size = opts.size || (is58 ? 15 : 17);
+        const weight = opts.bold ? 700 : 400;
+        setFont(size, weight);
+        ctx.textAlign = 'left';
+        ctx.fillText(this.sanitizePrinterText(label), x0, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(this.sanitizePrinterText(value), x1, y);
+        y += size + (opts.gap ?? 5);
+    };
+
+    // Logo aman: jika URL eksternal tidak mengizinkan canvas/CORS, struk tetap lanjut tanpa logo.
+    const logoSrc = config.receiptLogo || this.appSettings?.receiptLogo || '';
+    const logo = await this.loadPrinterCanvasImage(logoSrc);
+    if (logo) {
+        const maxW = is58 ? 105 : 150;
+        const maxH = is58 ? 48 : 62;
+        const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
+        const w = Math.max(1, Math.round(logo.width * scale));
+        const h = Math.max(1, Math.round(logo.height * scale));
+        try {
+            ctx.drawImage(logo, Math.round(cx - w / 2), y, w, h);
+            y += h + 8;
+        } catch (_) {}
+    }
+
+    centerText(String(storeName).toUpperCase(), is58 ? 19 : 23, 700, 5);
+    centeredWrap(storeAddress, is58 ? 13 : 15, 400, 3);
+    if (storePhone) centerText('Telp: ' + storePhone, is58 ? 13 : 15, 400, 3);
+    rule(7, 10);
+
+    metaRow('No. Inv', trx.id || '-');
+    metaRow('Tanggal', trx.dateStr || trx.date || '-');
+    metaRow('Outlet', outletName);
+    metaRow('Kasir', trx.cashierName || trx.userName || trx.pic || 'Admin');
+    metaRow('Pelanggan', trx.customer || 'Umum');
+    rule(6, 10);
+
+    const normalItems = (trx.items || []).filter(i => i.productId !== 'EXCHANGE');
+    for (const item of normalItems) {
+        leftWrap(item.name || '-', is58 ? 16 : 18, 700, 0, 2);
+        if (item.variantName) leftWrap('Varian: ' + item.variantName, is58 ? 13 : 15, 400, 0, 2);
+        if (item.note) {
+            String(item.note).split(',').forEach(note => leftWrap('- ' + note.trim(), is58 ? 12 : 14, 400, 6, 2));
+        }
+        const unitPrice = Number(item.finalPrice ?? item.sellPrice ?? item.price ?? 0);
+        const qty = Number(item.qty || 0);
+        moneyRow(`${qty} ${item.uom || 'Pcs'} x Rp ${this.formatNumber(unitPrice)}`, `Rp ${this.formatNumber(qty * unitPrice)}`, { size: is58 ? 13 : 15, gap: 8 });
+    }
+
+    const exchangeItems = (trx.items || []).filter(i => i.productId === 'EXCHANGE');
+    if (exchangeItems.length) {
+        rule(2, 7);
+        centerText('POTONGAN TUKAR TAMBAH', is58 ? 14 : 16, 700, 7);
+        for (const item of exchangeItems) {
+            leftWrap(String(item.name || '').replace('[SALDO TUKAR] ', ''), is58 ? 14 : 16, 600, 0, 2);
+            const value = Math.abs(Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0));
+            moneyRow('Nilai Barang Lama', '- Rp ' + this.formatNumber(value), { size: is58 ? 13 : 15, gap: 5 });
+            if (item.note) leftWrap('Ket: ' + item.note, is58 ? 12 : 14, 400, 0, 3);
+        }
+    }
+
+    rule(2, 8);
+    const subtotal = normalItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0), 0);
+    moneyRow('Subtotal Produk', 'Rp ' + this.formatNumber(subtotal));
+    if (exchangeItems.length) {
+        const exchangeTotal = Math.abs(exchangeItems.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.finalPrice ?? item.sellPrice ?? 0), 0));
+        moneyRow('Potongan Tukar', '- Rp ' + this.formatNumber(exchangeTotal));
+    }
+    const globalDiscount = Number(trx.globalDiscountAmt || 0);
+    const itemDiscount = Math.max(0, Number(trx.discountAmt || 0) - globalDiscount);
+    if (itemDiscount > 0) moneyRow('Diskon Item', '- Rp ' + this.formatNumber(itemDiscount));
+    if (globalDiscount > 0) moneyRow('Diskon Invoice', '- Rp ' + this.formatNumber(globalDiscount));
+    if (Number(trx.taxAmt || trx.taxAmount || 0) > 0) moneyRow('PPN (Tax)', 'Rp ' + this.formatNumber(trx.taxAmt || trx.taxAmount));
+    if (Number(trx.surchargeFee || 0) > 0) moneyRow('Biaya Layanan', 'Rp ' + this.formatNumber(trx.surchargeFee));
+    if (Number(trx.shippingCost || 0) > 0) moneyRow(`Ongkir (${trx.courier || '-'})`, 'Rp ' + this.formatNumber(trx.shippingCost));
+    if (trx.orderType === 'delivery') moneyRow('Status Pengiriman', trx.isCOD ? 'COD' : 'NON-COD', { bold: true });
+    rule(3, 7);
+    moneyRow('TOTAL AKHIR', 'Rp ' + this.formatNumber(trx.total), { bold: true, size: is58 ? 18 : 22, gap: 8 });
+
+    // Kotak pembayaran seperti preview QueenPOS.
+    y += 2;
+    const payTop = y;
+    y += 10;
+    centerText(trx.splitPayments && trx.splitPayments.length ? 'PEMBAYARAN (SPLIT)' : 'PEMBAYARAN', is58 ? 14 : 16, 700, 8);
+    if (trx.splitPayments && trx.splitPayments.length > 0) {
+        trx.splitPayments.forEach(sp => moneyRow(sp.method || '-', 'Rp ' + this.formatNumber(sp.cashReceived || sp.amount || 0), { size: is58 ? 13 : 15, gap: 4 }));
+        const paid = trx.splitPayments.filter(p => !String(p.method || '').toUpperCase().includes('HUTANG')).reduce((sum,p)=>sum+Number(p.cashReceived || p.amount || 0),0)
+            + (trx.paymentHistory || []).reduce((sum,p)=>sum+Number(p.amount || 0),0);
+        y += 3;
+        moneyRow('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), { bold: true, size: is58 ? 14 : 16 });
+        if (paid > Number(trx.total || 0)) moneyRow('KEMBALIAN', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), { bold: true });
+        else if (paid < Number(trx.total || 0)) moneyRow('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), { bold: true });
+        else moneyRow('STATUS', 'LUNAS', { bold: true });
+    } else {
+        const method = String(trx.paymentMethod || 'CASH').toUpperCase();
+        const paid = method.includes('HUTANG') ? 0 : Number(trx.amountReceived ?? trx.total ?? 0);
+        moneyRow('Metode Bayar', method, { size: is58 ? 13 : 15 });
+        if (trx.paymentNote) leftWrap('Catatan: ' + trx.paymentNote, is58 ? 12 : 14, 400, 0, 3);
+        moneyRow('TOTAL DIBAYAR', 'Rp ' + this.formatNumber(paid), { bold: true, size: is58 ? 14 : 16 });
+        if (paid > Number(trx.total || 0)) moneyRow('Kembalian', 'Rp ' + this.formatNumber(paid - Number(trx.total || 0)), { bold: true });
+        else if (paid < Number(trx.total || 0)) moneyRow('SISA HUTANG', 'Rp ' + this.formatNumber(Number(trx.total || 0) - paid), { bold: true });
+        else moneyRow('STATUS', 'LUNAS', { bold: true });
+    }
+    y += 7;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0, payTop, contentWidth, y - payTop);
+    y += 7;
+
+    if (trx.paymentHistory && trx.paymentHistory.length) {
+        rule(0, 7);
+        centerText('HISTORI PEMBAYARAN / CICILAN', is58 ? 13 : 15, 700, 6);
+        trx.paymentHistory.forEach((pay, idx) => {
+            moneyRow(`${idx + 1}. ${pay.method || '-'}`, 'Rp ' + this.formatNumber(pay.amount || 0), { size: is58 ? 12 : 14, gap: 3 });
+            if (pay.dateStr || pay.date) leftWrap(pay.dateStr || pay.date, is58 ? 11 : 13, 400, 8, 3);
+        });
+    }
+
+    if (trx.returHistory && trx.returHistory.length) {
+        rule(0, 7);
+        centerText('INFO RETUR / REFUND', is58 ? 13 : 15, 700, 6);
+        trx.returHistory.forEach(retur => {
+            leftWrap('[RETUR] ' + (retur.productName || '-'), is58 ? 13 : 15, 600, 0, 2);
+            moneyRow(`${retur.qtyRetur || 0}x`, '- Rp ' + this.formatNumber(retur.refundAmount || 0), { size: is58 ? 12 : 14, gap: 3 });
+            if (retur.alasan) leftWrap('Ket: ' + retur.alasan, is58 ? 11 : 13, 400, 0, 4);
+        });
+    }
+
+    rule(1, 10);
+    const footer = config.receiptFooter || this.appSettings?.receiptFooter || 'Terima kasih telah berbelanja';
+    centeredWrap(footer, is58 ? 13 : 15, 600, 3);
+    const socials = [];
+    if (config.socialWa || this.appSettings?.socialWa) socials.push('WA: ' + (config.socialWa || this.appSettings.socialWa));
+    if (config.socialIg || this.appSettings?.socialIg) socials.push('IG: ' + (config.socialIg || this.appSettings.socialIg));
+    if (config.socialFb || this.appSettings?.socialFb) socials.push('FB: ' + (config.socialFb || this.appSettings.socialFb));
+    socials.forEach(v => centeredWrap(v, is58 ? 11 : 13, 400, 2));
+    y += is58 ? 48 : 64; // feed bawah supaya struk mudah disobek dan isi terakhir tidak tertahan body printer
+
+    const finalHeight = Math.min(maxHeight, Math.max(1, Math.ceil(y)));
+    const image = ctx.getImageData(0, 0, canvasWidth, finalHeight);
+    const rowBytes = Math.ceil(canvasWidth / 8);
+    const parts = [];
+    const command = (...vals) => parts.push(new Uint8Array(vals));
+
+    // Reset + feed awal 3 baris: header keluar penuh dari area cutter sebelum raster utama.
+    command(ESC, 0x40);
+    command(ESC, 0x61, 0x00);
+    command(ESC, 0x64, is58 ? 2 : 3);
+
+    // Kirim bitmap bertahap. Stripe kecil lebih stabil pada BLE buffer printer portable.
+    const stripeRows = 120;
+    for (let top = 0; top < finalHeight; top += stripeRows) {
+        const rows = Math.min(stripeRows, finalHeight - top);
+        const raster = new Uint8Array(rowBytes * rows);
+        let p = 0;
+        for (let yy = 0; yy < rows; yy++) {
+            for (let xb = 0; xb < rowBytes; xb++) {
+                let byte = 0;
+                for (let bit = 0; bit < 8; bit++) {
+                    const x = xb * 8 + bit;
+                    if (x >= canvasWidth) continue;
+                    const i = ((top + yy) * canvasWidth + x) * 4;
+                    const r = image.data[i], g = image.data[i + 1], b = image.data[i + 2], a = image.data[i + 3];
+                    const lum = a === 0 ? 255 : (0.299 * r + 0.587 * g + 0.114 * b);
+                    if (lum < 188) byte |= (0x80 >> bit);
+                }
+                raster[p++] = byte;
+            }
+        }
+        // GS v 0, normal scale. Width sengaja 544/360 dots dengan blank margin di bitmap.
+        command(GS, 0x76, 0x30, 0x00, rowBytes & 0xff, (rowBytes >> 8) & 0xff, rows & 0xff, (rows >> 8) & 0xff);
+        parts.push(raster);
+    }
+
+    command(ESC, 0x64, is58 ? 3 : 4);
+    command(GS, 0x56, 0x41, 0x00);
+    return this.concatPrinterBytes(...parts);
+},
+
 async buildEscPosBytes(trx) {
+    if (this.printerReceiptMode !== 'text') {
+        try {
+            return await this.buildEscPosGraphicReceiptBytes(trx);
+        } catch (err) {
+            console.warn('Mode grafis gagal, fallback ke ESC/POS teks:', err);
+        }
+    }
+    return await this.buildEscPosTextBytes(trx);
+},
+
+async buildEscPosTextBytes(trx) {
     const enc = new TextEncoder();
     const ESC = 0x1B, GS = 0x1D;
     const width = this.getPrinterColumns();
@@ -16312,8 +16622,13 @@ async sendPrinterBytes(bytes) {
 
     if (this.printerConnectionType === 'ble' && this.printerCharacteristic) {
         // 20 byte adalah ukuran paling kompatibel lintas BLE printer murah/portable.
+        // Bitmap grafis jauh lebih besar dari teks, jadi jedanya dipercepat tetapi tetap diberi
+        // napas berkala agar buffer Panda portable tidak overflow.
         const CHUNK_SIZE = 20;
+        const graphicMode = this.printerProtocol === 'escpos' && this.printerReceiptMode !== 'text';
+        const packetDelay = graphicMode ? 5 : 18;
         const ch = this.printerCharacteristic;
+        let packetNo = 0;
         for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
             const chunk = bytes.slice(i, i + CHUNK_SIZE);
             let sent = false;
@@ -16334,7 +16649,11 @@ async sendPrinterBytes(bytes) {
                     await new Promise(resolve => setTimeout(resolve, 120));
                 }
             }
-            await new Promise(resolve => setTimeout(resolve, 18));
+            packetNo++;
+            await new Promise(resolve => setTimeout(resolve, packetDelay));
+            if (graphicMode && packetNo % 80 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 35));
+            }
         }
         return;
     }
