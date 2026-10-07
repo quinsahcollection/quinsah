@@ -18685,10 +18685,16 @@ async deletePaymentMethod(id) {
                 this.printMode = 'receipt';
             }
             
-            // 3. Picu fungsi Print bawaan Browser
+            // 3. Untuk thermal gunakan router printer V3.2 agar tidak otomatis meminta Wi-Fi.
+            if (this.printMode === 'receipt' && typeof this.triggerPrint === 'function') {
+                this.triggerPrint(this.activePrintData, 'receipt');
+                return;
+            }
+
+            // A4 tetap memakai print service browser/OS.
             setTimeout(() => {
                 window.print();
-            }, 500); // Tunggu setengah detik agar Vue memuat HTML-nya dulu
+            }, 500);
         },
         
         // ==========================================
@@ -23279,15 +23285,14 @@ let item = {
         this.printMode = 'receipt';
         this.hideModal('paymentModal');
 
-        if (this.printerCharacteristic || this.printerSerialWriter) {
-            this.printReceiptBluetooth(trxData); 
-        }
-
+        // V3.2: cetak transaksi POS memakai jalur hardware printer langsung.
+        // Jika printer belum terhubung, triggerPrint akan menawarkan koneksi Bluetooth
+        // dan TIDAK otomatis membuka Android Print Service/Wi-Fi.
         setTimeout(() => {
-            if (!(this.printerCharacteristic || this.printerSerialWriter) && typeof this.triggerPrint === 'function') {
+            if (typeof this.triggerPrint === 'function') {
                 this.triggerPrint(trxData, 'receipt');
             }
-        }, 500);
+        }, 350);
 
         // =================================================================
         // 9. 🌟 RESET SEMUA FORM KASIR KE KONDISI AWAL
@@ -24021,20 +24026,51 @@ doActualPrint() {
     }, 500); 
 },
 
-                // 2. TIMPA FUNGSI triggerPrint
-        triggerPrint(trx, mode) {
+                // 2. PRINT ROUTER V3.2
+        // Struk thermal selalu diprioritaskan ke printer hardware yang sudah terhubung.
+        // window.print() hanya dipakai untuk A4/label atau jika user secara eksplisit memilih cetak sistem.
+        async triggerPrint(trx, mode) {
             this.activePrintData = trx;
             this.printMode = mode;
-            
-            // 🌟 LOGIKA BARU: Ambil setting struk KHUSUS untuk outlet transaksi ini
+
+            // Ambil setting struk KHUSUS untuk outlet transaksi ini.
             if (this.appSettings && this.appSettings.outletReceipts && this.appSettings.outletReceipts[trx.outletId]) {
-                // Gabungkan setting global dengan setting khusus outlet (agar setting ukuran kertas 58mm tidak hilang)
                 this.currentPrintSettings = { ...this.appSettings, ...this.appSettings.outletReceipts[trx.outletId] };
             } else {
-                // Fallback jika outlet belum punya desain khusus
                 this.currentPrintSettings = this.appSettings || {};
             }
-            
+
+            // THERMAL: jangan lempar ke Android Print Service/Wi-Fi secara otomatis.
+            if (mode === 'receipt') {
+                if (this.printerCharacteristic || this.printerSerialWriter) {
+                    await this.printReceiptBluetooth(trx);
+                    return;
+                }
+
+                const result = await Swal.fire({
+                    icon: 'info',
+                    title: 'Printer Thermal Belum Terhubung',
+                    html: 'Untuk cetak struk Bluetooth tanpa Wi-Fi, hubungkan printer melalui <b>Setelan → Hardware Printer</b> terlebih dahulu.<br><br><small>Tombol <b>Cetak via Sistem</b> hanya untuk printer Android/Wi-Fi atau menyimpan PDF.</small>',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '<i class="bi bi-bluetooth me-1"></i> Hubungkan Printer',
+                    denyButtonText: 'Cetak via Sistem',
+                    cancelButtonText: 'Batal',
+                    confirmButtonColor: '#0d6efd',
+                    denyButtonColor: '#6c757d'
+                });
+
+                if (result.isConfirmed) {
+                    this.currentView = 'settings';
+                    this.settingTab = 'printer';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                }
+
+                if (!result.isDenied) return;
+                // Hanya atas pilihan user: buka Android/desktop print service.
+            }
+
             this.$nextTick(() => {
                 setTimeout(() => {
                     this.doActualPrint();
